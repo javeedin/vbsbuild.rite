@@ -62,3 +62,7 @@ html[data-nx-product="buildrite"] .nx-nav-scroll { scrollbar-color: rgba(255, 25
 .nx-rc-betable th { color: #5a6876; font-weight: 600; }
 .nx-rc-be--need td:last-child { color: #b42318; font-weight: 600; }
 @media (max-width: 720px) { .nx-rc-facts { grid-template-columns: 1fr; } }
+
+/* Connect to Jira: links to your Jira site, your API tokens, your projects (opened in your browser) */
+.nx-jira-links { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 6px 0 4px; }
+.nx-jira-links a { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }

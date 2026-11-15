@@ -12,6 +12,11 @@ define(['resources/js/jiraBacklog', 'resources/js/exportKit', 'resources/js/test
   }
 
   class PageModule {
+    // Connect to Jira: links to your Jira site (the one typed or saved), its projects (where each project's key is
+    // shown) — opened in your browser
+    jiraHome(conn) { const s = String((conn && conn.site) || '').trim().replace(/\/+$/, ''); return /^https:\/\/[^/\s]+$/.test(s) ? s + '/jira' : 'https://www.atlassian.com/software/jira'; }
+    jiraHomeLabel(conn) { const s = String((conn && conn.site) || '').trim().replace(/\/+$/, ''); return /^https:\/\/[^/\s]+$/.test(s) ? 'Open ' + s.replace(/^https:\/\//, '') : 'Open Jira'; }
+    jiraProjects(conn) { const s = String((conn && conn.site) || '').trim().replace(/\/+$/, ''); return /^https:\/\/[^/\s]+$/.test(s) ? s + '/jira/projects' : 'https://www.atlassian.com/software/jira'; }
     constructor(context) {
       // Record: when a recording or screenshot is saved (from the bar or a shortcut, perhaps in another tab), the open
       // item's evidence is read again (evidenceChain).

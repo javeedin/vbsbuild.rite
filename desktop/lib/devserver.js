@@ -356,6 +356,12 @@ function createDevServer(o) {
 
     // Connect Jira (lib/jiraAuth.js): the jira backend goes to the site the person connected, with their email and token.
     const jira = name === 'jira' && o.jiraStore ? o.jiraStore.auth() : null;
+    // Jira not connected yet (no site, email or token on this PC): answered here as Jira would, never sent to the
+    // catalog's placeholder address
+    if (name === 'jira' && o.jiraStore && !jira && !overrides.jira) {
+      log(`${req.method} jira ${rest} -> 401 (Jira is not connected: Jira stories → Connect Jira)`);
+      return send(res, 401, 'application/json', JSON.stringify({ errorMessages: ['Jira is not connected: Jira stories → Connect Jira.'] }));
+    }
     const base = overrides[name.toLowerCase()] || (jira && jira.site) || backend.url;
     let target;
     try {

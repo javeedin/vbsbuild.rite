@@ -44,6 +44,12 @@
       <oj-bind-if test="[[ $variables.conn.desktop ]]">
         <p class="nx-note">Your Jira email and an Atlassian API token. The desktop app keeps the token on this PC (in the system keychain) and adds it to
           the calls to Jira; this page never holds it. <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Create an API token</a></p>
+        <p class="nx-note nx-jira-links" id="jiraLinks">
+          <a id="jiraOpenSite" :href="[[ $functions.jiraHome($variables.conn) ]]" target="_blank" rel="noopener"><span class="oj-ux-ico-launch" aria-hidden="true"></span> <oj-bind-text value="[[ $functions.jiraHomeLabel($variables.conn) ]]"></oj-bind-text></a>
+          <a id="jiraOpenTokens" href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener"><span class="oj-ux-ico-key" aria-hidden="true"></span> Your API tokens (create one: Create API token, copy it, paste it below)</a>
+          <a id="jiraOpenProjects" :href="[[ $functions.jiraProjects($variables.conn) ]]" target="_blank" rel="noopener"><span class="oj-ux-ico-list" aria-hidden="true"></span> Find your project key (Jira → Projects: the Key column)</a>
+        </p>
+        <p class="nx-note" id="jiraImportHint">Connected to Jira in another desktop app on this PC? <b>File → Import settings from another folder…</b> brings that connection in, with its token, without typing it again.</p>
         <div class="nx-jira-form">
           <label class="nx-cm-field"><span class="nx-cm-label">Jira site</span>
             <input class="nx-cm-input" id="jiraSite" data-field="site" :value="[[ $variables.conn.site ]]" on-change="[[ $listeners.onConnField ]]" placeholder="https://your-site.atlassian.net"></label>

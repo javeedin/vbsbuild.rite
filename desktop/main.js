@@ -1124,18 +1124,68 @@ async function importSettings() {
   const there = SETTINGS_FILES.filter((f) => fs.existsSync(path.join(from, f)));
   if (!there.length) { dialog.showMessageBox(win, { type: 'info', message: 'No settings in that folder', detail: 'Build.Rite looks for: ' + SETTINGS_FILES.join(', ') }); return; }
   const ok = await dialog.showMessageBox(win, { type: 'question', buttons: ['Copy and restart', 'Cancel'], defaultId: 0, cancelId: 1, message: 'Copy ' + there.length + ' file(s) into Build.Rite?',
-    detail: there.join('\n') + '\n\nWhat Build.Rite has of the same name is replaced (a copy of it is kept as .before-import). Build.Rite restarts to read them.' });
+    detail: there.join('\n') + (process.platform === 'win32' && fs.existsSync(path.join(from, 'Local State')) ? '\nLocal State (the key the saved tokens and passwords are encrypted with)' : '')
+      + '\n\nWhat Build.Rite has of the same name is replaced (a copy of it is kept as .before-import). Build.Rite restarts to read them.' });
   if (ok.response !== 0) return;
+  copySettings(from, there);
+}
+/** Copies those files into Build.Rite's data folder (what it had of the same name kept as .before-import), then restarts.
+ *  On Windows the saved keys and passwords are encrypted with a key kept in the app's own data folder (Local State,
+ *  itself protected by your Windows account): it comes along, so they open in Build.Rite too. Chromium holds that file
+ *  while Build.Rite runs, so a small helper copies it once Build.Rite has closed, then starts Build.Rite again. */
+function copySettings(from, there) {
   const to = app.getPath('userData');
   fs.mkdirSync(to, { recursive: true });
   there.forEach((f) => {
     const dst = path.join(to, f);
     try { if (fs.existsSync(dst)) fs.copyFileSync(dst, dst + '.before-import'); fs.copyFileSync(path.join(from, f), dst); } catch (e) { pushLog('import ' + f + ': ' + e.message); }
   });
-  pushLog(`${new Date().toTimeString().slice(0, 8)} settings imported from ${from}: ${there.join(', ')}`);
+  const key = path.join(from, 'Local State');
+  const withKey = process.platform === 'win32' && fs.existsSync(key);
+  pushLog(`${new Date().toTimeString().slice(0, 8)} settings imported from ${from}: ${there.join(', ')}${withKey ? ', Local State (once Build.Rite has closed)' : ''}`);
   quitting = true;
+  if (withKey) {
+    const helper = "const fs=require('fs'),cp=require('child_process');const a=process.argv.slice(1);const src=a[0],dst=a[1],pid=+a[2],exe=a[3],args=a.slice(4);"
+      + "const alive=()=>{try{process.kill(pid,0);return true}catch(e){return false}};"
+      + "(function wait(n){if(alive()&&n<150)return setTimeout(()=>wait(n+1),200);"
+      + "try{if(fs.existsSync(dst))fs.copyFileSync(dst,dst+'.before-import');fs.copyFileSync(src,dst)}catch(e){}"
+      + "const env=Object.assign({},process.env);delete env.ELECTRON_RUN_AS_NODE;cp.spawn(exe,args,{detached:true,stdio:'ignore',env:env}).unref()})(0);";
+    try {
+      require('child_process').spawn(process.execPath, ['-e', helper, key, path.join(to, 'Local State'), String(process.pid), process.execPath].concat(process.argv.slice(1)),
+        { env: Object.assign({}, process.env, { ELECTRON_RUN_AS_NODE: '1' }), detached: true, stdio: 'ignore', windowsHide: true }).unref();
+      app.exit(0);
+      return;
+    } catch (e) { pushLog('import Local State: ' + e.message); }
+  }
   app.relaunch();
   app.exit(0);
+}
+/** The settings files a folder holds. */
+const settingsIn = (dir) => SETTINGS_FILES.filter((f) => { try { return fs.statSync(path.join(dir, f)).isFile(); } catch (e) { return false; } });
+/**
+ * First start, with no settings of its own yet: another desktop app's data folder on this PC holding settings Build.Rite
+ * uses (at least two of its files — connections, keys, minutes…) is offered, the one holding most first. Asked once:
+ * Not now is remembered; File → Import settings from another folder… does it any time.
+ */
+async function offerImport() {
+  const mine = app.getPath('userData');
+  const asked = path.join(mine, 'import-offered.json');
+  if (settingsIn(mine).filter((f) => f !== 'run-as.json').length || fs.existsSync(asked)) return;
+  let found = [];
+  try {
+    const root = app.getPath('appData');
+    found = fs.readdirSync(root).map((n) => path.join(root, n)).filter((d) => path.resolve(d) !== path.resolve(mine))
+      .map((d) => ({ dir: d, files: settingsIn(d) })).filter((x) => x.files.length >= 2).sort((a, b) => b.files.length - a.files.length);
+  } catch (e) { found = []; }
+  if (!found.length || !win || win.isDestroyed()) return;
+  const f = found[0];
+  const r = await dialog.showMessageBox(win, { type: 'question', buttons: ['Bring them in', 'Choose another folder…', 'Not now'], defaultId: 0, cancelId: 2, noLink: true,
+    title: APP_NAME, message: 'Bring in your settings from ' + path.basename(f.dir) + '?',
+    detail: 'Another desktop app on this PC keeps settings Build.Rite uses, in ' + f.dir + ':\n' + f.files.join(', ')
+      + '\n\nThey are copied, never moved: that app keeps working. Keys and passwords stay encrypted for your account. Build.Rite restarts to read them.' });
+  try { fs.mkdirSync(mine, { recursive: true }); fs.writeFileSync(asked, JSON.stringify({ at: new Date().toISOString(), from: f.dir, answer: ['import', 'choose', 'later'][r.response] })); } catch (e) { /* asked again next time */ }
+  if (r.response === 0) copySettings(f.dir, f.files);
+  else if (r.response === 1) await importSettings();
 }
 
 function showLog() {
@@ -1281,6 +1331,8 @@ if (!app.requestSingleInstanceLock()) {
     }
     pushLog(`${new Date().toTimeString().slice(0, 8)} Build.Rite at ${server.url}; you are ${me().displayName}`);
     win.loadURL(appUrl()).catch(() => {});
+    // first start: settings of another desktop app on this PC offered (connections, keys, minutes…)
+    setTimeout(() => { offerImport().catch((e) => pushLog('import offer: ' + e.message)); }, 2500);
   });
   app.on('activate', () => {
     if (!win) { createWindow(); if (server) win.loadURL(appUrl()).catch(() => {}); }
