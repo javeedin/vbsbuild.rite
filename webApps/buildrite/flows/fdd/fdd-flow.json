@@ -1,0 +1,7 @@
+{
+  "id": "fdd",
+  "description": "The FDD library: the project's functional design documents, uploaded into its data and pushed to git, so every user has them; one is the latest, the one \"Analyze with AI\" reads.",
+  "defaultPage": "library",
+  "pages": { "library": { "path": "pages/library-page" } },
+  "chains": {}, "services": {}, "types": {}, "variables": {}
+}

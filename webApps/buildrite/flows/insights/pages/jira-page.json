@@ -1,0 +1,1005 @@
+{
+  "description": "Jira stories: your Jira project's backlog read from Jira (services/jira, read only; rules resources/js/jiraBacklog.js). Connect (in the desktop app the token stays on the PC; deployed, the VBCS administrator sets the jira backend's Basic authentication), a JQL search with presets, the analysis (numbers, findings, by status, epic, release, person, quality check, FDD section, tester gaps), the items, one item in a drawer, export. Redwood (your menu, Look): Oracle's Smart Search page with a filter per column and an oj-table.",
+  "navigation": {
+    "embeddable": "enabled"
+  },
+  "variables": {
+    "pgCat": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "The Application pages catalog (resources/pages): which pages each story is mapped to."
+    },
+    "pgInfo": {
+      "type": "object",
+      "defaultValue": {
+        "available": false,
+        "canWrite": false,
+        "canCapture": false
+      }
+    },
+    "pgPick": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "The Assign page picker is open."
+    },
+    "pgQ": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "pgBusy": {
+      "type": "boolean",
+      "defaultValue": false
+    },
+    "pgBusyText": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "isLoading": {
+      "type": "boolean",
+      "defaultValue": false
+    },
+    "error": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "notice": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "A note on what was read (stopped early, how many)."
+    },
+    "conn": {
+      "type": "object",
+      "defaultValue": {
+        "checked": false,
+        "desktop": false,
+        "connected": false,
+        "site": "",
+        "email": "",
+        "project": "",
+        "name": "",
+        "busy": false,
+        "error": "",
+        "token": ""
+      },
+      "description": "The Jira connection: desktop (the page runs in the desktop app, which keeps the token), connected, who it signs in as; the Connect form's fields (site, email, project key, token — the token is sent once to the desktop app, then cleared)."
+    },
+    "jql": {
+      "type": "string",
+      "defaultValue": "issuetype = Story ORDER BY key ASC"
+    },
+    "preset": {
+      "type": "string",
+      "defaultValue": "stories"
+    },
+    "readAt": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "rows": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "Every item read (jiraBacklog.fromIssue)."
+    },
+    "analysis": {
+      "type": "any",
+      "defaultValue": {
+        "kpis": {},
+        "statuses": [],
+        "epics": [],
+        "releases": [],
+        "people": [],
+        "sprints": [],
+        "checks": [],
+        "fdd": [],
+        "gaps": [],
+        "findings": []
+      },
+      "description": "jiraBacklog.analyse(rows)."
+    },
+    "f": {
+      "type": "object",
+      "defaultValue": {
+        "text": "",
+        "status": "",
+        "epic": "",
+        "assignee": "",
+        "release": "",
+        "sprint": "",
+        "priority": "",
+        "type": "",
+        "check": "",
+        "only": "",
+        "fdd": ""
+      },
+      "description": "The filters both looks apply (Current's own, a finding or a check clicked)."
+    },
+    "fLabel": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "What a finding, check or FDD section clicked shows, in words (the Showing chip)."
+    },
+    "rwCols": {
+      "type": "object",
+      "defaultValue": {
+        "text": "",
+        "status": "",
+        "epic": "",
+        "assignee": "",
+        "release": "",
+        "sprint": "",
+        "priority": "",
+        "type": ""
+      },
+      "description": "Redwood: what Smart Search narrows the table to (rwFilterChain)."
+    },
+    "shown": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "The rows the filters keep (applyChain)."
+    },
+    "rwRows": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "rwADP": {
+      "type": "vb/ArrayDataProvider2",
+      "defaultValue": {
+        "itemType": "any",
+        "keyAttributes": "key",
+        "data": "{{ $page.variables.rwRows }}"
+      }
+    },
+    "rwCriterion": {
+      "type": "any"
+    },
+    "rwSearchConfig": {
+      "type": "oj-sp/smart-search/strategies/JsonSearchConfigProviderFactory",
+      "defaultValue": {
+        "url": "[[ $application.path + 'resources/data/jiraSearchConfig.json' ]]"
+      }
+    },
+    "selKey": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "The item open in the drawer."
+    },
+    "activity": {
+      "type": "object",
+      "defaultValue": {},
+      "description": "Each opened story's whole activity, read from Jira (jiraBacklog.loadActivity): { KEY: { ok, all, comments, history, worklog, counts } | { loading } }."
+    },
+    "actTab": {
+      "type": "string",
+      "defaultValue": "all",
+      "description": "The Activity tab: all | comments | history | worklog."
+    },
+    "aiIndex": {
+      "type": "object",
+      "defaultValue": {},
+      "description": "The saved AI analyses (analysisStore.index): { KEY: { at, by, … } } — the AI icon in each row."
+    },
+    "openSub": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "The subtask expanded inline in the drawer ('' = none)."
+    },
+    "subDetails": {
+      "type": "object",
+      "defaultValue": {},
+      "description": "Fetched full detail per subtask key { KEY: jiraBacklog row } (lazy, cached)."
+    },
+    "subBusy": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "The subtask key whose detail is loading from Jira."
+    },
+    "exportOpen": {
+      "type": "boolean",
+      "defaultValue": false
+    },
+    "fuOpen": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "The Copy to follow-up dialog is open."
+    },
+    "fuRows": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "The items the follow-up email covers (the items shown)."
+    },
+    "fuTitle": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "The email header's first line (Follow-up — Jira stories)."
+    },
+    "fuSubtitle": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "The email header's second line (the query / filter)."
+    },
+    "fuWhen": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "When the follow-up was drafted (shown with the item count)."
+    },
+    "fuTpl": {
+      "type": "string",
+      "defaultValue": "close",
+      "description": "The chosen body template key (followup.TEMPLATES)."
+    },
+    "fuTo": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "Recipients for Open in Outlook (optional)."
+    },
+    "fuSubject": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "The email subject."
+    },
+    "fuMessage": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "The editable message above the table (greeting + body)."
+    },
+    "fuSignoff": {
+      "type": "string",
+      "defaultValue": "Thanks,",
+      "description": "The editable sign-off below the table."
+    },
+    "fuM365": {
+      "type": "any",
+      "defaultValue": {
+        "signedIn": false,
+        "account": ""
+      },
+      "description": "Microsoft 365 sign-in status (from Minutes settings), for Send via Microsoft 365."
+    },
+    "fuCc": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "CC recipients."
+    },
+    "fuSug": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "Contact suggestions for the active recipient field (from the directory)."
+    },
+    "fuToDraft": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "What is being typed in the To box before it becomes a chip."
+    },
+    "fuCcDraft": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "What is being typed in the Cc box before it becomes a chip."
+    },
+    "fuSugFor": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "Which recipient field the suggestions are for ('to' | 'cc')."
+    },
+    "tab": {
+      "type": "string",
+      "defaultValue": "sprints",
+      "description": "Which breakdown shows: sprints, epics, releases, people, checks, fdd, gaps."
+    },
+    "rwOpt_status": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "rwOpt_statusADP": {
+      "type": "vb/ArrayDataProvider2",
+      "defaultValue": {
+        "itemType": "any",
+        "keyAttributes": "value",
+        "data": "{{ $page.variables.rwOpt_status }}"
+      }
+    },
+    "rwOpt_epic": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "rwOpt_epicADP": {
+      "type": "vb/ArrayDataProvider2",
+      "defaultValue": {
+        "itemType": "any",
+        "keyAttributes": "value",
+        "data": "{{ $page.variables.rwOpt_epic }}"
+      }
+    },
+    "rwOpt_assignee": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "rwOpt_assigneeADP": {
+      "type": "vb/ArrayDataProvider2",
+      "defaultValue": {
+        "itemType": "any",
+        "keyAttributes": "value",
+        "data": "{{ $page.variables.rwOpt_assignee }}"
+      }
+    },
+    "rwOpt_release": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "rwOpt_releaseADP": {
+      "type": "vb/ArrayDataProvider2",
+      "defaultValue": {
+        "itemType": "any",
+        "keyAttributes": "value",
+        "data": "{{ $page.variables.rwOpt_release }}"
+      }
+    },
+    "rwOpt_sprint": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "rwOpt_sprintADP": {
+      "type": "vb/ArrayDataProvider2",
+      "defaultValue": {
+        "itemType": "any",
+        "keyAttributes": "value",
+        "data": "{{ $page.variables.rwOpt_sprint }}"
+      }
+    },
+    "rwOpt_priority": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "rwOpt_priorityADP": {
+      "type": "vb/ArrayDataProvider2",
+      "defaultValue": {
+        "itemType": "any",
+        "keyAttributes": "value",
+        "data": "{{ $page.variables.rwOpt_priority }}"
+      }
+    },
+    "rwOpt_type": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "rwOpt_typeADP": {
+      "type": "vb/ArrayDataProvider2",
+      "defaultValue": {
+        "itemType": "any",
+        "keyAttributes": "value",
+        "data": "{{ $page.variables.rwOpt_type }}"
+      }
+    },
+    "rwSearchContext": {
+      "type": "object",
+      "defaultValue": {
+        "$search": {
+          "filters": {
+            "StatusFilter": {
+              "label": "Status",
+              "options": {
+                "optionsData": "[[ $page.variables.rwOpt_statusADP ]]",
+                "optionsKeys": {
+                  "label": "label",
+                  "value": "value"
+                }
+              }
+            },
+            "EpicFilter": {
+              "label": "Epic",
+              "options": {
+                "optionsData": "[[ $page.variables.rwOpt_epicADP ]]",
+                "optionsKeys": {
+                  "label": "label",
+                  "value": "value"
+                }
+              }
+            },
+            "AssigneeFilter": {
+              "label": "Assignee",
+              "options": {
+                "optionsData": "[[ $page.variables.rwOpt_assigneeADP ]]",
+                "optionsKeys": {
+                  "label": "label",
+                  "value": "value"
+                }
+              }
+            },
+            "ReleaseFilter": {
+              "label": "Release",
+              "options": {
+                "optionsData": "[[ $page.variables.rwOpt_releaseADP ]]",
+                "optionsKeys": {
+                  "label": "label",
+                  "value": "value"
+                }
+              }
+            },
+            "SprintFilter": {
+              "label": "Sprint",
+              "options": {
+                "optionsData": "[[ $page.variables.rwOpt_sprintADP ]]",
+                "optionsKeys": {
+                  "label": "label",
+                  "value": "value"
+                }
+              }
+            },
+            "PriorityFilter": {
+              "label": "Priority",
+              "options": {
+                "optionsData": "[[ $page.variables.rwOpt_priorityADP ]]",
+                "optionsKeys": {
+                  "label": "label",
+                  "value": "value"
+                }
+              }
+            },
+            "TypeFilter": {
+              "label": "Type",
+              "options": {
+                "optionsData": "[[ $page.variables.rwOpt_typeADP ]]",
+                "optionsKeys": {
+                  "label": "label",
+                  "value": "value"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "images": {
+      "type": "object",
+      "defaultValue": {},
+      "description": "The open item's images, read through the jira connection: { attachment id: object URL } ('' when it could not be read)."
+    },
+    "evidence": {
+      "type": "object",
+      "defaultValue": {
+        "available": false,
+        "key": "",
+        "items": [],
+        "folder": "",
+        "error": "",
+        "busy": "",
+        "canTranscribe": false,
+        "engines": []
+      },
+      "description": "The open item's test evidence on this PC (resources/js/testRecorder.js): recordings and screenshots in its folder."
+    },
+    "evidenceIndex": {
+      "type": "object",
+      "defaultValue": {},
+      "description": "Which stories have recordings or screenshots on this PC (resources/js/testRecorder.js index): { KEY: { videos, shots, failed, latest } }, for the icon after a story's summary."
+    },
+    "desktopApp": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "Running in the Build.Rite desktop app (so recording and transcription work)."
+    },
+    "transcribeReady": {
+      "type": "boolean",
+      "defaultValue": true,
+      "description": "A transcription engine (local Whisper or OpenAI) is set up; when false on the desktop app, the header offers Set up transcription."
+    }
+  },
+  "eventListeners": {
+    "onPages": {
+      "chains": [
+        {
+          "chain": "pagesChain",
+          "parameters": {
+            "act": "{{ $event.currentTarget.dataset.act }}",
+            "id": "{{ $event.currentTarget.dataset.id || '' }}"
+          }
+        }
+      ]
+    },
+    "onPagesQ": {
+      "chains": [
+        {
+          "chain": "pagesChain",
+          "parameters": {
+            "act": "{{ 'q' }}",
+            "id": "{{ $event.target.value }}"
+          }
+        }
+      ]
+    },
+    "onAnalyzeSet": {
+      "chains": [
+        {
+          "chain": "analyzeSetChain"
+        }
+      ]
+    },
+    "onActTab": {
+      "chains": [
+        {
+          "chain": "setChain",
+          "parameters": {
+            "field": "{{ 'actTab' }}",
+            "value": "{{ $event.currentTarget.dataset.tab }}"
+          }
+        }
+      ]
+    },
+    "onFile": {
+      "chains": [
+        {
+          "chain": "fileChain",
+          "parameters": {
+            "id": "{{ $event.currentTarget.dataset.id }}"
+          }
+        }
+      ]
+    },
+    "focusRequest": {
+      "chains": [
+        {
+          "chain": "focusChain"
+        }
+      ]
+    },
+    "vbEnter": {
+      "chains": [
+        {
+          "chain": "initChain"
+        }
+      ]
+    },
+    "onProgress": {
+      "chains": [
+        {
+          "chain": "openProgressChain"
+        }
+      ]
+    },
+    "onRefresh": {
+      "chains": [
+        {
+          "chain": "loadChain",
+          "parameters": {
+            "jql": "{{ $page.variables.jql }}"
+          }
+        }
+      ]
+    },
+    "onPreset": {
+      "chains": [
+        {
+          "chain": "loadChain",
+          "parameters": {
+            "preset": "{{ $event.currentTarget.dataset.value }}"
+          }
+        }
+      ]
+    },
+    "onJqlInput": {
+      "chains": [
+        {
+          "chain": "setChain",
+          "parameters": {
+            "field": "jql",
+            "value": "{{ $event.target.value }}"
+          }
+        }
+      ]
+    },
+    "onJqlKey": {
+      "chains": [
+        {
+          "chain": "loadChain",
+          "parameters": {
+            "jql": "{{ $event.key === 'Enter' ? $event.target.value : '' }}"
+          }
+        }
+      ]
+    },
+    "onConnField": {
+      "chains": [
+        {
+          "chain": "connectChain",
+          "parameters": {
+            "act": "field",
+            "field": "{{ $event.target.dataset.field }}",
+            "value": "{{ $event.target.value }}"
+          }
+        }
+      ]
+    },
+    "onConnect": {
+      "chains": [
+        {
+          "chain": "connectChain",
+          "parameters": {
+            "act": "{{ $event.currentTarget.dataset.act }}"
+          }
+        }
+      ]
+    },
+    "onFilter": {
+      "chains": [
+        {
+          "chain": "filterChain",
+          "parameters": {
+            "field": "{{ $event.target.dataset.field }}",
+            "value": "{{ $event.target.value }}"
+          }
+        }
+      ]
+    },
+    "onFilterClick": {
+      "chains": [
+        {
+          "chain": "filterChain",
+          "parameters": {
+            "field": "{{ $event.currentTarget.dataset.field }}",
+            "value": "{{ $event.currentTarget.dataset.value }}",
+            "label": "{{ $event.currentTarget.dataset.label }}"
+          }
+        }
+      ]
+    },
+    "onFinding": {
+      "chains": [
+        {
+          "chain": "filterChain",
+          "parameters": {
+            "field": "finding",
+            "value": "{{ $event.currentTarget.dataset.index }}"
+          }
+        }
+      ]
+    },
+    "onClear": {
+      "chains": [
+        {
+          "chain": "filterChain",
+          "parameters": {
+            "field": "clear",
+            "value": ""
+          }
+        }
+      ]
+    },
+    "onTab": {
+      "chains": [
+        {
+          "chain": "setChain",
+          "parameters": {
+            "field": "tab",
+            "value": "{{ $event.currentTarget.dataset.value }}"
+          }
+        }
+      ]
+    },
+    "onOpen": {
+      "chains": [
+        {
+          "chain": "selectChain",
+          "parameters": {
+            "key": "{{ $event.currentTarget.dataset.key }}",
+            "ai": "{{ !!($event.target && $event.target.closest && $event.target.closest('[data-ai]')) }}"
+          }
+        }
+      ]
+    },
+    "onSubToggle": {
+      "chains": [
+        {
+          "chain": "subtaskChain",
+          "parameters": {
+            "key": "{{ $event.currentTarget.dataset.key }}"
+          }
+        }
+      ]
+    },
+    "onRwRow": {
+      "chains": [
+        {
+          "chain": "selectChain",
+          "parameters": {
+            "key": "{{ $event.detail.context.key }}"
+          }
+        }
+      ]
+    },
+    "onRwFilter": {
+      "chains": [
+        {
+          "chain": "rwFilterChain"
+        }
+      ]
+    },
+    "onDrawer": {
+      "chains": [
+        {
+          "chain": "selectChain",
+          "parameters": {
+            "key": "{{ $event.detail.value ? $page.variables.selKey : '' }}"
+          }
+        }
+      ]
+    },
+    "onOpenAnalysis": {
+      "chains": [
+        {
+          "chain": "openAnalysisChain"
+        }
+      ]
+    },
+    "onDrawerClose": {
+      "chains": [
+        {
+          "chain": "selectChain",
+          "parameters": {
+            "key": ""
+          }
+        }
+      ]
+    },
+    "onExportToggle": {
+      "chains": [
+        {
+          "chain": "setChain",
+          "parameters": {
+            "field": "exportOpen",
+            "value": "{{ !$page.variables.exportOpen }}"
+          }
+        }
+      ]
+    },
+    "onExport": {
+      "chains": [
+        {
+          "chain": "exportChain",
+          "parameters": {
+            "format": "{{ $event.currentTarget.dataset.format }}"
+          }
+        }
+      ]
+    },
+    "onFollowup": {
+      "chains": [
+        {
+          "chain": "followupChain",
+          "parameters": {
+            "act": "open"
+          }
+        }
+      ]
+    },
+    "onFuTemplate": {
+      "chains": [
+        {
+          "chain": "followupChain",
+          "parameters": {
+            "act": "template",
+            "key": "{{ $event.currentTarget.dataset.key }}"
+          }
+        }
+      ]
+    },
+    "onFuField": {
+      "chains": [
+        {
+          "chain": "followupChain",
+          "parameters": {
+            "act": "field",
+            "field": "{{ $event.target.dataset.field }}",
+            "value": "{{ $event.detail.value }}"
+          }
+        }
+      ]
+    },
+    "onFuCopy": {
+      "chains": [
+        {
+          "chain": "followupChain",
+          "parameters": {
+            "act": "copy"
+          }
+        }
+      ]
+    },
+    "onFuOutlook": {
+      "chains": [
+        {
+          "chain": "followupChain",
+          "parameters": {
+            "act": "outlook"
+          }
+        }
+      ]
+    },
+    "onFuDefault": {
+      "chains": [
+        {
+          "chain": "followupChain",
+          "parameters": {
+            "act": "default"
+          }
+        }
+      ]
+    },
+    "onFuSave": {
+      "chains": [
+        {
+          "chain": "followupChain",
+          "parameters": {
+            "act": "save"
+          }
+        }
+      ]
+    },
+    "onFuSend": {
+      "chains": [
+        {
+          "chain": "followupChain",
+          "parameters": {
+            "act": "send"
+          }
+        }
+      ]
+    },
+    "onFuRecipInput": {
+      "chains": [
+        {
+          "chain": "followupChain",
+          "parameters": {
+            "act": "recipSearch",
+            "field": "{{ $event.target.dataset.field }}",
+            "value": "{{ $event.target.value }}"
+          }
+        }
+      ]
+    },
+    "onFuRecipKey": {
+      "chains": [
+        {
+          "chain": "followupChain",
+          "parameters": {
+            "act": "recipKey",
+            "key": "{{ $event.key }}",
+            "field": "{{ $event.target.dataset.field }}",
+            "value": "{{ $event.target.value }}"
+          }
+        }
+      ]
+    },
+    "onFuRecipPick": {
+      "chains": [
+        {
+          "chain": "followupChain",
+          "parameters": {
+            "act": "recipPick",
+            "field": "{{ $event.currentTarget.dataset.field }}",
+            "value": "{{ $event.currentTarget.dataset.email }}"
+          }
+        }
+      ]
+    },
+    "onFuRecipRemove": {
+      "chains": [
+        {
+          "chain": "followupChain",
+          "parameters": {
+            "act": "recipRemove",
+            "field": "{{ $event.currentTarget.dataset.field }}",
+            "value": "{{ $event.currentTarget.dataset.email }}"
+          }
+        }
+      ]
+    },
+    "onFuClose": {
+      "chains": [
+        {
+          "chain": "followupChain",
+          "parameters": {
+            "act": "close"
+          }
+        }
+      ]
+    },
+    "onSprintOpen": {
+      "chains": [
+        {
+          "chain": "openSprintChain",
+          "parameters": {
+            "id": "{{ $event.currentTarget.dataset.id }}",
+            "name": "{{ $event.currentTarget.dataset.name }}"
+          }
+        }
+      ]
+    },
+    "evidenceChanged": {
+      "chains": [
+        {
+          "chain": "evidenceChain",
+          "parameters": {
+            "act": "list"
+          }
+        }
+      ]
+    },
+    "onEvidence": {
+      "chains": [
+        {
+          "chain": "evidenceChain",
+          "parameters": {
+            "act": "{{ $event.currentTarget.dataset.act }}",
+            "name": "{{ $event.currentTarget.dataset.name || '' }}"
+          }
+        }
+      ]
+    },
+    "onSetupTranscribe": {
+      "chains": [
+        {
+          "chain": "setupChain"
+        }
+      ]
+    },
+    "onRwAction": {
+      "chains": [
+        {
+          "chain": "rwActionChain",
+          "parameters": {
+            "id": "{{ $event.detail.secondaryItem && $event.detail.secondaryItem.id ? $event.detail.secondaryItem.id : '' }}"
+          }
+        }
+      ]
+    }
+  },
+  "imports": {
+    "components": {
+      "oj-bind-for-each": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-bind-if": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-bind-text": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-sp-smart-search-page": {
+        "path": "oj-sp/smart-search-page/loader"
+      },
+      "oj-sp-smart-search": {
+        "path": "oj-sp/smart-search/loader"
+      },
+      "oj-sp-collection-container": {
+        "path": "oj-sp/collection-container/loader"
+      },
+      "oj-table": {
+        "path": "ojs/ojtable"
+      },
+      "oj-c-button": {
+        "path": "oj-c/button"
+      },
+      "oj-drawer-popup": {
+        "path": "ojs/ojdrawerpopup"
+      },
+      "oj-sp-general-drawer-template": {
+        "path": "oj-sp/general-drawer-template/loader"
+      },
+      "oj-input-text": {
+        "path": "ojs/ojinputtext"
+      },
+      "oj-text-area": {
+        "path": "ojs/ojinputtext"
+      }
+    }
+  },
+  "events": {
+    "focusRequest": {
+      "description": "Build.Rite's Jira updates bell handed this screen a story to open (shellBus.focus('jira', { key })).",
+      "payloadType": "object"
+    },
+    "evidenceChanged": {
+      "description": "From resources/js/testRecorder.js: a recording or screenshot was saved (or a recording began or ended).",
+      "payloadType": "object"
+    }
+  }
+}

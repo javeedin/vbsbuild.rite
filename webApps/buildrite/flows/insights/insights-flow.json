@@ -1,0 +1,24 @@
+{
+  "id": "insights",
+  "description": "Build.Rite's screens: your workspace (organizations and projects, the set-up wizard, the Run console), the work (issues, Jira stories, sprints, daily progress, AI analyses, standup minutes, follow-ups), the application (its pages with code fix, flows explained) and tools (SQL).",
+  "defaultPage": "issues",
+  "navigation": { "embeddable": "enabled" },
+  "pages": {
+    "jira": { "path": "pages/jira-page" },
+    "jira-sprint": { "path": "pages/jira-sprint-page" },
+    "jira-progress": { "path": "pages/jira-progress-page" },
+    "projects": { "path": "pages/projects-page" },
+    "vbs-project": { "path": "pages/vbs-project-page" },
+    "vbs-setup": { "path": "pages/vbs-setup-page" },
+    "run-console": { "path": "pages/run-console-page" },
+    "jira-analysis": { "path": "pages/jira-analysis-page" },
+    "jira-analysis-set": { "path": "pages/jira-analysis-set-page" },
+    "app-pages": { "path": "pages/app-pages-page" },
+    "issues": { "path": "pages/issues-page" },
+    "flows": { "path": "pages/flows-page" },
+    "minutes": { "path": "pages/minutes-page" },
+    "followups": { "path": "pages/followups-page" },
+    "sql": { "path": "pages/sql-page" }
+  },
+  "chains": {}, "services": {}, "types": {}, "variables": {}
+}

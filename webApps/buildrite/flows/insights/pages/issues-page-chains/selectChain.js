@@ -1,0 +1,69 @@
+define(['vb/action/actionChain', 'resources/js/issuesClient', 'resources/js/pagesClient'], (ActionChain, IC, PC) => {
+  'use strict';
+
+  // An issue picked: it, its fix (analysis, change, tests), its write-up and details to edit, the verify and close forms
+  // set from it. Another issue: the train shows where it is; the same one again (after a save): the same step stays.
+  const DEFAULT_RES = (x) => {
+    if (['in-review', 'verified'].indexOf(x.status) !== -1) return x.kind === 'bug' ? 'fixed' : 'done';
+    const c = x.verdict && x.verdict.code;
+    return c === 'as-designed' ? 'as-designed' : c === 'out-of-scope' ? 'out-of-scope' : c === 'fix-elsewhere' ? 'moved' : c === 'needs-info' ? 'cannot-reproduce' : 'wont-fix';
+  };
+  class selectChain extends ActionChain {
+    async run(context, { id }) {
+      const v = context.$page.variables;
+      if (!id) return;
+      const same = v.selId === id && v.mode === 'view';
+      const was = same && v.issue && v.issue.id === id ? v.issue.status : '';
+      v.selId = id; v.mode = 'view'; v.layout = 'split'; v.result = same ? v.result : null;
+      if (!same) { v.stageView = -1; v.refine = ''; v.reason = ''; v.cText = ''; v.cKind = 'comment'; v.cEmail = false; v.vNotes = ''; v.rNotes = ''; }
+      const r = await IC.get(id);
+      if (v.selId !== id) return;
+      if (!r.ok) { v.issue = null; v.result = { ok: false, text: (r.body && r.body.error) || 'Could not read this issue.' }; return; }
+      const x = r.body.issue;
+      v.issue = x;
+      const f = x.formatted || {};
+      const d = x.details || {};
+      v.edit = { title: f.title || x.title || '', summary: f.summary || '', steps: (f.steps || []).join('\n'), expected: f.expected || '', actual: f.actual || '', impact: f.impact || '' };
+      v.det = { kind: x.kind || 'bug', severity: d.severity || '', priority: d.priority || '', environment: d.environment || '', foundIn: d.foundIn || '', fixVersion: d.fixVersion || '', customer: d.customer || '',
+        customerRef: d.customerRef || '', reportedBy: d.reportedBy || x.by || '', reporterEmail: d.reporterEmail || '', raisedOn: d.raisedOn || '', assignee: d.assignee || '', dueDate: d.dueDate || '',
+        notify: (d.notify || []).join(', ') };
+      // an email about it: to its Notify list and the reporter, its key and title in the subject (until changed)
+      if (!same) {
+        v.cTo = (d.notify || []).concat(d.reporterEmail && (d.notify || []).indexOf(d.reporterEmail) === -1 ? [d.reporterEmail] : []).join(', ');
+        v.cCc = '';
+        v.cSubject = '[' + x.key + '] ' + (f.title || x.title || '');
+      }
+      v.emailMe = !!(v.info && v.info.mail && v.info.mail.signedIn);
+      if (!same || !v.approver) v.approver = (v.info && v.info.mail && v.info.mail.account) || '';
+      v.project = (v.info && v.info.jira && v.info.jira.project) || '';
+      // the verify and close forms start from where it is: set again when another issue is picked or it moved on
+      if (!same || was !== x.status) {
+        v.vEnv = d.environment && d.environment !== 'PROD' ? d.environment : 'SIT';
+        v.vBuild = d.fixVersion || '';
+        v.rRes = DEFAULT_RES(x);
+        v.rCause = '';
+        v.rFixed = d.fixVersion || (x.verification && x.verification.build) || '';
+      }
+      IC.fillBoxes(v);
+      if (!same) {
+        v.agent = null;
+        const ag = await IC.progress(id);
+        if (ag.ok && (ag.body.running || ag.body.done) && v.selId === id) v.agent = ag.body;
+        // the sandbox: being made, or why it was not (a made one shows itself)
+        v.sbRun = null;
+        v.sbStatus = null;
+        const sr = await IC.progress(id, 'sandbox');
+        if (sr.ok && (sr.body.running || (sr.body.done && !sr.body.okRun)) && v.selId === id) v.sbRun = sr.body;
+      }
+      // the sandbox on this PC: the files it changed, how far behind its base, its diff, where its data comes from
+      if (x.sandbox && x.sandbox.exists) { const ss = await IC.sandbox(id, 'status', { diff: true }); if (v.selId === id) v.sbStatus = ss.ok ? ss.body.status : null; } else if (v.selId === id) v.sbStatus = null;
+      // its page in Application pages: the screenshots and the technical sheet (the Analyzed step shows them)
+      if (!same || !v.pageSheet || v.pageSheet.id !== x.page) {
+        if (!same) v.pageSheet = null;
+        const ps = await PC.sheet(context.$application.path, x.page);
+        if (v.selId === id) v.pageSheet = ps.ok && ps.body.sheet ? Object.assign({}, ps.body.sheet, { saved: !!ps.body.saved, codeChanged: !!ps.body.codeChanged }) : null;
+      }
+    }
+  }
+  return selectChain;
+});

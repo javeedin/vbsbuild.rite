@@ -1,0 +1,423 @@
+'use strict';
+/**
+ * The Application pages catalog: every Visual Builder page in the project, each with a technical sheet — its screenshot,
+ * features, business logic, integrations and links (lib/pageScan.js reads them from the page's own files), an
+ * AI-written explanation — and the Jira stories mapped to it. Kept in git, so everyone (and the app in VBCS) has the same
+ * sheets and mappings. A page mapped to a second story keeps its sheet: only the story number is added.
+ *
+ * In the project (all in git, shipped with Build.Rite's app so its pages can read them anywhere):
+ *   webApps/buildrite/resources/pages/catalog.json        { scannedAt, pages: [{ id, app, appName, flow, page, label,
+ *                                                               route, stories: [KEY], sheet: { at, by, codeHash,
+ *                                                               screenshot, ai } | null }] }
+ *   webApps/buildrite/resources/pages/sheets/<file>.json  the sheet: { id, facts, ai, screenshot, stories, at, by, codeHash }
+ *   webApps/buildrite/resources/pages/screens/<file>.<n>.jpg  its screenshots (several)
+ *
+ *   open({ root, git, gitPath, now, capture, mirror }) → store
+ *     catalog()                       the catalog, with any page added to the code since (a fresh scan)
+ *     rescan()                        writes that catalog (every page, labels as the code has them now)
+ *     sheet(id)                       { ok, sheet, codeChanged } (the saved sheet, or the facts read now when there is none)
+ *     build(id, { by })               reads the facts again and saves the sheet (keeping its screenshot, AI text, stories)
+ *     assign(id, key, { by })         maps a Jira story to the page (building the sheet first when it has none) → { ok, sheet, built }
+ *     unassign(id, key)               → { ok }
+ *     forStory(key)                   [{ id, label, appName, sheet }] the pages a story is mapped to
+ *     saveShot(id, { base64, mime, source, caption, by })   adds a screenshot (a page keeps several) → { ok, file, shot }
+ *     removeShot(id, shotId)          → { ok }
+ *     remove(id) / restore(id)        deletes a page from the catalog (its sheet, screenshots, mappings; hidden from the
+ *                                     lists) / brings it back
+ *     capture(id, { by })             opens the page in the desktop app (o.capture) and saves what it shows → { ok, file }
+ *     saveAi(id, { text, provider, by })            → { ok }
+ *     gitStatus() / gitSave({ message, push })      only these files, to the branch the project is on (lib/gitPaths.js)
+ *     setMirror(dir | fn)             also write into the running app's build copy (and copy the project's there now)
+ */
+const fs = require('fs');
+const path = require('path');
+const scan = require('./pageScan');
+const gitPaths = require('./gitPaths');
+
+const RES = 'webApps/buildrite/resources/pages';
+function str(v) { return v == null ? '' : String(v); }
+const fileOf = (id) => str(id).split('/').map((x) => x || '_root').join('.');
+const keyOf = (k) => { const s = str(k).trim().toUpperCase(); return /^[A-Z][A-Z0-9]*-\d+$/.test(s) ? s : ''; };
+
+/** The sheet's screenshots (a sheet from before several were kept had one, as `screenshot`). */
+function shotsOf(sh) {
+  if (Array.isArray(sh.screenshots)) return sh.screenshots;
+  sh.screenshots = sh.screenshot && sh.screenshot.file ? [Object.assign({ id: 's1' }, sh.screenshot)] : [];
+  delete sh.screenshot;
+  return sh.screenshots;
+}
+function summaryOf(sh) {
+  const shots = shotsOf(sh);
+  return { at: sh.at, by: sh.by || '', codeHash: sh.codeHash, screenshots: shots.length, ai: !!(sh.ai && sh.ai.text),
+    rest: (sh.facts && sh.facts.integrations.rest.length) || 0, chains: (sh.facts && sh.facts.logic.chains.length) || 0 };
+}
+
+// ── Merging what two people saved at once (the data branch, lib/dataBranch.js: a git merge with a conflict) ──────────
+const union = (a, b) => { const out = []; (a || []).concat(b || []).forEach((k) => { if (k && out.indexOf(k) === -1) out.push(k); }); return out; };
+/** One page's sheet changed on both sides: the newer build, both sides' stories and screenshots, the newer AI text. */
+function mergeSheet(oursText, theirsText) {
+  const a = JSON.parse(oursText), b = JSON.parse(theirsText);
+  const newer = str(a.at) >= str(b.at) ? a : b;
+  const out = Object.assign({}, newer);
+  out.stories = union(a.stories, b.stories).sort();
+  const ai = [a.ai, b.ai].filter((x) => x && x.text).sort((x, y) => str(y.at).localeCompare(str(x.at)))[0];
+  if (ai) out.ai = ai;
+  const shots = [];
+  shotsOf(a).concat(shotsOf(b)).forEach((x) => { if (x && x.file && !shots.some((y) => y.file === x.file)) shots.push(x); });
+  shots.sort((x, y) => str(x.at).localeCompare(str(y.at)));
+  out.screenshots = shots.slice(-30);
+  delete out.screenshot;
+  return JSON.stringify(out, null, 1) + '\n';
+}
+/** The catalog changed on both sides: every page of either, its stories and summary from its (merged) sheet. */
+function mergeCatalog(oursText, theirsText, sheetOf) {
+  const a = JSON.parse(oursText), b = JSON.parse(theirsText);
+  const by = {}, order = [];
+  [a, b].forEach((c, side) => (c.pages || []).forEach((p) => { if (!by[p.id]) { by[p.id] = [null, null]; order.push(p.id); } by[p.id][side] = p; }));
+  const pages = order.map((id) => {
+    const x = by[id];
+    const p = Object.assign({}, x[1] || {}, x[0] || {});
+    const sh = sheetOf ? sheetOf(id) : null;
+    if (sh) { p.stories = sh.stories || []; p.sheet = summaryOf(sh); delete p.deleted; } else {
+      p.deleted = !!((x[0] && x[0].deleted) || (x[1] && x[1].deleted)) || undefined;
+      p.stories = p.deleted ? [] : union(x[0] && x[0].stories, x[1] && x[1].stories);
+      p.sheet = p.deleted ? null : (x[0] && x[0].sheet) || (x[1] && x[1].sheet) || null;
+    }
+    return p;
+  });
+  return JSON.stringify({ scannedAt: [str(a.scannedAt), str(b.scannedAt)].sort().pop(), pages: pages }, null, 1) + '\n';
+}
+
+function open(opts) {
+  const o = opts || {};
+  const root = path.resolve(o.root || path.join(__dirname, '..', '..'));
+  // the code read: root — or, when the desktop app says so (o.rootFn: Build.Rite's workspace on this PC), that folder (its
+  // working folder); the data (sheets, screenshots, stories) stay where they are
+  const rootNow = () => { let r = ''; try { r = typeof o.rootFn === 'function' ? str(o.rootFn()) : ''; } catch (e) { r = ''; } return r ? path.resolve(r) : root; };
+  // whose data: this project's (resources/pages/…), or — reading a VB Studio project (o.spaceFn: '<org>_<project>') — that
+  // project's own (resources/pages/projects/<org>_<project>/…: its own catalog, sheets and screenshots, the same for all its
+  // workspaces), so a page of the same name in this project never lends it its sheet, screenshots or stories
+  const space = () => { let s = ''; try { s = typeof o.spaceFn === 'function' ? str(o.spaceFn()) : ''; } catch (e) { s = ''; } s = s.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^[.-]+/, ''); return s ? 'projects/' + s + '/' : ''; };
+  const sourceNow = () => { try { return typeof o.rootLabel === 'function' ? str(o.rootLabel()) : ''; } catch (e) { return ''; } };
+  // the data (sheets, screenshots, stories, the catalog): on the app's data branch when there is one (lib/dataBranch.js),
+  // else in the project folder itself; the code is always read from root
+  const data = o.data && o.data.ok ? o.data : null;
+  const dataRoot = data ? data.dir : root;
+  const resDir = path.join(dataRoot, RES);
+  const now = o.now || (() => new Date());
+  let mirror = o.mirror || '';
+  const repo = gitPaths.create({ root: dataRoot, paths: [RES], git: o.git, gitPath: o.gitPath, message: 'Application pages: update',
+    sync: data ? { resolve: data.resolve, after: data.merged } : null });
+
+  const readJson = (f, dflt) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return dflt; } };
+  const mirrorDir = () => { try { return typeof mirror === 'function' ? mirror() : mirror; } catch (e) { return ''; } };
+  function write(relPath, data) {
+    const abs = path.join(resDir, relPath);
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    fs.writeFileSync(abs, data);
+    const m = mirrorDir();
+    if (m) { try { const mm = path.join(m, relPath); fs.mkdirSync(path.dirname(mm), { recursive: true }); fs.writeFileSync(mm, data); } catch (e) { /* the next build catches up */ } }
+  }
+  function removeFile(relPath) { [resDir, mirrorDir()].filter(Boolean).forEach((d) => { try { fs.unlinkSync(path.join(d, relPath)); } catch (e) { /* gone */ } }); }
+  // The build copy (mirror) refreshed in the background, file by file, and only what changed (a different size, or newer
+  // than the copy): the sheets and every screenshot were copied at once, which held the app (and every screen waiting on
+  // it) for seconds on a PC whose antivirus reads each file. A refresh asked for meanwhile runs once it is done.
+  let syncing = null;
+  let syncAgain = false;
+  function sync() {
+    const m = mirrorDir();
+    if (!m || !fs.existsSync(resDir)) return Promise.resolve();
+    if (syncing) { syncAgain = true; return syncing; }
+    const fsp = fs.promises;
+    const copy = async (from, to) => {
+      await fsp.mkdir(to, { recursive: true });
+      for (const f of await fsp.readdir(from)) {
+        const a = path.join(from, f), b = path.join(to, f);
+        const sa = await fsp.stat(a);
+        if (sa.isDirectory()) { await copy(a, b); continue; }
+        let sb = null;
+        try { sb = await fsp.stat(b); } catch (e) { sb = null; }
+        if (!sb || sb.size !== sa.size || sb.mtimeMs < sa.mtimeMs) await fsp.copyFile(a, b);
+      }
+    };
+    syncing = copy(resDir, m).catch(() => { /* the next build catches up */ }).then(() => {
+      syncing = null;
+      if (syncAgain) { syncAgain = false; return sync(); }
+      return null;
+    });
+    return syncing;
+  }
+  if (data) data.onMerged(sync); // others' sheets merged in: into the build copy at once
+
+  const saved = () => readJson(path.join(resDir, space() + 'catalog.json'), { pages: [] });
+  const sheetFile = (id) => space() + 'sheets/' + fileOf(id) + '.json';
+  const readSheet = (id) => readJson(path.join(resDir, sheetFile(id)), null);
+
+  /** The catalog: every page the code has now, with what was saved for it (stories, sheet); pages gone from the code
+   *  but still mapped to stories stay, marked missing. */
+  // the pages in the code: read at most every 15 s (each read opens every page's files; Issues, Application pages and each
+  // saved sheet ask for it); Rescan reads them at once
+  let listed = { at: 0, v: null };
+  const livePages = (fresh) => {
+    const r = rootNow();
+    if (fresh || !listed.v || listed.root !== r || Date.now() - listed.at > 15000) listed = { at: Date.now(), root: r, v: scan.list(r) };
+    return listed.v;
+  };
+  function catalog(fresh) {
+    const old = {};
+    (saved().pages || []).forEach((p) => { old[p.id] = p; });
+    const live = livePages(fresh);
+    const pages = live.map((p) => Object.assign({}, p, { stories: (old[p.id] && old[p.id].stories) || [], sheet: (old[p.id] && old[p.id].sheet) || null,
+      deleted: !!(old[p.id] && old[p.id].deleted) }));
+    Object.keys(old).forEach((id) => { if (!pages.some((p) => p.id === id) && (old[id].stories || []).length) pages.push(Object.assign({}, old[id], { missing: true })); });
+    return { scannedAt: now().toISOString(), pages: pages, root: rootNow(), source: rootNow() === root ? '' : sourceNow(), space: space() ? RES + '/' + space().replace(/\/$/, '') : '' };
+  }
+  function writeCatalog(cat) {
+    const slim = { scannedAt: cat.scannedAt, pages: cat.pages.map((p) => ({ id: p.id, app: p.app, appName: p.appName, flow: p.flow, page: p.page, label: p.label,
+      route: p.route, next: (p.next || []).length ? p.next : undefined, menu: p.menu || undefined,
+      stories: p.stories || [], sheet: p.sheet || null, missing: p.missing || undefined, deleted: p.deleted || undefined })) };
+    write(space() + 'catalog.json', JSON.stringify(slim, null, 1) + '\n');
+  }
+  function saveSheet(sh) {
+    write(sheetFile(sh.id), JSON.stringify(sh, null, 1) + '\n');
+    const cat = catalog();
+    cat.pages.forEach((p) => { if (p.id === sh.id) { p.stories = sh.stories || []; p.sheet = summaryOf(sh); } });
+    writeCatalog(cat);
+  }
+
+  function sheet(id) {
+    const sh = readSheet(id);
+    if (sh) {
+      const facts = scan.analyze(rootNow(), id);
+      shotsOf(sh);
+      return { ok: true, sheet: sh, codeChanged: !!(facts && facts.codeHash !== sh.codeHash), saved: true };
+    }
+    const facts = scan.analyze(rootNow(), id);
+    if (!facts) return { ok: false, error: 'There is no page "' + id + '" in the project.' };
+    const entry = (saved().pages || []).filter((p) => p.id === id)[0];
+    return { ok: true, sheet: { id: id, facts: facts, ai: null, screenshots: [], stories: (entry && entry.stories) || [], at: '', by: '', codeHash: facts.codeHash }, codeChanged: false, saved: false, deleted: !!(entry && entry.deleted) };
+  }
+
+  function build(id, b) {
+    const facts = scan.analyze(rootNow(), id);
+    if (!facts) return { ok: false, error: 'There is no page "' + id + '" in the project.' };
+    const old = readSheet(id) || {};
+    const entry = (saved().pages || []).filter((p) => p.id === id)[0];
+    const sh = { id: id, facts: facts, ai: old.ai || null, screenshots: old.id ? shotsOf(old) : [],
+      stories: old.stories || (entry && entry.stories) || [], at: now().toISOString(), by: str((b && b.by) || ''), codeHash: facts.codeHash };
+    if (entry && entry.deleted) restore(id);
+    saveSheet(sh);
+    return { ok: true, sheet: sh };
+  }
+
+  function assign(id, key, b) {
+    const k = keyOf(key);
+    if (!k) return { ok: false, error: 'Give a Jira story key, like ABC-12.' };
+    let sh = readSheet(id);
+    let built = false;
+    if (!sh) { const r = build(id, b); if (!r.ok) return r; sh = r.sheet; built = true; }
+    if (sh.stories.indexOf(k) === -1) sh.stories = sh.stories.concat([k]).sort((x, y) => x.localeCompare(y, undefined, { numeric: true }));
+    saveSheet(sh);
+    return { ok: true, sheet: sh, built: built };
+  }
+
+  function unassign(id, key) {
+    const k = keyOf(key);
+    const sh = readSheet(id);
+    if (!sh || !k) return { ok: false, error: 'Nothing to unmap.' };
+    sh.stories = sh.stories.filter((x) => x !== k);
+    saveSheet(sh);
+    return { ok: true, sheet: sh };
+  }
+
+  function forStory(key) {
+    const k = keyOf(key);
+    return (saved().pages || []).filter((p) => (p.stories || []).indexOf(k) !== -1).map((p) => ({ id: p.id, label: p.label, appName: p.appName, sheet: p.sheet }));
+  }
+
+  function saveShot(id, b) {
+    b = b || {};
+    let sh = readSheet(id);
+    if (!sh) { const r = build(id, b); if (!r.ok) return r; sh = r.sheet; }
+    const buf = Buffer.from(str(b.base64).replace(/^data:[^,]*,/, ''), 'base64');
+    if (!buf.length) return { ok: false, error: 'There is no image.' };
+    if (buf.length > 8 * 1024 * 1024) return { ok: false, error: 'The image is larger than 8 MB.' };
+    const shots = shotsOf(sh);
+    if (shots.length >= 30) return { ok: false, error: 'A page keeps up to 30 screenshots: delete one first.' };
+    const ext = /png/i.test(str(b.mime)) ? '.png' : /webp/i.test(str(b.mime)) ? '.webp' : '.jpg';
+    let n = shots.length + 1;
+    while (shots.some((x) => x.id === 's' + n)) n++;
+    const file = space() + 'screens/' + fileOf(id) + '.' + n + ext;
+    write(file, buf);
+    const shot = { id: 's' + n, file: file, at: now().toISOString(), by: str(b.by), source: b.source === 'capture' ? 'capture' : 'upload',
+      caption: str(b.caption).slice(0, 120), bytes: buf.length };
+    if (b.source === 'capture' && b.from) shot.from = str(b.from).slice(0, 20);       // 'workspace': your working folder's code
+    if (b.source === 'capture' && b.landed) shot.landed = str(b.landed).slice(0, 200); // the page sent the capture there
+    shots.push(shot);
+    saveSheet(sh);
+    return { ok: true, file: file, shot: shot, sheet: sh };
+  }
+
+  function removeShot(id, shotId) {
+    const sh = readSheet(id);
+    if (!sh) return { ok: false, error: 'This page has no sheet.' };
+    const shots = shotsOf(sh);
+    const s1 = shots.filter((x) => x.id === shotId)[0];
+    if (!s1) return { ok: false, error: 'There is no such screenshot.' };
+    removeFile(s1.file);
+    sh.screenshots = shots.filter((x) => x.id !== shotId);
+    saveSheet(sh);
+    return { ok: true, sheet: sh };
+  }
+
+  /** Deletes a page from the catalog: its sheet, screenshots and story mappings go, and it is hidden from the lists
+   *  (the code still has it: restore brings it back, without a sheet). */
+  function remove(id) {
+    const entry = (saved().pages || []).filter((p) => p.id === id)[0];
+    const live = scan.list(rootNow()).some((p) => p.id === id);
+    if (!entry && !live) return { ok: false, error: 'There is no page "' + id + '".' };
+    const sh = readSheet(id);
+    if (sh) { shotsOf(sh).forEach((x) => removeFile(x.file)); removeFile(sheetFile(id)); }
+    const cat = catalog();
+    cat.pages = cat.pages.filter((p) => !(p.id === id && p.missing));
+    cat.pages.forEach((p) => { if (p.id === id) { p.stories = []; p.sheet = null; p.deleted = true; } });
+    writeCatalog(cat);
+    return { ok: true, removed: { stories: (entry && entry.stories) || [], screenshots: sh ? shotsOf(sh).length : 0 } };
+  }
+  function restore(id) {
+    const cat = catalog();
+    let found = false;
+    cat.pages.forEach((p) => { if (p.id === id) { p.deleted = false; found = true; } });
+    if (!found) return { ok: false, error: 'There is no page "' + id + '".' };
+    writeCatalog(cat);
+    return { ok: true };
+  }
+
+  async function capture(id, b) {
+    if (typeof o.capture !== 'function') return { ok: false, error: 'Capturing works in the Build.Rite desktop app. Upload a screenshot instead.' };
+    const facts = scan.analyze(rootNow(), id);
+    if (!facts) return { ok: false, error: 'There is no page "' + id + '" in the project.' };
+    if (!facts.route.url) return { ok: false, error: facts.route.needs || 'This page has no address of its own: upload a screenshot.' };
+    const shot = await o.capture(facts.app, facts.route.url);
+    if (!shot || !shot.ok) return { ok: false, error: (shot && shot.error) || 'The page could not be captured.' };
+    const r = saveShot(id, { base64: shot.base64, mime: shot.mime, source: 'capture', by: b && b.by, from: shot.from, landed: shot.landed });
+    return r.ok ? Object.assign(r, { from: shot.from || '', built: !!shot.built, landed: shot.landed || '', asked: facts.route.url }) : r;
+  }
+  /** Run it: the page in a window of its own (the desktop app: your workspace's build, or this app's own copy). */
+  async function run(id) {
+    if (typeof o.run !== 'function') return { ok: false, error: 'Running a page works in the desktop app.' };
+    const facts = scan.analyze(rootNow(), id);
+    if (!facts) return { ok: false, error: 'There is no page "' + id + '" in the code.' };
+    if (!facts.route.url) return { ok: false, error: facts.route.needs || 'This page has no address of its own.' };
+    return o.run(facts.app, facts.route.url);
+  }
+
+  function saveAi(id, b) {
+    b = b || {};
+    let sh = readSheet(id);
+    if (!sh) { const r = build(id, b); if (!r.ok) return r; sh = r.sheet; }
+    if (!str(b.text).trim()) return { ok: false, error: 'There is no text to save.' };
+    sh.ai = { text: str(b.text).slice(0, 200000), provider: str(b.provider).slice(0, 120), at: now().toISOString(), by: str(b.by), codeHash: sh.codeHash };
+    saveSheet(sh);
+    return { ok: true, sheet: sh };
+  }
+
+  // ── What changed in the code, for the Page code tab to mark: against VB Studio's branch (your workspace: o.baseFn →
+  // { ref, label }), else what the branch has on its remote (its upstream), else its last commit — the files as they are
+  // on this PC now (saved or not, committed or not) ──
+  const gitOut = (cwd, args) => {
+    try { return { code: 0, out: require('child_process').execFileSync(o.gitPath || 'git', args, { cwd: cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 8000, windowsHide: true, maxBuffer: 16 * 1024 * 1024 }) }; } catch (e) { return { code: 1, out: str(e && e.stdout) }; }
+  };
+  function baseOf(folder) {
+    let b = null;
+    try { b = typeof o.baseFn === 'function' ? o.baseFn() : null; } catch (e) { b = null; }
+    const has = (ref) => gitOut(folder, ['rev-parse', '--verify', '--quiet', ref + '^{commit}']).code === 0;
+    if (b && b.ref && has(b.ref)) return { ref: str(b.ref), label: str(b.label) || str(b.ref) };
+    const up = gitOut(folder, ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']).out.trim();
+    if (up && has(up)) return { ref: up, label: up };
+    return has('HEAD') ? { ref: 'HEAD', label: 'the last commit' } : null;
+  }
+  /** One file's changes: { base, ref, isNew, regions: [{ from, to, kind: added | changed | removed, was }], added, removed }
+   *  (lines of the file as it is; a removal: from = the line it followed, 0 at the top). null: not in git. */
+  function changesOf(folder, rel, base, text) {
+    if (!base) return null;
+    if (gitOut(folder, ['cat-file', '-e', base.ref + ':' + rel]).code !== 0) {
+      const n = str(text).replace(/\n$/, '').split('\n').length;
+      return { base: base.label, ref: base.ref, isNew: true, regions: [{ from: 1, to: n, kind: 'added', was: 0 }], added: n, removed: 0 };
+    }
+    const d = gitOut(folder, ['diff', '--no-color', '--no-ext-diff', '-U0', base.ref, '--', rel]);
+    if (d.code !== 0) return null;
+    const regions = [];
+    let added = 0, removed = 0;
+    d.out.split('\n').forEach((l) => {
+      const m = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(l);
+      if (!m) return;
+      const was = m[2] == null ? 1 : Number(m[2]), from = Number(m[3]), n = m[4] == null ? 1 : Number(m[4]);
+      added += n; removed += was;
+      regions.push(n > 0 ? { from: from, to: from + n - 1, kind: was > 0 ? 'changed' : 'added', was: was } : { from: from, to: from, kind: 'removed', was: was });
+    });
+    return { base: base.label, ref: base.ref, isNew: false, regions: regions, added: added, removed: removed };
+  }
+  /** Each file's count of lines added and taken away since the base: { path: { added, removed, isNew } } (changed ones). */
+  function filesChanged(folder, base, paths) {
+    if (!base || !paths.length) return {};
+    const out = {};
+    gitOut(folder, ['diff', '--no-color', '--no-ext-diff', '--numstat', base.ref, '--'].concat(paths)).out.split('\n').forEach((l) => {
+      const m = /^(\d+|-)\t(\d+|-)\t(.+)$/.exec(l);
+      if (m && (m[1] !== '0' || m[2] !== '0')) out[m[3]] = { added: Number(m[1]) || 0, removed: Number(m[2]) || 0, isNew: false };
+    });
+    gitOut(folder, ['ls-files', '--others', '--exclude-standard', '--'].concat(paths)).out.split('\n').filter(Boolean).forEach((p) => { out[p] = { added: 0, removed: 0, isNew: true }; });
+    return out;
+  }
+
+  /** The page's code, as it is in the project now (the Page code tab, read only): its files — the page, its action
+   *  chains, the rules modules it uses — and one file's text (only a file of that page), with what changed in each. */
+  function code(id) {
+    const facts = scan.analyze(rootNow(), id);
+    if (!facts) return { ok: false, error: 'This page is not in the code.' };
+    const group = (p) => (/-page-chains\//.test(p) ? 'chain' : 'page');
+    const files = facts.files.map((f) => ({ path: f.path, lines: f.lines, group: group(f.path), name: path.basename(f.path) }))
+      .concat((facts.logic.modules || []).filter((m) => m.file).map((m) => ({ path: m.file, lines: m.lines || 0, group: 'module', name: path.basename(m.file), about: m.about || '' })));
+    const list = files.filter((f, i) => files.findIndex((x) => x.path === f.path) === i);
+    const base = baseOf(rootNow());
+    const changed = filesChanged(rootNow(), base, list.map((f) => f.path));
+    list.forEach((f) => { if (changed[f.path]) f.changed = changed[f.path]; });
+    return { ok: true, id: facts.id, label: facts.label, folder: rootNow(), codeHash: facts.codeHash, files: list, base: base ? base.label : '' };
+  }
+  function codeFile(id, rel) {
+    const c = code(id);
+    if (!c.ok) return c;
+    const f = c.files.filter((x) => x.path === str(rel))[0];
+    if (!f) return { ok: false, error: 'Not a file of this page.' };
+    let text;
+    try { text = fs.readFileSync(path.join(rootNow(), f.path), 'utf8'); } catch (e) { return { ok: false, error: 'Could not read ' + f.path + '.' }; }
+    return { ok: true, path: f.path, abs: path.join(rootNow(), f.path), text: text, lines: text.split('\n').length, size: Buffer.byteLength(text), changes: changesOf(rootNow(), f.path, baseOf(rootNow()), text) };
+  }
+
+  /** A page's latest screenshots as images ({ name, mime, base64, caption, at }), newest first: Issues gives the latest to
+   *  the AI with the analysis, so it sees the page as it looks. */
+  function shotImages(id, max) {
+    const sh = readSheet(str(id));
+    if (!sh) return [];
+    return shotsOf(sh).slice().reverse().slice(0, max || 1).map((x) => {
+      try { return { name: 'Application pages screenshot' + (x.caption ? ' — ' + x.caption : ''), mime: /\.png$/i.test(x.file) ? 'image/png' : 'image/jpeg', base64: fs.readFileSync(path.join(resDir, x.file)).toString('base64'), caption: x.caption || '', at: x.at || '' }; } catch (e) { return null; }
+    }).filter(Boolean);
+  }
+
+  /** Writes the catalog as the code is now (new pages listed, labels current): what the Rescan button does. */
+  function rescan() { const cat = catalog(true); writeCatalog(cat); return { ok: true, pages: cat.pages.length }; }
+
+  return {
+    remove: remove, restore: restore, removeShot: removeShot,
+    catalog: catalog, rescan: rescan, sheet: sheet, code: code, codeFile: codeFile, shotImages: shotImages, build: build, assign: assign, unassign: unassign, forStory: forStory,
+    saveShot: saveShot, capture: capture, saveAi: saveAi, canCapture: () => typeof o.capture === 'function', run: run, canRun: () => typeof o.run === 'function',
+    canWrite: () => { try { return fs.statSync(path.join(root, 'webApps', 'buildrite')).isDirectory(); } catch (e) { return false; } },
+    gitStatus: () => repo.status(), gitSave: (b) => repo.save(b), gitPull: () => repo.pull(),
+    dataInfo: () => (o.data ? o.data.info() : { separate: false, branch: '', reason: '' }),
+    setMirror: (dir) => { const was = mirrorDir(); mirror = dir || ''; if (mirrorDir() !== was) sync(); },
+    synced: () => syncing || Promise.resolve(), // the build copy's refresh, done
+    RES: RES, root: root, rootNow: rootNow, space: space, dataRoot: dataRoot,
+  };
+}
+
+module.exports = { open, fileOf, RES, mergeSheet, mergeCatalog, summaryOf, shotsOf };

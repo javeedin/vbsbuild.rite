@@ -1,0 +1,16 @@
+{
+  "backends": {
+    "jira": {
+      "description": "Jira Cloud, read only, for the Jira stories screens (services/jira). The site, email, API token and project key come from Connect Jira on the Jira stories screen: kept on this PC (the token encrypted), added to each call by the desktop app. No credential here on purpose.",
+      "servers": [
+        {
+          "url": "https://your-site.atlassian.net",
+          "description": "your Jira site (set by Connect Jira)",
+          "x-vb": {
+            "forceProxy": "always"
+          }
+        }
+      ]
+    }
+  }
+}

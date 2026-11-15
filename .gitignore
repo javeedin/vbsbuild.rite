@@ -1,0 +1,14 @@
+# Local build output and tools: npm install, npm run build / serve / desktop
+node_modules
+build/
+package-lock.json
+
+# Desktop installer output
+desktop/dist/
+desktop/app/
+
+# Temporary working copies made by helper agents
+.claude/worktrees/
+
+# Build.Rite's data branch, checked out next to the code (desktop/lib/dataBranch.js)
+/.buildrite-data/

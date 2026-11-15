@@ -1,0 +1,386 @@
+<!-- Standup minutes: the daily standup on the Jira backlog written down and kept in DuckDB on this PC
+     (desktop/lib/minutes.js). Standard-minutes layout — a meeting header, a Discussion body ("what we discussed"), and
+     Action items (each with an "Actioned by" owner, due date and status, optionally tied to a Jira story with a note).
+     Voice→text (Whisper) and Format by AI help write the body and each item; tracking rolls up by the story's epic and by
+     customer; the minutes send as a formatted email or to a Teams webhook. Rules: resources/js/minutes.js. -->
+<div class="nx-page nx-min">
+  <div class="nx-pagehead">
+    <div>
+      <div class="nx-kicker">Insights</div>
+      <h1>Standup minutes</h1>
+      <div class="nx-sub" id="minSub"><oj-bind-text value="[[ $functions.subtitle($variables.available, $variables.meetings, $variables.jiraReady) ]]"></oj-bind-text></div>
+    </div>
+    <div class="nx-actions">
+      <oj-bind-if test="[[ $variables.graph.signedIn ]]"><span class="nx-min-m365 nx-min-m365--on" id="minM365" :title="[[ 'Signed in to Microsoft 365' + ($variables.graph.account ? ' as ' + $variables.graph.account : '') ]]"><span class="nx-min-dot" aria-hidden="true"></span>Microsoft 365<oj-bind-if test="[[ $variables.graph.account ]]">: <oj-bind-text value="[[ $variables.graph.account ]]"></oj-bind-text></oj-bind-if></span></oj-bind-if>
+      <oj-bind-if test="[[ !$variables.graph.signedIn ]]"><button type="button" class="nx-btn nx-btn--plain nx-min-m365 nx-min-m365--off" id="minM365In" data-act="settings" on-click="[[ $listeners.onAct ]]"><span class="nx-min-dot" aria-hidden="true"></span>Microsoft 365: sign in</button></oj-bind-if>
+      <oj-bind-if test="[[ $variables.available && $variables.view==='edit' ]]"><button type="button" class="nx-btn nx-btn--plain nx-min-fmtall" id="minFormatAll" data-act="formatAll" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.fmtAll ]]" title="Format the whole minutes (the discussion and every note) with AI"><oj-bind-text value="[[ $variables.fmtAll ? '…formatting' : '✨ Format all with AI' ]]"></oj-bind-text></button></oj-bind-if>
+      <button type="button" class="nx-btn nx-btn--plain" id="minAi" data-act="ai" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ $functions.aiLabel($variables.ai, $variables.aiReady) ]]"></oj-bind-text></button>
+      <button type="button" class="nx-btn nx-btn--plain" id="minSettings" data-act="settings" on-click="[[ $listeners.onAct ]]">⚙ Settings</button>
+    </div>
+  </div>
+
+  <oj-bind-if test="[[ $variables.checked && !$variables.available ]]">
+    <div class="nx-empty" id="minNA">Standup minutes are kept on this PC by the Build.Rite desktop app (DuckDB on your computer), so this page works in the desktop app.</div>
+  </oj-bind-if>
+
+  <oj-bind-if test="[[ $variables.available ]]">
+    <div class="nx-min-tabs">
+      <button type="button" id="minTabEdit" data-act="view" data-id="edit" on-click="[[ $listeners.onAct ]]" :class="[[ 'nx-min-tab' + ($variables.view==='edit' ? ' nx-min-tab--on' : '') ]]">Minutes</button>
+      <button type="button" id="minTabTrack" data-act="view" data-id="track" on-click="[[ $listeners.onAct ]]" :class="[[ 'nx-min-tab' + ($variables.view==='track' ? ' nx-min-tab--on' : '') ]]">Tracking</button>
+      <span class="nx-min-flex"></span>
+      <button type="button" class="nx-btn nx-btn--sm" id="minNew" data-act="new" on-click="[[ $listeners.onAct ]]">+ New meeting</button>
+    </div>
+
+    <oj-bind-if test="[[ $variables.toast ]]"><div class="nx-min-toast" id="minToast"><oj-bind-text value="[[ $variables.toast ]]"></oj-bind-text></div></oj-bind-if>
+    <oj-bind-if test="[[ $variables.error ]]"><div class="nx-empty nx-min-err"><oj-bind-text value="[[ $variables.error ]]"></oj-bind-text></div></oj-bind-if>
+
+    <!-- EDIT -->
+    <oj-bind-if test="[[ $variables.view==='edit' ]]">
+      <div class="nx-min-cols">
+        <aside class="nx-card nx-min-list">
+          <div class="nx-card-head"><h2 class="nx-h2">Past minutes</h2></div>
+          <div class="nx-min-listbody" id="minList">
+            <oj-bind-for-each data="[[ $variables.meetings ]]">
+              <template data-oj-as="mm">
+                <button type="button" :class="[[ 'nx-min-item' + (mm.data.id===$variables.meeting.id ? ' nx-min-item--on' : '') ]]" data-act="open" :data-id="[[ mm.data.id ]]" on-click="[[ $listeners.onAct ]]">
+                  <div class="nx-min-item-top"><b><oj-bind-text value="[[ mm.data.date ]]"></oj-bind-text></b><span><oj-bind-text value="[[ mm.data.title ]]"></oj-bind-text></span></div>
+                  <div class="nx-min-item-sub">
+                    <oj-bind-if test="[[ mm.data.customer ]]"><span class="nx-min-cust"><oj-bind-text value="[[ mm.data.customer ]]"></oj-bind-text></span></oj-bind-if>
+                    <span><oj-bind-text value="[[ mm.data.lineCount ]]"></oj-bind-text> notes</span>
+                    <oj-bind-if test="[[ mm.data.actionOpen ]]"><span class="nx-min-open"><oj-bind-text value="[[ mm.data.actionOpen ]]"></oj-bind-text> open</span></oj-bind-if>
+                  </div>
+                </button>
+              </template>
+            </oj-bind-for-each>
+            <oj-bind-if test="[[ $variables.meetings.length===0 ]]"><p class="nx-note">No minutes yet. Start with "+ New meeting".</p></oj-bind-if>
+          </div>
+        </aside>
+
+        <section class="nx-card nx-min-edit">
+          <div class="nx-min-head">
+            <div class="nx-min-field"><label>Date</label><input type="date" data-scope="header" data-field="date" :value="[[ $variables.meeting.date ]]" on-change="[[ $listeners.onField ]]"></div>
+            <div class="nx-min-field"><label>Time</label><input type="time" data-scope="header" data-field="time" :value="[[ $variables.meeting.time ]]" on-change="[[ $listeners.onField ]]"></div>
+            <div class="nx-min-field nx-min-grow"><label>Title</label><input type="text" data-scope="header" data-field="title" :value="[[ $variables.meeting.title ]]" on-change="[[ $listeners.onField ]]" placeholder="Daily standup"></div>
+            <div class="nx-min-field"><label>Customer</label><input type="text" data-scope="header" data-field="customer" :value="[[ $variables.meeting.customer ]]" on-change="[[ $listeners.onField ]]" placeholder="e.g. Cianbro"></div>
+            <div class="nx-min-field nx-min-wide"><label>Attendees</label>
+              <div class="nx-min-att">
+                <oj-bind-for-each data="[[ $variables.meeting.attendees ]]">
+                  <template data-oj-as="at">
+                    <span class="nx-min-chip"><oj-bind-text value="[[ $functions.chipName(at.data) ]]"></oj-bind-text><button type="button" class="nx-min-chipx" data-act="removeAttendee" :data-id="[[ at.data ]]" on-click="[[ $listeners.onAct ]]" aria-label="Remove attendee">×</button></span>
+                  </template>
+                </oj-bind-for-each>
+                <div class="nx-min-attbox">
+                  <input type="text" class="nx-min-attadd" autocomplete="off" :value="[[ $variables.attendeeDraft ]]" on-input="[[ $listeners.onAttendeeInput ]]" on-keydown="[[ $listeners.onAttendeeKey ]]" :placeholder="[[ $variables.people.length ? 'Start typing a name…' : 'Type a name, then Enter' ]]">
+                  <oj-bind-if test="[[ !!$variables.attendeeDraft && $functions.suggest($variables.people, $variables.attendeeDraft, $variables.meeting.attendees).length > 0 ]]">
+                    <div class="nx-min-suggest" role="listbox">
+                      <oj-bind-for-each data="[[ $functions.suggest($variables.people, $variables.attendeeDraft, $variables.meeting.attendees) ]]">
+                        <template data-oj-as="s">
+                          <button type="button" class="nx-min-suggest-item" role="option" data-act="addAttendee" :data-id="[[ s.data.value ]]" on-mousedown="[[ $listeners.onAct ]]">
+                            <span class="nx-min-suggest-av"><oj-bind-text value="[[ s.data.initials ]]"></oj-bind-text></span>
+                            <span class="nx-min-suggest-main"><b><oj-bind-text value="[[ s.data.name ]]"></oj-bind-text></b><span class="nx-min-suggest-em"><oj-bind-text value="[[ s.data.email ]]"></oj-bind-text></span></span>
+                          </button>
+                        </template>
+                      </oj-bind-for-each>
+                    </div>
+                  </oj-bind-if>
+                </div>
+                <oj-bind-if test="[[ !$variables.graph.signedIn && $variables.people.length === 0 ]]">
+                  <p class="nx-note nx-min-chint" id="minContactHint">No contacts loaded — <button type="button" class="nx-min-linkbtn" data-act="settings" on-click="[[ $listeners.onAct ]]">sign in to Microsoft 365</button> in Settings to search your directory, or type a name and press Enter.</p>
+                </oj-bind-if>
+              </div>
+            </div>
+            <div class="nx-min-field nx-min-wide"><label>Context (optional)</label><input type="text" data-scope="header" data-field="context" :value="[[ $variables.meeting.context ]]" on-change="[[ $listeners.onField ]]" placeholder="sprint, release, agenda…"></div>
+          </div>
+
+          <!-- Discussion body: a rich-text editor (headings, bold, bullets, numbered lists). Stores HTML in meeting.discussion.
+               Type rough notes, then Format with AI tidies them up. The editor content is kept in sync by the chain (syncBody). -->
+          <div class="nx-min-sec nx-min-sec--body">Discussion — what we discussed</div>
+          <div class="nx-min-body">
+            <div class="nx-min-rtewrap">
+              <div class="nx-min-rtebar" role="toolbar" aria-label="Formatting">
+                <button type="button" class="nx-min-rtebtn" data-act="rte" data-id="h2" on-mousedown="[[ $listeners.onAct ]]" title="Heading">H2</button>
+                <button type="button" class="nx-min-rtebtn" data-act="rte" data-id="h3" on-mousedown="[[ $listeners.onAct ]]" title="Subheading">H3</button>
+                <button type="button" class="nx-min-rtebtn" data-act="rte" data-id="p" on-mousedown="[[ $listeners.onAct ]]" title="Normal text">¶</button>
+                <span class="nx-min-rtesep"></span>
+                <button type="button" class="nx-min-rtebtn" data-act="rte" data-id="bold" on-mousedown="[[ $listeners.onAct ]]" title="Bold"><b>B</b></button>
+                <button type="button" class="nx-min-rtebtn" data-act="rte" data-id="italic" on-mousedown="[[ $listeners.onAct ]]" title="Italic"><i>I</i></button>
+                <button type="button" class="nx-min-rtebtn" data-act="rte" data-id="underline" on-mousedown="[[ $listeners.onAct ]]" title="Underline"><u>U</u></button>
+                <span class="nx-min-rtesep"></span>
+                <button type="button" class="nx-min-rtebtn" data-act="rte" data-id="ul" on-mousedown="[[ $listeners.onAct ]]" title="Bulleted list">• List</button>
+                <button type="button" class="nx-min-rtebtn" data-act="rte" data-id="ol" on-mousedown="[[ $listeners.onAct ]]" title="Numbered list">1. List</button>
+                <span class="nx-min-rtesep"></span>
+                <button type="button" class="nx-min-rtebtn" data-act="rte" data-id="clear" on-mousedown="[[ $listeners.onAct ]]" title="Clear formatting">Clear</button>
+              </div>
+              <div id="minBody" class="nx-min-rte" contenteditable="true" role="textbox" aria-multiline="true" on-input="[[ $listeners.onBodyHtml ]]" on-blur="[[ $listeners.onBodyHtml ]]" data-placeholder="Summary of what was discussed. Use the toolbar for headings and bullets, or ✨ Format with AI to tidy rough notes."></div>
+            </div>
+            <div class="nx-min-body-btns">
+              <button type="button" :class="[[ 'nx-btn nx-btn--sm' + ($variables.recLineId==='__body__' ? ' nx-btn--rec' : '') ]]" id="minBodyVoice" data-act="dictate" data-line="__body__" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ $variables.recLineId==='__body__' ? '◼ Stop' : '🎤 Voice' ]]"></oj-bind-text></button>
+              <button type="button" class="nx-btn nx-btn--sm nx-min-fmt" id="minBodyFormat" data-act="formatBody" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.fmtBody ]]"><oj-bind-text value="[[ $variables.fmtBody ? '…formatting' : '✨ Format with AI' ]]"></oj-bind-text></button>
+            </div>
+          </div>
+
+          <!-- Action items: who does what next. Each row is an action with the person it is actioned by, a due date and a status;
+               a Jira story and a note can be attached for the standup tracking. -->
+          <div class="nx-min-sec">Action items — who does what next</div>
+          <!-- Suggestions (datalists): standard action phrases for "Action item", and the attendees + directory contacts for "Actioned by". -->
+          <datalist id="minActions"><oj-bind-for-each data="[[ $functions.actionOptions() ]]"><template data-oj-as="a"><option :value="[[ a.data ]]"></option></template></oj-bind-for-each></datalist>
+          <datalist id="minOwners"><oj-bind-for-each data="[[ $functions.ownerOptions($variables.people, $variables.meeting.attendees) ]]"><template data-oj-as="o"><option :value="[[ o.data ]]"></option></template></oj-bind-for-each></datalist>
+          <div class="nx-min-lines" id="minLines">
+            <oj-bind-for-each data="[[ $variables.meeting.lines ]]">
+              <template data-oj-as="ln">
+                <div class="nx-min-line">
+                  <div class="nx-min-action">
+                    <div class="nx-min-field nx-min-grow"><label>Action item</label><input type="text" list="minActions" data-scope="line" data-field="action" :data-line="[[ ln.data.id ]]" :value="[[ ln.data.action ]]" on-change="[[ $listeners.onField ]]" placeholder="what happens next"></div>
+                    <div class="nx-min-field"><label>Actioned by</label><input type="text" list="minOwners" data-scope="line" data-field="owner" :data-line="[[ ln.data.id ]]" :value="[[ ln.data.owner ]]" on-change="[[ $listeners.onField ]]" placeholder="who"></div>
+                    <div class="nx-min-field"><label>Due</label><input type="date" data-scope="line" data-field="due" :data-line="[[ ln.data.id ]]" :value="[[ ln.data.due ]]" on-change="[[ $listeners.onField ]]"></div>
+                    <button type="button" :class="[[ $functions.statusClass(ln.data) ]]" data-act="toggleDone" :data-line="[[ ln.data.id ]]" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ ln.data.status==='done' ? 'Done' : 'Open' ]]"></oj-bind-text></button>
+                    <button type="button" class="nx-min-x" data-act="removeLine" :data-line="[[ ln.data.id ]]" on-click="[[ $listeners.onAct ]]" title="Remove this action item">×</button>
+                  </div>
+                  <div class="nx-min-line-top">
+                    <div class="nx-min-field nx-min-key"><label>Link to Jira story (optional)</label>
+                      <div class="nx-min-storypick">
+                        <oj-bind-if test="[[ ln.data.jiraKey ]]">
+                          <div class="nx-min-storycard">
+                            <div class="nx-min-storycard-top">
+                              <b class="nx-min-pk-key"><oj-bind-text value="[[ ln.data.jiraKey ]]"></oj-bind-text></b>
+                              <oj-bind-if test="[[ $functions.storyStatus(ln.data, $variables.rows) ]]"><span :class="[[ $functions.pickBadge($functions.storyStatusCat(ln.data, $variables.rows)) ]]"><oj-bind-text value="[[ $functions.storyStatus(ln.data, $variables.rows) ]]"></oj-bind-text></span></oj-bind-if>
+                              <oj-bind-if test="[[ $functions.storyUrl(ln.data, $variables.rows) ]]"><a class="nx-min-jira" :href="[[ $functions.storyUrl(ln.data, $variables.rows) ]]" target="_blank" rel="noopener" :title="[[ 'Open ' + ln.data.jiraKey + ' in Jira' ]]" :aria-label="[[ 'Open ' + ln.data.jiraKey + ' in Jira' ]]"><span class="oj-ux-ico-external-link" aria-hidden="true"></span></a></oj-bind-if>
+                              <button type="button" class="nx-min-chipx" data-act="pickStory" data-id="" :data-line="[[ ln.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Unlink the story">×</button>
+                            </div>
+                            <div class="nx-min-storycard-sum"><oj-bind-text value="[[ $functions.storyHint(ln.data, $variables.rows) ]]"></oj-bind-text></div>
+                          </div>
+                        </oj-bind-if>
+                        <button type="button" class="nx-btn nx-btn--sm nx-min-findbtn" data-act="pickOpen" :data-line="[[ ln.data.id ]]" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-search" aria-hidden="true"></span><oj-bind-text value="[[ ln.data.jiraKey ? 'Change story' : 'Find a Jira story' ]]"></oj-bind-text></button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="nx-min-note">
+                    <oj-text-area class="nx-min-ta" rows="2" :data-line="[[ ln.data.id ]]" value="[[ ln.data.text ]]" on-value-changed="[[ $listeners.onNote ]]" label-edge="none" placeholder="Note or detail for this item (optional)…"></oj-text-area>
+                    <div class="nx-min-note-btns">
+                      <button type="button" :class="[[ 'nx-btn nx-btn--sm' + ($functions.recActive(ln.data,$variables.recLineId) ? ' nx-btn--rec' : '') ]]" data-act="dictate" :data-line="[[ ln.data.id ]]" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ $functions.recLabel(ln.data,$variables.recLineId) ]]"></oj-bind-text></button>
+                      <button type="button" class="nx-btn nx-btn--sm" data-act="format" :data-line="[[ ln.data.id ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ $functions.fmtActive(ln.data,$variables.fmtLineId) ]]"><oj-bind-text value="[[ $functions.fmtActive(ln.data,$variables.fmtLineId) ? '…formatting' : '✨ Format by AI' ]]"></oj-bind-text></button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </oj-bind-for-each>
+          </div>
+
+          <div class="nx-min-editfoot">
+            <button type="button" class="nx-btn nx-btn--sm" id="minAddLine" data-act="addLine" on-click="[[ $listeners.onAct ]]">+ Add action item</button>
+            <span class="nx-min-flex"></span>
+            <button type="button" class="nx-btn nx-btn--sm" id="minEmail" data-act="email" on-click="[[ $listeners.onAct ]]" :disabled="[[ !$functions.canSend($variables.meeting) ]]">✉ Email</button>
+            <button type="button" class="nx-btn nx-btn--sm" id="minTeams" data-act="teams" on-click="[[ $listeners.onAct ]]" :disabled="[[ !$functions.canSend($variables.meeting) ]]">Send to Teams</button>
+            <oj-bind-if test="[[ $variables.meeting.id ]]"><button type="button" class="nx-btn nx-btn--sm nx-btn--danger" data-act="delete" on-click="[[ $listeners.onAct ]]">Delete</button></oj-bind-if>
+            <button type="button" class="nx-btn nx-btn--cta" id="minSave" data-act="save" on-click="[[ $listeners.onAct ]]">Save minutes</button>
+          </div>
+        </section>
+      </div>
+    </oj-bind-if>
+
+    <!-- TRACK -->
+    <oj-bind-if test="[[ $variables.view==='track' ]]">
+      <div class="nx-min-track">
+        <div class="nx-chips" id="minTrackBy">
+          <button type="button" data-act="trackBy" data-id="epic" on-click="[[ $listeners.onAct ]]" :class="[[ $functions.trackClass($variables.trackBy,'epic') ]]">By epic</button>
+          <button type="button" data-act="trackBy" data-id="story" on-click="[[ $listeners.onAct ]]" :class="[[ $functions.trackClass($variables.trackBy,'story') ]]">By story</button>
+          <button type="button" data-act="trackBy" data-id="customer" on-click="[[ $listeners.onAct ]]" :class="[[ $functions.trackClass($variables.trackBy,'customer') ]]">By customer</button>
+        </div>
+        <div class="nx-cols2">
+          <section class="nx-card">
+            <div class="nx-card-head"><h2 class="nx-h2"><oj-bind-text value="[[ $variables.trackBy==='epic' ? 'By epic' : ($variables.trackBy==='story' ? 'By story' : 'By customer') ]]"></oj-bind-text></h2></div>
+            <div class="nx-jira-tbl" role="table" id="minTrackTbl">
+              <div class="nx-jira-tr nx-jira-tr--head nx-min-trk" role="row"><span role="columnheader">Name</span><span role="columnheader">Meetings</span><span role="columnheader">Notes</span><span role="columnheader">Open actions</span><span role="columnheader">Last</span></div>
+              <oj-bind-for-each data="[[ $functions.tracks($variables.meetings, $variables.rows, $variables.trackBy) ]]">
+                <template data-oj-as="g">
+                  <div class="nx-jira-tr nx-min-trk" role="row">
+                    <span role="cell"><strong><oj-bind-text value="[[ g.data.name ]]"></oj-bind-text></strong></span>
+                    <span role="cell"><oj-bind-text value="[[ g.data.meetings ]]"></oj-bind-text></span>
+                    <span role="cell"><oj-bind-text value="[[ g.data.lines ]]"></oj-bind-text></span>
+                    <span role="cell" :class="[[ g.data.overdue ? 'nx-jira-bad' : '' ]]"><oj-bind-text value="[[ g.data.openActions ]]"></oj-bind-text></span>
+                    <span role="cell"><oj-bind-text value="[[ g.data.lastDate ]]"></oj-bind-text></span>
+                  </div>
+                </template>
+              </oj-bind-for-each>
+              <oj-bind-if test="[[ $functions.tracks($variables.meetings, $variables.rows, $variables.trackBy).length===0 ]]"><p class="nx-note">Nothing tracked yet — save a meeting with some lines.</p></oj-bind-if>
+            </div>
+          </section>
+          <section class="nx-card">
+            <div class="nx-card-head"><h2 class="nx-h2">Open action items</h2></div>
+            <div class="nx-min-oa" id="minOpenActions">
+              <oj-bind-for-each data="[[ $functions.openActions($variables.meetings) ]]">
+                <template data-oj-as="a">
+                  <div class="nx-min-oarow">
+                    <div class="nx-min-oatop"><b><oj-bind-text value="[[ a.data.action ]]"></oj-bind-text></b><span :class="[[ a.data.overdue ? 'nx-jira-bad' : 'nx-note' ]]"><oj-bind-text value="[[ a.data.due || 'no date' ]]"></oj-bind-text></span></div>
+                    <div class="nx-min-oasub">
+                      <oj-bind-if test="[[ a.data.owner ]]"><span><oj-bind-text value="[[ a.data.owner ]]"></oj-bind-text></span></oj-bind-if>
+                      <oj-bind-if test="[[ a.data.key ]]"><span class="nx-min-cust"><oj-bind-text value="[[ a.data.key ]]"></oj-bind-text></span></oj-bind-if>
+                      <oj-bind-if test="[[ a.data.customer ]]"><span><oj-bind-text value="[[ a.data.customer ]]"></oj-bind-text></span></oj-bind-if>
+                      <span class="nx-note"><oj-bind-text value="[[ a.data.date ]]"></oj-bind-text></span>
+                    </div>
+                  </div>
+                </template>
+              </oj-bind-for-each>
+              <oj-bind-if test="[[ $functions.openActions($variables.meetings).length===0 ]]"><p class="nx-note">No open action items.</p></oj-bind-if>
+            </div>
+          </section>
+        </div>
+      </div>
+    </oj-bind-if>
+  </oj-bind-if>
+
+  <oj-bind-if test="[[ $variables.dialog ]]"><div class="nx-min-backdrop" data-act="dialog" data-id="" on-click="[[ $listeners.onAct ]]"></div></oj-bind-if>
+
+  <oj-bind-if test="[[ $variables.dialog==='ai' ]]">
+    <div class="nx-min-modal" role="dialog" aria-label="AI setup" id="minAiDlg">
+      <h2 class="nx-h2">AI setup</h2>
+      <p class="nx-note">Shared with the SQL worksheet's Ask AI. The key stays on this PC in the desktop app and is used to Format by AI.</p>
+      <div class="nx-min-field"><label>Provider</label>
+        <select data-scope="ai" data-field="provider" :value="[[ $variables.aiForm.provider ]]" on-change="[[ $listeners.onField ]]">
+          <option value="claudecode">Claude Code (your subscription — no key)</option><option value="anthropic">Claude (Anthropic API key)</option><option value="openai">OpenAI (ChatGPT)</option><option value="gemini">Google Gemini</option><option value="oci">OCI GenAI</option><option value="custom">OpenAI-compatible</option>
+        </select></div>
+      <oj-bind-if test="[[ $variables.aiForm.provider==='claudecode' ]]"><p class="nx-note">Uses the Claude Code app signed in on this PC (your Max/Pro subscription) — no API key, and no per-call cost. Needs Claude Code installed and signed in.</p></oj-bind-if>
+      <oj-bind-if test="[[ $variables.aiForm.provider!=='claudecode' ]]"><div class="nx-min-field"><label>API key</label><input type="password" data-scope="ai" data-field="key" :value="[[ $variables.aiForm.key ]]" on-change="[[ $listeners.onField ]]" placeholder="paste your key — stored on this PC"></div></oj-bind-if>
+      <div class="nx-min-field"><label>Model (optional)</label>
+        <input type="text" list="minAiModels" data-scope="ai" data-field="model" :value="[[ $variables.aiForm.model ]]" on-change="[[ $listeners.onField ]]" placeholder="Pick a model or leave blank for the default">
+        <datalist id="minAiModels"><oj-bind-for-each data="[[ $functions.modelOptions($variables.aiForm.provider) ]]"><template data-oj-as="m"><option :value="[[ m.data ]]"></option></template></oj-bind-for-each></datalist>
+      </div>
+      <oj-bind-if test="[[ $variables.aiForm.provider==='custom' ]]"><div class="nx-min-field"><label>Base URL</label><input type="text" data-scope="ai" data-field="baseUrl" :value="[[ $variables.aiForm.baseUrl ]]" on-change="[[ $listeners.onField ]]" placeholder="https://host/v1"></div></oj-bind-if>
+      <div class="nx-note nx-min-err2"><oj-bind-text value="[[ $variables.aiForm.status ]]"></oj-bind-text></div>
+      <div class="nx-min-modalfoot"><button type="button" class="nx-btn nx-btn--sm" data-act="dialog" data-id="" on-click="[[ $listeners.onAct ]]">Cancel</button><button type="button" class="nx-btn nx-btn--cta" id="minAiSave" data-act="aiSave" on-click="[[ $listeners.onAct ]]">Save</button></div>
+    </div>
+  </oj-bind-if>
+
+  <oj-bind-if test="[[ $variables.dialog==='settings' ]]">
+    <div class="nx-min-modal" role="dialog" aria-label="Minutes settings" id="minSetDlg">
+      <h2 class="nx-h2">Minutes settings</h2>
+      <div class="nx-min-field"><label>Microsoft Teams Incoming Webhook URL</label><input type="password" data-scope="settings" data-field="teamsWebhook" :value="[[ $variables.settingsForm.teamsWebhook ]]" on-change="[[ $listeners.onField ]]" placeholder="https://…webhook.office.com/…"></div>
+      <p class="nx-note"><oj-bind-text value="[[ $variables.settings.teamsWebhookSet ? 'A webhook is set (hidden). Paste a new one to replace it.' : 'Add a channel Incoming Webhook to send minutes to Teams.' ]]"></oj-bind-text></p>
+      <div class="nx-min-field"><label>Default attendees</label><input type="text" data-scope="settings" data-field="defaultAttendees" :value="[[ $variables.settingsForm.defaultAttendees ]]" on-change="[[ $listeners.onField ]]" placeholder="comma separated"></div>
+      <div class="nx-min-field"><label>Organisation (email footer)</label><input type="text" data-scope="settings" data-field="orgName" :value="[[ $variables.settingsForm.orgName ]]" on-change="[[ $listeners.onField ]]"></div>
+      <div class="nx-min-field"><label>Send email to (default)</label><input type="text" data-scope="settings" data-field="fromEmail" :value="[[ $variables.settingsForm.fromEmail ]]" on-change="[[ $listeners.onField ]]" placeholder="team@company.com"></div>
+
+      <div class="nx-min-sec">Contacts &amp; sending</div>
+      <div class="nx-min-prov">
+        <button type="button" data-act="setProvider" data-id="local" on-click="[[ $listeners.onAct ]]" :class="[[ 'nx-chip nx-cm-chip--sm' + ($variables.settingsForm.provider!=='o365' ? ' nx-chip--on' : '') ]]">Local Outlook</button>
+        <button type="button" data-act="setProvider" data-id="o365" on-click="[[ $listeners.onAct ]]" :class="[[ 'nx-chip nx-cm-chip--sm' + ($variables.settingsForm.provider==='o365' ? ' nx-chip--on' : '') ]]">Microsoft 365</button>
+      </div>
+      <oj-bind-if test="[[ $variables.settingsForm.provider==='o365' ]]">
+        <div class="nx-min-field"><label>Microsoft 365 Tenant ID</label><input type="text" data-scope="settings" data-field="tenantId" :value="[[ $variables.settingsForm.tenantId ]]" on-change="[[ $listeners.onField ]]" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+        <div class="nx-min-field"><label>App (Client) ID</label><input type="text" data-scope="settings" data-field="clientId" :value="[[ $variables.settingsForm.clientId ]]" on-change="[[ $listeners.onField ]]" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+        <div class="nx-min-field"><label>Contacts</label>
+          <button type="button" data-act="setDirectory" on-click="[[ $listeners.onAct ]]" :class="[[ 'nx-chip nx-cm-chip--sm' + ($variables.settingsForm.directory ? ' nx-chip--on' : '') ]]"><oj-bind-text value="[[ $variables.settingsForm.directory ? '✓ Search the whole company directory' : 'Search the whole company directory' ]]"></oj-bind-text></button>
+          <p class="nx-note">Off: your recent colleagues and saved contacts (no admin needed). On: everyone in the company — requires an admin to grant <strong>User.ReadBasic.All</strong> consent, and you must sign in again.</p></div>
+        <oj-bind-if test="[[ $variables.graph.signedIn ]]"><p class="nx-note">✓ Signed in<oj-bind-if test="[[ $variables.graph.account ]]"> as <oj-bind-text value="[[ $variables.graph.account ]]"></oj-bind-text></oj-bind-if>. <button type="button" class="nx-min-linkbtn" id="minGraphOut" data-act="graphSignOut" on-click="[[ $listeners.onAct ]]">Sign out</button></p>
+          <button type="button" class="nx-btn nx-btn--sm" id="minGraphTest" data-act="graphTest" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-email" aria-hidden="true"></span>Send a test email to me</button>
+          <p class="nx-note nx-min-dirnote" id="minGraphDirNote">Attendee search shows your recent contacts. To search the whole company directory, an administrator must grant this app <strong>User.ReadBasic.All</strong> (with admin consent) in Azure.</p></oj-bind-if>
+        <oj-bind-if test="[[ !$variables.graph.signedIn && $variables.graph.pending ]]">
+          <div class="nx-min-devicecode">
+            <div class="nx-min-dc-label">Enter this code at the Microsoft sign-in page:</div>
+            <div class="nx-min-dc-row">
+              <span class="nx-min-dc-code" id="minGraphCode"><oj-bind-text value="[[ $variables.graph.userCode ]]"></oj-bind-text></span>
+              <button type="button" class="nx-btn nx-btn--sm" id="minGraphCopy" data-act="graphCopyCode" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-copy-to-clipboard" aria-hidden="true"></span>Copy code</button>
+              <a class="nx-btn nx-btn--sm" :href="[[ $variables.graph.verificationUri ]]" target="_blank" rel="noopener"><span class="oj-ux-ico-external-link" aria-hidden="true"></span>Open sign-in page</a>
+            </div>
+            <p class="nx-note">The code is shown here in Build.Rite — type it on the Microsoft page, then come back. Waiting for you to sign in…</p>
+            <button type="button" class="nx-btn nx-btn--sm" id="minGraphCheck" data-act="graphRecheck" on-click="[[ $listeners.onAct ]]">I've signed in on the web — check now</button>
+          </div>
+        </oj-bind-if>
+        <oj-bind-if test="[[ !$variables.graph.signedIn && !$variables.graph.pending ]]">
+          <div class="nx-min-dc-row">
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--cta" id="minGraphIn" data-act="graphInteractive" on-click="[[ $listeners.onAct ]]">Sign in to Microsoft 365</button>
+            <button type="button" class="nx-btn nx-btn--sm" id="minGraphCheck2" data-act="graphRecheck" on-click="[[ $listeners.onAct ]]">Check status</button>
+          </div>
+          <p class="nx-note">A Microsoft sign-in window opens inside Build.Rite — no code to type. <button type="button" class="nx-min-linkbtn" id="minGraphCodeLink" data-act="graphSignIn" on-click="[[ $listeners.onAct ]]">Use a sign-in code instead</button></p>
+        </oj-bind-if>
+        <oj-bind-if test="[[ $variables.graph.error ]]"><p class="nx-note nx-min-err2"><oj-bind-text value="[[ $variables.graph.error ]]"></oj-bind-text></p></oj-bind-if>
+        <oj-bind-if test="[[ $variables.graph.hasToken && !$variables.graph.signedIn ]]"><p class="nx-note nx-min-err2">A token is stored on this PC but could not be used — this is usually a Windows secure-storage issue. Update to the latest Build.Rite, then sign out and sign in again.</p></oj-bind-if>
+        <p class="nx-note" id="minGraphDiag">Status: <oj-bind-text value="[[ $variables.graph.signedIn ? ('signed in' + ($variables.graph.account ? ' as ' + $variables.graph.account : '')) : 'not signed in' ]]"></oj-bind-text> · token <oj-bind-text value="[[ $variables.graph.hasToken ? 'yes' : 'no' ]]"></oj-bind-text> · valid <oj-bind-text value="[[ $variables.graph.tokenValid ? 'yes' : 'no' ]]"></oj-bind-text> · refresh <oj-bind-text value="[[ $variables.graph.hasRefresh ? 'yes' : 'no' ]]"></oj-bind-text> · secure-store <oj-bind-text value="[[ $variables.graph.encrypted ? 'on' : 'off' ]]"></oj-bind-text></p>
+      </oj-bind-if>
+
+      <div class="nx-min-modalfoot"><button type="button" class="nx-btn nx-btn--sm" data-act="dialog" data-id="" on-click="[[ $listeners.onAct ]]">Cancel</button><button type="button" class="nx-btn nx-btn--cta" id="minSetSave" data-act="settingsSave" on-click="[[ $listeners.onAct ]]">Save</button></div>
+    </div>
+  </oj-bind-if>
+
+  <oj-bind-if test="[[ $variables.dialog==='email' ]]">
+    <div class="nx-min-modal nx-min-modal--wide" role="dialog" aria-label="Minutes email" id="minEmailDlg">
+      <h2 class="nx-h2">Minutes email</h2>
+      <div class="nx-min-field"><label>Subject</label><input type="text" :value="[[ $variables.email.subject ]]" readonly></div>
+      <div class="nx-min-field"><label>Send to</label><input type="text" data-scope="email" data-field="to" :value="[[ $variables.email.to ]]" on-change="[[ $listeners.onField ]]" placeholder="team@company.com"></div>
+      <div class="nx-min-preview"><iframe title="Email preview" id="minEmailPreview" :srcdoc="[[ $variables.email.html ]]"></iframe></div>
+      <div class="nx-min-modalfoot">
+        <button type="button" class="nx-btn nx-btn--sm" data-act="dialog" data-id="" on-click="[[ $listeners.onAct ]]">Close</button>
+        <span class="nx-min-flex"></span>
+        <button type="button" class="nx-btn nx-btn--sm" data-act="emailDownload" on-click="[[ $listeners.onAct ]]">Download .html</button>
+        <button type="button" class="nx-btn nx-btn--sm" id="minEmailCopy" data-act="emailCopy" on-click="[[ $listeners.onAct ]]">Copy</button>
+        <button type="button" class="nx-btn nx-btn--sm" data-act="emailMailto" on-click="[[ $listeners.onAct ]]">Open in email app</button>
+        <button type="button" class="nx-btn nx-btn--cta" id="minEmailSend" data-act="emailSend" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ $variables.graph.signedIn ? 'Send via Office 365' : 'Send via Outlook' ]]"></oj-bind-text></button>
+      </div>
+    </div>
+  </oj-bind-if>
+
+  <!-- Find a Jira story: a search dialog over the backlog read (number, description, status, assignee, sprint), with
+       filter dropdowns and a results table. Picks the story onto the action-item line the picker was opened for. -->
+  <oj-bind-if test="[[ $variables.pickOpen ]]">
+    <div class="nx-min-backdrop" data-act="pickClose" on-click="[[ $listeners.onAct ]]"></div>
+    <div class="nx-min-modal nx-min-modal--wide nx-min-pick" role="dialog" aria-label="Find a Jira story" id="minPickDlg">
+      <div class="nx-min-pick-head">
+        <h2 class="nx-h2">Find a Jira story</h2>
+        <button type="button" class="nx-min-x" data-act="pickClose" on-click="[[ $listeners.onAct ]]" aria-label="Close">×</button>
+      </div>
+      <input type="search" id="minPickSearch" class="nx-min-pick-search" data-field="q" autocomplete="off" :value="[[ $variables.pickQ ]]" on-input="[[ $listeners.onPickField ]]" placeholder="Search by number, description, status, assignee or sprint…">
+      <div class="nx-min-pick-filters">
+        <div class="nx-min-pick-chiprow">
+          <span class="nx-min-pick-lbl">Sprint</span>
+          <button type="button" :class="[[ 'nx-min-fchip' + (!$variables.pickSprint ? ' nx-min-fchip--on' : '') ]]" data-act="pickSprint" data-id="" on-click="[[ $listeners.onAct ]]">All</button>
+          <oj-bind-for-each data="[[ $functions.pickSprints($variables.rows) ]]"><template data-oj-as="s"><button type="button" :class="[[ 'nx-min-fchip' + ($variables.pickSprint===s.data ? ' nx-min-fchip--on' : '') ]]" data-act="pickSprint" :data-id="[[ s.data ]]" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ s.data ]]"></oj-bind-text></button></template></oj-bind-for-each>
+        </div>
+        <div class="nx-min-pick-chiprow">
+          <span class="nx-min-pick-lbl">Status</span>
+          <button type="button" :class="[[ 'nx-min-fchip' + (!$variables.pickStatus ? ' nx-min-fchip--on' : '') ]]" data-act="pickStatus" data-id="" on-click="[[ $listeners.onAct ]]">All</button>
+          <oj-bind-for-each data="[[ $functions.pickStatuses($variables.rows) ]]"><template data-oj-as="s"><button type="button" :class="[[ 'nx-min-fchip' + ($variables.pickStatus===s.data ? ' nx-min-fchip--on' : '') ]]" data-act="pickStatus" :data-id="[[ s.data ]]" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ s.data ]]"></oj-bind-text></button></template></oj-bind-for-each>
+        </div>
+        <div class="nx-min-pick-chiprow">
+          <span class="nx-min-pick-lbl">Assignee</span>
+          <button type="button" :class="[[ 'nx-min-fchip' + (!$variables.pickAssignee ? ' nx-min-fchip--on' : '') ]]" data-act="pickAssignee" data-id="" on-click="[[ $listeners.onAct ]]">All</button>
+          <oj-bind-for-each data="[[ $functions.pickAssignees($variables.rows) ]]"><template data-oj-as="s"><button type="button" :class="[[ 'nx-min-fchip' + ($variables.pickAssignee===s.data ? ' nx-min-fchip--on' : '') ]]" data-act="pickAssignee" :data-id="[[ s.data ]]" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ s.data ]]"></oj-bind-text></button></template></oj-bind-for-each>
+        </div>
+        <div class="nx-min-pick-foot">
+          <button type="button" class="nx-btn nx-btn--sm" id="minPickClear" data-act="pickClear" on-click="[[ $listeners.onAct ]]">Clear filters</button>
+          <span class="nx-min-flex"></span>
+          <span class="nx-note" id="minPickCount"><oj-bind-text value="[[ $functions.pickList($variables.rows, $variables.pickQ, $variables.pickSprint, $variables.pickStatus, $variables.pickAssignee).length ]]"></oj-bind-text> stories</span>
+        </div>
+      </div>
+      <p class="nx-note nx-min-pick-tip">Tick one or more stories, then <b>Link</b> — each one becomes an action item. Or use <b>No story</b> for a general note.</p>
+      <div class="nx-min-pick-tbl" id="minPickList">
+        <div class="nx-min-pickrow nx-min-pickrow--head" role="row"><span></span><span>Key</span><span>Summary</span><span>Status</span><span>Assignee</span><span>Due</span><span>Sprint</span></div>
+        <button type="button" class="nx-min-pickrow nx-min-pickrow--none" data-act="pickStory" data-id="" on-click="[[ $listeners.onAct ]]">— No story (general note) —</button>
+        <oj-bind-for-each data="[[ $functions.pickList($variables.rows, $variables.pickQ, $variables.pickSprint, $variables.pickStatus, $variables.pickAssignee) ]]">
+          <template data-oj-as="p">
+            <button type="button" :class="[[ 'nx-min-pickrow' + ($variables.pickSel.indexOf(p.data.key) >= 0 ? ' nx-min-pickrow--on' : '') ]]" :data-id="[[ p.data.key ]]" data-act="pickToggle" on-click="[[ $listeners.onAct ]]" :aria-pressed="[[ $variables.pickSel.indexOf(p.data.key) >= 0 ? 'true' : 'false' ]]">
+              <span class="nx-min-pkcheck" aria-hidden="true"></span>
+              <span class="nx-min-pk-key"><oj-bind-text value="[[ p.data.key ]]"></oj-bind-text></span>
+              <span class="nx-min-pk-sum"><oj-bind-text value="[[ p.data.summary ]]"></oj-bind-text></span>
+              <span :class="[[ $functions.pickBadge(p.data.statusCat) ]]"><oj-bind-text value="[[ p.data.status ]]"></oj-bind-text></span>
+              <span class="nx-min-pk-asg"><oj-bind-text value="[[ p.data.assignee ]]"></oj-bind-text></span>
+              <span :class="[[ 'nx-min-pk-due' + (p.data.overdue ? ' nx-jira-bad' : '') ]]"><oj-bind-text value="[[ p.data.due || '—' ]]"></oj-bind-text></span>
+              <span class="nx-min-pk-spr"><oj-bind-text value="[[ p.data.sprint || '—' ]]"></oj-bind-text></span>
+            </button>
+          </template>
+        </oj-bind-for-each>
+        <oj-bind-if test="[[ $functions.pickList($variables.rows, $variables.pickQ, $variables.pickSprint, $variables.pickStatus, $variables.pickAssignee).length===0 ]]"><p class="nx-note nx-min-pick-empty">No stories match. Try fewer words, clear the filters, or type the key below to link it anyway.</p></oj-bind-if>
+      </div>
+      <div class="nx-min-pick-actions">
+        <span class="nx-note" id="minPickSelCount"><oj-bind-text value="[[ $variables.pickSel.length ]]"></oj-bind-text> selected</span>
+        <span class="nx-min-flex"></span>
+        <button type="button" class="nx-btn nx-btn--sm" data-act="pickClose" on-click="[[ $listeners.onAct ]]">Cancel</button>
+        <button type="button" class="nx-btn nx-btn--cta" id="minPickLink" data-act="pickLinkSel" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.pickSel.length === 0 ]]"><oj-bind-text value="[[ $variables.pickSel.length === 1 ? 'Link 1 story' : 'Link ' + $variables.pickSel.length + ' stories' ]]"></oj-bind-text></button>
+      </div>
+      <div class="nx-min-pick-manual">
+        <label for="minPickManual">Not in the list? Enter a Jira key</label>
+        <input type="text" id="minPickManual" autocomplete="off" placeholder="e.g. ABC-383" on-keydown="[[ $listeners.onPickManualKey ]]">
+        <button type="button" class="nx-btn nx-btn--sm" id="minPickManualBtn" data-act="pickManual" on-click="[[ $listeners.onAct ]]">Link this key</button>
+      </div>
+    </div>
+  </oj-bind-if>
+</div>

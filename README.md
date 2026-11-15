@@ -1,0 +1,119 @@
+# Build.Rite
+
+The team's tools for an **Oracle Visual Builder Studio** project, on your PC.
+
+Build.Rite clones a VB Studio workspace into a folder on your PC and works on it there. It builds and runs the
+workspace's app from its working folder. It takes issues from "logged" to a fix on a branch, and it shows every page
+of the app with its code and a technical sheet. It also keeps the team's Jira, standups and follow-ups in one place.
+
+It is an independent app: it works with any VB Studio project and keeps its own data apart from your projects.
+
+## What it does
+
+| Area | Screens |
+|---|---|
+| **Workspace** | **Organizations & projects**: your VB Studio organizations (the sign-in is kept encrypted on this PC) and their projects and workspaces. **Set up your workspace**: a wizard that clones a workspace into `main` and `working` (a worktree on its own branch). **▶ Run** and the **Run console**: your workspace's app built from its working folder and run in a window of its own, with the build, its requests and its console shown live, and commands typed as in an editor's terminal. **Run as**: the user and roles the app runs as; the roles offered are the ones found in the app's own code. |
+| **Work** | **Issues**: an issue is logged against a page, then written up and analysed by the AI against the page's code and the FDD. Once approved, the agent applies it on a branch with a pull request, and Jira is kept up to date. **Jira stories**, sprints, daily progress and AI analyses of one story or several. **Standup minutes** and **Follow-ups**. |
+| **Application** | **Application pages**: every VB page of your workspace's app, with its technical sheet, screenshots, navigation maps, page code (lines changed since VB Studio are highlighted) and **Code fix**. Code fix writes a change into your working folder only after you approve it, and marks each change in the code with who asked for it, when, and its issue or Jira story. **FDD library**: the FDDs that Analyze with AI reads. **Flows explained**: how Build.Rite's own flows work. |
+| **Tools** | **SQL**: a worksheet against an Oracle database, with Ask AI. |
+
+## Start
+
+You need Node.js 20 or later, and git on your PATH.
+
+```bash
+npm install
+```
+
+```bash
+npm run desktop:fresh
+```
+
+`desktop:fresh` builds Build.Rite with Oracle's VB build tool, then starts the desktop app. After that, `npm run desktop`
+starts it without building. Build.Rite is itself a Visual Builder app (`webApps/buildrite`), served by a local server
+inside the desktop app (`desktop/lib/devserver.js`) at `http://localhost:18893` (set `BUILDRITE_PORT` to change it).
+
+Then:
+
+1. **Organizations & projects**: add your VB Studio organization and sign in.
+2. **Workspace** (in the top bar): **Set up your workspace**. Choose a VB Studio workspace and a folder on this PC.
+   Build.Rite clones it into `<folder>/<project>-<workspace>/main` and `…/working`.
+3. **▶ Run** (in the top bar) builds the workspace's app from its working folder and opens it in a window of its own.
+   Choose who it runs as in **Run console → Run as**. **File → Sign in for your app…** sets the backend login its
+   service calls go out with, kept encrypted on this PC.
+
+### Who you are
+
+Build.Rite knows you by your git name and email on this PC (`git config user.name` / `user.email`), the same as your
+commits. Change notes in the code and approvals carry that name.
+
+### Your settings
+
+Build.Rite keeps everything in its data folder on this PC (**File → Open Build.Rite's data folder**). That covers:
+
+- connections, keys and passwords, encrypted with your OS account;
+- standup minutes, follow-ups, issues, Code fix history and Run as.
+
+None of it is ever written into a project.
+
+**File → Import settings from another folder…** copies these files in from another desktop app's data folder, for
+example the one you used before. The copies are made on this PC; nothing is moved.
+
+### Its shared data
+
+Some of what Build.Rite saves is shared with the team through git, on a branch of its own: **`buildrite-data`**. That
+covers the Application pages' sheets and screenshots, the FDD library and the change history. Build.Rite checks the
+branch out next to the code in `.buildrite-data/`, and it commits and pushes there, never to the code branch.
+
+## Run any VB app from its own folder
+
+Your workspace's working folder, or any other VB Studio app on this PC, can run straight from its folder without
+opening Build.Rite. It is built from a copy of the folder. In the copy, its Component Exchange list is emptied, so the
+components load from Oracle's CDN. The folder itself is never changed. The app is served at one address with its
+backends forwarded, and it is built again each time you save a file there: reload the page to see the change.
+
+```bash
+# from the app's own folder (VS Code's terminal too):
+node C:\path\to\vbsbuild.rite\tools\run-vb-app.js
+```
+
+```bash
+# or from Build.Rite's folder, naming the app's folder:
+npm run vb -- C:\path\to\workspace\working
+```
+
+Options:
+
+- `--app <name>` picks the app when the folder has several.
+- `--port <n>` changes the port (8890 by default).
+- `--open` opens the app in your browser.
+- `--user <name> --roles <ROLE,…>` sets who the app runs as. The roles are answered on this PC.
+  `BUILDRITE_USER` and `BUILDRITE_ROLES` work too, and `BUILDRITE_FUSION_USER` / `BUILDRITE_FUSION_PASSWORD` set the
+  backend login.
+
+## Layout
+
+| Path | What |
+|---|---|
+| `webApps/buildrite/` | Build.Rite's screens: a Visual Builder app (`app-flow.*`, `pages/shell-page*`, `flows/insights`, `flows/fdd`, `resources/js`, `resources/css`) |
+| `desktop/` | the Electron desktop app: `main.js` (the window, the stores, ▶ Run, the Run console), `lib/` (the engines: `vbs.js` VB Studio and your workspace, `workPreview.js` building it, `codeFix.js` and `changeNote.js`, `issues.js`, `pages.js`, `pageScan.js`, `devserver.js` the local server, `appRoles.js` the roles in your app's code, …) |
+| `services/jira/` | the Jira service connection the Jira screens read through (read only) |
+| `tools/` | `run-vb-app.js` (run a VB app from its folder), `check-tools.js` (build preflight), `get-electron.js`, `fdd.js` (the FDD library from a terminal) |
+| `tests/` | dependency-free `node` test suites (`npm test`), and browser tests in `tests/e2e` (Playwright) |
+
+## Tests
+
+```bash
+npm test
+```
+
+```bash
+npm run build
+```
+
+```bash
+node tests/e2e/run-all.js
+```
+
+The unit suites need nothing but Node. The e2e suites drive Build.Rite's built screens in Chromium (Playwright), each
+against stand-ins for the desktop app's engines, so they need no VB Studio, Jira or AI account.

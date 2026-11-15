@@ -1,0 +1,311 @@
+define(['resources/js/pagesClient', 'resources/js/storyAnalysis', 'resources/js/shellBus', 'resources/js/pageMap', 'resources/js/codeFixClient', 'resources/js/codeView', 'resources/js/appNames'], (PC, SA, bus, PM, FX, CV, AN) => {
+  'use strict';
+
+  // Application pages: binding helpers. The facts come from desktop/lib/pageScan.js (via the catalog, resources/pages);
+  // the work is the chains. None uses `this` (a binding may call a function detached).
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const when = (at) => { const d = new Date(at); if (isNaN(d.getTime())) return ''; const p2 = (n) => (n < 10 ? '0' : '') + n; return d.getDate() + ' ' + MON[d.getMonth()] + ' ' + d.getFullYear() + ', ' + p2(d.getHours()) + ':' + p2(d.getMinutes()); };
+  /** Check all's result for one call (the API tester). */
+  /** A run's time: just the time today, else its day too. */
+  const shortWhen = (at) => { const d = new Date(at); if (isNaN(d.getTime())) return ''; const p2 = (n) => (n < 10 ? '0' : '') + n; const t = p2(d.getHours()) + ':' + p2(d.getMinutes()); return d.toDateString() === new Date().toDateString() ? t : d.getDate() + ' ' + MON[d.getMonth()] + ', ' + t; };
+  const checkOf = (check, key) => ((check && check.results) || []).filter((r) => r.endpoint === key)[0] || null;
+  let shownKept = { k: '', v: [] };
+  const mapKept = { page: { k: '', v: null }, app: { k: '', v: null } };
+  const codeKept = { k: '', v: '' };
+  // Screenshots for a Code fix request: pasted (Ctrl+V), dropped or picked in its box. The clipboard can only be read
+  // during the paste, so this module reads it (one set of listeners, whichever page instance is live) and hands the
+  // images to the chain through codeFixClient's queue and the fixImages event.
+  let fireImages = null;
+  function listenForImages() {
+    if (typeof document === 'undefined' || window.__nxFixImages) return;
+    window.__nxFixImages = true;
+    const inAsk = (t) => !!(t && t.closest && t.closest('#fxAsk'));
+    const filesOf = (dt) => {
+      if (!dt) return [];
+      const fromItems = Array.prototype.filter.call(dt.items || [], (i) => i.kind === 'file' && /^image\//.test(i.type)).map((i) => i.getAsFile()).filter(Boolean);
+      return fromItems.length ? fromItems : Array.prototype.filter.call(dt.files || [], (f) => /^image\//.test(f.type));
+    };
+    const take = (files) => {
+      if (!files.length) return false;
+      Promise.all(files.map((f) => FX.prepImage(f))).then((imgs) => { FX.queueImages(imgs.filter(Boolean)); if (fireImages) fireImages(); });
+      return true;
+    };
+    document.addEventListener('paste', (ev) => { if (inAsk(ev.target) && take(filesOf(ev.clipboardData))) ev.preventDefault(); });
+    document.addEventListener('dragover', (ev) => { if (inAsk(ev.target)) { ev.preventDefault(); const a = ev.target.closest('#fxAsk'); if (a) a.classList.add('nx-fx-ask--drop'); } });
+    document.addEventListener('dragleave', (ev) => { const a = ev.target && ev.target.closest && ev.target.closest('#fxAsk'); if (a && !a.contains(ev.relatedTarget)) a.classList.remove('nx-fx-ask--drop'); });
+    document.addEventListener('drop', (ev) => { if (!inAsk(ev.target)) return; ev.preventDefault(); const a = ev.target.closest('#fxAsk'); if (a) a.classList.remove('nx-fx-ask--drop'); take(filesOf(ev.dataTransfer)); });
+    document.addEventListener('change', (ev) => { if (ev.target && ev.target.id === 'fxImgFile') { take(Array.prototype.slice.call(ev.target.files || [])); ev.target.value = ''; } });
+  }
+
+  class PageModule {
+    constructor(context) {
+      // a Jira story hands this screen a page to open (bus.focus('app-pages', { id })): the focusRequest event takes it
+      const helper = context && typeof context.getEventHelper === 'function' ? context.getEventHelper() : null;
+      bus.onFocus('app-pages', () => { if (helper) helper.fireCustomEvent('focusRequest', {}); });
+      fireImages = () => { if (helper) helper.fireCustomEvent('fixImages', {}); };
+      // Build.Rite: the build in scope changed in the top bar: the list shows that build
+      bus.onScope('app-pages', () => { if (helper) helper.fireCustomEvent('scopeChanged', {}); });
+      listenForImages();
+      // the maps' lines follow the boxes: drawn again when the window changes size
+      if (typeof window !== 'undefined') { let t = 0; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => PM.redraw(), 120); }); }
+    }
+    // ── Page code (read only; resources/js/codeView.js) ──
+    codeGroups(info) {
+      const files = (info && info.files) || [];
+      return [['page', 'The page'], ['chain', 'Action chains'], ['module', 'Rules modules it uses']]
+        .map((g) => ({ id: g[0], title: g[1], files: files.filter((f) => f.group === g[0]) })).filter((g) => g.files.length);
+    }
+    codeDoc(text, path, find, marks, at) {
+      const k = path + '|' + find + '|' + (text || '').length + '|' + (text || '').slice(0, 64) + '|' + JSON.stringify((marks && marks.regions) || null) + '|' + at;
+      if (codeKept.k !== k) { codeKept.k = k; codeKept.v = CV.doc(text, path, find, marks, at); }
+      return codeKept.v;
+    }
+    // what changed in the file shown, against VB Studio (your workspace) or the branch's remote; where you are in it
+    codeChangesText(m) {
+      if (!m) return '';
+      const n = (m.regions || []).length;
+      if (m.isNew) return 'A new file: not in ' + m.base + ' yet (' + m.added + ' line' + (m.added === 1 ? '' : 's') + ')';
+      return n ? n + ' change' + (n === 1 ? '' : 's') + ' since ' + m.base + ': +' + m.added + ' −' + m.removed + ' line' + (m.added + m.removed === 1 ? '' : 's') : 'No change since ' + m.base;
+    }
+    codeWhereText(info, at) {
+      if (!info || !info.folder) return '';
+      let t = '';
+      try { const d = at ? new Date(at) : null; t = d && !isNaN(d.getTime()) ? ' · read at ' + d.toLocaleTimeString() : ''; } catch (e) { t = ''; }
+      return 'As it is in ' + info.folder + t;
+    }
+    codeAtText(m, at) { const n = (m && m.regions) ? m.regions.length : 0; return n && at >= 0 ? 'Change ' + (at + 1) + ' of ' + n : ''; }
+    codeHasNotes(text) { return Object.keys(CV.noteLines(text)).length > 0; }
+    codeFileBadge(f) { const c = f && f.changed; return !c ? '' : (c.isNew ? 'new' : '+' + c.added + ' −' + c.removed); }
+    codeHits(text, find) { const n = CV.hits(text, find); return String(find || '').trim().length < 2 ? '' : (n ? n + ' match' + (n === 1 ? '' : 'es') : 'Not in this file'); }
+    codeLines(text) { const n = String(text || '').split('\n').length; return text ? n + ' lines' : ''; }
+    codeFileClass(f, sel) { return 'nx-cv-file' + (f.path === sel ? ' nx-cv-file--on' : '') + (f.changed ? ' nx-cv-file--changed' : ''); }
+    fixImgUrl(f, n) { return FX.imgUrl(f, n); }
+    fixImgSize(x) { return (x.w ? x.w + '×' + x.h + ' · ' : '') + Math.max(1, Math.round((x.size || 0) / 1024)) + ' KB'; }
+    // ── Code Fix (desktop/lib/codeFix.js) ──
+    fixKinds() { return [{ id: 'fix', label: 'Fix a bug' }, { id: 'enhance', label: 'Enhance' }, { id: 'change', label: 'Change' }]; }
+    fixStatus(s) {
+      return { proposed: 'Proposed — waiting for your approval', 'needs-redo': 'Not usable as it is (see below): ask again', questions: 'The AI has questions first', applied: 'Applied — not committed yet',
+        committed: 'Committed', undone: 'Undone', discarded: 'Discarded', stale: 'Out of date: the code changed' }[s] || s;
+    }
+    fixStatusClass(s) { return 'nx-fx-st nx-fx-st--' + (s || 'none'); }
+    fixFolder(i) {
+      if (!i) return '';
+      if (i.workspace) return 'Your workspace ' + i.workspace.label + ' — its working folder, branch ' + (i.branch || i.workspace.branch) + '. Changes stay on this PC until Apply to main, then Push, in its project\'s tab.';
+      return (i.branch ? 'branch ' + i.branch + (i.upstream ? ' → ' + i.upstream : ' (not pushed anywhere)') : '') + (i.isDefault ? ' · the project this app runs from' : '');
+    }
+    // a change to your workspace (Build.Rite): written, checked and committed in its working folder only, never pushed from here
+    fixInWs(f) { return !!(f && f.workspace); }
+    // the Jira story and the issue the change is for; the change notes written into the code with it
+    fixRefsText(f) { const r = (f && f.refs) || {}, i = (f && f.issue) || {}; const jira = i.jira || r.jira, iss = i.number || r.issue; return [jira ? 'Jira story ' + jira : '', iss ? 'Issue ' + iss : ''].filter(Boolean).join(' · '); }
+    fixNotesText(f) { const n = (f && f.applied && f.applied.notes) || 0; return n + ' change note' + (n === 1 ? '' : 's') + ' written in the code beside the change: what was asked, who asked and who changed it, when, the Jira story and the issue (see The change above).'; }
+    fixApproveText(f, i) {
+      const n = f ? f.files.length : 0;
+      const note = ' A note goes into the code beside the change: who asked, who changed it, when, the Jira story and the issue.';
+      if (f && f.workspace) return 'Writes the ' + n + ' file(s) in your workspace\'s working folder (' + f.workspace + ') and checks them. Nothing is pulled, committed or pushed: Save in working commits it here; Apply to main, then Push, in the project\'s tab, send it to VB Studio.' + note;
+      return 'Pulls ' + (i ? i.branch : 'the branch') + ' first, runs the related tests, writes the ' + n + ' file(s), and tests again. Nothing is committed until you click Commit.' + note;
+    }
+    fixAppliedText(f) {
+      const a = (f && f.applied) || {};
+      return 'Applied ' + when(a.at) + (f && f.workspace ? ' in your workspace\'s working folder (' + a.branch + ')' : ' on ' + a.branch);
+    }
+    fixCommittedText(f) {
+      const c = (f && f.commit) || {};
+      if (f && f.workspace) return 'Saved in working: commit ' + c.sha + ' on ' + c.branch + ', on this PC only. ' + (c.next || '');
+      return 'Committed ' + c.sha + ' on ' + c.branch + (c.pushed ? ', pushed to ' + c.upstream : ' (not pushed)');
+    }
+    fixWhen(at) { return when(at); }
+    fixMeta(f) { return !f ? '' : (f.provider || 'AI') + (f.model ? ' (' + f.model + ')' : '') + ' · ' + when(f.at) + (f.by ? ' · asked by ' + f.by : '') + (f.ms ? ' · ' + Math.round(f.ms / 1000) + ' s' : '') + (f.retried ? ' · asked twice' : ''); }
+    fixSent(f) { return !f || !f.sent ? '' : 'The AI read ' + f.sent.files.length + ' files of this page (' + Math.round(f.sent.chars / 1000) + 'k characters)' + (f.sent.skipped.length ? '; too large to send: ' + f.sent.skipped.join(', ') : '') + '.'; }
+    fixStats(f) {
+      const d = (f && f.diff) || [];
+      return d.length + ' file' + (d.length === 1 ? '' : 's') + ' · +' + d.reduce((n, x) => n + x.added, 0) + ' −' + d.reduce((n, x) => n + x.removed, 0);
+    }
+    fixLine(t) { return 'nx-fx-l nx-fx-l--' + (t === '+' ? 'add' : t === '-' ? 'del' : 'ctx'); }
+    fixSign(t) { return t === ' ' ? '' : (t === '-' ? '−' : t); }
+    fixCheck(c) { return c.ok ? '✓' : (c.warn ? '⚠' : (c.already ? '•' : '✗')); }
+    fixCheckClass(c) { return 'nx-fx-check ' + (c.ok ? 'nx-fx-check--ok' : (c.warn ? 'nx-fx-check--warn' : (c.already ? 'nx-fx-check--old' : 'nx-fx-check--bad'))); }
+    fixCheckText(c) { return c.name + (c.detail ? ': ' + c.detail : '') + (!c.ok && c.already ? ' (already so before the change)' : ''); }
+    fixChecksOk(list) { return (list || []).every((c) => c.ok || c.already); }
+    fixUnit(u) { return u.ok ? '✓ ' + u.passed + ' passed' : (u.newFailures.length ? '✗ ' + u.newFailures.length + ' new failure' + (u.newFailures.length === 1 ? '' : 's') : '• ' + u.failed + ' failing, as before the fix'); }
+    fixUnitClass(u) { return 'nx-fx-check ' + (u.ok ? 'nx-fx-check--ok' : (u.newFailures.length ? 'nx-fx-check--bad' : 'nx-fx-check--old')); }
+    fixTestsText(t) {
+      if (!t) return '';
+      return (t.ok ? '✓ Nothing broke' : '✗ Something broke') + ' — tested ' + when(t.at) + (t.none ? '. No unit test names this page; the checks ran.' : '.');
+    }
+    fixShot(f, which) { return FX.shotUrl(f, which); }
+    fixCanApply(f) { return !!f && !f.shared && (f.status === 'proposed' || f.status === 'undone'); }
+    // ── the change history ──
+    histShown(list, q) {
+      const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+      return (list || []).filter((r) => !words.length || words.every((w) => [r.label, r.page, r.request, r.by, r.approvedBy, r.status, r.commit && r.commit.sha].join(' ').toLowerCase().indexOf(w) !== -1));
+    }
+    histMeta(r) {
+      const parts = ['asked by ' + (r.by || 'someone') + ' · ' + when(r.at)];
+      if (r.approvedBy || r.approvedAt) parts.push('approved by ' + (r.approvedBy || 'someone') + ' · ' + when(r.approvedAt) + (r.branch ? ' on ' + r.branch : ''));
+      if (r.tests) parts.push(r.tests.ok ? 'tests ✓' : 'tests ✗');
+      if (r.commit) parts.push('committed ' + r.commit.sha + (r.commit.pushed ? ', pushed' : ''));
+      if (r.undone) parts.push('undone');
+      if (r.shared) parts.push('from another PC');
+      return parts.join(' · ');
+    }
+    histCount(list, q, info) {
+      const n = (list || []).length;
+      const shown = (list || []).filter((r) => !String(q || '').trim() || [r.label, r.page, r.request, r.by, r.approvedBy, r.status, r.commit && r.commit.sha].join(' ').toLowerCase().indexOf(String(q).toLowerCase().trim()) !== -1).length;
+      return (shown === n ? n + ' change' + (n === 1 ? '' : 's') : shown + ' of ' + n + ' changes') + (info && info.shared ? ' · shared with everyone on ' + info.branch : ' · on this PC (no data branch)');
+    }
+    histStatus(st) { return { proposed: 'waiting for approval', applied: 'applied', committed: 'committed', undone: 'undone', discarded: 'discarded', 'needs-redo': 'not usable', questions: 'questions', stale: 'out of date' }[st] || st; }
+    stepText(e) { return (e.by ? e.by + ' · ' : '') + when(e.at); }
+    fixListText(x) { return (x.status ? ({ proposed: 'proposed', applied: 'applied', committed: 'committed', undone: 'undone', discarded: 'discarded', 'needs-redo': 'not usable', questions: 'questions', stale: 'out of date' }[x.status] || x.status) : '') + ' · ' + when(x.at) + (x.by ? ' · ' + x.by : ''); }
+    // ── the navigation maps (resources/js/pageMap.js) ──
+    /** One page's map: Comes from → This page → Goes to → Then. */
+    pageMap(pages, id, sheet) {
+      const via = (sheet && sheet.facts && sheet.facts.next) || [];
+      const k = (pages || []).length + '|' + id + '|' + JSON.stringify(via);
+      if (mapKept.page.k === k && mapKept.page.pages === pages) return mapKept.page.v;
+      const v = PM.pageMap(pages, id, via);
+      mapKept.page = { k: k, v: v, pages: pages };
+      return v;
+    }
+    /** The whole app's map (the open page's app), the open page marked. */
+    appMap(pages, id) {
+      const p = (pages || []).filter((x) => x.id === id)[0];
+      const app = p ? p.app : '';
+      const k = (pages || []).length + '|' + app + '|' + id;
+      if (mapKept.app.k === k && mapKept.app.pages === pages) return mapKept.app.v;
+      const v = app ? PM.appMap(pages, app, id) : { cols: [], edges: [], counts: { pages: 0, links: 0, linked: 0, menu: 0 } };
+      mapKept.app = { k: k, v: v, pages: pages };
+      return v;
+    }
+    edges(map) { return JSON.stringify((map && map.edges) || []); }
+    mapLinks(map) { const c = map && map.cols ? map.cols : []; const n = (i) => (c[i] ? c[i].nodes.length : 0); return n(0) + n(2); }
+    nodeClass(n, selId) { return 'nx-pm-node nx-pm-node--' + n.kind + (n.id && n.id === selId && n.kind !== 'self' ? ' nx-pm-node--sel' : ''); }
+    nodeTitle(n) { return n.kind === 'menu' ? 'In the menu: ' + n.sub : n.kind === 'self' ? 'The page open now' : 'Open ' + n.label + ' (' + n.sub + ')'; }
+    appMapText(m, appName) {
+      const c = (m && m.counts) || { pages: 0, links: 0, linked: 0, menu: 0 };
+      return (appName || 'This app') + ': ' + c.pages + ' pages · ' + c.menu + ' in the menu · ' + c.links + ' links between pages · ' + (c.pages - c.linked) + ' with no link either way';
+    }
+    subText(pages) {
+      const ps = pages || [];
+      const deleted = ps.filter((p) => p.deleted).length;
+      const sheets = ps.filter((p) => p.sheet).length;
+      const stories = [];
+      ps.forEach((p) => (p.stories || []).forEach((k) => { if (stories.indexOf(k) === -1) stories.push(k); }));
+      return (ps.length - deleted) + ' pages in the code · ' + sheets + ' with a technical sheet · ' + stories.length + ' Jira stories mapped' + (deleted ? ' · ' + deleted + ' deleted' : '');
+    }
+    gitText(g) {
+      if (!g || !g.available) return '';
+      const where = g.branch + (g.upstream ? ' → ' + g.upstream : ' (not pushed anywhere yet)');
+      if (g.pending && g.pending.length) return 'Branch ' + where + ' · ' + g.pending.length + ' file' + (g.pending.length === 1 ? '' : 's') + ' not committed';
+      if (g.unpushed && g.unpushed.length) return 'Branch ' + where + ' · ' + g.unpushed.length + ' commit' + (g.unpushed.length === 1 ? '' : 's') + ' not pushed';
+      return 'Branch ' + where + ' · everything is in git ✓';
+    }
+    needsPush(g) { return !!(g && g.available && ((g.pending && g.pending.length) || (g.unpushed && g.unpushed.length))); }
+    /** Build the sheet's steps, each with its icon (done ✓, going ●, to come ○, failed ✗, skipped –). */
+    stepRows(steps) {
+      const ICON = { done: '✓', active: '●', todo: '○', failed: '✗', skipped: '–' };
+      return ((steps && steps.list) || []).map((s) => ({ label: s.label, detail: s.detail || '', state: s.state, icon: ICON[s.state] || '○' }));
+    }
+    appChips(pages, showDeleted) {
+      const ps = (pages || []).filter((p) => showDeleted || !p.deleted);
+      const apps = ps.map((p) => p.app).filter((a, i, l) => a && l.indexOf(a) === i).sort((a, b) => a.localeCompare(b));
+      const name = (id) => { const p = ps.filter((x) => x.app === id)[0]; return (p && p.appName) || id; };
+      return [{ id: 'all', label: 'All', n: ps.length }].concat(apps.map((id) => ({ id: id, label: name(id), n: ps.filter((p) => p.app === id).length })));
+    }
+    shown(pages, q, appF, onlyMapped, onlySheet, showDeleted) {
+      const k = JSON.stringify([(pages || []).length, (pages || []).map((p) => (p.stories || []).length + (p.sheet ? 's' + (p.sheet.screenshots || 0) : '') + (p.deleted ? 'd' : '')).join(''), q, appF, onlyMapped, onlySheet, showDeleted]);
+      if (shownKept.k === k && shownKept.pages === pages) return shownKept.v;
+      const s = String(q || '').trim().toLowerCase();
+      const v = (pages || []).filter((p) => (showDeleted || !p.deleted) && (appF === 'all' || !appF || p.app === appF) && (!onlyMapped || (p.stories || []).length) && (!onlySheet || p.sheet)
+        && (!s || [p.label, p.id, p.appName, (p.stories || []).join(' ')].join(' ').toLowerCase().indexOf(s) !== -1));
+      shownKept = { k: k, v: v, pages: pages };
+      return v;
+    }
+    /** How many screenshots a page has (a catalog entry from before several were kept may have one, as `screenshot`). */
+    shotCount(p) { const sh = p && p.sheet; return !sh ? 0 : (typeof sh.screenshots === 'number' ? sh.screenshots : (sh.screenshot ? 1 : 0)); }
+    /** The screenshots, each with its index (the button's data-key) and its number. */
+    indexed(list) { return (list || []).map((x, i) => Object.assign({ i: String(i), n: String(i + 1) }, x)); }
+    shotAt(sheet, i) { const l = (sheet && sheet.screenshots) || []; const k = Number(i); return k >= 0 && k < l.length ? l[k] : null; }
+    shot(base, s) { return PC.shotUrl(base, s); }
+    shotText(s) { return s ? (s.caption ? s.caption + ' · ' : '') + (s.source === 'capture' ? 'Captured' : 'Uploaded') + ' ' + when(s.at) + (s.by ? ' by ' + s.by : '') + (s.from === 'workspace' ? ' · from your workspace\'s working folder' : '') + (s.landed ? ' · the page sent it to ' + s.landed : '') : ''; }
+    /** The app's mark, made from its id (appNames.js): 'my-app' → MA; its colour, picked from the id. */
+    appShort(app) { return AN.short(app); }
+    appTone(app) { return AN.tone(app); }
+    firstStories(list) { const l = list || []; return l.length > 4 ? l.slice(0, 4).concat(['+' + (l.length - 4)]) : l; }
+    stateText(sh, saved) {
+      if (!sh) return '';
+      if (!saved) return 'No technical sheet saved yet — these facts are read from the code now.';
+      return 'Sheet built ' + when(sh.at) + (sh.by ? ' by ' + sh.by : '') + ' · code ' + sh.codeHash;
+    }
+    routeText(r) { return r ? (r.menu ? 'Menu: ' + r.menu + ' · ' : '') + (r.url ? 'Opens at ' + r.url : '') : ''; }
+    aiText(ai) { return ai ? 'Explained by ' + (ai.provider || 'AI') + ' · ' + when(ai.at) + (ai.by ? ' by ' + ai.by : '') : ''; }
+    usesText(c) {
+      return [c.calls.length ? 'calls ' + c.calls.join(', ') : '', c.reports.length ? 'reports ' + c.reports.join(', ') : '', c.opens.length ? 'opens ' + c.opens.join(', ') : ''].filter(Boolean).join(' · ');
+    }
+    method(m) { const k = String(m || '').toLowerCase(); return /^(get|post|patch|put|delete)$/.test(k) ? k : 'other'; }
+
+    // ── the API tester (desktop/lib/apiTest.js; apiChain does the work) ──
+    /** A call's last run, beside it: "200 · 84 ms · 25 rows". */
+    apiLastText(last, key) {
+      const h = last && last[key];
+      return !h ? '' : (h.status ? h.status + ' · ' + h.ms + ' ms' + (h.rows !== null && h.rows !== undefined ? ' · ' + h.rows + (h.rows === 1 ? ' row' : ' rows') : '') : 'no answer') + ' · ' + shortWhen(h.at);
+    }
+    apiLastClass(last, key) { const h = last && last[key]; return 'nx-api-last nx-api-last--' + (!h ? 'none' : !h.ok ? 'fail' : (h.shape === 'differs' ? 'warn' : 'ok')); }
+    /** What Check all adds beside the last run: why a call was not run, what failed or differs, the value it used. */
+    apiCheckNote(check, key) {
+      const r = checkOf(check, key);
+      if (!r) return '';
+      if (r.state === 'skip') return '— ' + r.note;
+      const used = /^with /.test(r.note || '') ? r.note.split(' · ')[0] : '';
+      if (r.state === 'ok') return used ? '✓ ' + used : '';
+      return (r.state === 'warn' ? '⚠ ' : '✗ ') + (r.note || '');
+    }
+    apiCheckClass(check, key) { const r = checkOf(check, key); return 'nx-api-chk nx-api-chk--' + (r ? r.state : 'none'); }
+    apiCheckText(check) {
+      if (!check) return '';
+      if (check.error) return check.error;
+      return [check.passed + ' ok', check.warned ? check.warned + ' differ from the example' : '', check.failed ? check.failed + ' failed' : '', check.skipped ? check.skipped + ' not run' : ''].filter(Boolean).join(' · ');
+    }
+    apiCheckClassAll(check) { return 'nx-api-sum' + (!check ? '' : check.error || check.failed ? ' nx-api-sum--fail' : check.warned ? ' nx-api-sum--warn' : ' nx-api-sum--ok'); }
+    apiTitle(d) { return !d ? '' : (d.op.report ? d.op.reportName : d.op.operation); }
+    apiSub(d) { return !d ? '' : (d.op.report ? 'BI Publisher report · runs through bipService/runBIPReport' : (d.op.summary ? d.op.summary + ' · ' : '') + d.op.service); }
+    apiPath(d) { return !d ? '' : d.op.path; }
+    apiReads(d) { return !d ? '' : (d.op.reads ? 'Only reads' : 'Changes data: it asks you before sending'); }
+    apiPMeta(p) { return (p.in === 'report' ? 'report parameter' : p.in) + ' · ' + p.type + (p.format ? ' (' + p.format + ')' : '') + (p.required ? ' · required' : ''); }
+    apiPlaceholder(p) { return p.example ? 'e.g. ' + p.example : p.enum && p.enum.length ? 'one of the values below' : p.in === 'report' ? 'its value (empty: left out)' : (p.required ? 'required' : 'optional'); }
+    /** What can go in a box: its choices, and values seen in other answers (an id from a list → its detail). */
+    apiChips(d, p) {
+      const out = (p.enum || []).slice(0, 8).map((x) => ({ key: p.name + '=' + x, label: x, title: 'One of its values' }));
+      const s = d && d.suggest && d.suggest[p.name];
+      (s || []).forEach((x) => { if (out.length < 10) out.push({ key: p.name + '=' + x.value, label: x.value, title: 'Seen in ' + x.from }); });
+      return out;
+    }
+    apiChipClass(c) { return 'nx-api-chip' + (/^Seen/.test(c.title) ? ' nx-api-chip--seen' : ''); }
+    apiSeenText(d, p) { const s = d && d.suggest && d.suggest[p.name]; return s && s.length ? 'from ' + s[0].from.split(' · ')[0] : ''; }
+    apiStatusText(r) { return !r ? '' : (r.status ? r.status + ' ' + (r.statusText || '') : 'No answer'); }
+    apiStatusClass(r) { return 'nx-api-status nx-api-status--' + (!r || !r.status ? 'fail' : r.status < 300 && !r.fault ? 'ok' : r.status < 400 ? 'warn' : 'fail'); }
+    apiFacts(r) { return !r ? '' : [r.ms + ' ms', r.sizeText, r.table ? r.table.total + (r.table.total === 1 ? ' row' : ' rows') : '', r.report ? 'report rows <' + (r.report.rowTag || '?') + '>' : ''].filter(Boolean).join(' · '); }
+    apiShapeText(r) { return !r || !r.shape ? '' : (r.shape.status === 'same' ? '✓ Same shape as the example' : '⚠ Differs from the example'); }
+    apiShapeClass(r) { return 'nx-api-shape nx-api-shape--' + (r && r.shape ? r.shape.status : 'none'); }
+    apiShapeIntro(r) {
+      const s = r && r.shape;
+      if (!s) return 'This call has no example response saved with its service connection, so there is nothing to compare with.';
+      return (s.status === 'same' ? 'Every field of the example the page was built with is still in the answer, with the same type.' : 'The answer is not shaped like the example the page was built with: the page may show blanks or break where it reads a field that is gone.')
+        + (s.empty ? ' Its list came back empty, so the fields inside it could not be compared.' : '') + ' Compared with ' + s.basis + '.';
+    }
+    apiTabClass(tab, cur) { return 'nx-api-tab' + (tab === cur ? ' nx-api-tab--on' : ''); }
+    apiTableMeta(t) { return !t ? '' : 'Rows from ' + t.from + ' · ' + (t.shown < t.total ? 'the first ' + t.shown + ' of ' + t.total : t.total + (t.total === 1 ? ' row' : ' rows')) + (t.meta ? ' · ' + t.meta : ''); }
+    apiHistText(h) { return (h.status ? h.status : 'no answer') + ' · ' + h.ms + ' ms' + (h.rows !== null && h.rows !== undefined ? ' · ' + h.rows + ' rows' : '') + (h.shape === 'differs' ? ' · differs' : '') + ' · ' + when(h.at); }
+    apiHistClass(h) { return 'nx-api-hist nx-api-hist--' + (!h.ok ? 'fail' : h.shape === 'differs' ? 'warn' : 'ok'); }
+    apiReportMeta(r) { return (r.params.length ? 'Parameters: ' + r.params.join(', ') : 'No parameters found in its code') + (r.rowTag ? ' · rows <' + r.rowTag + '>' : '') + (r.guessed ? ' · its path is a guess (not found in the code)' : (r.file ? ' · ' + r.file.split('/').pop() : '')); }
+    apiLoginClass(d) { return 'nx-api-login' + (d && d.backend && !d.backend.loginOk ? ' nx-api-login--warn' : ''); }
+    /** The AI explanation in a small styled document for its sandboxed iframe. */
+    doc(text) {
+      return '<!doctype html><meta charset="utf-8"><style>'
+        + 'body{font:14px/1.55 -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#161513;margin:0;padding:14px}'
+        + 'h2,h3,h4{color:#00688c;margin:16px 0 6px;font-size:15px;font-weight:700}h3:first-child{margin-top:0}'
+        + 'ul,ol{margin:0 0 12px;padding-left:20px}li{margin-bottom:5px}p{margin:0 0 10px}code{background:#eef2f4;padding:1px 5px;border-radius:4px;font-size:12px}'
+        + '</style>' + SA.renderHtml(text || '');
+    }
+  }
+  return PageModule;
+});

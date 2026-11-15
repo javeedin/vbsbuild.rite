@@ -1,0 +1,355 @@
+<!-- Build.Rite's shell. A light toolbar (your workspace, ▶ Run, the Run console, Jira updates, you), a light menu that
+     collapses to icons, and tabs: every screen and record opens in a tab of its own and stays alive while another is
+     shown (oj-vb-switcher). Styles: resources/css/next.css and buildrite.css. -->
+<div :class="[[ 'nx-app' + ($variables.navCollapsed ? ' nx-app--rail' : '') + ($variables.navOpen ? ' nx-app--navopen' : '') ]]">
+
+  <header class="nx-top">
+    <button type="button" class="nx-iconbtn" id="nxNavToggle" on-click="[[ $listeners.toggleNav ]]"
+      :aria-label="[[ $variables.navCollapsed ? 'Show the full menu' : 'Collapse the menu to icons' ]]"
+      :aria-expanded="[[ $variables.navCollapsed ? 'false' : 'true' ]]" aria-controls="nxNav">
+      <span :class="[[ $variables.navCollapsed ? 'oj-ux-ico-panel-expand-left' : 'oj-ux-ico-panel-collapse-left' ]]" aria-hidden="true"></span>
+    </button>
+    <!-- Build.Rite: the same build shown as the team's own tools (resources/js/nav.js product) -->
+      <button type="button" class="nx-brand nx-brand--build" id="nxBrandBuild" data-nav-id="issues" on-click="[[ $listeners.onNav ]]" aria-label="Build.Rite, Issues">
+        <span class="nx-logo nx-logo--build" aria-hidden="true">BR</span>
+        <span class="nx-brand-name">Build<span class="nx-brand-dot">.</span>Rite</span>
+        <span class="nx-badge nx-badge--build">for the team</span>
+      </button>
+    
+
+    <!-- The search box (Ctrl K): Build.Rite's screens, by name, group and keywords (searchChain; nav.search). -->
+    <div class="nx-command">
+      <span class="oj-ux-ico-search" aria-hidden="true"></span>
+      <input id="nxCommand" type="search" autocomplete="off" placeholder="Search Build.Rite screens…"
+        aria-label="Search Build.Rite screens" role="combobox" aria-autocomplete="list" aria-controls="nxResultList"
+        :aria-expanded="[[ $variables.showResults ? 'true' : 'false' ]]"
+        :aria-activedescendant="[[ $variables.showResults && $variables.search.count > 0 ? 'nxRes-' + $variables.resultIndex : '' ]]"
+        :value="[[ $variables.query ]]" on-input="[[ $listeners.onCommandInput ]]" on-keydown="[[ $listeners.onCommandKey ]]" on-focus="[[ $listeners.onCommandFocus ]]">
+      <kbd class="nx-kbd" aria-hidden="true">Ctrl K</kbd>
+      <oj-bind-if test="[[ $variables.showResults ]]">
+        <div id="nxResults" class="nx-results nx-gs">
+          <oj-bind-if test="[[ $variables.search.scopes.length > 2 ]]">
+            <div class="nx-gs-scopes" role="group" aria-label="Search in">
+              <oj-bind-for-each data="[[ $variables.search.scopes ]]">
+                <template data-oj-as="sc">
+                  <button type="button" :data-scope="[[ sc.data.key ]]" on-click="[[ $listeners.onSearchScope ]]" :aria-pressed="[[ sc.data.on ? 'true' : 'false' ]]"
+                    :class="[[ 'nx-gs-scope' + (sc.data.on ? ' nx-gs-scope--on' : '') ]]">
+                    <oj-bind-text value="[[ sc.data.label ]]"></oj-bind-text><span class="nx-gs-scope-n"><oj-bind-text value="[[ sc.data.count ]]"></oj-bind-text></span>
+                  </button>
+                </template>
+              </oj-bind-for-each>
+            </div>
+          </oj-bind-if>
+          <ul id="nxResultList" class="nx-gs-list" role="listbox" aria-label="Matches">
+            <oj-bind-for-each data="[[ $variables.results ]]">
+              <template data-oj-as="res">
+                <oj-bind-if test="[[ res.data.type === 'head' ]]">
+                  <li role="presentation" class="nx-gs-head"><span class="nx-gs-head-label"><oj-bind-text value="[[ res.data.label ]]"></oj-bind-text></span>
+                    <span class="nx-gs-head-n"><oj-bind-text value="[[ res.data.count ]]"></oj-bind-text></span></li>
+                </oj-bind-if>
+                <oj-bind-if test="[[ res.data.type === 'note' ]]">
+                  <li role="presentation" class="nx-gs-note"><oj-bind-text value="[[ res.data.label ]]"></oj-bind-text></li>
+                </oj-bind-if>
+                <oj-bind-if test="[[ res.data.type === 'row' || res.data.type === 'more' ]]">
+                  <li role="presentation">
+                    <button type="button" role="option" :id="[[ 'nxRes-' + res.data.n ]]" :data-index="[[ res.data.n ]]" :data-key="[[ res.data.key ]]"
+                      on-click="[[ $listeners.onResult ]]" :title="[[ res.data.title ]]"
+                      :aria-selected="[[ res.data.n === $variables.resultIndex ? 'true' : 'false' ]]"
+                      :class="[[ 'nx-result nx-gs-row nx-gs-row--' + res.data.type + (res.data.n === $variables.resultIndex ? ' nx-result--on' : '') ]]">
+                      <span :class="[[ res.data.icon + ' nx-result-icon' ]]" aria-hidden="true"></span>
+                      <span class="nx-gs-text">
+                        <span class="nx-result-label"><oj-bind-text value="[[ res.data.label ]]"></oj-bind-text></span>
+                        <oj-bind-if test="[[ !!res.data.sub ]]">
+                          <span class="nx-gs-sub"><oj-bind-text value="[[ res.data.sub ]]"></oj-bind-text></span>
+                        </oj-bind-if>
+                      </span>
+                      <span :class="[[ 'nx-result-hint' + (res.data.tone ? ' nx-gs-tone--' + res.data.tone : '') ]]"><oj-bind-text value="[[ res.data.hint ]]"></oj-bind-text></span>
+                    </button>
+                  </li>
+                </oj-bind-if>
+              </template>
+            </oj-bind-for-each>
+          </ul>
+          <oj-bind-if test="[[ !$variables.results.length ]]">
+            <p class="nx-gs-empty" id="nxResultsEmpty"><oj-bind-text value="[[ 'Nothing matches “' + $variables.query.trim() + '”' + ($variables.search.scope !== 'all' ? ' here: try Everything.' : '.') ]]"></oj-bind-text></p>
+          </oj-bind-if>
+          <div class="nx-gs-foot">
+            <span class="nx-gs-foot-text" id="nxResultsFoot"><oj-bind-text value="[[ $variables.search.foot ]]"></oj-bind-text></span>
+            <span class="nx-gs-keys" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd> move <kbd>Enter</kbd> open <kbd>Esc</kbd> close</span>
+          </div>
+        </div>
+      </oj-bind-if>
+    </div>
+
+    <!-- Build.Rite: the working copy — the VB Studio project ▸ workspace cloned on this PC, where changes are made -->
+      <div class="nx-work-wrap" id="nxWorkWrap">
+        <button type="button" :class="[[ $functions.workClass($variables.work) ]]" id="nxWork" on-click="[[ $listeners.onWork ]]" :title="[[ $functions.workTitle($variables.work) ]]">
+          <span class="nx-work-lbl">Workspace</span>
+          <span class="nx-work-val"><oj-bind-text value="[[ $functions.workText($variables.work) ]]"></oj-bind-text></span>
+          <oj-bind-if test="[[ !!$functions.workBadge($variables.work) ]]"><span class="nx-work-badge"><oj-bind-text value="[[ $functions.workBadge($variables.work) ]]"></oj-bind-text></span></oj-bind-if>
+        </button>
+        <oj-bind-if test="[[ !!$variables.work && !!$variables.work.current ]]">
+          <button type="button" class="nx-work-caret" id="nxWorkMenuBtn" data-act="menu" on-click="[[ $listeners.onWorkAct ]]" aria-haspopup="menu" :aria-expanded="[[ $variables.workMenu ? 'true' : 'false' ]]" aria-label="Your workspace: open, change, stop using or remove it"><span class="oj-ux-ico-chevron-down" aria-hidden="true"></span></button>
+          <!-- ▶ Run: your workspace's app, built from its working folder (when its code changed), in a window of its own -->
+          <button type="button" :class="[[ 'nx-work-run' + ($variables.workRunning ? ' nx-work-run--busy' : '') ]]" id="nxWorkRun" data-act="run" on-click="[[ $listeners.onWorkAct ]]" :disabled="[[ $variables.workRunning ]]"
+            title="Run your workspace's app in a window of its own — built from its working folder when its code changed: your changes, running. Run again after more changes.">
+            <oj-bind-if test="[[ $variables.workRunning ]]"><span class="nx-spin nx-spin--btn" aria-hidden="true"></span></oj-bind-if>
+            <oj-bind-if test="[[ !$variables.workRunning ]]"><span class="nx-work-runico" aria-hidden="true">▶</span></oj-bind-if>
+            <oj-bind-text value="[[ $variables.workRunning ? 'Building…' : 'Run' ]]"></oj-bind-text></button>
+          <oj-bind-if test="[[ $variables.workRunProg ]]"><div class="nx-runprog nx-runprog--pop" id="nxRunProg" aria-live="polite"></div></oj-bind-if>
+          <button type="button" class="nx-work-console" id="nxWorkConsole" data-act="console" on-click="[[ $listeners.onWorkAct ]]" title="Run console: what happens when your workspace runs — the build, its requests, the app's own console — and commands">&gt;_</button>
+        </oj-bind-if>
+        <oj-bind-if test="[[ $variables.workMenu ]]">
+          <div class="nx-work-menu" id="nxWorkMenu" role="menu" aria-label="Your workspace">
+            <button type="button" role="menuitem" id="nxWorkRunMenu" data-act="run" on-click="[[ $listeners.onWorkAct ]]"><span class="oj-ux-ico-play" aria-hidden="true"></span><span>Run its app<span class="nx-work-mnote">in a window of its own, with your changes</span></span></button>
+            <button type="button" role="menuitem" id="nxWorkConsoleMenu" data-act="console" on-click="[[ $listeners.onWorkAct ]]"><span aria-hidden="true">&gt;_</span><span>Run console<span class="nx-work-mnote">the build, its requests, the app's own console</span></span></button>
+            <button type="button" role="menuitem" id="nxWorkOpen" data-act="open" on-click="[[ $listeners.onWorkAct ]]"><span class="oj-ux-ico-folder" aria-hidden="true"></span>Open its project</button>
+            <button type="button" role="menuitem" id="nxWorkSwitch" data-act="switch" on-click="[[ $listeners.onWorkAct ]]"><span class="oj-ux-ico-settings" aria-hidden="true"></span>Set up another workspace…</button>
+            <button type="button" role="menuitem" id="nxWorkStop" data-act="stop" on-click="[[ $listeners.onWorkAct ]]"><span class="oj-ux-ico-close" aria-hidden="true"></span><span>Stop using it<span class="nx-work-mnote">its folders kept, to use again</span></span></button>
+            <button type="button" role="menuitem" id="nxWorkRemove" class="nx-work-danger" data-act="remove" on-click="[[ $listeners.onWorkAct ]]"><span class="oj-ux-ico-trash" aria-hidden="true"></span><span>Remove it from this PC…<span class="nx-work-mnote">its folders deleted (asked first)</span></span></button>
+          </div>
+        </oj-bind-if>
+      </div>
+    
+
+
+    <div class="nx-top-end">
+      <!-- Build.Rite: what changed in Jira lately (resources/js/jiraFeed.js) -->
+      <button type="button" class="nx-iconbtn nx-bell nx-jbell" id="nxJiraBell" data-act="toggle" on-click="[[ $listeners.onJira ]]" aria-controls="nxJiraPanel"
+        :aria-expanded="[[ $variables.jiraOpen ? 'true' : 'false' ]]" :aria-label="[[ 'Jira updates' + ($variables.jiraNew ? ', ' + $variables.jiraNew + ' new' : '') ]]"
+        :title="[[ 'What changed in Jira: new stories, status changes, assignments, comments' + ($variables.jiraNew ? ' — ' + $variables.jiraNew + ' new' : '') ]]">
+        <span class="oj-ux-ico-notification" aria-hidden="true"></span>
+        <oj-bind-if test="[[ $variables.jiraNew > 0 ]]">
+          <span class="nx-bell-count" id="nxJiraCount" aria-hidden="true"><oj-bind-text value="[[ $variables.jiraNew > 99 ? '99+' : $variables.jiraNew ]]"></oj-bind-text></span>
+        </oj-bind-if>
+      </button>
+      
+      <!-- You: who Build.Rite knows you as (your git name on this PC), and your look. -->
+      <button type="button" class="nx-user" id="nxUser" on-click="[[ $listeners.onProfile ]]" aria-controls="nxProfilePanel"
+        :aria-expanded="[[ $variables.profileOpen ? 'true' : 'false' ]]" aria-label="You, and your look" title="You, and your look">
+        <span class="nx-avatar" aria-hidden="true"><oj-bind-text value="[[ $application.functions.userInitials($application.user) ]]"></oj-bind-text></span>
+        <span class="nx-user-text">
+          <span class="nx-user-name"><oj-bind-text value="[[ $application.functions.userDisplayName($application.user) ]]"></oj-bind-text></span>
+          <span class="nx-user-role"><oj-bind-text value="[[ $application.functions.userRole($application.user) ]]"></oj-bind-text></span>
+        </span>
+        <span class="oj-ux-ico-chevron-down nx-user-caret" aria-hidden="true"></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="nx-body">
+    <nav class="nx-nav" id="nxNav" aria-label="Main menu">
+      <div class="nx-nav-scroll">
+        <oj-bind-for-each data="[[ $application.functions.visibleGroups() ]]">
+          <template data-oj-as="grp">
+            <div class="nx-nav-group">
+              <oj-bind-if test="[[ !!grp.data.label ]]">
+                <span class="nx-nav-label"><oj-bind-text value="[[ grp.data.label ]]"></oj-bind-text></span>
+              </oj-bind-if>
+              <oj-bind-for-each data="[[ grp.data.items ]]">
+                <template data-oj-as="item">
+                  <button type="button" :data-nav-id="[[ item.data.id ]]" on-click="[[ $listeners.onNav ]]" :title="[[ item.data.label ]]"
+                    :class="[[ 'nx-nav-item' + ($functions.activeNav($variables.tabList, $variables.currentTab) === item.data.id ? ' nx-nav-item--on' : '') ]]"
+                    :aria-current="[[ $functions.activeNav($variables.tabList, $variables.currentTab) === item.data.id ? 'page' : 'false' ]]">
+                    <span :class="[[ item.data.icon + ' nx-nav-icon' ]]" aria-hidden="true"></span>
+                    <span class="nx-nav-text"><oj-bind-text value="[[ item.data.label ]]"></oj-bind-text></span>
+                  </button>
+                </template>
+              </oj-bind-for-each>
+            </div>
+          </template>
+        </oj-bind-for-each>
+      </div>
+      <button type="button" class="nx-nav-foot" on-click="[[ $listeners.toggleNav ]]"
+        :aria-label="[[ $variables.navCollapsed ? 'Show the full menu' : 'Collapse the menu to icons' ]]">
+        <span :class="[[ $variables.navCollapsed ? 'oj-ux-ico-chevron-double-right' : 'oj-ux-ico-chevron-double-left' ]]" aria-hidden="true"></span>
+        <span class="nx-nav-text">Collapse menu</span>
+      </button>
+    </nav>
+    <button type="button" class="nx-scrim" on-click="[[ $listeners.toggleNav ]]" aria-label="Close the menu" tabindex="-1"></button>
+
+    <main class="nx-main">
+      <div :class="[[ 'nx-tabbar' + ($variables.tabMenuOpen ? ' nx-tabbar--menu' : '') ]]">
+        <div class="nx-tabs" role="tablist" aria-label="Open screens">
+          <oj-bind-for-each data="[[ $variables.tabList ]]">
+            <template data-oj-as="tab">
+              <div :class="[[ 'nx-tab' + (tab.data.id === $variables.currentTab ? ' nx-tab--on' : '') + (tab.data.pinned ? ' nx-tab--pinned' : '') ]]"
+                :data-tab-id="[[ tab.data.id ]]">
+                <button type="button" role="tab" class="nx-tab-btn" :data-id="[[ tab.data.id ]]" on-click="[[ $listeners.onTab ]]"
+                  on-auxclick="[[ $listeners.onTabAux ]]" :title="[[ tab.data.title ]]" :id="[[ 'nxTab-' + tab.index ]]"
+                  :aria-selected="[[ tab.data.id === $variables.currentTab ? 'true' : 'false' ]]">
+                  <span :class="[[ tab.data.icon + ' nx-tab-icon' ]]" aria-hidden="true"></span>
+                  <span class="nx-tab-title"><oj-bind-text value="[[ tab.data.title ]]"></oj-bind-text></span>
+                </button>
+                <oj-bind-if test="[[ !tab.data.pinned ]]">
+                  <button type="button" class="nx-tab-close" :data-id="[[ tab.data.id ]]" on-click="[[ $listeners.onTabClose ]]"
+                    :aria-label="[[ 'Close ' + tab.data.title ]]" title="Close (middle-click works too)">
+                    <span class="oj-ux-ico-close" aria-hidden="true"></span>
+                  </button>
+                </oj-bind-if>
+              </div>
+            </template>
+          </oj-bind-for-each>
+        </div>
+        <div class="nx-tabbar-end">
+          <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-action="toggle" on-click="[[ $listeners.onTabMenu ]]" aria-label="Tab options"
+            :aria-expanded="[[ $variables.tabMenuOpen ? 'true' : 'false' ]]" aria-haspopup="menu">
+            <span class="oj-ux-ico-menu-overflow" aria-hidden="true"></span>
+          </button>
+          <oj-bind-if test="[[ $variables.tabMenuOpen ]]">
+            <div class="nx-menu" role="menu">
+              <button type="button" role="menuitem" class="nx-menu-item" data-action="others" on-click="[[ $listeners.onTabMenu ]]">Close other tabs</button>
+              <button type="button" role="menuitem" class="nx-menu-item" data-action="all" on-click="[[ $listeners.onTabMenu ]]">Close all tabs</button>
+            </div>
+          </oj-bind-if>
+        </div>
+      </div>
+      <div class="nx-content">
+        <oj-bind-if test="[[ !$variables.tabList.length ]]">
+          <div class="nx-page nx-soon">
+            <div class="nx-card nx-card-pad nx-soon-card" id="nxStartNote">
+              <oj-bind-text value="Opening your screens…"></oj-bind-text>
+            </div>
+          </div>
+        </oj-bind-if>
+        <oj-vb-switcher id="nxSwitcher" class="nx-switcher" data="[[ $variables.tabs ]]" current-item="{{ $variables.currentTab }}"
+          bridge="[[ vbBridge ]]"></oj-vb-switcher>
+      </div>
+    </main>
+  </div>
+
+  <oj-bind-if test="[[ $variables.tabMenuOpen || $variables.profileOpen || $variables.jiraOpen ]]">
+    <button type="button" class="nx-backdrop" on-click="[[ $listeners.onBackdrop ]]" aria-label="Close" tabindex="-1"></button>
+  </oj-bind-if>
+
+
+
+
+  <oj-bind-if test="[[ $variables.profileOpen ]]">
+    <aside class="nx-panel nx-profile-panel" id="nxProfilePanel" role="dialog" aria-labelledby="nxProfileName">
+      <div class="nx-profile-head">
+        <span class="nx-avatar nx-avatar--lg" aria-hidden="true"><oj-bind-text value="[[ $application.functions.userInitials($application.user) ]]"></oj-bind-text></span>
+        <span class="nx-profile-who">
+          <span class="nx-profile-name" id="nxProfileName"><oj-bind-text value="[[ $application.functions.userDisplayName($application.user) ]]"></oj-bind-text></span>
+          <span class="nx-user-role"><oj-bind-text value="[[ $application.functions.userRole($application.user) ]]"></oj-bind-text></span>
+        </span>
+        <button type="button" class="nx-iconbtn nx-iconbtn--sm" on-click="[[ $listeners.onProfile ]]" aria-label="Close"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+      </div>
+      <!-- Your look, on every screen: Redwood (Oracle's own) or Current (Next's own); resources/js/look.js, lookChain. -->
+      <div class="nx-profile-sec">
+        <span class="nx-profile-label" id="nxLookLabel">Look</span>
+        <div class="nx-looks" role="radiogroup" aria-labelledby="nxLookLabel" id="nxLooks">
+          <oj-bind-for-each data="[[ $functions.looks() ]]">
+            <template data-oj-as="l">
+              <button type="button" role="radio" :id="[[ 'nxLook-' + l.data.id ]]" :data-look="[[ l.data.id ]]" on-click="[[ $listeners.onLook ]]"
+                :class="[[ 'nx-look nx-look--' + l.data.id + ($variables.look === l.data.id ? ' nx-look--on' : '') ]]"
+                :aria-checked="[[ $variables.look === l.data.id ? 'true' : 'false' ]]">
+                <span class="nx-look-pic" aria-hidden="true">
+                  <span class="nx-look-pic-nav"></span><span class="nx-look-pic-head"></span><span class="nx-look-pic-btn"></span>
+                  <span class="nx-look-pic-row"></span><span class="nx-look-pic-row nx-look-pic-row--2"></span>
+                </span>
+                <span class="nx-look-name"><oj-bind-text value="[[ l.data.label ]]"></oj-bind-text>
+                  <span class="oj-ux-ico-check nx-look-tick" aria-hidden="true"></span></span>
+                <span class="nx-look-note"><oj-bind-text value="[[ l.data.note ]]"></oj-bind-text></span>
+              </button>
+            </template>
+          </oj-bind-for-each>
+        </div>
+        <p class="nx-profile-note" id="nxLookNote">On every screen, kept for you on this computer.</p>
+      </div>
+      <oj-bind-if test="[[ $variables.look === 'redwood' ]]">
+        <div class="nx-profile-sec">
+          <span class="nx-profile-label">Colours</span>
+          <p class="nx-profile-note nx-profile-note--flush" id="nxColoursRedwood">Redwood uses Oracle's own colours. Your colours come back with Current.</p>
+        </div>
+      </oj-bind-if>
+      <oj-bind-if test="[[ $variables.look !== 'redwood' ]]">
+      <div class="nx-profile-sec">
+        <span class="nx-profile-label" id="nxColoursLabel">Colours</span>
+        <div class="nx-themes" role="radiogroup" aria-labelledby="nxColoursLabel" id="nxThemes">
+          <oj-bind-for-each data="[[ $functions.themes() ]]">
+            <template data-oj-as="t">
+              <button type="button" role="radio" :class="[[ 'nx-theme' + ($variables.colours.theme === t.data.id ? ' nx-theme--on' : '') ]]"
+                :aria-checked="[[ $variables.colours.theme === t.data.id ? 'true' : 'false' ]]" :data-theme="[[ t.data.id ]]" on-click="[[ $listeners.onTheme ]]"
+                :title="[[ t.data.label + ': the menu dark, the page heads the same colour lighter' ]]">
+                <span class="nx-theme-chip" :style="[[ $functions.swatch(t.data) ]]" aria-hidden="true"></span>
+                <oj-bind-text value="[[ t.data.label ]]"></oj-bind-text>
+              </button>
+            </template>
+          </oj-bind-for-each>
+        </div>
+        <div class="nx-menu-modes" role="radiogroup" aria-label="The menu" id="nxMenuModes">
+          <oj-bind-for-each data="[[ $functions.menus() ]]">
+            <template data-oj-as="m">
+              <button type="button" role="radio" :class="[[ 'nx-menu-mode' + ($variables.colours.menu === m.data.id ? ' nx-menu-mode--on' : '') ]]"
+                :aria-checked="[[ $variables.colours.menu === m.data.id ? 'true' : 'false' ]]" :data-menu="[[ m.data.id ]]" on-click="[[ $listeners.onTheme ]]">
+                <oj-bind-text value="[[ m.data.label ]]"></oj-bind-text></button>
+            </template>
+          </oj-bind-for-each>
+        </div>
+        <p class="nx-profile-note">Kept on this computer.</p>
+      </div>
+      </oj-bind-if>
+    </aside>
+  </oj-bind-if>
+
+
+  <oj-bind-if test="[[ $variables.jiraOpen ]]">
+    <aside class="nx-panel nx-bell-panel nx-jfeed" id="nxJiraPanel" role="dialog" aria-labelledby="nxJiraTitle">
+      <div class="nx-panel-head">
+        <h2 id="nxJiraTitle">Jira updates</h2>
+        <div class="nx-jfeed-days" role="group" aria-label="How far back">
+          <button type="button" :class="[[ 'nx-jfeed-day' + ($variables.jiraDays === 1 ? ' nx-jfeed-day--on' : '') ]]" data-act="days" data-key="1" on-click="[[ $listeners.onJira ]]">1 day</button>
+          <button type="button" :class="[[ 'nx-jfeed-day' + ($variables.jiraDays === 2 ? ' nx-jfeed-day--on' : '') ]]" data-act="days" data-key="2" on-click="[[ $listeners.onJira ]]">2 days</button>
+          <button type="button" :class="[[ 'nx-jfeed-day' + ($variables.jiraDays === 7 ? ' nx-jfeed-day--on' : '') ]]" data-act="days" data-key="7" on-click="[[ $listeners.onJira ]]">7 days</button>
+        </div>
+        <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="close" on-click="[[ $listeners.onJira ]]" aria-label="Close Jira updates">
+          <span class="oj-ux-ico-close" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="nx-jfeed-kinds" id="nxJiraKinds">
+        <oj-bind-for-each data="[[ $functions.jiraChips($variables.jiraEvents) ]]">
+          <template data-oj-as="k">
+            <button type="button" :class="[[ 'nx-jfeed-kind nx-jfeed-kind--' + k.data.id + ($variables.jiraKind === k.data.id ? ' nx-jfeed-kind--on' : '') ]]" data-act="kind" :data-key="[[ k.data.id ]]" on-click="[[ $listeners.onJira ]]">
+              <oj-bind-text value="[[ k.data.label ]]"></oj-bind-text> <span class="nx-jfeed-n"><oj-bind-text value="[[ k.data.n ]]"></oj-bind-text></span></button>
+          </template>
+        </oj-bind-for-each>
+      </div>
+      <oj-bind-if test="[[ !!$variables.jiraError ]]"><p class="nx-panel-note nx-error-text" id="nxJiraError"><oj-bind-text value="[[ $variables.jiraError ]]"></oj-bind-text></p></oj-bind-if>
+      <oj-bind-if test="[[ $variables.jiraBusy && !$variables.jiraEvents.length ]]"><p class="nx-panel-empty"><span class="nx-spin" aria-hidden="true"></span> Reading Jira…</p></oj-bind-if>
+      <oj-bind-if test="[[ !$variables.jiraBusy && !$variables.jiraError && $functions.jiraGroups($variables.jiraEvents, $variables.jiraKind).length === 0 ]]">
+        <p class="nx-panel-empty" id="nxJiraNone"><span class="oj-ux-ico-check-circle" aria-hidden="true"></span> <oj-bind-text value="[[ 'Nothing changed in Jira in the last ' + ($variables.jiraDays === 1 ? 'day' : $variables.jiraDays + ' days') + ($variables.jiraKind === 'all' ? '' : ' of this kind') + '.' ]]"></oj-bind-text></p>
+      </oj-bind-if>
+      <div class="nx-jfeed-list" id="nxJiraList">
+        <oj-bind-for-each data="[[ $functions.jiraGroups($variables.jiraEvents, $variables.jiraKind) ]]">
+          <template data-oj-as="g">
+            <div class="nx-jfeed-day-h"><oj-bind-text value="[[ g.data.label ]]"></oj-bind-text></div>
+            <oj-bind-for-each data="[[ g.data.items ]]">
+              <template data-oj-as="e">
+                <button type="button" :class="[[ $functions.jiraItemClass(e.data, $variables.jiraSeen) ]]" data-act="open" :data-key="[[ e.data.key ]]" on-click="[[ $listeners.onJira ]]" :title="[[ 'Open ' + e.data.key + ' in Jira stories' ]]">
+                  <span :class="[[ 'nx-jfeed-ico ' + $functions.jiraIcon(e.data.kind) ]]" aria-hidden="true"></span>
+                  <span class="nx-jfeed-body">
+                    <span class="nx-jfeed-top"><code class="nx-jfeed-key"><oj-bind-text value="[[ e.data.key ]]"></oj-bind-text></code><span class="nx-jfeed-sum"><oj-bind-text value="[[ e.data.summary ]]"></oj-bind-text></span></span>
+                    <span class="nx-jfeed-text"><oj-bind-text value="[[ e.data.text ]]"></oj-bind-text></span>
+                    <span class="nx-jfeed-meta"><oj-bind-text value="[[ (e.data.by || 'someone') + ' · ' + e.data.time + ' · ' + e.data.type + (e.data.mine ? ' · yours' : '') ]]"></oj-bind-text></span>
+                  </span>
+                </button>
+              </template>
+            </oj-bind-for-each>
+          </template>
+        </oj-bind-for-each>
+      </div>
+      <button type="button" class="nx-jfeed-progress" id="nxJiraProgress" data-act="progress" on-click="[[ $listeners.onJira ]]"><span class="oj-ux-ico-chart-bar" aria-hidden="true"></span><span><b>Daily progress</b> — closed, new and moved, day by day</span><span class="oj-ux-ico-chevron-right" aria-hidden="true"></span></button>
+      <p class="nx-panel-foot"><oj-bind-text value="[[ $variables.jiraBusy ? 'Reading Jira…' : ($variables.jiraAt ? $variables.jiraEvents.length + ' updates · read at ' + $variables.jiraAt + ' · again every 5 minutes' : '') ]]"></oj-bind-text></p>
+    </aside>
+  </oj-bind-if>
+
+  <oj-bind-if test="[[ !!$variables.toast.message ]]">
+    <div :class="[[ 'nx-toast nx-toast--' + $variables.toast.tone ]]" role="status" aria-live="polite">
+      <span><oj-bind-text value="[[ $variables.toast.message ]]"></oj-bind-text></span>
+      <button type="button" class="nx-iconbtn nx-iconbtn--sm" on-click="[[ $listeners.onToastClose ]]" aria-label="Dismiss">
+        <span class="oj-ux-ico-close" aria-hidden="true"></span>
+      </button>
+    </div>
+  </oj-bind-if>
+</div>

@@ -1,0 +1,464 @@
+{
+  "description": "Build.Rite's shell: the top bar (your workspace, ▶ Run, the Run console, Jira updates, you), the menu and the tabs.",
+  "variables": {
+    "tabs": {
+      "type": "vb/ArrayDataProvider2",
+      "defaultValue": {
+        "itemType": "TabType",
+        "keyAttributes": "id"
+      },
+      "description": "The switcher's items, one per open tab (id, name, flow, page, params). Changed only through shellTabs.apply (mutation events), never replaced, so open tabs keep their pages."
+    },
+    "tabList": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "The tab strip, in order: { id, title, icon, navId, pinned }."
+    },
+    "currentTab": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "jiraOpen": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "Build.Rite: the Jira updates panel is open."
+    },
+    "jiraEvents": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "What changed in Jira lately (resources/js/jiraFeed.js): new stories, status changes, assignments, comments…"
+    },
+    "jiraBusy": {
+      "type": "boolean",
+      "defaultValue": false
+    },
+    "jiraError": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "jiraAt": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "When Jira was last read (HH:MM)."
+    },
+    "jiraDays": {
+      "type": "number",
+      "defaultValue": 2,
+      "description": "How many days back: 1, 2 or 7."
+    },
+    "jiraKind": {
+      "type": "string",
+      "defaultValue": "all",
+      "description": "Which updates: all, mine, new, status, assign, comment, priority, sprint, attach, edit."
+    },
+    "jiraSeen": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "When the panel was last opened (kept on this PC): what came after is new."
+    },
+    "jiraNew": {
+      "type": "number",
+      "defaultValue": 0,
+      "description": "How many updates came since it was last opened (the bell's count)."
+    },
+    "workRunProg": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "Build.Rite: what ▶ Run is doing, step by step, shown under it (a few seconds after, too)."
+    },
+    "workRunning": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "Build.Rite: ▶ Run is building your workspace's app and opening it in a window of its own."
+    },
+    "workMenu": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "Build.Rite: the workspace's menu is open (open its project, set up another, stop using it, remove it)."
+    },
+    "work": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "Build.Rite: the working copy — the VB Studio project ▸ workspace cloned on this PC (desktop/lib/vbs.js work())."
+    },
+    "navCollapsed": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "Menu shown as icons only (kept in this browser)."
+    },
+    "navOpen": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "Menu shown over the content on a narrow window."
+    },
+    "query": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "results": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "The search list, in order: the heading ({ type: head }) and the screens matched ({ type: row, n, label, sub, hint, open }); n numbers the ones that can be chosen."
+    },
+    "resultIndex": {
+      "type": "number",
+      "defaultValue": 0,
+      "description": "The n of the match chosen (arrow keys)."
+    },
+    "showResults": {
+      "type": "boolean",
+      "defaultValue": false
+    },
+    "search": {
+      "type": "any",
+      "defaultValue": {
+        "scope": "all",
+        "expanded": "",
+        "scopes": [],
+        "count": 0,
+        "forQuery": "",
+        "empty": "",
+        "foot": ""
+      },
+      "description": "The search: how many matches can be chosen, the words they are for, and the foot (searchChain: Build.Rite's screens)."
+    },
+    "colours": {
+      "type": "any",
+      "defaultValue": {
+        "theme": "teal",
+        "menu": "dark"
+      },
+      "description": "Your colours: the theme and the menu dark or light (resources/js/theme.js), kept on this computer."
+    },
+    "look": {
+      "type": "string",
+      "defaultValue": "current",
+      "description": "Your look: 'redwood' (Oracle's own) or 'current' (Next's own), on every screen (resources/js/look.js), kept for you on this computer."
+    },
+    "profileOpen": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "The menu under your name: who you are, and your look."
+    },
+    "tabMenuOpen": {
+      "type": "boolean",
+      "defaultValue": false
+    },
+    "toast": {
+      "type": "any",
+      "defaultValue": {
+        "message": "",
+        "tone": "info",
+        "seq": 0
+      }
+    },
+    "open": {
+      "type": "string",
+      "defaultValue": "",
+      "input": "fromUrl",
+      "description": "Deep link: ?open=<menu id> opens that screen; ?open=request&id=…&number=… opens a record."
+    },
+    "id": {
+      "type": "string",
+      "defaultValue": "",
+      "input": "fromUrl"
+    },
+    "number": {
+      "type": "string",
+      "defaultValue": "",
+      "input": "fromUrl"
+    },
+    "shellReady": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "True once page access is known and the tabs this role may open are open."
+    }
+  },
+  "types": {
+    "TabType": {
+      "id": "string",
+      "name": "string",
+      "flow": "string",
+      "page": "string",
+      "params": "object",
+      "title": "string",
+      "icon": "string",
+      "navId": "string",
+      "pinned": "boolean"
+    }
+  },
+  "events": {
+    "shellRequest": {
+      "description": "From a screen in a tab, through resources/js/shellBus.js: open a screen or record, rename or close a tab, show a toast.",
+      "payloadType": {
+        "action": "string",
+        "navId": "string",
+        "record": "string",
+        "params": "object",
+        "id": "string",
+        "title": "string",
+        "message": "string",
+        "tone": "string"
+      }
+    },
+    "refreshAlerts": {
+      "description": "Every five minutes, from the page module.",
+      "payloadType": "object"
+    },
+    "dismiss": {
+      "description": "Escape: closes the open popup.",
+      "payloadType": "object"
+    },
+    "refreshDrafts": {
+      "description": "From the page module: the requests changed (requestData.onChange), so the cart counts its drafts again.",
+      "payloadType": "object"
+    },
+    "searchAway": {
+      "description": "From the page module: a click outside the search box and its list, which closes the list.",
+      "payloadType": "object"
+    }
+  },
+  "eventListeners": {
+    "vbEnter": {
+      "chains": [
+        {
+          "chain": "themeChain"
+        },
+        {
+          "chain": "jiraFeedChain",
+          "parameters": {
+            "act": "{{ 'init' }}",
+            "key": "{{ '' }}"
+          }
+        },
+        {
+          "chain": "lookChain"
+        },
+        {
+          "chain": "shellEnterChain"
+        }
+      ]
+    },
+    "shellRequest": {
+      "chains": [
+        {
+          "chain": "shellRequestChain",
+          "parameters": {
+            "request": "{{ $event }}"
+          }
+        }
+      ]
+    },
+    "refreshAlerts": {
+      "chains": [
+        {
+          "chain": "jiraFeedChain",
+          "parameters": {
+            "act": "{{ 'refresh' }}",
+            "key": "{{ '' }}"
+          }
+        }
+      ]
+    },
+    "onJira": {
+      "chains": [
+        {
+          "chain": "jiraFeedChain",
+          "parameters": {
+            "act": "{{ $event.currentTarget.dataset.act }}",
+            "key": "{{ $event.currentTarget.dataset.key || '' }}"
+          }
+        }
+      ]
+    },
+    "dismiss": {
+      "chains": [
+        {
+          "chain": "dismissChain"
+        }
+      ]
+    },
+    "onNav": {
+      "chains": [
+        {
+          "chain": "openChain",
+          "parameters": {
+            "navId": "{{ $event.currentTarget.dataset.navId }}"
+          }
+        }
+      ]
+    },
+    "onWorkAct": {
+      "chains": [
+        {
+          "chain": "workChain",
+          "parameters": {
+            "act": "{{ $event.currentTarget.dataset.act }}"
+          }
+        }
+      ]
+    },
+    "onWork": {
+      "chains": [
+        {
+          "chain": "workChain",
+          "parameters": {
+            "act": "open"
+          }
+        }
+      ]
+    },
+    "onTab": {
+      "chains": [
+        {
+          "chain": "showTabChain",
+          "parameters": {
+            "id": "{{ $event.currentTarget.dataset.id }}"
+          }
+        }
+      ]
+    },
+    "onTabClose": {
+      "chains": [
+        {
+          "chain": "closeTabChain",
+          "parameters": {
+            "id": "{{ $event.currentTarget.dataset.id }}"
+          }
+        }
+      ]
+    },
+    "onTabAux": {
+      "chains": [
+        {
+          "chain": "closeTabChain",
+          "parameters": {
+            "id": "{{ $event.button === 1 ? $event.currentTarget.dataset.id : '' }}"
+          }
+        }
+      ]
+    },
+    "onTabMenu": {
+      "chains": [
+        {
+          "chain": "tabMenuChain",
+          "parameters": {
+            "action": "{{ $event.currentTarget.dataset.action }}"
+          }
+        }
+      ]
+    },
+    "toggleNav": {
+      "chains": [
+        {
+          "chain": "navChain"
+        }
+      ]
+    },
+    "onCommandInput": {
+      "chains": [
+        {
+          "chain": "commandChain",
+          "parameters": {
+            "text": "{{ $event.target.value }}"
+          }
+        }
+      ]
+    },
+    "onCommandKey": {
+      "chains": [
+        {
+          "chain": "commandKeyChain",
+          "parameters": {
+            "key": "{{ $event.key }}"
+          }
+        }
+      ]
+    },
+    "onCommandFocus": {
+      "chains": [
+        {
+          "chain": "searchFocusChain"
+        }
+      ]
+    },
+    "onResult": {
+      "chains": [
+        {
+          "chain": "resultChain",
+          "parameters": {
+            "index": "{{ $event.currentTarget.dataset.index }}"
+          }
+        }
+      ]
+    },
+    "searchAway": {
+      "chains": [
+        {
+          "chain": "searchCloseChain"
+        }
+      ]
+    },
+    "onTheme": {
+      "chains": [
+        {
+          "chain": "themeChain",
+          "parameters": {
+            "theme": "{{ $event.currentTarget.dataset.theme }}",
+            "menu": "{{ $event.currentTarget.dataset.menu }}"
+          }
+        }
+      ]
+    },
+    "onLook": {
+      "chains": [
+        {
+          "chain": "lookChain",
+          "parameters": {
+            "look": "{{ $event.currentTarget.dataset.look }}"
+          }
+        }
+      ]
+    },
+    "onProfile": {
+      "chains": [
+        {
+          "chain": "profileChain"
+        }
+      ]
+    },
+    "onToastClose": {
+      "chains": [
+        {
+          "chain": "toastChain",
+          "parameters": {
+            "message": ""
+          }
+        }
+      ]
+    },
+    "onBackdrop": {
+      "chains": [
+        {
+          "chain": "dismissChain"
+        }
+      ]
+    }
+  },
+  "imports": {
+    "components": {
+      "oj-vb-switcher": {
+        "path": "vb/components/oj-vb-switcher/loader"
+      },
+      "oj-bind-for-each": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-bind-if": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-bind-text": {
+        "path": "ojs/ojknockout"
+      }
+    }
+  }
+}

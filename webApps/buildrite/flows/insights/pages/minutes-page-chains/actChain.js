@@ -1,0 +1,394 @@
+define([
+  'vb/action/actionChain',
+  'resources/js/minutesClient',
+  'resources/js/minutes',
+  'resources/js/shellBus',
+], (ActionChain, C, R, bus) => {
+  'use strict';
+
+  const clone = (x) => JSON.parse(JSON.stringify(x == null ? null : x));
+  const lid = () => 'l_' + Date.now().toString(36) + Math.random().toString(16).slice(2, 6);
+  function toast(msg, kind) { try { bus.toast(msg, kind || 'info'); } catch (e) { /* no bus */ } }
+
+  class actChain extends ActionChain {
+    async run(context, { act, id, lineId, value }) {
+      const v = context.$page.variables;
+
+      async function refreshList() { const r = await C.list(); if (r.ok && r.body && r.body.meetings) v.meetings = r.body.meetings; }
+      // A plain <input>'s bound value only sets the attribute, so clearing the model doesn't wipe what was already
+      // typed: reset the live value (and refocus) directly once an attendee becomes a chip.
+      const clearAttInput = () => { try { const el = (typeof document !== 'undefined') && document.querySelector('.nx-min-attadd'); if (el) { el.value = ''; el.focus(); } } catch (e) { /* no DOM (tests) */ } };
+      // The discussion is a rich-text (contenteditable) editor kept outside the binding, so push the model's HTML into it
+      // whenever a meeting opens or the body is changed programmatically (open/new, Format by AI, voice, returning to Edit).
+      const syncBody = () => { try { if (typeof document === 'undefined') return; setTimeout(() => { const el = document.getElementById('minBody'); if (!el) return; const want = R.toEditorHtml((v.meeting && v.meeting.discussion) || ''); if (el.innerHTML !== want) el.innerHTML = want; }, 0); } catch (e) { /* no DOM (tests) */ } };
+      function openMeeting(m) { v.meeting = m; v.attendeesText = (m.attendees || []).join(', '); v.dirty = false; syncBody(); }
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      async function openSettings() {
+        const gs = await C.graphStatus();
+        const g = (gs.ok && gs.body) ? gs.body : (v.graph || {});
+        v.graph = g;
+        const st = v.settings || {};
+        // Prefill the Microsoft 365 IDs with the RITE app registration by default (not secrets; the user can overwrite
+        // them), so when Microsoft 365 is chosen the Tenant/Client fields are already filled — just Sign in and Save.
+        const def = (R && R.GRAPH_DEFAULT) || { tenantId: '', clientId: '' };
+        v.settingsForm = { teamsWebhook: '', clearTeamsWebhook: false, defaultAttendees: ((st.defaultAttendees) || []).join(', '), orgName: st.orgName || '', fromName: st.fromName || '', fromEmail: st.fromEmail || '', provider: st.provider || 'local', tenantId: g.tenantId || def.tenantId, clientId: g.clientId || def.clientId, directory: !!g.directory };
+        v.dialog = 'settings';
+      }
+
+      switch (act) {
+        case 'view': v.view = id || 'edit'; if ((id || 'edit') === 'edit') syncBody(); return;
+        case 'trackBy': v.trackBy = id || 'epic'; return;
+
+        case 'rte': {
+          // Rich-text toolbar for the discussion body (headings, bold, bullets…) via the browser's editing commands.
+          try {
+            if (typeof document === 'undefined') return;
+            const el = document.getElementById('minBody'); if (!el) return;
+            el.focus();
+            const cmd = {
+              h2: ['formatBlock', 'H2'], h3: ['formatBlock', 'H3'], p: ['formatBlock', 'P'],
+              bold: ['bold'], italic: ['italic'], underline: ['underline'],
+              ul: ['insertUnorderedList'], ol: ['insertOrderedList'], clear: ['removeFormat'],
+            }[id];
+            if (cmd) document.execCommand(cmd[0], false, cmd[1]);
+            if (id === 'clear') { document.execCommand('formatBlock', false, 'P'); }
+            v.meeting.discussion = el.innerHTML; v.dirty = true; // mutate in place: don't re-render (keeps the caret)
+          } catch (e) { /* no DOM (tests) */ }
+          return;
+        }
+
+        case 'new': { const m = R.blankMeeting(); m.attendees = ((v.settings && v.settings.defaultAttendees) || []).slice(); openMeeting(m); v.view = 'edit'; return; }
+        case 'open': { const r = await C.get(id); if (r.ok && r.body && r.body.meeting) { openMeeting(r.body.meeting); v.view = 'edit'; } else toast('Could not open that meeting.', 'error'); return; }
+        case 'addLine': { const m = clone(v.meeting) || { lines: [] }; const l = R.blankLine(); l.id = lid(); m.lines = (m.lines || []).concat(l); v.meeting = m; return; }
+        case 'removeLine': { const m = clone(v.meeting) || { lines: [] }; m.lines = (m.lines || []).filter((x) => x.id !== lineId); v.meeting = m; v.dirty = true; return; }
+        case 'toggleDone': { const m = clone(v.meeting) || { lines: [] }; const l = (m.lines || []).filter((x) => x.id === lineId)[0]; if (l) l.status = l.status === 'done' ? 'open' : 'done'; v.meeting = m; v.dirty = true; return; }
+        case 'addAttendee': {
+          let val = String(id || '').trim();
+          if (!val) { v.attendeeDraft = ''; clearAttInput(); return; }
+          // Enter on a typed name resolves to the matching person (with their email) when there is one.
+          if (val.indexOf('<') === -1) {
+            const ql = val.toLowerCase();
+            const hit = (v.people || []).filter((p) => p && (String(p.name || '').toLowerCase().indexOf(ql) !== -1 || String(p.email || '').toLowerCase().indexOf(ql) !== -1))[0];
+            if (hit) val = hit.email ? (hit.name + ' <' + hit.email + '>') : hit.name;
+          }
+          const m = clone(v.meeting) || {}; m.attendees = (m.attendees || []).slice();
+          if (m.attendees.indexOf(val) === -1) m.attendees.push(val);
+          v.meeting = m; v.attendeeDraft = ''; v.dirty = true; clearAttInput(); return;
+        }
+        case 'removeAttendee': { const m = clone(v.meeting) || {}; m.attendees = (m.attendees || []).filter((a) => a !== id); v.meeting = m; v.dirty = true; return; }
+
+        // The "Find a Jira story" picker dialog: search the backlog by number/description/status/assignee/sprint, tick one or
+        // more stories (each becomes an action item), or pick "No story" / type a key by hand.
+        case 'pickOpen': {
+          const l = (v.meeting.lines || []).filter((x) => x.id === lineId)[0];
+          v.pickLineId = lineId; v.pickCurrent = l ? String(l.jiraKey || '') : '';
+          v.pickQ = ''; v.pickSprint = ''; v.pickStatus = ''; v.pickAssignee = ''; v.pickSel = []; v.pickOpen = true;
+          // Focus the search box once the dialog is in the DOM.
+          try { setTimeout(() => { const el = (typeof document !== 'undefined') && document.getElementById('minPickSearch'); if (el) el.focus(); }, 0); } catch (e) { /* no DOM (tests) */ }
+          return;
+        }
+        case 'pickClose': { v.pickOpen = false; v.pickLineId = ''; v.pickCurrent = ''; v.pickSel = []; return; }
+        case 'pickClear': { v.pickQ = ''; v.pickSprint = ''; v.pickStatus = ''; v.pickAssignee = ''; return; }
+        case 'pickSet': { v.pickQ = value; return; } // the free-text search box (filters are the chips below)
+        case 'pickSprint': { v.pickSprint = (v.pickSprint === id ? '' : id); return; }
+        case 'pickStatus': { v.pickStatus = (v.pickStatus === id ? '' : id); return; }
+        case 'pickAssignee': { v.pickAssignee = (v.pickAssignee === id ? '' : id); return; }
+        case 'pickToggle': { // tick / untick a story for multi-select
+          const k = String(id || '').trim().toUpperCase();
+          if (!k) return;
+          const sel = (v.pickSel || []).slice();
+          const at = sel.indexOf(k);
+          if (at >= 0) sel.splice(at, 1); else sel.push(k);
+          v.pickSel = sel;
+          return;
+        }
+        case 'pickLinkSel': { // link every ticked story: the first goes on the current action item, each other becomes a new one
+          const sel = (v.pickSel || []).slice();
+          if (!sel.length) { toast('Tick at least one story, or use "No story".', 'error'); return; }
+          const m = clone(v.meeting) || {}; m.lines = m.lines || [];
+          let l0 = m.lines.filter((x) => x.id === v.pickLineId)[0];
+          if (!l0) { l0 = R.blankLine(); l0.id = lid(); m.lines.push(l0); }
+          l0.jiraKey = sel[0]; l0.generic = false;
+          for (let i = 1; i < sel.length; i++) { const nl = R.blankLine(); nl.id = lid(); nl.jiraKey = sel[i]; nl.generic = false; m.lines.push(nl); }
+          v.meeting = m; v.dirty = true; v.pickOpen = false; v.pickLineId = ''; v.pickCurrent = ''; v.pickSel = [];
+          toast(sel.length === 1 ? 'Linked ' + sel[0] + '.' : 'Added ' + sel.length + ' action items.');
+          return;
+        }
+        case 'pickStory': {
+          const target = lineId || v.pickLineId;
+          const m = clone(v.meeting) || {}; const l = (m.lines || []).filter((x) => x.id === target)[0];
+          if (l) { const k = String(id || '').trim().toUpperCase(); l.jiraKey = k; l.generic = !k; }
+          v.meeting = m; v.dirty = true; v.pickOpen = false; v.pickLineId = ''; v.pickCurrent = ''; v.pickSel = [];
+          return;
+        }
+        case 'pickManual': {
+          // Link a story key the user typed in, even if it isn't in the backlog read (its details fill in once Jira is refreshed).
+          let k = '';
+          try { const el = (typeof document !== 'undefined') && document.getElementById('minPickManual'); k = el ? String(el.value || '').trim() : ''; } catch (e) { /* no DOM (tests) */ }
+          if (!k) k = String(v.pickQ || '').trim();
+          k = k.toUpperCase();
+          if (!k) { toast('Type a Jira story key, for example ABC-383.', 'error'); return; }
+          const m = clone(v.meeting) || {}; const l = (m.lines || []).filter((x) => x.id === v.pickLineId)[0];
+          if (l) { l.jiraKey = k; l.generic = false; }
+          v.meeting = m; v.dirty = true; v.pickOpen = false; v.pickLineId = ''; v.pickCurrent = '';
+          return;
+        }
+        case 'attendeeSearch': {
+          // Keep the draft (drives the dropdown) and look the name up live via the active provider (Outlook or
+          // Microsoft 365), merging matches into the people list so the suggestions reflect the real directory.
+          v.attendeeDraft = id;
+          const q = String(id || '').trim();
+          if (q.length < 1) return;
+          const r = await C.contacts(q);
+          if (r.ok && r.body && r.body.contacts && r.body.contacts.length) {
+            const have = {};
+            const merged = (v.people || []).slice();
+            merged.forEach((p) => { have[String((p && (p.email || p.name)) || '').toLowerCase()] = true; });
+            r.body.contacts.forEach((p) => { const k = String((p && (p.email || p.name)) || '').toLowerCase(); if (p && k && !have[k]) { have[k] = true; merged.push({ name: p.name, email: p.email }); } });
+            v.people = merged;
+          }
+          return;
+        }
+
+        case 'save': {
+          const r = await C.save(clone(v.meeting));
+          if (r.ok && r.body && r.body.meeting) { openMeeting(r.body.meeting); await refreshList(); toast('Minutes saved.'); }
+          else toast((r.body && r.body.error) || 'Could not save the minutes.', 'error');
+          return;
+        }
+        case 'delete': {
+          if (!v.meeting.id) return;
+          const r = await C.remove(v.meeting.id);
+          if (r.ok) { const m = R.blankMeeting(); m.attendees = ((v.settings && v.settings.defaultAttendees) || []).slice(); openMeeting(m); await refreshList(); toast('Meeting deleted.'); }
+          else toast('Could not delete.', 'error');
+          return;
+        }
+
+        case 'dictate': {
+          if (v.recLineId === lineId) {
+            v.recLineId = '';
+            let res;
+            try { res = await C.stopRec(); } catch (e) { toast('Could not read the recording.', 'error'); return; }
+            if (!res || !res.base64) { toast('Nothing was recorded.', 'error'); return; }
+            toast('Transcribing…');
+            const d = await C.dictate(res.base64, res.mime);
+            if (d.ok && d.body && d.body.ok && d.body.text) {
+              const m = clone(v.meeting);
+              if (lineId === '__body__') {
+                const cur = R.plainText(m.discussion);
+                m.discussion = R.toEditorHtml((cur ? cur.trim() + '\n' : '') + d.body.text);
+              } else {
+                const l = (m.lines || []).filter((x) => x.id === lineId)[0];
+                if (l) { l.text = (l.text ? l.text.trim() + ' ' : '') + d.body.text; l.raw = l.text; }
+              }
+              v.meeting = m; v.dirty = true; if (lineId === '__body__') syncBody(); toast('Added from voice.');
+            } else toast((d.body && d.body.error) || 'Could not transcribe. Set up transcription on the Jira page first.', 'error');
+          } else {
+            if (v.recLineId) { try { await C.stopRec(); } catch (e) { /* drop */ } }
+            try { await C.startRec(); v.recLineId = lineId; toast('Recording… click Stop when done.'); }
+            catch (e) { toast((e && e.message) || 'Cannot record audio here.', 'error'); }
+          }
+          return;
+        }
+
+        case 'format': {
+          const src = clone(v.meeting); const l0 = (src.lines || []).filter((x) => x.id === lineId)[0];
+          const text = l0 ? String(l0.text || l0.raw || '').trim() : '';
+          if (!text) { toast('Write something in the note first.', 'error'); return; }
+          v.fmtLineId = lineId;
+          const p = R.formatPrompt(text);
+          const r = await C.aiChat(p.system, p.user);
+          v.fmtLineId = '';
+          if (r.ok && r.body && r.body.ok && r.body.text) {
+            const m = clone(v.meeting); const l = (m.lines || []).filter((x) => x.id === lineId)[0];
+            if (l) l.text = String(r.body.text).trim();
+            v.meeting = m; v.dirty = true; toast('Formatted by ' + (r.body.provider || 'AI') + '.');
+          } else {
+            const err = (r.body && r.body.error) || '';
+            if (/choose the llm|not set up/i.test(err)) { toast('Set up AI first.', 'error'); v.aiForm = { provider: (v.ai && v.ai.active) || 'claudecode', key: '', model: '', baseUrl: '', status: '' }; v.dialog = 'ai'; }
+            else toast(err || 'AI could not format this.', 'error');
+          }
+          return;
+        }
+
+        case 'formatBody': {
+          // Tidy the whole discussion body into a clean, standard-minutes "Discussion" section via the shared Ask AI.
+          const text = R.plainText(v.meeting && v.meeting.discussion).trim();
+          if (!text) { toast('Write what was discussed first, then Format with AI.', 'error'); return; }
+          v.fmtBody = true;
+          const p = R.formatBodyPrompt(text);
+          const r = await C.aiChat(p.system, p.user);
+          v.fmtBody = false;
+          if (r.ok && r.body && r.body.ok && r.body.text) {
+            const m = clone(v.meeting); m.discussion = R.toEditorHtml(String(r.body.text).trim()); syncBody();
+            v.meeting = m; v.dirty = true; toast('Formatted by ' + (r.body.provider || 'AI') + '.');
+          } else {
+            const err = (r.body && r.body.error) || '';
+            if (/choose the llm|not set up/i.test(err)) { toast('Set up AI first.', 'error'); v.aiForm = { provider: (v.ai && v.ai.active) || 'claudecode', key: '', model: '', baseUrl: '', status: '' }; v.dialog = 'ai'; }
+            else toast(err || 'AI could not format this.', 'error');
+          }
+          return;
+        }
+
+        case 'formatAll': {
+          // One click: tidy the whole minutes — the discussion body, then every action-item note — with the shared Ask AI.
+          const m = clone(v.meeting) || {};
+          const jobs = [];
+          if (R.plainText(m.discussion).trim()) jobs.push({ body: true });
+          (m.lines || []).forEach((l) => { if (String((l.text || l.raw) || '').trim()) jobs.push({ id: l.id }); });
+          if (!jobs.length) { toast('Nothing to format yet — write the discussion or some notes first.', 'error'); return; }
+          v.fmtAll = true;
+          let done = 0, failed = 0, aiMissing = false, provider = '';
+          for (let i = 0; i < jobs.length; i++) {
+            const job = jobs[i];
+            let src, p;
+            if (job.body) { src = R.plainText(m.discussion).trim(); p = R.formatBodyPrompt(src); }
+            else { const l = (m.lines || []).filter((x) => x.id === job.id)[0]; src = l ? String((l.text || l.raw) || '').trim() : ''; p = R.formatPrompt(src); }
+            if (!src) continue;
+            const r = await C.aiChat(p.system, p.user);
+            if (r.ok && r.body && r.body.ok && r.body.text) {
+              provider = r.body.provider || provider;
+              if (job.body) m.discussion = R.toEditorHtml(String(r.body.text).trim());
+              else { const l = (m.lines || []).filter((x) => x.id === job.id)[0]; if (l) l.text = String(r.body.text).trim(); }
+              done++;
+              v.meeting = clone(m); // show each section as it is tidied
+            } else {
+              const err = (r.body && r.body.error) || '';
+              if (/choose the llm|not set up/i.test(err)) { aiMissing = true; break; }
+              failed++;
+            }
+          }
+          v.fmtAll = false;
+          v.meeting = m; v.dirty = true; syncBody();
+          if (aiMissing) { toast('Set up AI first.', 'error'); v.aiForm = { provider: (v.ai && v.ai.active) || 'claudecode', key: '', model: '', baseUrl: '', status: '' }; v.dialog = 'ai'; return; }
+          if (!done && failed) { toast('AI could not format the minutes.', 'error'); return; }
+          toast('Formatted ' + done + ' section' + (done === 1 ? '' : 's') + ' by ' + (provider || 'AI') + (failed ? ' · ' + failed + ' could not be formatted' : '') + '.');
+          return;
+        }
+
+        case 'email': { try { const gs = await C.graphStatus(); if (gs.ok && gs.body) v.graph = gs.body; } catch (e) { /* keep last */ } const em = R.emailFor(v.meeting, v.rows); const emails = R.attendeeEmails(v.meeting.attendees || []); em.to = emails.length ? emails.join('; ') : ((v.settings && v.settings.fromEmail) || ''); v.email = em; v.dialog = 'email'; return; }
+        case 'emailCopy': { const okc = await C.copyHtml(v.email.html, v.email.text); toast(okc ? 'Email copied.' : 'Copied the text.'); return; }
+        case 'emailDownload': { C.download('minutes-' + (v.meeting.date || 'meeting') + '.html', v.email.html, 'text/html'); return; }
+        case 'emailMailto': { C.mailto(v.email.to, v.email.subject, v.email.text); return; }
+        case 'emailSend': {
+          const prov = (v.settings && v.settings.provider) || 'local';
+          const r = await C.send({ to: v.email.to, subject: v.email.subject, html: v.email.html });
+          if (r.ok && r.body && r.body.ok) { toast(prov === 'o365' ? 'Sent via Office 365.' : 'Opening the message in Outlook…'); if (prov === 'o365') v.dialog = ''; }
+          else if (prov === 'o365') { toast((r.body && r.body.error) || 'Could not send via Office 365.', 'error'); }
+          else {
+            // Local Outlook COM isn't available (e.g. the new Outlook has none) — open the default mail app instead.
+            C.mailto(v.email.to, v.email.subject, v.email.text);
+            toast('Outlook automation is not available here — opened your default mail app instead.' + ((r.body && r.body.error) ? ' (' + r.body.error + ')' : ''), 'error');
+          }
+          return;
+        }
+
+        case 'teams': {
+          const t = R.teamsFor(v.meeting, v.rows);
+          const r = await C.teams({ text: t.text });
+          if (r.ok && r.body && r.body.ok) toast('Sent to Teams.');
+          else {
+            const err = (r.body && r.body.error) || 'Could not send to Teams.';
+            toast(err, 'error');
+            if (/no teams webhook/i.test(err)) { await openSettings(); }
+          }
+          return;
+        }
+
+        case 'dialog': {
+          if (id === 'settings') { await openSettings(); return; }
+          v.dialog = id || '';
+          if (id === 'ai') v.aiForm = { provider: (v.ai && v.ai.active) || 'claudecode', key: '', model: '', baseUrl: '', status: '' };
+          return;
+        }
+        case 'ai': { v.aiForm = { provider: (v.ai && v.ai.active) || 'claudecode', key: '', model: '', baseUrl: '', status: '' }; v.dialog = 'ai'; return; }
+        case 'settings': { await openSettings(); return; }
+        case 'setProvider': { const f = clone(v.settingsForm) || {}; f.provider = id || 'local'; v.settingsForm = f; return; }
+        case 'setDirectory': { const f = clone(v.settingsForm) || {}; f.directory = !f.directory; v.settingsForm = f; return; }
+        case 'graphInteractive': {
+          const f = clone(v.settingsForm) || {};
+          await C.graphConfig({ tenantId: f.tenantId, clientId: f.clientId, directory: !!f.directory });
+          toast('Opening the Microsoft sign-in window…');
+          const r = await C.graphInteractive();
+          if (r.ok && r.body && r.body.ok) {
+            if (r.body.status) v.graph = r.body.status; else { const s = await C.graphStatus(); if (s.ok && s.body) v.graph = s.body; }
+            toast('Signed in to Microsoft 365' + (v.graph.account ? ' as ' + v.graph.account : '') + '.');
+            try {
+              const pc = await C.contacts('');
+              if (pc.ok && pc.body && pc.body.contacts) {
+                const have = {}; const merged = [];
+                pc.body.contacts.forEach((p) => { const k = String((p.email || p.name) || '').toLowerCase(); if (p && k && !have[k]) { have[k] = true; merged.push({ name: p.name, email: p.email }); } });
+                (v.people || []).forEach((p) => { const k = String((p.email || p.name) || '').toLowerCase(); if (p && k && !have[k]) { have[k] = true; merged.push(p); } });
+                v.people = merged;
+              }
+            } catch (e) { /* keep people */ }
+          } else { const g = clone(v.graph) || {}; g.error = (r.body && r.body.error) || 'Sign-in did not complete.'; v.graph = g; toast(g.error, 'error'); }
+          return;
+        }
+        case 'graphSignIn': {
+          const f = clone(v.settingsForm) || {};
+          await C.graphConfig({ tenantId: f.tenantId, clientId: f.clientId, directory: !!f.directory });
+          const r = await C.graphSignIn();
+          if (!(r.ok && r.body && r.body.ok)) { const g = clone(v.graph) || {}; g.error = (r.body && r.body.error) || 'Could not start sign-in.'; v.graph = g; return; }
+          v.graph = { configured: true, signedIn: false, pending: true, userCode: r.body.userCode, verificationUri: r.body.verificationUri, tenantId: f.tenantId, clientId: f.clientId, account: '', error: '' };
+          for (let i = 0; i < 40; i++) { await sleep(3000); const s = await C.graphStatus(); if (s.ok && s.body) { v.graph = s.body; if (s.body.signedIn || s.body.error || !s.body.pending) break; } }
+          if (v.graph.signedIn) {
+            toast('Signed in to Microsoft 365' + (v.graph.account ? ' as ' + v.graph.account : '') + '.');
+            // Contacts were loaded at page open (before sign-in, so empty) — reload them now so the attendee box has names.
+            try {
+              const pc = await C.contacts('');
+              if (pc.ok && pc.body && pc.body.contacts) {
+                const have = {}; const merged = [];
+                pc.body.contacts.forEach((p) => { const k = String((p.email || p.name) || '').toLowerCase(); if (p && k && !have[k]) { have[k] = true; merged.push({ name: p.name, email: p.email }); } });
+                (v.people || []).forEach((p) => { const k = String((p.email || p.name) || '').toLowerCase(); if (p && k && !have[k]) { have[k] = true; merged.push(p); } });
+                v.people = merged;
+              }
+            } catch (e) { /* keep the existing people list */ }
+          } else if (v.graph.error) toast(v.graph.error, 'error');
+          return;
+        }
+        case 'graphRecheck': {
+          // Actively poll Microsoft for the token with the current code (not just read the stored status), so a
+          // just-completed web sign-in is picked up immediately even if the background poll missed it.
+          const s = (await C.graphPoll()) || (await C.graphStatus());
+          if (s.ok && s.body) v.graph = s.body;
+          if (v.graph && v.graph.signedIn) {
+            toast('Signed in to Microsoft 365' + (v.graph.account ? ' as ' + v.graph.account : '') + '.');
+            try { const pc = await C.contacts(''); if (pc.ok && pc.body && pc.body.contacts) { const have = {}; const merged = []; pc.body.contacts.forEach((p) => { const k = String((p.email || p.name) || '').toLowerCase(); if (p && k && !have[k]) { have[k] = true; merged.push({ name: p.name, email: p.email }); } }); (v.people || []).forEach((p) => { const k = String((p.email || p.name) || '').toLowerCase(); if (p && k && !have[k]) { have[k] = true; merged.push(p); } }); v.people = merged; } } catch (e) { /* keep people */ }
+          } else toast((v.graph && v.graph.error) || 'Not signed in yet. Finish the sign-in on the Microsoft page, then check again.', 'error');
+          return;
+        }
+        case 'graphSignOut': { const r = await C.graphSignOut(); if (r.ok && r.body && r.body.status) v.graph = r.body.status; toast('Signed out of Microsoft 365.'); return; }
+        case 'graphCopyCode': { const ok = await C.copy((v.graph && v.graph.userCode) || ''); toast(ok ? 'Code copied — paste it on the Microsoft sign-in page.' : 'Could not copy the code; type it from here.', ok ? 'info' : 'error'); return; }
+        case 'graphTest': {
+          toast('Sending a test email…');
+          const r = await C.graphTest();
+          if (r.ok && r.body && r.body.ok) toast('Test email sent to ' + (r.body.to || v.graph.account || 'you') + ' — check your inbox.', 'info');
+          else toast((r.body && r.body.error) || 'Could not send the test email.', 'error');
+          return;
+        }
+
+        case 'settingsSave': {
+          const f = clone(v.settingsForm) || {};
+          const body = { teamsWebhook: f.teamsWebhook || '', defaultAttendees: String(f.defaultAttendees || '').split(',').map((s) => s.trim()).filter(Boolean), orgName: f.orgName || '', fromName: f.fromName || '', fromEmail: f.fromEmail || '', provider: f.provider || 'local' };
+          if (f.provider === 'o365') await C.graphConfig({ tenantId: f.tenantId, clientId: f.clientId, directory: !!f.directory });
+          const r = await C.saveSettings(body);
+          if (r.ok && r.body) { v.settings = r.body; v.dialog = ''; toast('Settings saved.'); } else toast((r.body && r.body.error) || 'Could not save settings.', 'error');
+          return;
+        }
+        case 'aiSave': {
+          const f = clone(v.aiForm) || {};
+          const r = await C.aiSave({ provider: f.provider, key: f.key, model: f.model, base: f.baseUrl });
+          if (r.ok && r.body && !r.body.error) {
+            const a = await C.aiSettings();
+            if (a.ok && a.body) { v.ai = { active: a.body.active || '', providers: a.body.providers || {} }; v.aiReady = !!a.body.active; }
+            v.dialog = ''; toast('AI saved.');
+          } else { const a2 = clone(v.aiForm) || {}; a2.status = (r.body && r.body.error) || 'Could not save the AI settings.'; v.aiForm = a2; }
+          return;
+        }
+        default: return;
+      }
+    }
+  }
+  return actChain;
+});

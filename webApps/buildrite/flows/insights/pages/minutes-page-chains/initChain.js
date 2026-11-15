@@ -1,0 +1,59 @@
+define([
+  'vb/action/actionChain',
+  'vb/action/actions',
+  'resources/js/minutesClient',
+  'resources/js/minutes',
+  'resources/js/jiraBacklog',
+], (ActionChain, Actions, C, R, J) => {
+  'use strict';
+
+  // Opening the Minutes page: is it the desktop app (DuckDB on this PC)? Then read the past meetings, the settings and the
+  // shared Ask AI setup, start a blank meeting, and (best effort, if Jira is connected) read the backlog so lines can be
+  // tied to stories and tracking can resolve epics and customers.
+  class initChain extends ActionChain {
+    async run(context) {
+      const v = context.$page.variables;
+      const info = await C.info();
+      v.checked = true;
+      v.available = !!info.available;
+      if (!v.available) return;
+
+      const st = await C.settings();
+      if (st.ok && st.body) v.settings = st.body;
+      const gs = await C.graphStatus();
+      if (gs.ok && gs.body) v.graph = gs.body;
+      const ai = await C.aiSettings();
+      if (ai.ok && ai.body) { v.ai = { active: ai.body.active || '', providers: ai.body.providers || {} }; v.aiReady = !!ai.body.active; }
+
+      const ls = await C.list();
+      if (ls.ok && ls.body && ls.body.meetings) v.meetings = ls.body.meetings;
+
+      // The attendee picker: the user's Outlook contacts (when available), plus everyone from past meetings, so it is
+      // never empty even where Outlook automation is not available (the new Outlook has no COM).
+      const pc = await C.contacts('');
+      const people = (pc.ok && pc.body && pc.body.contacts) ? pc.body.contacts.slice() : [];
+      const seen = {};
+      people.forEach((p) => { seen[String(p.email || p.name).toLowerCase()] = true; });
+      (v.meetings || []).forEach((mm) => { (mm.attendees || []).forEach((a) => {
+        const nm = R.attendeeName(a); const em = R.attendeeEmail(a); const key = String(em || nm).toLowerCase();
+        if (nm && !seen[key]) { seen[key] = true; people.push({ name: nm, email: em }); }
+      }); });
+      v.people = people;
+      v.peopleReady = people.length > 0;
+
+      const m = R.blankMeeting();
+      m.attendees = ((v.settings && v.settings.defaultAttendees) || []).slice();
+      v.meeting = m;
+      v.attendeesText = (m.attendees || []).join(', ');
+      // Seed the rich-text discussion editor (it lives outside the binding) once it is in the DOM.
+      try { if (typeof document !== 'undefined') setTimeout(() => { const el = document.getElementById('minBody'); if (el) el.innerHTML = R.toEditorHtml(m.discussion || ''); }, 0); } catch (e) { /* no DOM */ }
+
+      try {
+        const project = await J.ensureProject();
+        const res = await J.load(context, Actions, (project ? 'project = ' + project + ' AND ' : '') + 'issuetype = Story ORDER BY key ASC');
+        if (res && res.ok && res.issues) { v.rows = res.issues.map((i) => J.fromIssue(i, {})); v.jiraReady = v.rows.length > 0; }
+      } catch (e) { /* no Jira connection: tracking still works by key and customer */ }
+    }
+  }
+  return initChain;
+});

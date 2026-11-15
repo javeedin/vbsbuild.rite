@@ -1,0 +1,10 @@
+{
+  "name": "build-rite-desktop",
+  "productName": "Build.Rite",
+  "version": "0.1.0",
+  "description": "Build.Rite desktop app: the team's tools for an Oracle VB Studio project, on your PC",
+  "author": "javeedin",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js"
+}
