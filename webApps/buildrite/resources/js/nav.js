@@ -58,7 +58,11 @@ define([], function () {
       // SQL against an Oracle database from this PC, as in SQL Developer (flows/insights sql): the desktop app connects
       // for it (desktop/lib/oracleSql.js), so it works in the desktop app only.
       { id: 'sql', label: 'SQL', icon: 'oj-ux-ico-database', route: { flow: 'insights', page: 'sql' },
-        keywords: 'query database oracle developer tns select statement worksheet' }
+        keywords: 'query database oracle developer tns select statement worksheet' },
+      // AI settings: Claude Code on your subscription or an API key — the default for everything, and one per feature
+      // (flows/insights ai; desktop/lib/aiSql.js)
+      { id: 'ai', label: 'AI settings', icon: 'oj-ux-ico-lightbulb', route: { flow: 'insights', page: 'ai' },
+        keywords: 'ai llm claude code subscription api key anthropic openai gemini oci model tokens cost code fix issues default' }
     ] }
   ];
 

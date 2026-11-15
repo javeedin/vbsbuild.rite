@@ -1,0 +1,105 @@
+<!-- AI settings: which AI Build.Rite asks — Claude Code on your subscription (no API key, no per-call cost) or an API key
+     (paid per use) — as the default for everything, and for each feature on its own (desktop/lib/aiSql.js). -->
+<div class="nx-page nx-ai">
+  <div class="nx-pagehead">
+    <div>
+      <div class="nx-kicker">Build.Rite · Tools</div>
+      <h1 id="aiTitle">AI settings</h1>
+      <div class="nx-sub">Which AI Build.Rite asks: <b>Claude Code</b> on your subscription, or an <b>API key</b> paid per use — for everything, or a different one for each feature.</div>
+    </div>
+  </div>
+
+  <oj-bind-if test="[[ !!$variables.result ]]"><div :class="[[ 'nx-flib-result ' + ($variables.result.ok ? 'nx-flib-result--ok' : 'nx-flib-result--err') ]]" id="aiResult"><oj-bind-text value="[[ $variables.result.text ]]"></oj-bind-text></div></oj-bind-if>
+  <oj-bind-if test="[[ !$variables.st ]]"><div class="nx-empty"><span class="nx-spin" aria-hidden="true"></span> Reading the AI settings…</div></oj-bind-if>
+
+  <oj-bind-if test="[[ !!$variables.st ]]">
+    <!-- the AIs: each set up or not -->
+    <section class="nx-card nx-ai-sec" aria-labelledby="aiYours">
+      <h2 id="aiYours">1 · Your AIs</h2>
+      <p class="nx-note">Set up one or more. Keys stay encrypted on this PC; Build.Rite never shows them again.</p>
+      <div class="nx-ai-cards" id="aiCards">
+        <oj-bind-for-each data="[[ $functions.cards($variables.st, $variables.edit) ]]">
+          <template data-oj-as="c">
+            <div :class="[[ c.data.cls ]]" :id="[[ 'aiCard-' + c.data.id ]]">
+              <div class="nx-ai-cardhead">
+                <b><oj-bind-text value="[[ c.data.label ]]"></oj-bind-text></b>
+                <span :class="[[ 'nx-ai-pay nx-ai-pay--' + c.data.pay ]]"><oj-bind-text value="[[ c.data.payText ]]"></oj-bind-text></span>
+              </div>
+              <p class="nx-ai-cardnote"><oj-bind-text value="[[ c.data.note ]]"></oj-bind-text></p>
+              <p class="nx-ai-state"><oj-bind-text value="[[ c.data.state ]]"></oj-bind-text></p>
+              <div class="nx-ai-cardbtns">
+                <button type="button" class="nx-btn nx-btn--sm" :id="[[ 'aiEdit-' + c.data.id ]]" data-act="edit" :data-key="[[ c.data.id ]]" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ c.data.ready ? 'Change' : 'Set up' ]]"></oj-bind-text></button>
+                <oj-bind-if test="[[ c.data.ready ]]"><button type="button" class="nx-btn nx-btn--sm nx-btn--plain" :id="[[ 'aiForget-' + c.data.id ]]" data-act="forget" :data-key="[[ c.data.id ]]" on-click="[[ $listeners.onAct ]]">Forget</button></oj-bind-if>
+              </div>
+            </div>
+          </template>
+        </oj-bind-for-each>
+      </div>
+
+      <!-- one AI being set up -->
+      <oj-bind-if test="[[ !!$variables.edit ]]">
+        <div class="nx-ai-form" id="aiForm">
+          <h3><oj-bind-text value="[[ $functions.formTitle($variables.st, $variables.edit) ]]"></oj-bind-text></h3>
+          <oj-bind-for-each data="[[ $functions.fields($variables.st, $variables.edit) ]]">
+            <template data-oj-as="f">
+              <label class="nx-cm-field nx-ai-field"><span class="nx-cm-label"><oj-bind-text value="[[ f.data.label ]]"></oj-bind-text></span>
+                <oj-bind-if test="[[ f.data.area ]]"><textarea class="nx-cm-input" rows="4" :id="[[ 'aiF-' + f.data.key ]]" :data-field="[[ f.data.key ]]" on-change="[[ $listeners.onField ]]" :placeholder="[[ f.data.placeholder ]]"></textarea></oj-bind-if>
+                <oj-bind-if test="[[ !f.data.area ]]"><input class="nx-cm-input" :type="[[ f.data.secret ? 'password' : 'text' ]]" autocomplete="off" :id="[[ 'aiF-' + f.data.key ]]" :data-field="[[ f.data.key ]]" :value="[[ f.data.value ]]" on-change="[[ $listeners.onField ]]" :placeholder="[[ f.data.placeholder ]]"></oj-bind-if>
+              </label>
+            </template>
+          </oj-bind-for-each>
+          <div class="nx-ai-modelrow">
+            <label class="nx-cm-field nx-ai-field"><span class="nx-cm-label">Model</span>
+              <select class="nx-cm-input" id="aiModel" data-field="model" on-change="[[ $listeners.onField ]]">
+                <oj-bind-for-each data="[[ $functions.modelOptions($variables.models, $variables.edit) ]]">
+                  <template data-oj-as="m"><option :value="[[ m.data.id ]]" :selected="[[ m.data.on ]]"><oj-bind-text value="[[ m.data.label ]]"></oj-bind-text></option></template>
+                </oj-bind-for-each>
+              </select></label>
+            <button type="button" class="nx-btn nx-btn--sm" id="aiLoadModels" data-act="models" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]">Load models</button>
+          </div>
+          <div class="nx-ai-formbtns">
+            <button type="button" class="nx-btn nx-btn--primary" id="aiSave" data-act="save" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]">Save</button>
+            <button type="button" class="nx-btn nx-btn--plain" id="aiCancel" data-act="cancel" on-click="[[ $listeners.onAct ]]">Cancel</button>
+          </div>
+        </div>
+      </oj-bind-if>
+    </section>
+
+    <!-- the default -->
+    <section class="nx-card nx-ai-sec" aria-labelledby="aiDef">
+      <h2 id="aiDef">2 · For everything</h2>
+      <p class="nx-note">The AI every feature uses, unless you choose another one for it below.</p>
+      <div class="nx-ai-defrow">
+        <select class="nx-cm-input nx-ai-select" id="aiDefault" data-act="default" on-change="[[ $listeners.onPick ]]">
+          <oj-bind-for-each data="[[ $functions.defaultOptions($variables.st) ]]">
+            <template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.label ]]"></oj-bind-text></option></template>
+          </oj-bind-for-each>
+        </select>
+      </div>
+    </section>
+
+    <!-- each feature -->
+    <section class="nx-card nx-ai-sec" aria-labelledby="aiEach">
+      <h2 id="aiEach">3 · For each feature</h2>
+      <p class="nx-note">For example: Code fix on Claude Code (your subscription) and Issues on a company API key. Try it asks the feature's AI a one-line question.</p>
+      <table class="nx-ai-feat" id="aiFeatures">
+        <tbody>
+          <oj-bind-for-each data="[[ $functions.featureRows($variables.st, $variables.tests) ]]">
+            <template data-oj-as="r">
+              <tr :id="[[ 'aiFeat-' + r.data.id ]]">
+                <td class="nx-ai-feat-name"><b><oj-bind-text value="[[ r.data.label ]]"></oj-bind-text></b><span class="nx-note"><oj-bind-text value="[[ r.data.note ]]"></oj-bind-text></span></td>
+                <td><select class="nx-cm-input nx-ai-select" :id="[[ 'aiUse-' + r.data.id ]]" data-act="use" :data-key="[[ r.data.id ]]" on-change="[[ $listeners.onPick ]]">
+                  <oj-bind-for-each data="[[ r.data.options ]]">
+                    <template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.label ]]"></oj-bind-text></option></template>
+                  </oj-bind-for-each>
+                </select></td>
+                <td><button type="button" class="nx-btn nx-btn--sm nx-btn--plain" :id="[[ 'aiTest-' + r.data.id ]]" data-act="test" :data-key="[[ r.data.id ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]">Try it</button></td>
+                <td class="nx-ai-feat-test"><oj-bind-text value="[[ r.data.test ]]"></oj-bind-text></td>
+              </tr>
+            </template>
+          </oj-bind-for-each>
+        </tbody>
+      </table>
+    </section>
+  </oj-bind-if>
+</div>

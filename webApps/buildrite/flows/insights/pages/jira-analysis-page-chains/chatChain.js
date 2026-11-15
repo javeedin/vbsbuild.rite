@@ -32,7 +32,7 @@ define([
         let f = null;
         try { f = await R.fddFor(v, context.$application.path, q); } catch (e) { f = null; }
         const p = SA.chatPrompt(v.story, history, q, f && f.text ? { name: f.name, text: f.text } : '');
-        const r = await M.aiChat(p.system, p.user);
+        const r = await M.aiChat(p.system, p.user, 'analysis');
         const out = (v.chat || []).slice();
         if (r.ok && r.body && r.body.ok && r.body.text) out.push({ role: 'assistant', text: r.body.text, html: SA.renderHtml(r.body.text) });
         else out.push({ role: 'assistant', text: '', html: '<p class="nx-an-err">' + ((r.body && r.body.error) || 'AI could not answer.') + '</p>' });

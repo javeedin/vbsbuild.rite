@@ -18,7 +18,8 @@
     "flows": { "path": "pages/flows-page" },
     "minutes": { "path": "pages/minutes-page" },
     "followups": { "path": "pages/followups-page" },
-    "sql": { "path": "pages/sql-page" }
+    "sql": { "path": "pages/sql-page" },
+    "ai": { "path": "pages/ai-page" }
   },
   "chains": {}, "services": {}, "types": {}, "variables": {}
 }

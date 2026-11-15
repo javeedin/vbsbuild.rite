@@ -298,7 +298,17 @@
                   <b>Code folder</b> <code id="fxFolderPath"><oj-bind-text value="[[ $variables.fixInfo.folder ]]"></oj-bind-text></code>
                   <span class="nx-note"><oj-bind-text value="[[ $functions.fixFolder($variables.fixInfo) ]]"></oj-bind-text></span>
                   <oj-bind-if test="[[ !$variables.fixInfo.valid ]]"><span class="nx-fx-warn" id="fxFolderWarn"><oj-bind-text value="[[ $variables.fixInfo.reason || 'Not a VB app git checkout.' ]]"></oj-bind-text></span></oj-bind-if>
-                  <oj-bind-if test="[[ !$variables.fixInfo.ai.ready ]]"><span class="nx-fx-warn" id="fxNoAi">No AI chosen yet: pick one in AI settings (Claude Code uses your subscription, no API key).</span></oj-bind-if>
+                  <oj-bind-if test="[[ !$variables.fixInfo.ai.ready ]]"><span class="nx-fx-warn" id="fxNoAi">No AI set up yet: <button type="button" class="nx-linkbtn" id="fxOpenAi" data-act="aiSettings" on-click="[[ $listeners.onFix ]]">AI settings</button> (Claude Code uses your subscription, no API key).</span></oj-bind-if>
+                  <oj-bind-if test="[[ !!($variables.fixInfo.ai && ($variables.fixInfo.ai.choices || []).length) ]]">
+                    <label class="nx-fx-ai" id="fxAi"><span>AI for Code fix</span>
+                      <select class="nx-cm-input nx-cm-input--sm" id="fxAiPick" data-act="aiUse" on-change="[[ $listeners.onFixPick ]]">
+                        <option value="" :selected="[[ !$variables.fixInfo.ai.own ]]"><oj-bind-text value="[[ 'The default' + ($variables.fixInfo.ai.defaultLabel ? ' (' + $variables.fixInfo.ai.defaultLabel + ')' : '') ]]"></oj-bind-text></option>
+                        <oj-bind-for-each data="[[ $variables.fixInfo.ai.choices ]]">
+                          <template data-oj-as="c"><option :value="[[ c.data.id ]]" :selected="[[ $variables.fixInfo.ai.own === c.data.id ]]"><oj-bind-text value="[[ c.data.label + (c.data.model ? ' · ' + c.data.model : '') ]]"></oj-bind-text></option></template>
+                        </oj-bind-for-each>
+                      </select></label>
+                    <button type="button" class="nx-linkbtn" id="fxAiSettings" data-act="aiSettings" on-click="[[ $listeners.onFix ]]">AI settings</button>
+                  </oj-bind-if>
                 </div>
                 <oj-bind-if test="[[ $variables.fixInfo.canPick ]]"><button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="fxPick" data-act="pick" on-click="[[ $listeners.onFix ]]" :disabled="[[ $variables.fixBusy ]]"><span class="oj-ux-ico-folder" aria-hidden="true"></span>Change folder…</button></oj-bind-if>
               </div>

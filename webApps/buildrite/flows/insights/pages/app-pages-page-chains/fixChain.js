@@ -1,4 +1,4 @@
-define(['vb/action/actionChain', 'vb/action/actions', 'resources/js/codeFixClient', 'resources/js/shellBus'], (ActionChain, Actions, FX, bus) => {
+define(['vb/action/actionChain', 'vb/action/actions', 'resources/js/codeFixClient', 'resources/js/shellBus', 'resources/js/aiClient'], (ActionChain, Actions, FX, bus, AI) => {
   'use strict';
 
   // The Code fix tab (desktop/lib/codeFix.js does the work): open it, ask the AI for a change to the open page, ask
@@ -16,6 +16,15 @@ define(['vb/action/actionChain', 'vb/action/actions', 'resources/js/codeFixClien
       };
       const show = (r, text) => { if (r.body && r.body.fix) v.fix = r.body.fix; if (r.ok) v.fixResult = text ? { ok: true, text: text } : null; else fail(r); };
       const list = async () => { const r = await FX.list(id); v.fixList = (r.body && r.body.fixes) || []; v.fixPage = id; };
+      // the AI Code fix uses (its quick switch; '' = the default), and AI settings
+      if (act === 'aiSettings') { bus.open({ navId: 'ai' }); return; }
+      if (act === 'aiUse') {
+        const r = await AI.use('codefix', key || '');
+        bus.toast(r.ok ? (key ? 'Code fix uses ' + (((v.fixInfo && v.fixInfo.ai && v.fixInfo.ai.choices) || []).filter((c) => c.id === key).map((c) => c.label)[0] || key) + '.' : 'Code fix uses the default AI.') : ((r.body && r.body.error) || 'It could not be changed.'), r.ok ? 'success' : 'error');
+        const i = await FX.info();
+        if (i.ok) v.fixInfo = i.body;
+        return;
+      }
 
       if (act === 'open') {
         const i = await FX.info();

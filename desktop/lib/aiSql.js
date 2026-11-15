@@ -7,7 +7,11 @@
  *
  *   open({ file, encrypt, decrypt, fetch, now }) → store
  *   PROVIDERS                         the LLMs offered (labels, fields, how to call them)
- *   settings()                        { active, providers: { id: { …fields, hasKey, model } } }, never a key
+ *   settings()                        { active, uses: { feature: provider }, features, providers: { id: { …fields, hasKey,
+ *                                     model, ready } } }, never a key
+ *   setDefault(provider)              the AI used for everything that has no choice of its own ('' : none)
+ *   setUse({ feature, provider })     the AI one feature uses (Code fix, Issues, …); '' = the default
+ *   chat({ feature, … })              the feature's AI (its choice, else the default)
  *   save({ provider, …fields, key })  the provider's settings; an empty key keeps the saved one; it becomes the active one
  *   forget(provider)                  its keys removed
  *   models(provider)                  { ok, models: [{ id, label }] }: the models the key may use, from the provider itself
@@ -61,6 +65,16 @@ const PROVIDERS = [
   { id: 'claudecode', label: 'Claude Code (your subscription)', note: 'Uses the Claude Code app signed in on this PC with your Claude Max/Pro subscription — no API key, and no per-call API cost. Needs Claude Code installed and signed in.',
     fields: [] }
 ];
+// The features that ask an AI: each may use its own (AI settings → For each feature), else the default.
+const FEATURES = [
+  { id: 'codefix', label: 'Code fix', note: 'A change to a page: the AI reads the page\'s code and proposes the change.' },
+  { id: 'issues', label: 'Issues', note: 'An issue written up and analysed against the page\'s code; its approval emails.' },
+  { id: 'analysis', label: 'Analyze with AI', note: 'Jira stories analysed, alone or several at once, and their chat.' },
+  { id: 'pages', label: 'Application pages', note: 'A page\'s technical sheet written by the AI.' },
+  { id: 'minutes', label: 'Standup minutes', note: 'Format by AI.' },
+  { id: 'sql', label: 'SQL', note: 'Ask AI in the worksheet: a question in plain words, a query back.' },
+];
+const FEATURE_IDS = FEATURES.map((f) => f.id);
 const BY_ID = {};
 PROVIDERS.forEach((p) => { BY_ID[p.id] = p; });
 
@@ -341,7 +355,10 @@ async function open(opts) {
         pub.hasKey = p.fields.filter((f) => f.secret && f.key !== 'passphrase').every((f) => pub['has_' + f.key]) || p.id === 'custom';
         providers[p.id] = pub;
       });
-      return { active: d.active || '', providers, keychain: !!o.encrypt,
+      Object.keys(providers).forEach((k) => { const pp = providers[k]; pp.ready = k === 'claudecode' ? !!d.providers.claudecode : !!(pp.hasKey && pp.model); });
+      const uses = {};
+      FEATURE_IDS.forEach((f) => { uses[f] = (d.uses && BY_ID[d.uses[f]]) ? d.uses[f] : ''; });
+      return { active: d.active || '', uses, features: FEATURES.map((f) => Object.assign({}, f)), providers, keychain: !!o.encrypt,
         catalog: PROVIDERS.map((p) => ({ id: p.id, label: p.label, note: p.note, fields: p.fields.map((f) => ({ key: f.key, label: f.label, secret: !!f.secret, hint: f.hint || '', area: !!f.area })) })) };
     },
     save(x) {
@@ -358,17 +375,44 @@ async function open(opts) {
         } else rec[f.key] = v === undefined ? old[f.key] || '' : trim(v); // a field not sent keeps its saved value
       });
       d.providers[p.id] = rec;
-      d.active = p.id;
+      // the first AI set up (or one saved with makeDefault) becomes the default for everything
+      if (!d.active || !BY_ID[d.active] || x.makeDefault !== false) d.active = p.id;
       write(d);
       return { saved: p.id, keptIn: o.encrypt ? 'keychain' : 'this run' };
     },
     // Desktop-internal only (never wired to a page): a stored secret, so another desktop feature can reuse a key the
     // person already set here — e.g. the OpenAI key for transcribing a recording (lib/transcribe.js).
     secretFor(id, field) { try { return full(id)[field || 'key'] || ''; } catch (e) { return ''; } },
+    /** The AI everything uses unless a feature has its own: one set up already ('' : none). */
+    setDefault(id) {
+      const d = read();
+      const v = trim(id);
+      if (v && !BY_ID[v]) throw new Error('Not an AI here: ' + v);
+      if (v && !d.providers[v]) throw new Error('Set up ' + BY_ID[v].label + ' first (AI settings).');
+      d.active = v;
+      write(d);
+      return { ok: true, active: d.active };
+    },
+    /** The AI one feature uses: one set up already, or '' for the default. */
+    setUse(x) {
+      const f = trim(x && x.feature);
+      const v = trim(x && x.provider);
+      if (FEATURE_IDS.indexOf(f) === -1) throw new Error('Not a feature here: ' + f);
+      if (v && !BY_ID[v]) throw new Error('Not an AI here: ' + v);
+      const d = read();
+      if (v && !d.providers[v]) throw new Error('Set up ' + BY_ID[v].label + ' first (AI settings).');
+      d.uses = Object.assign({}, d.uses || {});
+      if (v) d.uses[f] = v; else delete d.uses[f];
+      write(d);
+      return { ok: true, feature: f, provider: v };
+    },
+    /** Which AI a feature uses now: its own choice, else the default → its id, or ''. */
+    providerFor(feature) { const d = read(); const own = d.uses && d.uses[feature]; return (own && BY_ID[own] && d.providers[own]) ? own : (d.active || ''); },
     forget(id) {
       const d = read();
       delete d.providers[id];
       delete memory[id];
+      if (d.uses) Object.keys(d.uses).forEach((f) => { if (d.uses[f] === id) delete d.uses[f]; });
       if (d.active === id) d.active = '';
       write(d);
       return { forgotten: id };
@@ -384,8 +428,7 @@ async function open(opts) {
       }
     },
     async ask(q) {
-      const d = read();
-      const id = (q && q.provider) || d.active;
+      const id = (q && q.provider) || store.providerFor('sql');
       const p = BY_ID[id];
       if (!p) throw new Error('Choose the LLM to use first (AI settings).');
       const c = full(id);
@@ -400,7 +443,8 @@ async function open(opts) {
     // A plain chat turn — no schema, no SQL parsing — for features that just need the LLM to rewrite or format text, e.g.
     // Build.Rite's Standup minutes page ("Format by AI"). Same active provider, key and HTTP plumbing as ask().
     async chat(req) {
-      const id = read().active;
+      // the feature's AI (Code fix, Issues, …: its own choice, else the default), or one named
+      const id = (req && req.provider && BY_ID[req.provider]) ? req.provider : store.providerFor(trim(req && req.feature));
       const p = BY_ID[id];
       if (!p) return { ok: false, error: 'Choose the LLM to use (AI settings).' };
       const t0 = now();
@@ -423,4 +467,4 @@ async function open(opts) {
   return store;
 }
 
-module.exports = { open, PROVIDERS, SYSTEM, schemaText, userPrompt, parseAnswer, ociSign };
+module.exports = { open, PROVIDERS, FEATURES, SYSTEM, schemaText, userPrompt, parseAnswer, ociSign };

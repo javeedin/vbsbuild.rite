@@ -502,7 +502,16 @@ function open(opts) {
   async function info() {
     const f = folder();
     const g = await gitState(f);
-    const ai = o.ai && typeof o.ai.settings === 'function' ? (() => { try { const s = o.ai.settings(); return { ready: !!s.active, provider: ((s.catalog || []).filter((c) => c.id === s.active)[0] || {}).label || '' }; } catch (e) { return { ready: false, provider: '' }; } })() : { ready: !!o.ai, provider: '' };
+    // the AI Code fix uses: its own choice (AI settings → For each feature), else the default; and the ones set up, for
+    // the quick switch on the Code fix tab
+    const ai = o.ai && typeof o.ai.settings === 'function' ? (() => { try {
+      const s = o.ai.settings();
+      const label = (id) => ((s.catalog || []).filter((c) => c.id === id)[0] || {}).label || '';
+      const own = (s.uses && s.uses.codefix) || '';
+      const id = own || s.active || '';
+      const choices = Object.keys(s.providers || {}).filter((k) => s.providers[k].ready).map((k) => ({ id: k, label: label(k), model: s.providers[k].model || '' }));
+      return { ready: !!id, provider: label(id), id: id, own: own, defaultId: s.active || '', defaultLabel: label(s.active), choices: choices };
+    } catch (e) { return { ready: false, provider: '' }; } })() : { ready: !!o.ai, provider: '' };
     const w = ws();
     return { ok: true, folder: f, isDefault: isDefault(), valid: g.git && isDir(path.join(f, 'webApps')), reason: g.git ? '' : g.reason, branch: g.branch || '', upstream: g.upstream || '',
       workspace: w ? { label: w.label, branch: g.branch || w.branch, key: w.key, name: w.name, ws: w.ws } : null,
@@ -589,7 +598,7 @@ function open(opts) {
     const system = issue ? SYSTEM + '\n' + issueRules(issue.key, issue.title) : SYSTEM;
     const t0 = Date.now();
     const pics = images.map((im) => ({ mime: im.mime, base64: im.base64 }));
-    let r = await o.ai.chat({ system: system, user: user, maxTokens: MAX_TOKENS, images: pics });
+    let r = await o.ai.chat({ feature: 'codefix', system: system, user: user, maxTokens: MAX_TOKENS, images: pics });
     if (!r || !r.ok) return no((r && r.error) || 'The AI did not answer.');
     let parsed = parseAnswer(r.text);
     let tried = tryEdits(f, parsed.edits, facts.app);
@@ -603,7 +612,7 @@ function open(opts) {
       if (!parsed.edits.length) why.push('There were no edits in the SEARCH/REPLACE format (or the format was wrong).');
       tried.errors.forEach((e) => why.push('Edit ' + e.n + ' (' + e.file + '): ' + e.why + (e.search ? '\nIts SEARCH was:\n' + e.search.slice(0, 1500) : '')));
       newFails(checks).forEach((c) => why.push('Check failed after your edits — ' + c.name + ' (' + c.file + ')' + (c.detail ? ': ' + c.detail : '')));
-      const again = await o.ai.chat({ system: system, user: user + '\n\nYOUR PREVIOUS ANSWER:\n' + r.text.slice(0, 30000) + '\n\nIT COULD NOT BE USED:\n' + why.join('\n\n')
+      const again = await o.ai.chat({ feature: 'codefix', system: system, user: user + '\n\nYOUR PREVIOUS ANSWER:\n' + r.text.slice(0, 30000) + '\n\nIT COULD NOT BE USED:\n' + why.join('\n\n')
         + '\n\nGive the whole answer again, in the format, with every SEARCH copied exactly from the CODE above.', maxTokens: MAX_TOKENS, images: pics });
       if (again && again.ok) {
         const p2 = parseAnswer(again.text), t2 = tryEdits(f, p2.edits, facts.app), c2 = checksFor(f, t2.files);

@@ -1236,6 +1236,9 @@ function createDevServer(o) {
           if (pathname === '/__sql/ai/settings' && req.method === 'GET') return json(200, ai.settings());
           if (pathname === '/__sql/ai/settings' && post) return json(200, ai.save(b));
           if (pathname === '/__sql/ai/forget' && post) return json(200, ai.forget(b.provider));
+          // the default AI, and one feature's own (AI settings)
+          if (pathname === '/__sql/ai/default' && post) { try { return json(200, ai.setDefault(b.provider)); } catch (e) { return json(200, { error: e.message }); } }
+          if (pathname === '/__sql/ai/use' && post) { try { return json(200, ai.setUse({ feature: b.feature, provider: b.provider })); } catch (e) { return json(200, { error: e.message }); } }
           if (pathname === '/__sql/ai/models' && post) {
             const r = await ai.models(b.provider);
             log(`AI models ${b.provider} -> ${r.ok ? r.models.length + ' models' : 'failed'} (${r.ms} ms)`);

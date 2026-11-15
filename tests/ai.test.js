@@ -77,7 +77,7 @@ const SCHEMA = { owner: 'SHOPAPP', tables: [{ name: 'DEPT', kind: 'TABLE', colum
   const store = await AI.open({ file, encrypt: enc, decrypt: dec, fetch: F });
   const sv = store.save({ provider: 'anthropic', key: 'sk-ant-SECRET', model: '' });
   T.check('saved: the key encrypted on disk, the provider in use', !fs.readFileSync(file, 'utf8').includes('sk-ant-SECRET') && sv.keptIn === 'keychain' && store.settings().active === 'anthropic');
-  T.eq('the settings say a key is kept, never the key', JSON.stringify(store.settings().providers.anthropic), '{"model":"","has_key":true,"hasKey":true}');
+  T.eq('the settings say a key is kept, never the key', JSON.stringify(store.settings().providers.anthropic), '{"model":"","has_key":true,"hasKey":true,"ready":false}'); // ready: a key and a model
   store.save({ provider: 'anthropic', key: '', model: 'model-a' });
   let err = '';
   T.eq('saved again with an empty key: the key kept, the model set', [store.settings().providers.anthropic.has_key, store.settings().providers.anthropic.model].join(), 'true,model-a');

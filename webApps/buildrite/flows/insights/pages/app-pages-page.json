@@ -570,6 +570,17 @@
           }
         }
       ]
+    },
+    "onFixPick": {
+      "chains": [
+        {
+          "chain": "fixChain",
+          "parameters": {
+            "act": "{{ $event.currentTarget.dataset.act }}",
+            "key": "{{ $event.currentTarget.value }}"
+          }
+        }
+      ]
     }
   },
   "imports": {

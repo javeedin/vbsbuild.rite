@@ -1,0 +1,25 @@
+{
+  "description": "AI settings: the AIs set up on this PC (Claude Code on your subscription, or an API key — Anthropic, OpenAI, Gemini, OCI, any OpenAI-compatible), the default for everything, and the one each feature uses (Code fix, Issues, Analyze with AI, Application pages, Standup minutes, SQL). desktop/lib/aiSql.js, /__sql/ai/*.",
+  "navigation": { "embeddable": "enabled" },
+  "variables": {
+    "st": { "type": "any", "defaultValue": null, "description": "The AI settings (GET /__sql/ai/settings): active, uses, features, providers, catalog. Never a key." },
+    "edit": { "type": "any", "defaultValue": null, "description": "The AI being set up: { provider, model, …its fields as typed }." },
+    "models": { "type": "any[]", "defaultValue": [], "description": "The models its key may use (Load models)." },
+    "tests": { "type": "object", "defaultValue": {}, "description": "Try it, per feature: { busy, ok, text }." },
+    "busy": { "type": "boolean", "defaultValue": false },
+    "result": { "type": "any", "defaultValue": null }
+  },
+  "eventListeners": {
+    "vbEnter": { "chains": [ { "chain": "aiChain", "parameters": { "act": "load", "key": "", "value": "" } } ] },
+    "onAct": { "chains": [ { "chain": "aiChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "key": "{{ $event.currentTarget.dataset.key || '' }}", "value": "" } } ] },
+    "onPick": { "chains": [ { "chain": "aiChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "key": "{{ $event.currentTarget.dataset.key || '' }}", "value": "{{ $event.currentTarget.value }}" } } ] },
+    "onField": { "chains": [ { "chain": "aiChain", "parameters": { "act": "field", "key": "{{ $event.currentTarget.dataset.field }}", "value": "{{ $event.currentTarget.value }}" } } ] }
+  },
+  "imports": {
+    "components": {
+      "oj-bind-for-each": { "path": "ojs/ojknockout" },
+      "oj-bind-if": { "path": "ojs/ojknockout" },
+      "oj-bind-text": { "path": "ojs/ojknockout" }
+    }
+  }
+}

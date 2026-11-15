@@ -207,7 +207,7 @@ define([
           if (!v.aiReady) { v.result = { ok: false, text: 'Set up AI first (Standup minutes → Set up AI).' }; return; }
           v.progress = 'Asking the AI to explain the page from its code facts…';
           const p = PS.prompt(v.sheet.facts);
-          const r = await M.aiChat(p.system, p.user);
+          const r = await M.aiChat(p.system, p.user, 'pages');
           if (!(r.ok && r.body && r.body.ok && r.body.text)) { v.result = { ok: false, text: (r.body && r.body.error) || 'The AI did not answer.' }; return; }
           await done(await PC.saveAi(id, r.body.text, r.body.provider || 'AI', v.commit), 'The AI explanation is saved with the sheet.');
           return;

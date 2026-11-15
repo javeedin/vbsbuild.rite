@@ -80,7 +80,7 @@ define([
       v.fddNote = !f ? '' : f.error ? f.error : (f.picked.length ? '' : 'Nothing in this FDD matched, so the analysis reads only the Jira stories.');
       v.fddView = null;
       const p = build(f && f.text ? { name: f.name, text: f.text } : '', mapped);
-      const r = await M.aiChat(p.system, p.user);
+      const r = await M.aiChat(p.system, p.user, 'analysis');
       if (r.ok && r.body && r.body.ok && r.body.text) {
         v.analysisHtml = SA.renderHtml(r.body.text);
         v.analysisProvider = r.body.provider || 'AI';
@@ -157,7 +157,7 @@ define([
     let f = null;
     try { f = await fddFor(v, base, question, merged(v.stories), 20000); } catch (e) { f = null; }
     const p = SA.chatPromptSet(v.stories, history, question, f && f.text ? { name: f.name, text: f.text } : '');
-    const r = await M.aiChat(p.system, p.user);
+    const r = await M.aiChat(p.system, p.user, 'analysis');
     if (r.ok && r.body && r.body.ok && r.body.text) return { ok: true, text: r.body.text };
     return { ok: false, error: (r.body && r.body.error) || 'AI could not answer.' };
   }

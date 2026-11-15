@@ -66,3 +66,31 @@ html[data-nx-product="buildrite"] .nx-nav-scroll { scrollbar-color: rgba(255, 25
 /* Connect to Jira: links to your Jira site, your API tokens, your projects (opened in your browser) */
 .nx-jira-links { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 6px 0 4px; }
 .nx-jira-links a { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+
+/* AI settings (flows/insights ai) and the Code fix quick switch */
+.nx-ai-sec { margin-top: 14px; padding: 14px 18px; }
+.nx-ai-sec h2 { margin: 0 0 4px; font-size: 16px; }
+.nx-ai-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; margin-top: 10px; }
+.nx-ai-card { border: 1px solid #d9e0e7; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; background: #fff; }
+.nx-ai-card--ready { border-color: #8cc8a3; background: #f4fbf6; }
+.nx-ai-card--on { box-shadow: 0 0 0 2px #2e6fd8; }
+.nx-ai-cardhead { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.nx-ai-pay { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 9px; white-space: nowrap; }
+.nx-ai-pay--sub { background: #e5f4ea; color: #1d6b3a; }
+.nx-ai-pay--tokens { background: #fff1db; color: #8a5300; }
+.nx-ai-pay--other { background: #eef1f4; color: #4a5865; }
+.nx-ai-cardnote { margin: 0; font-size: 12px; color: #5a6876; }
+.nx-ai-state { margin: 2px 0 0; font-size: 12.5px; font-weight: 600; }
+.nx-ai-cardbtns { display: flex; gap: 6px; margin-top: auto; padding-top: 6px; }
+.nx-ai-form { margin-top: 14px; padding: 12px 14px; border: 1px dashed #b9c4cf; border-radius: 10px; display: grid; gap: 8px; max-width: 760px; }
+.nx-ai-form h3 { margin: 0; font-size: 14px; }
+.nx-ai-field { display: grid; gap: 3px; }
+.nx-ai-modelrow { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.nx-ai-modelrow .nx-ai-field { flex: 1; min-width: 240px; }
+.nx-ai-formbtns { display: flex; gap: 8px; }
+.nx-ai-select { min-width: 280px; }
+.nx-ai-feat { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.nx-ai-feat td { padding: 8px 6px; border-bottom: 1px solid #e3e8ee; vertical-align: middle; }
+.nx-ai-feat-name { display: grid; gap: 2px; min-width: 220px; }
+.nx-ai-feat-test { font-size: 12.5px; color: #4a5865; }
+.nx-fx-ai { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; margin-left: 6px; }

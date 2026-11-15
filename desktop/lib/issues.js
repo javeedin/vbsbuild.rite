@@ -404,7 +404,7 @@ function open(opts) {
     const x = byId(id);
     if (!x) return no('No such issue.');
     if (!o.ai || typeof o.ai.chat !== 'function') return no('No AI is set up: choose one in AI settings.');
-    const r = await o.ai.chat({ system: FORMAT_SYSTEM, user: 'PAGE: ' + x.label + ' (' + x.page + ')\nKIND: ' + x.kind + '\n\nWHAT THEY WROTE:\n' + x.text, maxTokens: 2000, images: imagesOf(x) });
+    const r = await o.ai.chat({ feature: 'issues', system: FORMAT_SYSTEM, user: 'PAGE: ' + x.label + ' (' + x.page + ')\nKIND: ' + x.kind + '\n\nWHAT THEY WROTE:\n' + x.text, maxTokens: 2000, images: imagesOf(x) });
     if (!r || !r.ok) return no((r && r.error) || 'The AI did not answer.');
     const j = jsonOf(r.text);
     if (!j || !j.title) return no('The AI did not answer in the expected form: try again.');
@@ -920,7 +920,7 @@ function open(opts) {
     const user = ['PURPOSE: ' + purpose, 'SENDER: ' + (str(b.by) || 'the team'), 'STATUS: ' + (STATUS_LABEL[x.status] || x.status) + (x.verdict ? ' · verdict: ' + (VERDICT_LABEL[x.verdict.code] || '') : ''),
       'DETAILS: ' + [d.customer ? 'customer ' + d.customer : '', d.customerRef ? 'ticket ' + d.customerRef : '', d.foundIn ? 'found in ' + d.foundIn : '', d.environment ? 'on ' + d.environment : '', d.reportedBy ? 'raised by ' + d.reportedBy : ''].filter(Boolean).join(', '),
       '', 'THE ISSUE:', issueText(x), qs.length ? '\nWHAT IS MISSING OR UNCLEAR (the AI\'s questions):\n' + qs.map((q) => '- ' + q).join('\n') : '', talk ? '\nTHE DISCUSSION SO FAR:\n' + talk : ''].join('\n');
-    const r = await o.ai.chat({ system: DRAFT_SYSTEM, user, maxTokens: 1200 });
+    const r = await o.ai.chat({ feature: 'issues', system: DRAFT_SYSTEM, user, maxTokens: 1200 });
     if (!r || !r.ok) return no((r && r.error) || 'The AI did not answer.');
     const j = jsonOf(r.text);
     if (!j || !j.body) return no('The AI did not answer in the expected form: try again.');
