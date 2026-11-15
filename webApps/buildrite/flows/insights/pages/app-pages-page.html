@@ -36,8 +36,8 @@
   <oj-bind-if test="[[ $variables.noWorkspace ]]">
     <div class="nx-card nx-pg-nows" id="pgNoWorkspace">
       <span class="nx-pg-nows-ico oj-ux-ico-folder" aria-hidden="true"></span>
-      <h2>No workspace set up</h2>
-      <p>Application pages shows the pages of your workspace — the code in its working folder on this PC. Set one up (a VB Studio workspace and a folder), and its pages show here.</p>
+      <h2><oj-bind-text value="[[ $variables.noWorkspaceWhy ? 'Your workspace\'s folders are not here' : 'No workspace set up' ]]"></oj-bind-text></h2>
+      <p id="pgNoWorkspaceWhy"><oj-bind-text value="[[ $variables.noWorkspaceWhy || 'Application pages shows the pages of your workspace — the code in its working folder on this PC. Set one up (a VB Studio workspace and a folder), and its pages show here.' ]]"></oj-bind-text></p>
       <button type="button" class="nx-btn nx-btn--primary" id="pgSetupWs" data-act="setupWs" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-settings" aria-hidden="true"></span>Set up your workspace</button>
     </div>
   </oj-bind-if>

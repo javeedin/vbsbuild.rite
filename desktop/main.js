@@ -219,7 +219,7 @@ function buildTools() {
   return buildToolsInst;
 }
 // Your workspace set up on this PC (the top bar: a VB Studio project ▸ workspace, cloned into main and working), or null
-function buildWorkspace() {
+function currentWorkspace() {
   try { const c = vbsStoreInst && vbsStoreInst.work().current; return c && c.exists ? c : null; } catch (e) { return null; }
 }
 const NO_WORKSPACE = 'No workspace is set up: set one up first (Workspace, in the top bar).';
@@ -229,7 +229,7 @@ const NO_WORKSPACE = 'No workspace is set up: set one up first (Workspace, in th
 let pagesStoreInst = null;
 async function pagesStore() {
   if (!pagesStoreInst) {
-    const current = buildWorkspace;
+    const current = currentWorkspace;
     pagesStoreInst = require('./lib/pages').open({ root: REPO_ROOT, data: await dataBranch(), gitPath: commandPath('git') || 'git',
       capture: async (app, url) => {
         const c = current();
@@ -249,6 +249,13 @@ async function pagesStore() {
         return { ok: true, url: p.url + url, from: 'workspace', built: p.built, builtAt: p.builtAt };
       },
       rootFn: () => { const c = current(); return c ? projectOf(c) : ''; },
+      // a workspace chosen whose folders are not on this PC as Build.Rite left them: said, not "no workspace"
+      whyNot: () => {
+        const x = vbsStoreInst && vbsStoreInst.work().current;
+        if (!x || x.exists) return '';
+        const miss = [x.main, x.working].filter((d) => !fs.existsSync(path.join(String(d || ''), '.git')));
+        return 'Your workspace ' + x.projectName + ' ▸ ' + x.workspace + ' is chosen, but its folders are not on this PC as Build.Rite made them: ' + miss.join(' and ') + ' (no git there). Set it up again: the wizard copies it from VB Studio again, or uses those folders when they are there.';
+      },
       rootLabel: () => { const c = current(); return c ? c.projectName + ' ▸ ' + c.workspace + ' (' + c.branch + ')' : ''; },
       // its sheets, screenshots and stories: that VB Studio project's own (all its workspaces share them), in a folder
       // named by a hash of the organization and project — never their names or VB Studio's host, which git would carry
@@ -303,10 +310,10 @@ async function buildRiteOptions() {
     // The API tester: a page's REST calls and reports, tried against the real backend
     apiStore: apiStore(),
     // …sent to your workspace's backends (its services/catalog.json), with who its app runs as (Run as, Sign in for your app)
-    apiProject: () => { const c = buildWorkspace(); if (!c) return null; const p = profileOf(c.working); return { catalogFiles: ((p.services && p.services.catalogs) || []).map((x) => x.file), getIdentity: () => workspaceIdentity() }; },
+    apiProject: () => { const c = currentWorkspace(); if (!c) return null; const p = profileOf(c.working); return { catalogFiles: ((p.services && p.services.catalogs) || []).map((x) => x.file), getIdentity: () => workspaceIdentity() }; },
     // What Build.Rite read from your workspace's app (Run console → Your app); scan: read it again
     vbsProfile: async (scan) => {
-      const c = buildWorkspace();
+      const c = currentWorkspace();
       if (!c) return { ok: false, error: NO_WORKSPACE };
       const p = profileOf(c.working, scan);
       return { ok: true, profile: p, tool: p.kind === 'app' ? buildTools().choose(p) : null, login: { has: !!(identity && identity.fusion && identity.fusion.password), user: identity && identity.fusion ? identity.fusion.user : '' } };
@@ -351,7 +358,7 @@ async function serveSandbox(s) {
 }
 // The roles your workspace's app knows, found in its own code (lib/appRoles.js): offered by Run as and the sign-in
 function knownRoles() {
-  const c = buildWorkspace();
+  const c = currentWorkspace();
   if (!c) return [];
   try { return require('./lib/appRoles').rolesIn(projectOf(c), runAppOf(c)).roles || []; } catch (e) { return []; }
 }
@@ -666,8 +673,8 @@ async function capturePage(webApp, url, base) {
 let apiStoreInst = null;
 function apiStore() {
   // the calls of your workspace's pages: read from its working folder's services/ (else Build.Rite's own)
-  if (!apiStoreInst) apiStoreInst = require('./lib/apiTest').open({ root: REPO_ROOT, rootFn: () => { const c = buildWorkspace(); return c ? projectOf(c) : ''; },
-    bipFn: () => { const c = buildWorkspace(); const p = c ? profileOf(c.working) : null; return p && p.bip ? p.bip.endpoint : ''; }, file: path.join(app.getPath('userData'), 'api-tests.json'), log: (l) => { try { pushLog(l); } catch (e) { console.log(l); } } });
+  if (!apiStoreInst) apiStoreInst = require('./lib/apiTest').open({ root: REPO_ROOT, rootFn: () => { const c = currentWorkspace(); return c ? projectOf(c) : ''; },
+    bipFn: () => { const c = currentWorkspace(); const p = c ? profileOf(c.working) : null; return p && p.bip ? p.bip.endpoint : ''; }, file: path.join(app.getPath('userData'), 'api-tests.json'), log: (l) => { try { pushLog(l); } catch (e) { console.log(l); } } });
   return apiStoreInst;
 }
 let analysisStoreInst = null;
@@ -851,7 +858,7 @@ async function fixStore() {
       root: REPO_ROOT, file: path.join(app.getPath('userData'), 'code-fixes.json'), ai: await aiStore(), capture: capturePage, buildDir: BUILD_DIR,
       // your workspace set up (Build.Rite's top bar): the code to fix is its working folder — changed and committed
       // there only (never pushed from Code fix); Apply to main, then Push, in its project's tab send it to VB Studio
-      workFn: () => { const c = buildWorkspace(); return c ? { folder: c.working, label: c.projectName + ' ▸ ' + c.workspace, branch: c.workBranch || 'buildrite-working', key: spaceOf(c), name: c.projectName, ws: c.workspace } : null; },
+      workFn: () => { const c = currentWorkspace(); return c ? { folder: c.working, label: c.projectName + ' ▸ ' + c.workspace, branch: c.workBranch || 'buildrite-working', key: spaceOf(c), name: c.projectName, ws: c.workspace } : null; },
       // sandboxes (Issues → Try it in a sandbox): built with this project's own build tool, served like the app itself
       buildTool: REPO_ROOT, serveSandbox: serveSandbox, appUrl: appUrlOf,
       data: await dataBranch(), log: (l) => { try { pushLog(l); } catch (e) { console.log(l); } }, // the change history, shared on the data branch

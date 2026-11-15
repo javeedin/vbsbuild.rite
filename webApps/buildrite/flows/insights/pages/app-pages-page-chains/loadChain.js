@@ -30,6 +30,7 @@ define([
         v.info = info;
         // only your workspace's pages (its working folder) — none set up, none shown
         v.noWorkspace = !(cat.body && cat.body.source);
+        v.noWorkspaceWhy = v.noWorkspace && cat.body ? String(cat.body.why || '') : '';
         v.pages = v.noWorkspace ? [] : cat.body.pages;
         if (v.noWorkspace) { v.selId = ''; v.sheet = null; }
         // whose code: your workspace's working folder (the top bar)

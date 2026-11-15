@@ -98,6 +98,8 @@ function open(opts) {
   // project's own (resources/pages/projects/<org>_<project>/…: its own catalog, sheets and screenshots, the same for all its
   // workspaces), so a page of the same name in this project never lends it its sheet, screenshots or stories
   const space = () => { let s = ''; try { s = typeof o.spaceFn === 'function' ? str(o.spaceFn()) : ''; } catch (e) { s = ''; } s = s.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^[.-]+/, ''); return s ? 'projects/' + s + '/' : ''; };
+  // why no workspace is read (o.whyNot: the desktop app — e.g. its folders are not on this PC), '' when none is chosen
+  const whyNow = () => { try { return typeof o.whyNot === 'function' ? str(o.whyNot()) : ''; } catch (e) { return ''; } };
   const sourceNow = () => { try { return typeof o.rootLabel === 'function' ? str(o.rootLabel()) : ''; } catch (e) { return ''; } };
   // the data (sheets, screenshots, stories, the catalog): on the app's data branch when there is one (lib/dataBranch.js),
   // else in the project folder itself; the code is always read from root
@@ -170,7 +172,7 @@ function open(opts) {
     const pages = live.map((p) => Object.assign({}, p, { stories: (old[p.id] && old[p.id].stories) || [], sheet: (old[p.id] && old[p.id].sheet) || null,
       deleted: !!(old[p.id] && old[p.id].deleted) }));
     Object.keys(old).forEach((id) => { if (!pages.some((p) => p.id === id) && (old[id].stories || []).length) pages.push(Object.assign({}, old[id], { missing: true })); });
-    return { scannedAt: now().toISOString(), pages: pages, root: rootNow(), source: rootNow() === root ? '' : sourceNow(), space: space() ? RES + '/' + space().replace(/\/$/, '') : '' };
+    return { scannedAt: now().toISOString(), pages: pages, root: rootNow(), source: rootNow() === root ? '' : sourceNow(), why: rootNow() === root ? whyNow() : '', space: space() ? RES + '/' + space().replace(/\/$/, '') : '' };
   }
   function writeCatalog(cat) {
     const slim = { scannedAt: cat.scannedAt, pages: cat.pages.map((p) => ({ id: p.id, app: p.app, appName: p.appName, flow: p.flow, page: p.page, label: p.label,

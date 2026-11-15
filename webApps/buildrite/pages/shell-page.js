@@ -24,6 +24,7 @@ define(['resources/js/shellBus', 'resources/js/theme', 'resources/js/look', 'res
     workText(work) { const c = work && work.current; return c ? c.projectName + ' ▸ ' + c.workspace : 'Set up your workspace'; }
     workTitle(work) { const c = work && work.current; return c ? c.repo + '.git at ' + c.branch + ' — working: ' + c.working + ' · main: ' + c.main + ' (open its project)' : 'Set up your workspace: choose a VB Studio workspace and a folder on this PC'; }
     workBadge(work) {
+      if (work && work.current && work.current.exists === false) return 'folders missing';
       const s = work && work.current && work.current.summary;
       if (!s) return work && work.current ? work.current.branch : '';
       const parts = [work.current.branch];
