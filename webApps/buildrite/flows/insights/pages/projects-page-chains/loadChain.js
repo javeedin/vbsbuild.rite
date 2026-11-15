@@ -1,4 +1,4 @@
-define(['vb/action/actionChain', 'resources/js/vbsClient', 'resources/js/shellBus'], (ActionChain, VC, bus) => {
+define(['vb/action/actionChain', 'vb/action/actions', 'resources/js/vbsClient', 'resources/js/shellBus'], (ActionChain, Actions, VC, bus) => {
   'use strict';
 
   // Setup → Organizations & projects opened (or Refresh): the organizations and projects kept on this PC.
@@ -25,6 +25,16 @@ define(['vb/action/actionChain', 'resources/js/vbsClient', 'resources/js/shellBu
         v.found = f.body;
         // the filter kept while its organization is still there
         if (v.fOrg && !(f.body.orgs || []).some((o) => o.host + '/' + o.org === v.fOrg) && !v.orgs.some((o) => o.host + '/' + o.org === v.fOrg)) v.fOrg = '';
+      }
+      // opened to sign in to an organization (the set-up wizard's Sign in): its form, filled, the password to type
+      const handed = typeof bus.takeFocus === 'function' ? bus.takeFocus('projects') : null;
+      if (handed && handed.signIn) {
+        const s = handed.signIn;
+        const saved = (v.orgs || []).filter((o) => o.id === s.orgId)[0];
+        if (saved) v.selOrg = saved.id;
+        await Actions.callChain(context, { chain: 'actChain', params: saved ? { act: 'editOrg', key: saved.id } : { act: 'setupOrg', key: s.url } });
+        setTimeout(() => { try { const el = document.getElementById(saved && saved.user ? 'vbsOPass' : 'vbsOUser'); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); } } catch (e) { /* not drawn */ } }, 120);
+        bus.toast(saved ? 'Type your VB Studio password for ' + saved.name + ', then Save.' : 'Fill in your VB Studio sign-in for this organization, then Save.', 'info');
       }
     }
   }

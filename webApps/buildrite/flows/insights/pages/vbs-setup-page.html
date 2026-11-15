@@ -15,7 +15,8 @@
     </oj-bind-for-each>
   </ol>
 
-  <oj-bind-if test="[[ !!$variables.result ]]"><div :class="[[ 'nx-flib-result ' + ($variables.result.ok ? 'nx-flib-result--ok' : 'nx-flib-result--err') ]]" id="vbsuResult"><oj-bind-text value="[[ $variables.result.text ]]"></oj-bind-text></div></oj-bind-if>
+  <oj-bind-if test="[[ !!$variables.result ]]"><div :class="[[ 'nx-flib-result ' + ($variables.result.ok ? 'nx-flib-result--ok' : 'nx-flib-result--err') ]]" id="vbsuResult"><oj-bind-text value="[[ $variables.result.text ]]"></oj-bind-text>
+    <oj-bind-if test="[[ !!$variables.result.signIn ]]"> <button type="button" class="nx-btn nx-btn--sm nx-btn--primary nx-vbsu-signin" id="vbsuSignIn" data-act="signin" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-user-key" aria-hidden="true"></span> <oj-bind-text value="[[ 'Sign in to ' + ($variables.result.signIn.org || 'the organization') ]]"></oj-bind-text></button></oj-bind-if></div></oj-bind-if>
   <oj-bind-if test="[[ $variables.loading ]]"><div class="nx-empty"><span class="nx-spin" aria-hidden="true"></span> Reading what Build.Rite knows from VB Studio…</div></oj-bind-if>
 
   <!-- 1 the workspace -->

@@ -9,6 +9,8 @@ define(['vb/action/actionChain', 'resources/js/vbsClient', 'resources/js/vbsView
     async run(context, { act, key }) {
       const v = context.$page.variables;
       const p = V.project(v.found, v.selProject);
+      // Sign in to the organization: Organizations & projects, its sign-in form open (orgId: its saved one; else a new one at its address)
+      if (act === 'signin') { const s = v.result && v.result.signIn; if (s) bus.focus('projects', { signIn: s }); return; }
       const w = p && p.workspaces.filter((x) => x.key === v.selWs)[0];
       const parts = String(v.selProject || '').split('/');
       const plan = () => ({ orgKey: parts.slice(0, 2).join('/'), project: parts.slice(2).join('/'), projectName: p ? p.name : '', workspace: w ? w.name : '', repo: w ? w.repo : '', branch: w ? w.branchName : '', folder: v.folder });
@@ -56,7 +58,7 @@ define(['vb/action/actionChain', 'resources/js/vbsClient', 'resources/js/vbsView
           if (v.step === 2) {
             const r = await VC.workPlan(plan());
             v.plan = r.body;
-            if (!r.ok) { v.result = { ok: false, text: r.body.error || 'That folder cannot be used.' }; return; }
+            if (!r.ok) { v.result = { ok: false, text: r.body.error || 'That folder cannot be used.', signIn: r.body.signIn || null }; return; }
             v.step = 3;
           }
           return;

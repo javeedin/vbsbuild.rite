@@ -654,6 +654,8 @@ function open(opts) {
     const inWay = !existing && fs.existsSync(base) && fs.readdirSync(base).length > 0;
     return { ok: !inWay && !!(org && header(org)), orgKey: key, project: pid, workspace: ws, repo: repo, branch: branch, folder: folder, base: base, main: main, working: working, url: url, workBranch: WORK_BRANCH,
       reuse: !!(existing && isGitDir(existing.main) && isGitDir(existing.working)),
+      // the organization whose sign-in is missing (or could not be read): the wizard links to its sign-in form
+      signIn: !(org && header(org)) ? { orgId: org ? org.id : '', url: 'https://' + key + '/', org: m[2] } : null,
       error: !(org && header(org)) ? 'Set up the organization first (its sign-in): Build.Rite copies the workspace with it.' : inWay ? 'There is a folder there already, not made by Build.Rite: ' + base + ' — choose another folder.' : '' };
   }
   /** Its state: working's changes and saved changes not yet applied; main's commits to push, VB Studio's to get. */

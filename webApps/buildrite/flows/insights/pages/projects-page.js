@@ -1,4 +1,4 @@
-define(['resources/js/vbsView'], (V) => {
+define(['resources/js/vbsView', 'resources/js/shellBus'], (V, bus) => {
   'use strict';
 
   // Setup → Organizations & projects: binding helpers (desktop/lib/vbs.js does the work; the chains call it through
@@ -12,6 +12,11 @@ define(['resources/js/vbsView'], (V) => {
   const stepsOf = (f) => (f && (f.syncLive || (f.sync && f.sync.steps))) || [];
 
   class PageModule {
+    constructor(context) {
+      // opened again on one organization's sign-in while the tab is open (the set-up wizard's Sign in): read again
+      const helper = context && typeof context.getEventHelper === 'function' ? context.getEventHelper() : null;
+      try { bus.onFocus('projects', () => { if (helper) helper.fireCustomEvent('focusRequest', {}); }); } catch (e) { /* no shell */ }
+    }
     subText(orgs, found) { return !(orgs || []).length ? 'Start by adding your Visual Builder Studio organization.' : plural(orgs.length, 'organization') + ' · ' + plural(((found && found.projects) || []).length, 'project') + ' in VB Studio'; }
     orgClass(id, sel) { return 'nx-vbs-org' + (id === sel ? ' nx-vbs-org--on' : ''); }
     org(orgs, sel) { return (orgs || []).filter((o) => o.id === sel)[0] || null; }
