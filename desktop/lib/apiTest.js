@@ -402,7 +402,9 @@ function appJs(root, app) {
 // ── the store: values last used, runs, values seen (this PC only) ──
 function open(o) {
   const opt = o || {};
-  const root = opt.root || path.join(__dirname, '..', '..');
+  const root0 = opt.root || path.join(__dirname, '..', '..');
+  // the project its calls are read from: opt.rootFn() (your workspace's working folder) when it gives one, else opt.root
+  const rootNow = () => { try { return (typeof opt.rootFn === 'function' && opt.rootFn()) || root0; } catch (e) { return root0; } };
   const file = opt.file || '';
   const now = opt.now || (() => new Date());
   const log = opt.log || (() => {});
@@ -456,7 +458,7 @@ function open(o) {
   }
   /** A report as a call: bipService/runBIPReport with this report's path and parameters. */
   function reportOp(r) {
-    const base = opOf(root, BIP);
+    const base = opOf(rootNow(), (typeof opt.bipFn === 'function' && opt.bipFn()) || BIP);
     if (!base.ok) return base;
     const rp = str(r && r.path).trim();
     if (!/^\/[^<>&]+\.xdo$/.test(rp)) return { ok: false, error: 'Not a report path: "' + rp + '" (/Custom/…/NAME.xdo).' };
@@ -466,12 +468,12 @@ function open(o) {
       params: names.map((n) => ({ name: n, in: 'report', required: false, type: 'string', format: '', enum: [], def: '', description: '', example: '' })) });
   }
 
-  function op(endpoint, env) { const x = opOf(root, endpoint); return x.ok ? describe(x, env) : x; }
+  function op(endpoint, env) { const x = opOf(rootNow(), endpoint); return x.ok ? describe(x, env) : x; }
   function report(r, env) { const x = reportOp(r || {}); return x.ok ? describe(x, env) : x; }
 
   async function run(req, env) {
     const q = req || {};
-    const x = q.report ? reportOp(q.report) : opOf(root, q.endpoint);
+    const x = q.report ? reportOp(q.report) : opOf(rootNow(), q.endpoint);
     if (!x.ok) return x;
     const values = { params: isObj(q.params) ? q.params : {}, extra: str(q.extra).slice(0, 4000), body: str(q.body) };
     const headers = Object.assign({}, x.headers);
@@ -534,7 +536,7 @@ function open(o) {
     const ready = [];
     const later = [];
     eps.forEach((e) => {
-      const x = opOf(root, e);
+      const x = opOf(rootNow(), e);
       if (!x.ok) { results[e] = { endpoint: e, state: 'skip', note: x.error }; return; }
       if (x.report) { results[e] = { endpoint: e, state: 'skip', note: 'Runs the reports: run each one under BI Publisher reports.' }; return; }
       if (!x.reads) { results[e] = { endpoint: e, state: 'skip', note: 'Changes data: test it on its own.' }; return; }
@@ -580,8 +582,8 @@ function open(o) {
     const list = reportsIn(files);
     const want = uniq((names || []).map(str).filter((n) => /^[A-Z][A-Z0-9_]+$/.test(n) && !list.some((r) => r.name === n)));
     if (want.length && app) {
-      const more = reportsIn(appJs(root, app).filter((f) => { try { return want.some((n) => fs.readFileSync(f, 'utf8').indexOf(n + '.xdo') !== -1); } catch (e) { return false; } })
-        .map((f) => ({ path: path.relative(root, f).split(path.sep).join('/'), text: fs.readFileSync(f, 'utf8') })));
+      const more = reportsIn(appJs(rootNow(), app).filter((f) => { try { return want.some((n) => fs.readFileSync(f, 'utf8').indexOf(n + '.xdo') !== -1); } catch (e) { return false; } })
+        .map((f) => ({ path: path.relative(rootNow(), f).split(path.sep).join('/'), text: fs.readFileSync(f, 'utf8') })));
       more.forEach((r) => { if (want.indexOf(r.name) !== -1 && !list.some((x) => x.name === r.name)) list.push(r); });
     }
     // a report named but not found: guessed in the folder the page's other reports are in (else a placeholder folder)
@@ -591,7 +593,9 @@ function open(o) {
     return { ok: true, reports: list.sort((a, b) => (a.name < b.name ? -1 : 1)).map((r) => Object.assign(r, { key: 'report:' + r.path })) };
   }
 
-  return { op, report, run, check, last, reports, flush, root };
+  /** The services/catalog.json of the project its calls are read from (where they go: lib/devserver.js apiProject). */
+  const catalogFile = () => path.join(rootNow(), 'services', 'catalog.json');
+  return { op, report, run, check, last, reports, flush, root: root0, rootNow, catalogFile };
 }
 
 module.exports = { open, opOf, urlOf, extraPairs, skeleton, soapBody, reportBytesOf, rowTagOf, xmlRows, rowsOf, shapeOf, compareShape, prettyXml, curlOf, decode, reportsIn, normKey, BIP };

@@ -89,7 +89,7 @@
                 <span role="cell" :class="[[ cu.data.overdue ? 'nx-jira-bad' : '' ]]"><oj-bind-text value="[[ cu.data.overdue ]]"></oj-bind-text></span></button>
             </template>
           </oj-bind-for-each>
-          <oj-bind-if test="[[ ($variables.report.customers || []).length === 0 ]]"><p class="nx-note">No labels on these items. In Jira a story's labels are its customers (e.g. cianbro, oceaneering).</p></oj-bind-if>
+          <oj-bind-if test="[[ ($variables.report.customers || []).length === 0 ]]"><p class="nx-note">No labels on these items. In Jira a story's labels are its customers (e.g. acme, globex).</p></oj-bind-if>
         </div>
       </section>
       <section class="nx-card nx-card-pad" aria-labelledby="jspPeopleTitle">

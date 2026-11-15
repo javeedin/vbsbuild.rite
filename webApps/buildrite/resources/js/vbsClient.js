@@ -52,6 +52,9 @@ define([], function () {
     /** Stop using the current workspace (its folders kept). */
     workStop: function () { return post('work/stop', {}); },
     workRun: function (app) { return post('work/run', { app: app || '' }); },
+    // What Build.Rite read from your workspace's app (desktop/lib/appProfile.js): its layout, VB version and build tool,
+    // service connections and how they sign in, roles, components — scan: read it again now
+    workProfile: function (scan) { return call('work/profile' + (scan ? '?scan=1' : '')); },
     // the Run console (desktop/lib/runConsole.js): its new lines, who the app runs as, a command, clear
     consoleLines: function (after) { return call('console?after=' + encodeURIComponent(String(after || 0))); },
     consoleStatus: function () { return call('console/status'); },

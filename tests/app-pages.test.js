@@ -1,0 +1,209 @@
+/*
+ * Application pages: the page code analyzer (desktop/lib/pageScan.js) on a project's pages, the catalog kept in git
+ * (desktop/lib/pages.js: sheets, mapped Jira stories, screenshots, AI text, commit + push of only its files), and the
+ * words the AI is given (resources/js/pageSheet.js, storyAnalysis.js with mapped pages).
+ *
+ * The project: a throwaway copy, a git repository with a bare origin, holding two apps — the sample VB app's shop
+ * (tests/fixtures/vb-sample: a menu in app-flow.js, pages opened at /vp/shell/<flow>/<page>) and Build.Rite's own
+ * screens (a tab shell: resources/js/nav.js) — with both apps' services.
+ *
+ * Run:  node tests/app-pages.test.js
+ */
+'use strict';
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const vm = require('vm');
+const { execFileSync } = require('child_process');
+const H = require('./_harness');
+const S = require('../desktop/lib/pageScan');
+const P = require('../desktop/lib/pages');
+
+const T = H.makeAsserter();
+const ROOT = path.join(__dirname, '..');
+const FIX = path.join(__dirname, 'fixtures', 'vb-sample');
+function load(file) {
+  let out;
+  const sb = { console, define: (d, f) => { out = f(); } };
+  vm.createContext(sb);
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'webApps', 'buildrite', 'resources', 'js', file), 'utf8'), sb, { filename: file });
+  return out;
+}
+const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+
+// the project: the shop and Build.Rite's own screens (not Build.Rite's catalog: this test starts from none), their services
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'br-pages-'));
+const remote = fs.mkdtempSync(path.join(os.tmpdir(), 'br-pages-remote-'));
+const codeOnly = (src) => { try { return !/buildrite[\\/]resources[\\/]pages([\\/]|$)/.test(src) && (fs.statSync(src).isDirectory() || /\.(json|html|js)$/.test(src)); } catch (e) { return false; } };
+fs.cpSync(path.join(ROOT, 'webApps', 'buildrite'), path.join(tmp, 'webApps', 'buildrite'), { recursive: true, filter: codeOnly });
+fs.cpSync(path.join(FIX, 'webApps', 'shop'), path.join(tmp, 'webApps', 'shop'), { recursive: true });
+fs.cpSync(path.join(ROOT, 'services'), path.join(tmp, 'services'), { recursive: true });
+fs.readdirSync(path.join(FIX, 'services')).filter((d) => d !== 'catalog.json').forEach((d) => fs.cpSync(path.join(FIX, 'services', d), path.join(tmp, 'services', d), { recursive: true }));
+const cat0 = JSON.parse(fs.readFileSync(path.join(ROOT, 'services', 'catalog.json'), 'utf8'));
+Object.assign(cat0.backends, JSON.parse(fs.readFileSync(path.join(FIX, 'services', 'catalog.json'), 'utf8')).backends);
+fs.writeFileSync(path.join(tmp, 'services', 'catalog.json'), JSON.stringify(cat0, null, 2));
+const PROJ = tmp;
+
+T.section('every page of every app');
+const all = S.list(PROJ);
+const byApp = {};
+all.forEach((p) => { byApp[p.app] = (byApp[p.app] || 0) + 1; });
+T.check('both apps, each page once, ids "<app>/<flow>/<page>"', byApp.shop === 6 && byApp.buildrite >= 15 && Object.keys(byApp).length === 2
+  && new Set(all.map((p) => p.id)).size === all.length && all.every((p) => /^[a-z-]+\/[a-z0-9-]*\/[a-z0-9-]+$/.test(p.id)), JSON.stringify(byApp));
+const nx = all.filter((p) => p.id === 'buildrite/insights/app-pages')[0];
+T.check('a tab shell\'s page (Build.Rite\'s) takes its menu name, and opens with ?open=', nx && nx.label === 'Application pages' && nx.appName === 'Build.Rite' && nx.route.url === '/?open=app-pages' && /^Application › Application pages$/.test(nx.route.menu), JSON.stringify(nx));
+const wbp = all.filter((p) => p.id === 'shop/orders/order-list')[0];
+T.check('a VB app\'s page takes its page title, and opens at /vp/shell/<flow>/<page>; its app named as its folder', wbp && wbp.label === 'Order Workbench' && wbp.route.url === '/vp/shell/orders/order-list' && wbp.appName === 'shop', JSON.stringify(wbp));
+const rec = all.filter((p) => p.id === 'buildrite/insights/jira-analysis')[0];
+T.check('a screen opened from another (a record) says how to get its screenshot', rec && rec.route.url === '' && /record "jira-analysis"/.test(rec.route.needs));
+
+T.section('navigation: where each page goes, the menus, the maps');
+const L = S.links(PROJ);
+const edge = (a, b) => L.edges.some((e) => e.from === a && e.to === b);
+const DASH = 'shop/customers/customer-dashboard';
+const BILL = 'shop/customers/customer-billing';
+T.check('links resolved from the chains (navigateToPage within a flow and across flows; the shell\'s tabs and records)', edge(DASH, BILL) && edge(DASH, 'shop/orders/order-create') && edge('shop/orders/order-list', 'shop/orders/order-detail')
+  && L.edges.filter((e) => e.from.indexOf('shop/') === 0).length === 6 && L.edges.filter((e) => e.from.indexOf('buildrite/') === 0).length >= 10, L.edges.length + ' edges');
+T.check('…with the chain that opens it', (L.edges.filter((e) => e.from === DASH && e.to === BILL)[0].via || []).some((v) => /Chain$/.test(v)));
+T.check('the menus: the shop\'s (its NAV_GROUPS in app-flow.js) and Build.Rite\'s (nav.js)', (L.menus.shop || []).map((m) => m.label).join() === 'Customer Dashboard,My Billing,Order Workbench,New Order'
+  && (L.menus.buildrite || []).length >= 9, JSON.stringify(Object.keys(L.menus).map((a) => a + ' ' + L.menus[a].length)));
+const dash = all.filter((p) => p.id === DASH)[0];
+T.check('list(): each page with next and its menu entry', dash.next.indexOf(BILL) !== -1 && /Customer Dashboard/.test(dash.menu));
+T.check('analyze(): next with labels and chains', S.analyze(PROJ, DASH).next.some((n) => n.label === 'My Billing' && n.via.length));
+const PMAP = load('pageMap.js');
+const pm = PMAP.pageMap(all, DASH, S.analyze(PROJ, DASH).next);
+T.check('pageMap: Comes from (the menu first) → This page → Goes to (by its chain) → Then', pm.cols.map((c) => c.title).join('|') === 'Comes from|This page|Goes to|Then'
+  && pm.cols[0].nodes[0].kind === 'menu' && pm.cols[1].nodes[0].label === 'Customer Dashboard' && pm.cols[2].nodes.some((n) => n.label === 'My Billing' && /^by /.test(n.via)), JSON.stringify(pm.cols.map((c) => c.nodes.map((n) => n.label))));
+T.check('…an edge into this page for each "comes from", out of it for each "goes to"', pm.cols[0].nodes.every((n) => pm.edges.some((e) => e[0] === n.key && e[1] === 'self')) && pm.cols[2].nodes.every((n) => pm.edges.some((e) => e[0] === 'self' && e[1] === n.key)));
+T.check('…"Then" holds only pages not already shown', pm.cols[3].nodes.every((n) => n.id !== DASH && !pm.cols[2].nodes.some((x) => x.id === n.id)));
+const am = PMAP.appMap(all, 'shop', DASH);
+T.check('appMap: every page of the app once — from the menu, steps on, not reached', am.cols.reduce((s, c) => s + c.nodes.length, 0) === all.filter((p) => p.app === 'shop').length
+  && am.cols[0].title === 'From the menu' && am.cols[0].nodes.length === am.counts.menu && am.cols[am.cols.length - 1].title === 'Not reached', am.cols.map((c) => c.title + ' ' + c.nodes.length).join(' · '));
+T.check('…the open page marked, edges only between pages shown', am.cols[0].nodes.some((n) => n.id === DASH && n.kind === 'self') && am.edges.length === am.counts.links && am.edges.every((e) => e[0].indexOf('shop/') === 0 && e[1].indexOf('shop/') === 0));
+const tiny = [{ id: 'a/f/x', app: 'a', flow: 'f', page: 'x', label: 'X', next: ['a/f/y'] }, { id: 'a/f/y', app: 'a', flow: 'f', page: 'y', label: 'Y', next: ['a/f/x', 'a/f/z'] }, { id: 'a/f/z', app: 'a', flow: 'f', page: 'z', label: 'Z', next: [], deleted: true }];
+const tm = PMAP.pageMap(tiny, 'a/f/x', []);
+T.check('a page that comes back: the edge back to "This page"; deleted pages left out', tm.edges.some((e) => e[0] === 't:a/f/y' && e[1] === 'self') && tm.cols[3].nodes.length === 0 && PMAP.appMap(tiny, 'a', '').counts.pages === 2);
+
+T.section('one page\'s facts, from its files');
+const wb = S.analyze(PROJ, 'shop/orders/order-list');
+T.check('features: its title, table columns, what reacts (a row picked), when it runs, its fields', wb.features.sections[0] === 'Order Workbench'
+  && wb.features.columns.join() === 'Order,Customer,Total' && wb.features.actions.some((a) => /row action/.test(a.label) && a.chains.indexOf('RowClickChain') !== -1)
+  && wb.features.lifecycle.some((l) => l.when === 'when the page opens' && l.chains.indexOf('LoadOrdersChain') !== -1) && wb.features.fields.indexOf('Find an order') !== -1, JSON.stringify(wb.features));
+T.check('business logic: each chain with what its own comment says, what it calls, the modules it uses', wb.logic.chains.length === 2 && wb.logic.chains.every((c) => typeof c.about === 'string')
+  && wb.logic.chains.some((c) => c.name === 'LoadOrdersChain' && c.calls.indexOf('shopApi/getOrders') !== -1 && /Every order, read when the page opens/.test(c.about))
+  && wb.logic.modules.some((m) => m.name === 'shopRules' && /order's total/.test(m.about)), JSON.stringify(wb.logic.chains.map((c) => [c.name, c.calls, c.about])));
+const call = wb.integrations.rest.filter((r) => r.endpoint === 'shopApi/getOrders')[0];
+T.check('integrations: the endpoint → GET and its path → its backend (named after its service connection), used by its chain', call && call.method === 'GET' && call.path === '/shop/v1/orders'
+  && call.backend === 'shop' && call.backendLabel === 'shop' && call.usedBy.indexOf('LoadOrdersChain') !== -1, JSON.stringify(call));
+T.check('links: the screen it opens; files and a code hash', wb.links.indexOf('page order-detail') !== -1 && wb.files.length >= 4 && /^[0-9a-f]{16}$/.test(wb.codeHash));
+const an = S.analyze(PROJ, 'buildrite/insights/jira-analysis');
+T.check('a Build.Rite page: rules modules (two levels deep) and the desktop services they use; buttons by the words they show', an.logic.modules.some((m) => m.name === 'storyAnalysisRun')
+  && an.logic.modules.some((m) => m.name === 'analysisStore') && an.integrations.local.some((l) => l.route === '/__ai/') && an.integrations.local.some((l) => l.route === '/__fdd/')
+  && an.features.actions.some((a) => /Re-run analysis/.test(a.label)));
+const bipPage = all.map((p) => S.analyze(PROJ, p.id)).filter((f) => f.integrations.reports.length)[0];
+T.check('BI Publisher reports are named (…_RP)', !!bipPage && bipPage.integrations.reports.every((r) => /_RP$|^[A-Z0-9_]+$/.test(r)) && bipPage.integrations.backends.indexOf('Oracle BI Publisher (SOAP)') !== -1
+  && S.analyze(PROJ, 'shop/orders/order-create').integrations.reports.join() === 'CUSTOMERS_RP');
+let unresolved = 0;
+all.forEach((p) => { unresolved += S.analyze(PROJ, p.id).integrations.rest.filter((r) => !r.method).length; });
+T.eq('every REST endpoint any page calls is in services/', unresolved, 0);
+T.eq('a header comment', S.headerComment("// Opens the drawer.\n// Then reads it.\n\nconst x = 1;"), 'Opens the drawer. Then reads it.');
+T.eq('the analyzer reads, never writes: an unknown page is null', S.analyze(PROJ, 'nope/x/y'), null);
+
+T.section('the catalog in git: map a story (the sheet built once), reuse it for another, unmap');
+let clock = Date.parse('2026-11-12T10:00:00Z');
+let haveGit = true;
+try { git(tmp, '--version'); } catch (e) { haveGit = false; }
+if (haveGit) {
+  git(remote, 'init', '--bare', '-q');
+  git(tmp, 'init', '-q', '-b', 'pages/test'); git(tmp, 'config', 'user.email', 't@example.com'); git(tmp, 'config', 'user.name', 'T'); git(tmp, 'config', 'commit.gpgsign', 'false');
+  git(tmp, 'add', '-A'); git(tmp, 'commit', '-q', '-m', 'start'); git(tmp, 'remote', 'add', 'origin', remote); git(tmp, 'push', '-q', '-u', 'origin', 'pages/test');
+}
+const shots = [];
+const store = P.open({ root: tmp, now: () => new Date(clock += 60000), capture: async (app, url) => { shots.push(app + ' ' + url); return { ok: true, base64: Buffer.from('jpegbytes').toString('base64'), mime: 'image/jpeg' }; } });
+const ID = 'shop/orders/order-list';
+(async () => {
+  T.check('the catalog lists every page, none mapped yet', store.catalog().pages.length === all.length && store.catalog().pages.every((p) => !(p.stories || []).length));
+  const before = store.sheet(ID);
+  T.check('before a sheet is built: the facts read now, not saved', before.ok && !before.saved && before.sheet.facts.integrations.rest.length > 0);
+  const a1 = store.assign(ID, 'abc-93', { by: 'sam' });
+  T.check('mapping the first story builds and saves the sheet', a1.ok && a1.built === true && a1.sheet.stories.join() === 'ABC-93' && a1.sheet.by === 'sam'
+    && fs.existsSync(path.join(tmp, P.RES, 'sheets', P.fileOf(ID) + '.json')));
+  const builtAt = a1.sheet.at;
+  const a2 = store.assign(ID, 'ABC-285', { by: 'someone' });
+  T.check('a second story reuses the sheet: only its number is added (not rebuilt)', a2.ok && a2.built === false && a2.sheet.at === builtAt && a2.sheet.stories.join() === 'ABC-93,ABC-285');
+  T.check('the same story twice is kept once; a key that is not a key is refused', store.assign(ID, 'ABC-93').sheet.stories.length === 2 && !store.assign(ID, 'nonsense').ok);
+  const cat = JSON.parse(fs.readFileSync(path.join(tmp, P.RES, 'catalog.json'), 'utf8'));
+  const entry = cat.pages.filter((p) => p.id === ID)[0];
+  T.check('the page table (catalog.json) holds the story numbers and the sheet\'s summary', entry.stories.join() === 'ABC-93,ABC-285' && entry.sheet && entry.sheet.rest >= 1 && entry.sheet.chains === 2);
+  T.check('a story\'s pages', store.forStory('abc-285').map((p) => p.id).join() === ID && store.forStory('ABC-1').length === 0);
+  const cap = await store.capture(ID, { by: 'sam' });
+  T.check('a screenshot captured at the page\'s address, saved beside the sheet', cap.ok && shots[0] === 'shop /vp/shell/orders/order-list'
+    && fs.existsSync(path.join(tmp, P.RES, cap.file)) && store.sheet(ID).sheet.screenshots[0].source === 'capture');
+  const recap = await store.capture('buildrite/insights/jira-analysis', {});
+  T.check('a screen with no address of its own: not captured, says to upload', !recap.ok && /upload/i.test(recap.error));
+  const up = store.saveShot(ID, { base64: Buffer.from('png').toString('base64'), mime: 'image/png', by: 'j', caption: 'Filters open' });
+  const up2 = store.saveShot(ID, { base64: Buffer.from('jpg2').toString('base64'), mime: 'image/jpeg', by: 'j' });
+  const list = store.sheet(ID).sheet.screenshots;
+  T.check('several screenshots: an upload is added (the capture kept), each its own file and caption', up.ok && up2.ok && list.length === 3 && list.map((x) => x.id).join() === 's1,s2,s3'
+    && list[1].caption === 'Filters open' && list[1].file.endsWith('.2.png') && list.every((x) => fs.existsSync(path.join(tmp, P.RES, x.file))));
+  T.check('the page table counts them', JSON.parse(fs.readFileSync(path.join(tmp, P.RES, 'catalog.json'), 'utf8')).pages.filter((x) => x.id === ID)[0].sheet.screenshots === 3);
+  const delShot = store.removeShot(ID, 's2');
+  T.check('one deleted: its file gone, the others kept', delShot.ok && store.sheet(ID).sheet.screenshots.map((x) => x.id).join() === 's1,s3' && !fs.existsSync(path.join(tmp, P.RES, up.file)) && !store.removeShot(ID, 's9').ok);
+  const s4 = store.saveShot(ID, { base64: Buffer.from('x').toString('base64'), mime: 'image/jpeg' });
+  T.check('a new one after a delete gets a new number (a number never names two images)', s4.ok && s4.shot.id === 's4' && store.sheet(ID).sheet.screenshots.map((x) => x.id).join() === 's1,s3,s4');
+  T.check('the AI explanation is kept with the sheet', store.saveAi(ID, { text: '## What this page is for\n- the workbench', provider: 'Claude', by: 'j' }).ok && store.sheet(ID).sheet.ai.provider === 'Claude');
+  const rb = store.build(ID, { by: 'j' });
+  T.check('refreshing the sheet keeps its stories, screenshots and AI text', rb.ok && rb.sheet.stories.length === 2 && rb.sheet.screenshots.length === 3 && rb.sheet.ai && rb.sheet.at > builtAt);
+  T.check('unmapping a story', store.unassign(ID, 'ABC-285').ok && store.sheet(ID).sheet.stories.join() === 'ABC-93');
+  // the code changes: the sheet says so
+  const chain = path.join(tmp, 'webApps/shop/flows/orders/pages/order-list-page-chains/RowClickChain.js');
+  fs.appendFileSync(chain, '\n// changed\n');
+  T.check('when the page\'s code changes, its sheet says so', store.sheet(ID).codeChanged === true);
+  T.check('rescan writes every page into the catalog', store.rescan().pages === all.length);
+  // a sheet saved before several screenshots were kept had one, as "screenshot": read as the first of a list
+  const OLDID = 'shop/customers/customer-billing';
+  store.build(OLDID, {});
+  const oldFile = path.join(tmp, P.RES, 'sheets', P.fileOf(OLDID) + '.json');
+  const oj = JSON.parse(fs.readFileSync(oldFile, 'utf8')); delete oj.screenshots; oj.screenshot = { file: 'screens/old.jpg', at: '2026-11-01T00:00:00Z', source: 'upload' };
+  fs.writeFileSync(oldFile, JSON.stringify(oj));
+  T.check('an older sheet\'s single screenshot reads as a list of one', store.sheet(OLDID).sheet.screenshots.length === 1 && store.sheet(OLDID).sheet.screenshots[0].id === 's1');
+
+  T.section('delete a page from the catalog, and restore it');
+  store.assign(OLDID, 'ABC-7', {});
+  const del = store.remove(OLDID);
+  const cat2 = JSON.parse(fs.readFileSync(path.join(tmp, P.RES, 'catalog.json'), 'utf8')).pages.filter((x) => x.id === OLDID)[0];
+  T.check('deleted: its sheet and screenshots gone, its stories unmapped, marked deleted (the code still has it)', del.ok && del.removed.stories.join() === 'ABC-7'
+    && !fs.existsSync(oldFile) && cat2.deleted === true && cat2.stories.length === 0 && cat2.sheet === null && store.forStory('ABC-7').length === 0);
+  T.check('…and stays deleted after a rescan', store.rescan() && JSON.parse(fs.readFileSync(path.join(tmp, P.RES, 'catalog.json'), 'utf8')).pages.filter((x) => x.id === OLDID)[0].deleted === true);
+  T.check('opening it says it was deleted', store.sheet(OLDID).deleted === true && store.sheet(OLDID).saved === false);
+  T.check('restored: back in the lists', store.restore(OLDID).ok && !JSON.parse(fs.readFileSync(path.join(tmp, P.RES, 'catalog.json'), 'utf8')).pages.filter((x) => x.id === OLDID)[0].deleted);
+  store.remove(OLDID);
+  T.check('mapping a story to a deleted page brings it back, with a new sheet', store.assign(OLDID, 'ABC-8', {}).built === true
+    && !JSON.parse(fs.readFileSync(path.join(tmp, P.RES, 'catalog.json'), 'utf8')).pages.filter((x) => x.id === OLDID)[0].deleted);
+  T.check('an unknown page cannot be deleted', !store.remove('nope/x/y').ok);
+
+  if (haveGit) {
+    fs.writeFileSync(path.join(tmp, 'other.txt'), 'staged'); git(tmp, 'add', 'other.txt');
+    const g = await store.gitSave({ message: 'Application pages: map ABC-93' });
+    const files = git(tmp, 'show', '--name-only', '--format=', 'HEAD').split('\n').filter(Boolean);
+    T.check('git: only resources/pages is committed, then pushed; other staged work stays staged', g.ok && g.pushed && files.length > 0 && files.every((f) => f.indexOf(P.RES + '/') === 0)
+      && git(tmp, 'diff', '--cached', '--name-only') === 'other.txt' && git(remote, 'log', '-1', '--format=%s', 'pages/test') === 'Application pages: map ABC-93', files.join(','));
+  } else T.check('git is installed (skipping the git checks)', true);
+
+  T.section('what the AI is given');
+  const PS = load('pageSheet.js');
+  const SA = load('storyAnalysis.js');
+  const sh = store.sheet(ID).sheet;
+  const pr = PS.prompt(sh.facts);
+  T.check('"explain this page": its five headings, only the facts', ['What this page is for', 'How people use it', 'Business logic', 'Integrations', 'Things to watch'].every((h) => pr.system.indexOf('## ' + h) !== -1)
+    && /ONLY on the facts/.test(pr.system) && /PAGE Order Workbench \(shop, orders\/order-list\)/.test(pr.user) && /GET \/shop\/v1\/orders — shop \(shopApi\/getOrders\)/.test(pr.user), pr.user.slice(0, 400));
+  const mt = PS.storyPagesText([sh]);
+  T.check('a story\'s mapped pages: the essentials and the saved AI explanation', /PAGE Order Workbench/.test(mt) && /LoadOrdersChain/.test(mt) && /What the page does \(AI explanation/.test(mt) && /the workbench/.test(mt));
+  const sp = SA.prompt({ key: 'ABC-93', summary: 'Workbench filters' }, [], '', mt);
+  T.check('the story\'s analysis carries them, and is told to name chains and endpoints', /APPLICATION PAGES MAPPED TO THIS/.test(sp.user) && /name the chains and endpoints/.test(sp.system));
+  T.check('…and without mapped pages, nothing changes', SA.prompt({ key: 'ABC-1', summary: 'x' }, [], '').system === SA.SYSTEM);
+  T.check('a set too', /APPLICATION PAGES MAPPED TO THIS/.test(SA.promptSet([{ key: 'ABC-1' }, { key: 'ABC-2' }], [], '', mt).user));
+
+  [tmp, remote].forEach((d) => { try { fs.rmSync(d, { recursive: true, force: true }); } catch (e) { /* tmp */ } });
+  T.report();
+})().catch((e) => { console.error(e); process.exit(1); });

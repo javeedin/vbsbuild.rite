@@ -1,0 +1,36 @@
+{
+  "description": "Order Workbench \u2014 every order, filtered by status",
+  "variables": {
+    "q": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "orders": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "ordersADP": {
+      "type": "vb/ArrayDataProvider2",
+      "defaultValue": {
+        "keyAttributes": "number",
+        "data": "{{ $page.variables.orders }}"
+      }
+    }
+  },
+  "eventListeners": {
+    "vbEnter": {
+      "chains": [
+        {
+          "chain": "LoadOrdersChain"
+        }
+      ]
+    },
+    "onRowClick": {
+      "chains": [
+        {
+          "chain": "RowClickChain"
+        }
+      ]
+    }
+  }
+}

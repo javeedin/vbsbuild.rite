@@ -18,6 +18,8 @@ define(['vb/action/actionChain', 'resources/js/vbsClient', 'resources/js/runCons
       let n = 0;
       RC.start({ mount: 'rcLog', fetch: VC.consoleLines, every: 800, onRead: () => { if (++n % 4 === 0) status(); } });
       await status();
+      // what Build.Rite read from your app (its profile): once on entry, again with Scan again
+      try { const pr = await VC.workProfile(false); v.profile = pr.body || { error: 'Your app could not be read.' }; } catch (e) { v.profile = { error: 'Your app could not be read.' }; }
       try { setTimeout(() => { const el = document.getElementById('rcCmd'); if (el) el.focus(); }, 300); } catch (e) { /* no DOM */ }
     }
   }

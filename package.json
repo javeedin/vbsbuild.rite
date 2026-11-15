@@ -21,7 +21,9 @@
     "desktop": "node tools/get-electron.js && electron desktop",
     "desktop:fresh": "npm run build && node tools/get-electron.js && electron desktop",
     "vb": "node tools/run-vb-app.js",
-    "fdd": "node tools/fdd.js"
+    "fdd": "node tools/fdd.js",
+    "test:electron": "electron tests/electron/vbs-page.electron.js",
+    "test:e2e": "node tests/e2e/run-all.js"
   },
   "dependencies": {
     "@duckdb/node-api": "^1.4.5-r.1",

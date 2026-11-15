@@ -1,0 +1,32 @@
+{
+  "description": "Customer Dashboard \u2014 a customer's orders and invoices at a glance",
+  "variables": {
+    "orders": {
+      "type": "any[]",
+      "defaultValue": []
+    }
+  },
+  "eventListeners": {
+    "vbEnter": {
+      "chains": [
+        {
+          "chain": "LoadDashboardChain"
+        }
+      ]
+    },
+    "onOpenBilling": {
+      "chains": [
+        {
+          "chain": "OpenBillingChain"
+        }
+      ]
+    },
+    "onNewOrder": {
+      "chains": [
+        {
+          "chain": "NewOrderChain"
+        }
+      ]
+    }
+  }
+}

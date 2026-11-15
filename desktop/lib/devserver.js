@@ -31,6 +31,17 @@
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
+const tls = require('tls');
+// The certificates a backend's HTTPS is checked against: Node's own and this PC's (Windows / macOS / Linux store), so a
+// corporate network that re-signs HTTPS with its own authority works as in the browser. Read once.
+const CA = (() => {
+  try {
+    if (typeof tls.getCACertificates !== 'function') return null;
+    const all = new Set(tls.getCACertificates('default'));
+    try { tls.getCACertificates('system').forEach((c) => all.add(c)); } catch (e) { /* no system store here */ }
+    return [...all];
+  } catch (e) { return null; }
+})();
 const path = require('path');
 const TT = require('./testTrace');
 const { buildCatalog } = require('./catalog');
@@ -98,10 +109,22 @@ function rewriteCatalog(catalog, origin) {
   return { catalog: out, backends };
 }
 
-/** The VBCS credential the Fusion backends share (fusion / bipService); a local Fusion login stands in for it. */
+/** The VB credential most of the app's signed-in backends share (its main login), or null — whatever they are named. */
 function fusionCredential(backends) {
-  const b = backends.fusion || backends.bipService;
-  return (b && b.credentials) || null;
+  const n = {};
+  Object.values(backends || {}).forEach((b) => { if (b && b.basic && b.credentials) n[b.credentials] = (n[b.credentials] || 0) + 1; });
+  const best = Object.keys(n).sort((a, b) => n[b] - n[a] || (a < b ? -1 : 1))[0];
+  return best || null;
+}
+
+/** The login a backend's calls go out with: one given for its VB credential (identity.logins), else the app's login
+ *  (identity.fusion) — for every backend that signs in, whatever its name; none for a backend that does not. */
+function loginFor(backend, identity) {
+  if (!backend || !backend.basic) return null;
+  const id = identity || {};
+  const own = id.logins && backend.credentials ? id.logins[backend.credentials] : null;
+  if (own && own.user && own.password) return own;
+  return id.fusion && id.fusion.user && id.fusion.password ? id.fusion : null;
 }
 
 /** Fills the placeholders VBCS resolves when it serves app-flow.json. */
@@ -278,26 +301,52 @@ function createDevServer(o) {
   const log = (line) => (o.onLog ? o.onLog(`${time()} ${line}`) : undefined);
   let backends = {};
 
+  // The app's service connections: the project's catalog (the build writes it to processed/services) and the app's own
+  // (webApps/<app>/services/catalog.json — the build does not copy it, VB Studio's server serves it), merged: the
+  // app's own wins for a backend in both.
+  const appCatalogFile = path.join(repoRoot, 'webApps', o.webApp || 'buildrite', 'services', 'catalog.json');
+  const readCatalog = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return null; } };
   const loadCatalog = (origin) => {
-    const rewritten = rewriteCatalog(JSON.parse(fs.readFileSync(catalogFile, 'utf8')), origin);
+    const proj = readCatalog(catalogFile);
+    const own = readCatalog(appCatalogFile);
+    if (!proj && !own && !fs.existsSync(catalogFile)) throw new Error('no services/catalog.json (neither the project\'s nor the app\'s own)');
+    const merged = Object.assign({}, proj || {}, { backends: Object.assign({}, (proj && proj.backends) || {}, (own && own.backends) || {}) });
+    const rewritten = rewriteCatalog(merged, origin);
     backends = rewritten.backends;
     return rewritten.catalog;
   };
 
-  async function proxy(req, res, name, rest, search) {
-    if (!backends[name]) {
+  // The API tester's project (o.apiProject(): { catalogFile, getIdentity } — your workspace's services/catalog.json and who
+  // its app runs as): its calls go to that project's backends with that login, not this server's own (Build.Rite's).
+  let apiSet = null, apiKey = '';
+  function apiProject() {
+    const p = typeof o.apiProject === 'function' ? o.apiProject() : null;
+    const files = (Array.isArray(p && p.catalogFiles) ? p.catalogFiles : [p && p.catalogFile]).filter((f) => f && fs.existsSync(f));
+    if (!files.length) return null;
+    const key = files.map((f) => f + ':' + fs.statSync(f).mtimeMs).join('|');
+    if (key !== apiKey) {
+      const merged = { backends: {} };
+      files.forEach((f) => { try { Object.assign(merged.backends, JSON.parse(fs.readFileSync(f, 'utf8')).backends || {}); } catch (e) { /* a broken catalog: left out */ } });
+      apiSet = rewriteCatalog(merged, 'http://127.0.0.1').backends; apiKey = key;
+    }
+    return { backends: apiSet, identity: (typeof p.getIdentity === 'function' ? p.getIdentity() : null) || {} };
+  }
+
+  async function proxy(req, res, name, rest, search, alt) {
+    if (!alt && !backends[name]) {
       loadCatalog(`http://${req.headers.host}`);
     }
-    const backend = backends[name];
+    const set = alt ? alt.backends : backends;
+    const backend = set[name];
     if (!backend) {
       return send(res, 404, 'application/json', JSON.stringify({ error: `no backend "${name}" in services/catalog.json` }));
     }
-    const identity = o.getIdentity() || {};
+    const identity = alt ? alt.identity : (o.getIdentity() || {});
     const body = await readBody(req);
     const started = Date.now();
     const report = backend.basic ? reportName(body) : '';
     const label = `${req.method} ${name} ${report || `${rest}${search}`}`.slice(0, 220);
-    const usesFusionLogin = backend.basic && backend.credentials === fusionCredential(backends);
+    const usesLogin = !!backend.basic; // it signs in (a VB credential): the app's login stands in for it
     const problem = (p) => (o.onProblem ? o.onProblem(Object.assign({ backend: name, report }, p)) : undefined);
 
     if (identity.roles && identity.roles.length && isRolesReport(body, typeof o.rolesReport === 'function' ? o.rolesReport() : o.rolesReport)) {
@@ -318,9 +367,9 @@ function createDevServer(o) {
     ['host', 'origin', 'referer', 'cookie', 'authorization', ...HOP_BY_HOP].forEach((h) => delete headers[h]);
     headers.host = target.host;
     headers['content-length'] = String(body.length);
-    const fusion = identity.fusion;
-    if (usesFusionLogin && fusion && fusion.user && fusion.password) {
-      headers.authorization = `Basic ${Buffer.from(`${fusion.user}:${fusion.password}`).toString('base64')}`;
+    const login = loginFor(backend, identity);
+    if (login) {
+      headers.authorization = `Basic ${Buffer.from(`${login.user}:${login.password}`).toString('base64')}`;
     }
     if (jira) headers.authorization = jira.header;
 
@@ -343,7 +392,7 @@ function createDevServer(o) {
 
     await new Promise((resolve) => {
       const mod = target.protocol === 'https:' ? https : http;
-      const preq = mod.request(target, { method: req.method, headers, timeout: BACKEND_TIMEOUT_MS }, (pres) => {
+      const preq = mod.request(target, Object.assign({ method: req.method, headers, timeout: BACKEND_TIMEOUT_MS }, mod === https && CA ? { ca: CA } : {}), (pres) => {
         const out = Object.assign({}, pres.headers);
         // A 401 challenge would make the window pop a browser login box; the app handles the 401 itself.
         ['www-authenticate', 'set-cookie', ...HOP_BY_HOP].forEach((h) => delete out[h]);
@@ -352,14 +401,16 @@ function createDevServer(o) {
         if (tracing) pres.on('data', (c) => { if (resSize < TRACE_RAW_MAX) { resChunks.push(c); resSize += c.length; } });
         pres.on('end', () => {
           trace(pres.statusCode, pres.headers);
-          const refused = usesFusionLogin && (pres.statusCode === 401 || pres.statusCode === 403);
+          // Oracle Fusion's gateway may answer a missing or wrong login with a 404 page (HTML), not a 401
+          const html404 = usesLogin && !jira && pres.statusCode === 404 && /text\/html/i.test(String(pres.headers['content-type'] || ''));
+          const refused = usesLogin && !jira && (pres.statusCode === 401 || pres.statusCode === 403 || html404);
           let note = '';
           if (refused && !headers.authorization) {
-            note = ' (no Fusion login: File > Sign in as…)';
+            note = ' (no login for it: File > Sign in for your app…)';
+          } else if (html404) {
+            note = ' (a 404 page: Fusion answers so for a wrong login — check File > Sign in for your app…)';
           } else if (refused) {
-            note = pres.statusCode === 401 ? ' (Fusion refused the login)' : ' (the Fusion login may not run this)';
-          } else if (pres.statusCode === 401 && backend.basic) {
-            note = ' (its VBCS credential is not available locally)';
+            note = pres.statusCode === 401 ? ' (the backend refused the login)' : ' (the login may not do this)';
           }
           log(`${label} -> ${pres.statusCode} (${Date.now() - started} ms)${note}`);
           if (refused) {
@@ -391,7 +442,7 @@ function createDevServer(o) {
     const started = Date.now();
     const body = Buffer.from(init.body === undefined || init.body === null ? '' : String(init.body), 'utf8');
     return new Promise((resolve) => {
-      const r = http.request({ host: '127.0.0.1', port: server.address().port, path: `/__backend/${encodeURIComponent(name)}${rel}`, method: init.method,
+      const r = http.request({ host: '127.0.0.1', port: server.address().port, path: `${apiProject() ? '/__apibackend/' : '/__backend/'}${encodeURIComponent(name)}${rel}`, method: init.method,
         headers: Object.assign({}, init.headers, { 'content-length': String(body.length) }), timeout: BACKEND_TIMEOUT_MS + 5000 }, (pres) => {
         const chunks = [];
         let size = 0;
@@ -406,16 +457,19 @@ function createDevServer(o) {
   }
   /** Where a backend goes and with which login (the API tester shows it before anything is sent). */
   function backendInfo(name) {
-    if (!backends[name]) loadCatalog(`http://127.0.0.1:${server.address().port}`);
-    const b = backends[name];
+    const alt = apiProject();
+    if (!alt && !backends[name]) loadCatalog(`http://127.0.0.1:${server.address().port}`);
+    const set = alt ? alt.backends : backends;
+    const b = set[name];
     if (!b) return null;
-    const identity = o.getIdentity() || {};
-    const fusion = b.basic && b.credentials === fusionCredential(backends);
+    const identity = alt ? alt.identity : (o.getIdentity() || {});
+    const fusion = !!b.basic; // it signs in: the app's login stands in for its VB credential
     const jira = name === 'jira' && o.jiraStore ? o.jiraStore.auth() : null;
     const url = overrides[name.toLowerCase()] || (jira && jira.site) || b.url;
-    const user = fusion && identity.fusion && identity.fusion.user && identity.fusion.password ? identity.fusion.user : '';
+    const lg = loginFor(b, identity);
+    const user = lg ? lg.user : '';
     if (name === 'jira') return { url, login: jira ? 'Your Jira connection' : 'Jira is not connected (Jira stories → Connect Jira)', loginOk: !!jira, user: '' };
-    if (fusion) return { url, login: user ? `Your Fusion login (${user})` : 'No Fusion login yet: File → Sign in as… (Fusion will answer 401)', loginOk: !!user, user };
+    if (fusion) return { url, login: user ? `Your app's login (${user})` : 'No login for it yet: File → Sign in for your app… (the backend will refuse)', loginOk: !!user, user };
     if (b.basic) return { url, login: 'Its VBCS credential, which is not on this PC (it may answer 401)', loginOk: false, user: '' };
     return { url, login: 'None needed', loginOk: true, user: '' };
   }
@@ -898,6 +952,7 @@ function createDevServer(o) {
           if (pathname === '/__vbs/run/progress' && !post) return jsonV(200, o.vbsConsole && o.vbsConsole.progress ? o.vbsConsole.progress() : { ok: false, steps: [] });
           if (pathname === '/__vbs/console/status' && !post) return jsonV(200, o.vbsConsole ? o.vbsConsole.status() : { ok: false, error: 'The Run console needs the desktop app.' });
           if (pathname === '/__vbs/work/progress' && !post) return jsonV(200, vs.workProgress ? vs.workProgress() : { ok: true, active: false });
+          if (pathname === '/__vbs/work/profile' && !post) return jsonV(200, typeof o.vbsProfile === 'function' ? await o.vbsProfile(new URL(req.url, 'http://local').searchParams.get('scan') === '1') : { ok: false, error: 'Reading your app needs the desktop app.' });
           if (!post) return jsonV(404, { error: 'Not found' });
           let r;
           if (pathname === '/__vbs/org') { try { r = vs.saveOrg(b); } catch (e) { r = { ok: false, error: e.message }; } }
@@ -1211,6 +1266,13 @@ function createDevServer(o) {
         })().catch((e) => json(200, { error: e.message }));
         return undefined;
       }
+      const ab = /^\/__apibackend\/([^/]+)(\/.*)?$/.exec(pathname);
+      if (ab) {
+        // the API tester's send to your workspace's backends (o.apiProject): this server's own request, never a page's
+        const alt = apiProject();
+        if (!alt || !isLoopback(req.socket.remoteAddress) || req.headers.origin) return send(res, 404, 'text/plain; charset=utf-8', 'Not found');
+        return proxy(req, res, decodeURIComponent(ab[1]), ab[2] || '', u.search, alt);
+      }
       const b = /^\/__backend\/([^/]+)(\/.*)?$/.exec(pathname);
       if (b) {
         return proxy(req, res, decodeURIComponent(b[1]), b[2] || '', u.search);
@@ -1272,6 +1334,7 @@ module.exports = {
   currentUser,
   rolesReportResponse,
   isRolesReport,
+  loginFor,
   reportName,
   backendOverridesFromEnv,
   identityFromEnv,

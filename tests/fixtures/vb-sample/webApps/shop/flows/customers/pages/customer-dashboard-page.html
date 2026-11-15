@@ -1,0 +1,11 @@
+<!--
+  Customer Dashboard — a customer's orders and invoices at a glance
+  (a page of the sample shop app)
+-->
+<div class="oj-flex">
+  <oj-sp-general-overview-page page-title="Customer Dashboard" page-subtitle="Your orders and invoices">
+    <h2>Recent orders</h2>
+    <oj-button id="openBilling" on-oj-action="[[ $listeners.onOpenBilling ]]">My Billing</oj-button>
+    <oj-button id="newOrder" on-oj-action="[[ $listeners.onNewOrder ]]">New order</oj-button>
+  </oj-sp-general-overview-page>
+</div>

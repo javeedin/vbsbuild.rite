@@ -1,0 +1,11 @@
+<!--
+  New Order — a customer and the lines, then Submit
+  (a page of the sample shop app)
+-->
+<div class="oj-flex">
+  <oj-sp-general-overview-page page-title="New Order">
+    <oj-select-single label-hint="Customer" data="[[ $variables.customersADP ]]" value="{{ $variables.customer }}"></oj-select-single>
+    <oj-input-text label-hint="Note" value="{{ $variables.note }}"></oj-input-text>
+    <oj-button id="submit" on-oj-action="[[ $listeners.onSubmit ]]">Submit</oj-button>
+  </oj-sp-general-overview-page>
+</div>

@@ -74,4 +74,42 @@
       <button type="button" class="nx-btn nx-btn--sm" id="rcGo" data-act="go" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]">Run command</button>
     </div>
   </section>
+
+  <!-- Your app: what Build.Rite read from its code — never assumed (desktop/lib/appProfile.js) -->
+  <section class="nx-card nx-rc-app" id="rcApp" aria-labelledby="rcAppTitle">
+    <div class="nx-rc-apphead">
+      <button type="button" class="nx-rc-apptoggle" id="rcAppToggle" data-act="appToggle" on-click="[[ $listeners.onAct ]]" :aria-expanded="[[ $variables.appOpen ? 'true' : 'false' ]]">
+        <span :class="[[ $variables.appOpen ? 'oj-ux-ico-chevron-down' : 'oj-ux-ico-chevron-right' ]]" aria-hidden="true"></span>
+        <span id="rcAppTitle">Your app</span></button>
+      <span class="nx-rc-appsum" id="rcAppSum"><oj-bind-text value="[[ $functions.appHead($variables.profile) ]]"></oj-bind-text></span>
+      <span class="nx-min-flex"></span>
+      <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="rcAppScan" data-act="profile" on-click="[[ $listeners.onAct ]]" title="Read your app's files again (after a pull or a change to its services)">Scan again</button>
+    </div>
+    <oj-bind-if test="[[ $variables.appOpen ]]">
+      <p class="nx-note nx-rc-applede">What Build.Rite read from your workspace's app — its layout, Visual Builder version and build tool, how its service connections sign in, its roles. Every app is different: nothing here is assumed.</p>
+      <ul class="nx-rc-notes" id="rcAppNotes">
+        <oj-bind-for-each data="[[ $functions.appNotes($variables.profile) ]]">
+          <template data-oj-as="n"><li :class="[[ n.data.cls ]]"><oj-bind-text value="[[ n.data.text ]]"></oj-bind-text></li></template>
+        </oj-bind-for-each>
+      </ul>
+      <dl class="nx-rc-facts" id="rcAppFacts">
+        <oj-bind-for-each data="[[ $functions.appFacts($variables.profile) ]]">
+          <template data-oj-as="f"><dt><oj-bind-text value="[[ f.data.k ]]"></oj-bind-text></dt><dd><oj-bind-text value="[[ f.data.v ]]"></oj-bind-text></dd></template>
+        </oj-bind-for-each>
+      </dl>
+      <oj-bind-if test="[[ $functions.appBackends($variables.profile).length > 0 ]]">
+        <table class="nx-rc-betable" id="rcAppBackends" aria-label="Its service connections' backends">
+          <thead><tr><th>Backend</th><th>Where</th><th>Host</th><th>Sign-in</th><th>Login</th></tr></thead>
+          <tbody>
+            <oj-bind-for-each data="[[ $functions.appBackends($variables.profile) ]]">
+              <template data-oj-as="b">
+                <tr :class="[[ b.data.cls ]]"><td><code><oj-bind-text value="[[ b.data.name ]]"></oj-bind-text></code></td><td><oj-bind-text value="[[ b.data.where ]]"></oj-bind-text></td>
+                  <td><oj-bind-text value="[[ b.data.host ]]"></oj-bind-text></td><td><oj-bind-text value="[[ b.data.auth ]]"></oj-bind-text></td><td><oj-bind-text value="[[ b.data.login ]]"></oj-bind-text></td></tr>
+              </template>
+            </oj-bind-for-each>
+          </tbody>
+        </table>
+      </oj-bind-if>
+    </oj-bind-if>
+  </section>
 </div>

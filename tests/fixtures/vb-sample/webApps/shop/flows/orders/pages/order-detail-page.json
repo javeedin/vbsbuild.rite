@@ -1,0 +1,30 @@
+{
+  "description": "Order \u2014 one order with its lines",
+  "variables": {
+    "id": {
+      "type": "string",
+      "input": "fromCaller",
+      "description": "The order's id"
+    },
+    "order": {
+      "type": "object",
+      "defaultValue": {}
+    }
+  },
+  "eventListeners": {
+    "vbEnter": {
+      "chains": [
+        {
+          "chain": "LoadOrderChain"
+        }
+      ]
+    },
+    "onBack": {
+      "chains": [
+        {
+          "chain": "BackChain"
+        }
+      ]
+    }
+  }
+}

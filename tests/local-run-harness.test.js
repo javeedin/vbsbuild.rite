@@ -1,0 +1,118 @@
+/*
+ * Local-run harness: the build preflight and the desktop shell's navigation rule.
+ *
+ * Until 2026-10-29 "npm run desktop:install" put Electron in desktop/node_modules. vb-process-local copies
+ * every project folder but build, .git, node_modules, mobileApps, webApps and services into build/processed,
+ * so once Electron was installed the copy died on desktop/node_modules/.bin/electron (EISDIR) and both
+ * "npm run desktop:fresh" and "npm run serve" stopped at the build. Electron now installs with the root
+ * "npm install" (the root node_modules is never copied), and the preflight stops on a leftover one.
+ *
+ * Runs the REAL tools/check-tools.js and desktop/lib/hosts.js.
+ *
+ * Run:  node tests/local-run-harness.test.js
+ */
+'use strict';
+
+const fs   = require('fs');
+const os   = require('os');
+const path = require('path');
+const H    = require('./_harness');
+
+const T = H.makeAsserter();
+const ROOT = path.join(__dirname, '..');
+const { checkTools, strayNodeModules, strayMessage } = require(path.join(ROOT, 'tools', 'check-tools.js'));
+const { navAllowed, opensInOldWindow } = require(path.join(ROOT, 'desktop', 'lib', 'hosts.js'));
+
+// ── preflight: build tool version ────────────────────────────────────
+
+T.section('preflight — build tool version');
+T.eq('matching tool passes', checkTools('2701', '2701.0.3').ok, true);
+T.eq('older tool stops', checkTools('2701', '2610.0.1').ok, false);
+T.eq('missing tool stops', checkTools('2701', '').ok, false);
+
+// ── preflight: node_modules inside a copied folder ───────────────────
+
+T.section('preflight — node_modules inside a copied folder');
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'br-harness-'));
+try {
+  for (const d of ['node_modules', 'build/x/node_modules', 'webApps/node_modules', 'desktop/lib', 'tools']) {
+    fs.mkdirSync(path.join(tmp, d), { recursive: true });
+  }
+  T.eq('clean project has none', strayNodeModules(tmp).length, 0);
+  fs.mkdirSync(path.join(tmp, 'desktop', 'node_modules', '.bin'), { recursive: true });
+  const stray = strayNodeModules(tmp);
+  T.eq('desktop/node_modules is caught', stray.join(','), 'desktop/node_modules');
+  T.check('message says how to delete it', /rm -rf desktop\/node_modules/.test(strayMessage(stray)));
+  T.check('message gives the Windows command', /rmdir \/s \/q desktop\\node_modules/.test(strayMessage(stray)));
+} finally {
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+
+// ── wiring: Electron lives in the root node_modules ──────────────────
+
+T.section('wiring — Electron installs at the root');
+const rootPkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+const desktopPkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'desktop', 'package.json'), 'utf8'));
+T.check('root devDependencies carry electron', !!rootPkg.devDependencies.electron);
+T.check('desktop/package.json installs nothing',
+  !desktopPkg.dependencies && !desktopPkg.devDependencies);
+T.check('desktop:fresh builds, fetches Electron, then runs the shell',
+  /^npm run build && node tools\/get-electron\.js && electron desktop$/.test(rootPkg.scripts['desktop:fresh']));
+// vb-process-local refuses to run over an existing build/processed, so every second build failed.
+T.check('build cleans the last build first (vb-clean keeps build/cache)',
+  /grunt vb-clean vb-process-local$/.test(rootPkg.scripts.build));
+T.check('desktop fetches Electron before running it',
+  /^node tools\/get-electron\.js && electron desktop$/.test(rootPkg.scripts.desktop));
+T.check('no script installs into desktop/', !Object.values(rootPkg.scripts).some((s) => /--prefix desktop/.test(s)));
+
+// ── desktop window: what stays in the window ─────────────────────────
+
+T.section('desktop — navigation');
+const APP = 'http://localhost:18888';
+T.eq('the app itself stays', navAllowed(APP + '/?page=order', APP), true);
+T.eq('a different local port leaves', navAllowed('http://localhost:9999/', APP), false);
+T.eq('Oracle CDN stays', navAllowed('https://static.oracle.com/cdn/x.js', APP), true);
+T.eq('Fusion pod stays', navAllowed('https://abc-test.fa.us2.oraclecloud.com/fscmUI/', APP), true);
+T.eq('plain http to Oracle leaves', navAllowed('http://static.oracle.com/', APP), false);
+T.eq('look-alike host leaves', navAllowed('https://static.oracle.com.evil.example/', APP), false);
+T.eq('garbage leaves', navAllowed('not a url', APP), false);
+const OLDO = 'http://localhost:18888';
+const NEWO = 'http://localhost:18889';
+T.eq('an Old link clicked in New opens the Old window', opensInOldWindow(OLDO + '/vp/shell/main/order-schedule', NEWO, OLDO), true);
+T.eq('an Old link clicked in Old stays in that window', opensInOldWindow(OLDO + '/vp/shell/main/order-schedule', OLDO, OLDO), false);
+T.eq('a New link clicked in New stays', opensInOldWindow(NEWO + '/vp/shell/request/my-requests', NEWO, OLDO), false);
+T.eq('garbage does not open a window', opensInOldWindow('not a url', NEWO, OLDO), false);
+
+// ── get-electron: resumable download into @electron/get's cache ──────
+
+T.section('get-electron — artifact, URL and cache root');
+const GE = require(path.join(ROOT, 'tools', 'get-electron.js'));
+const ZIP = GE.artifactName('45.1.0', 'win32', 'x64');
+T.eq('Windows zip name', ZIP, 'electron-v45.1.0-win32-x64.zip');
+T.eq('GitHub by default', GE.remoteUrl('45.1.0', ZIP, {}),
+  'https://github.com/electron/electron/releases/download/v45.1.0/electron-v45.1.0-win32-x64.zip');
+T.eq('ELECTRON_MIRROR honoured', GE.remoteUrl('45.1.0', ZIP, { ELECTRON_MIRROR: 'https://m.example/e/' }),
+  'https://m.example/e/v45.1.0/electron-v45.1.0-win32-x64.zip');
+T.eq('Windows cache under LOCALAPPDATA',
+  GE.cacheRoot({ LOCALAPPDATA: 'C:\\Users\\u\\AppData\\Local' }, 'win32', 'C:\\Users\\u'),
+  path.join('C:\\Users\\u\\AppData\\Local', 'electron', 'Cache'));
+T.eq('electron_config_cache wins', GE.cacheRoot({ electron_config_cache: '/c' }, 'linux', '/h'), '/c');
+T.eq('Windows executable', GE.exeFor('win32'), 'electron.exe');
+T.check('every platform zip has a pinned checksum',
+  ['win32-x64', 'win32-arm64', 'darwin-arm64', 'darwin-x64', 'linux-x64'].every((p) =>
+    !!require(path.join(ROOT, 'node_modules', 'electron', 'checksums.json'))[`electron-v${require(path.join(ROOT, 'node_modules', 'electron', 'package.json')).version}-${p}.zip`]));
+
+// The zip only helps if it lands exactly where @electron/get looks, so compare with its own Cache.
+(async () => {
+  T.section('get-electron — cache path matches @electron/get');
+  try {
+    const url = GE.remoteUrl('45.1.0', ZIP, {});
+    // Not in the package's "exports", so load the file itself.
+    const cacheJs = path.join(ROOT, 'node_modules', '@electron', 'get', 'dist', 'Cache.js');
+    const { Cache } = await import(require('url').pathToFileURL(cacheJs).href);
+    T.eq('same cache file as @electron/get', GE.cachePath('/root', url, ZIP), new Cache('/root').getCachePath(url, ZIP));
+  } catch (e) {
+    T.check('@electron/get Cache loads (npm install first)', false, String(e && e.message));
+  }
+  T.report();
+})();

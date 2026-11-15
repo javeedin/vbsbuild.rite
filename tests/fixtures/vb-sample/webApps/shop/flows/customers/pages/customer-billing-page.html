@@ -1,0 +1,24 @@
+<!--
+  Customer Billing — the customer's invoices, newest first
+  (a page of the sample shop app)
+-->
+<div class="oj-flex">
+  <oj-sp-general-overview-page page-title="My Billing">
+    <div class="shop-billing-summary">
+      <span class="shop-label">Open</span>
+      <span class="shop-value"><oj-bind-text value="[[ $variables.invoices.length ]]"></oj-bind-text></span>
+    </div>
+    <div class="shop-billing-filters">
+      <oj-input-text label-hint="Find an invoice" value="{{ $variables.q }}"></oj-input-text>
+      <oj-select-single label-hint="Status" value="{{ $variables.status }}"></oj-select-single>
+    </div>
+    <h2>Invoices</h2>
+    <oj-bind-if test="[[ !$variables.invoices.length ]]">
+      <p class="shop-empty">No invoice yet.</p>
+    </oj-bind-if>
+    <oj-table id="invoices" data="[[ $variables.invoicesADP ]]" columns='[{"headerText": "Invoice", "field": "number"}, {"headerText": "Amount", "field": "amount"}, {"headerText": "Status", "field": "status"}]'></oj-table>
+    <oj-button id="back" on-oj-action="[[ $listeners.onBack ]]">Back to the dashboard</oj-button>
+    <p class="shop-foot">Amounts include tax.</p>
+    <p class="shop-foot">Invoices are kept for seven years.</p>
+  </oj-sp-general-overview-page>
+</div>

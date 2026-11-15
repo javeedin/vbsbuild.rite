@@ -18,6 +18,8 @@
  * Each build has a version folder of its own, so the server is started again after one.
  *
  *   open({ buildTool, build?(src, target), serve({ dir, buildDir, webApp }) → { url, close }, log?, onLine?, now? })
+ *     buildTool: the folder holding Oracle's VB build tool (node_modules/grunt…), or (folder) → Promise<{ ok, dir, version,
+ *     why, error }> — the build tool in the version the app asks for (lib/buildTools.js), chosen for each build
  *     onLine(text): the build tool's output, line by line, as it builds (the Run console shows it)
  *     onStep({ key, state, text }): each step as it goes — check (did the code change?), copy (the working folder into
  *       the preview's src), prepare (its Component Exchange list emptied), build (Oracle's VB build tool), serve (the
@@ -100,13 +102,23 @@ function open(opts) {
     step('prepare', 'done', st.emptied.length ? 'the Component Exchange list of ' + st.emptied.join(', ') + ' emptied in the copy — its components load from Oracle\'s CDN (your folder keeps its list)' : 'nothing to change in the copy');
     if (st.emptied.length) log('your workspace: Component Exchange components (' + st.emptied.join(', ') + ') loaded from the CDN, as in Build.Rite');
     step('build', 'running', 'Oracle\'s VB build tool: grunt vb-clean vb-process-local (the copy → ' + path.join(root, BUILD) + ')');
-    const r = await run(st.src, path.join(root, BUILD));
+    const r = await run(st.src, path.join(root, BUILD), folder);
     step('build', r && r.ok ? 'done' : 'failed', r && r.ok ? 'built in ' + secs(r.ms || 0) : ((r && r.error) || 'the build failed'));
     return Object.assign(r || {}, { emptied: st.emptied });
   }
-  function run(src, target) {
+  async function run(src, target, folder) {
     if (typeof o.build === 'function') return Promise.resolve(o.build(src, target)).catch((e) => ({ ok: false, error: str(e && e.message) }));
-    const tool = path.resolve(o.buildTool || path.join(__dirname, '..', '..'));
+    let toolDir = o.buildTool;
+    if (typeof o.buildTool === 'function') {
+      // the build tool the app asks for (its own version: installed once when it is not here yet)
+      const t = await Promise.resolve(o.buildTool(folder)).catch((e) => ({ ok: false, error: str(e && e.message) }));
+      if (!t || !t.ok) return { ok: false, error: (t && (t.error || t.why)) || 'No build tool for this app.' };
+      if (typeof o.onLine === 'function') { try { o.onLine('build tool: ' + (t.why || t.version || t.dir)); } catch (e) { /* no console */ } }
+      toolDir = t.dir;
+    }
+    return runIn(path.resolve(toolDir || path.join(__dirname, '..', '..')), src, target);
+  }
+  function runIn(tool, src, target) {
     const grunt = path.join(tool, 'node_modules', 'grunt', 'bin', 'grunt');
     if (!isFile(grunt)) return Promise.resolve({ ok: false, error: 'The build tool is not installed: run npm install in ' + tool + '.' });
     return new Promise((resolve) => {

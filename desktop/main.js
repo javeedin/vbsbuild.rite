@@ -34,6 +34,14 @@ const PORT = Number(process.env.BUILDRITE_PORT) || 18893;
 const REPO_ROOT = path.resolve(__dirname, '..');
 const BUILD_DIR = path.join(REPO_ROOT, 'build');
 const WEB_APP = 'buildrite';
+// An error nobody caught (a promise that failed with no .catch): said with where it came from — in the terminal, the
+// Run console and View → Backend calls… — instead of Node's bare "unhandled rejection" warning.
+process.on('unhandledRejection', (reason) => {
+  const text = String((reason && reason.stack) || reason || 'unknown').split('\n').slice(0, 6).join('\n');
+  console.error('[Build.Rite] an error nobody caught:\n' + text);
+  try { pushLog(`${new Date().toTimeString().slice(0, 8)} an error nobody caught: ${text.replace(/\n\s*/g, ' | ')}`); } catch (e) { /* the log is not there yet */ }
+  try { cpush('error', 'Build.Rite: an error nobody caught: ' + text.split('\n')[0]); } catch (e) { /* the console is not there yet */ }
+});
 // The SQL worksheet: Oracle connections kept in this app's data folder, passwords in the OS keychain.
 let sqlConnStore = null;
 async function sqlStore() {
@@ -191,6 +199,25 @@ async function fddStore() {
   if (!fddStoreInst) fddStoreInst = require('./lib/fdd').open({ root: path.join(__dirname, '..'), data: await dataBranch(), gitPath: commandPath('git') || 'git' });
   return fddStoreInst;
 }
+// What Build.Rite read from an app's own files (lib/appProfile.js): its layout, Visual Builder version and build tool, its
+// service connections and how they sign in, its roles, its components. Every VB app is different: nothing is assumed.
+const appProfile = require('./lib/appProfile');
+const profileOf = (folder, fresh) => appProfile.profileOf(folder, fresh ? { fresh: true } : undefined);
+/** The VB project in your workspace's working folder (the folder itself, or a subfolder of the repo). */
+const projectOf = (c) => { try { return appProfile.findRoot(c.working) || c.working; } catch (e) { return c.working; } };
+// Oracle's VB build tool in the version each app asks for (lib/buildTools.js): Build.Rite's own, else installed once
+let buildToolsInst = null;
+function buildTools() {
+  if (!buildToolsInst) {
+    buildToolsInst = require('./lib/buildTools').open({ own: REPO_ROOT, cache: path.join(app.getPath('userData'), 'build-tools'), npm: commandPath('npm') || 'npm',
+      run: (cmd, args, o) => new Promise((resolve) => {
+        require('child_process').execFile(cmd, args, { cwd: o.cwd, maxBuffer: 64 * 1024 * 1024, windowsHide: true, shell: process.platform === 'win32' },
+          (err, stdout, stderr) => resolve({ code: err ? (typeof err.code === 'number' ? err.code : 1) : 0, stdout: String(stdout || ''), stderr: String(stderr || (err && err.message) || '') }));
+      }),
+      log: (l) => { pushLog(`${new Date().toTimeString().slice(0, 8)} ${l}`); cpush('build', l); } });
+  }
+  return buildToolsInst;
+}
 // Your workspace set up on this PC (the top bar: a VB Studio project ▸ workspace, cloned into main and working), or null
 function buildWorkspace() {
   try { const c = vbsStoreInst && vbsStoreInst.work().current; return c && c.exists ? c : null; } catch (e) { return null; }
@@ -221,7 +248,7 @@ async function pagesStore() {
         openRunWindow(p.url + url, 'Your workspace — ' + c.projectName + ' ▸ ' + c.workspace + ' (' + app + ')');
         return { ok: true, url: p.url + url, from: 'workspace', built: p.built, builtAt: p.builtAt };
       },
-      rootFn: () => { const c = current(); return c ? c.working : ''; },
+      rootFn: () => { const c = current(); return c ? projectOf(c) : ''; },
       rootLabel: () => { const c = current(); return c ? c.projectName + ' ▸ ' + c.workspace + ' (' + c.branch + ')' : ''; },
       // its sheets, screenshots and stories: that VB Studio project's own (all its workspaces share them), in a folder
       // named by a hash of the organization and project — never their names or VB Studio's host, which git would carry
@@ -275,6 +302,15 @@ async function buildRiteOptions() {
     issuesStore: await issuesStore(),
     // The API tester: a page's REST calls and reports, tried against the real backend
     apiStore: apiStore(),
+    // …sent to your workspace's backends (its services/catalog.json), with who its app runs as (Run as, Sign in for your app)
+    apiProject: () => { const c = buildWorkspace(); if (!c) return null; const p = profileOf(c.working); return { catalogFiles: ((p.services && p.services.catalogs) || []).map((x) => x.file), getIdentity: () => workspaceIdentity() }; },
+    // What Build.Rite read from your workspace's app (Run console → Your app); scan: read it again
+    vbsProfile: async (scan) => {
+      const c = buildWorkspace();
+      if (!c) return { ok: false, error: NO_WORKSPACE };
+      const p = profileOf(c.working, scan);
+      return { ok: true, profile: p, tool: p.kind === 'app' ? buildTools().choose(p) : null, login: { has: !!(identity && identity.fusion && identity.fusion.password), user: identity && identity.fusion ? identity.fusion.user : '' } };
+    },
     // Organizations & projects: VB Studio organizations, projects and your workspace
     vbsStore: vbsStore(),
     vbsFind: openVbsFinder,
@@ -300,6 +336,8 @@ function appOptions(s) {
     getIdentity: () => workspaceIdentity(), // Run as, with the login from Sign in for your app
     // the app reads its user's roles from a BI Publisher report: that report is answered with the Run-as roles
     rolesReport: () => rolesReportOf(working, s.webApp),
+    // a recorded test's technical trace (Record, on a Jira story) sees the calls of the app it tests
+    recStore: evidenceStore(),
     backendOverrides: backendOverridesFromEnv(process.env),
     onProblem: backendProblem,
   };
@@ -315,7 +353,7 @@ async function serveSandbox(s) {
 function knownRoles() {
   const c = buildWorkspace();
   if (!c) return [];
-  try { return require('./lib/appRoles').rolesIn(c.working, runAppOf(c)).roles || []; } catch (e) { return []; }
+  try { return require('./lib/appRoles').rolesIn(projectOf(c), runAppOf(c)).roles || []; } catch (e) { return []; }
 }
 function rolesReportOf(folder, webApp) {
   try { return require('./lib/appRoles').rolesReportIn(folder, webApp) || ''; } catch (e) { return ''; }
@@ -346,7 +384,7 @@ function progEnd(ok, text) { runProg.running = false; runProg.ok = !!ok; runProg
 /** Your workspace built (when its code changed) and its app served, its steps shown as they go. */
 async function buildWorkspace(c, app, title) {
   progStart(title, /Run|run /.test(String(title)));
-  const p = await workPreview().ensure({ folder: c.working, out: require('./lib/workPreview').outOf(c.working), app: app });
+  const p = await workPreview().ensure({ folder: projectOf(c), out: require('./lib/workPreview').outOf(c.working), app: app });
   progEnd(p.ok, p.ok ? (p.built ? 'built in ' + (Math.round((p.ms || 0) / 100) / 10) + ' s' : 'no change since its last build') : p.error);
   if (p.ok && runProg.steps.some((x) => x.key === 'open')) runProg.running = true; // until its window opens
   setTimeout(() => { runProg.running = false; }, 4000);
@@ -356,7 +394,7 @@ async function buildWorkspace(c, app, title) {
 // this project's build tool, and served like the app — what Capture screenshot and Run it open in your workspace
 let workPreviewInst = null;
 function workPreview() {
-  if (!workPreviewInst) workPreviewInst = require('./lib/workPreview').open({ buildTool: REPO_ROOT, serve: serveWorkspace,
+  if (!workPreviewInst) workPreviewInst = require('./lib/workPreview').open({ buildTool: (folder) => buildTools().ensure(profileOf(folder)), serve: serveWorkspace,
     log: (l) => { try { pushLog(`${new Date().toTimeString().slice(0, 8)} ${l}`); } catch (e) { console.log(l); } cpush('info', l); },
     onLine: (l) => { cpush('build', l); if (String(l).trim()) { runProg.tail.push(String(l).slice(0, 300)); if (runProg.tail.length > 10) runProg.tail.shift(); } },
     onStep: progStep });
@@ -452,12 +490,12 @@ function watchRunWindow(w) {
 }
 function currentWork() { try { const x = vbsStoreInst && vbsStoreInst.work().current; return x && x.exists ? x : null; } catch (e) { return null; } }
 let lastApp = '';
-function runAppOf(c) { const apps = appsIn(c.working); return apps.indexOf(lastApp) !== -1 ? lastApp : apps[0]; }
+function runAppOf(c) { const apps = appsIn(projectOf(c)); return apps.indexOf(lastApp) !== -1 ? lastApp : apps[0]; }
 const runTitle = (c, app) => 'Working copy — ' + c.projectName + ' ▸ ' + c.workspace + ' (' + app + ')';
 /** Who the app runs as, the workspace, its build, its window: the Run console's head. */
 function consoleStatus(full) {
   const c = currentWork();
-  const st = c ? workPreview().status(c.working, !full) : null;
+  const st = c ? workPreview().status(projectOf(c), !full) : null;
   const id = workspaceIdentity(), ra = runAsNow();
   return { ok: true, signedInAs: id ? String(id.username || '') : '', roles: id && id.roles ? id.roles : null, by: ra.user ? 'run-as' : (identity ? 'sign-in' : ''),
     runAs: ra, knownRoles: knownRoles(), noAccess: noAccessSeen,
@@ -481,14 +519,14 @@ const consoleDoes = {
   build: async (force) => {
     const c = currentWork();
     if (!c) return noWorkspace();
-    if (force) workPreview().forget(c.working);
+    if (force) workPreview().forget(projectOf(c));
     cpush('info', (force ? 'rebuilding from scratch: ' : 'building (when its code changed): ') + c.working);
     const p = await buildWorkspace(c, runAppOf(c), force ? 'Rebuild' : 'Build');
     return p.ok ? { ok: true, text: p.built ? 'built in ' + (Math.round(p.ms / 100) / 10) + ' s' + (runWin && !runWin.isDestroyed() ? ' — reload (or run) to see it' : '') : 'up to date: no change since its last build' } : { ok: false, text: p.error };
   },
   reload: async () => { if (!runWin || runWin.isDestroyed()) return { ok: false, text: 'No app window: type run first.' }; runWin.webContents.reloadIgnoringCache(); return { ok: true, text: 'reloaded' }; },
   devtools: async () => { if (!runWin || runWin.isDestroyed()) return { ok: false, text: 'No app window: type run first.' }; runWin.webContents.openDevTools({ mode: 'detach' }); return { ok: true, text: 'the app window\'s developer tools are open (console, network, elements)' }; },
-  stop: async () => { const c = currentWork(); if (runWin && !runWin.isDestroyed()) runWin.close(); runWin = null; if (c) workPreview().stop(path.resolve(c.working)); return { ok: true, text: 'stopped: the app\'s window closed, its local server stopped' }; },
+  stop: async () => { const c = currentWork(); if (runWin && !runWin.isDestroyed()) runWin.close(); runWin = null; if (c) workPreview().stop(path.resolve(projectOf(c))); return { ok: true, text: 'stopped: the app\'s window closed, its local server stopped' }; },
   git: async (sub, args) => {
     const c = currentWork();
     if (!c) return noWorkspace();
@@ -536,7 +574,7 @@ async function runWorkspaceApp(b) {
   let c = null;
   try { const x = vbsStoreInst && vbsStoreInst.work().current; c = x && x.exists ? x : null; } catch (e) { c = null; }
   if (!c) return { ok: false, error: 'No workspace is set up: set one up first (Workspace, in the top bar).' };
-  const apps = appsIn(c.working);
+  const apps = appsIn(projectOf(c));
   const want = String((b && b.app) || '');
   const appName = apps.indexOf(want) !== -1 ? want : runAppOf(c);
   if (appName) lastApp = appName;
@@ -627,7 +665,9 @@ async function capturePage(webApp, url, base) {
 // to the real backend through the local server's proxy; the values last used and the runs kept on this PC (lib/apiTest.js).
 let apiStoreInst = null;
 function apiStore() {
-  if (!apiStoreInst) apiStoreInst = require('./lib/apiTest').open({ root: REPO_ROOT, file: path.join(app.getPath('userData'), 'api-tests.json'), log: (l) => { try { pushLog(l); } catch (e) { console.log(l); } } });
+  // the calls of your workspace's pages: read from its working folder's services/ (else Build.Rite's own)
+  if (!apiStoreInst) apiStoreInst = require('./lib/apiTest').open({ root: REPO_ROOT, rootFn: () => { const c = buildWorkspace(); return c ? projectOf(c) : ''; },
+    bipFn: () => { const c = buildWorkspace(); const p = c ? profileOf(c.working) : null; return p && p.bip ? p.bip.endpoint : ''; }, file: path.join(app.getPath('userData'), 'api-tests.json'), log: (l) => { try { pushLog(l); } catch (e) { console.log(l); } } });
   return apiStoreInst;
 }
 let analysisStoreInst = null;

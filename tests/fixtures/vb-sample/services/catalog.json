@@ -1,0 +1,57 @@
+{
+  "backends": {
+    "shop": {
+      "description": "The shop's REST backend",
+      "servers": [
+        {
+          "url": "https://shop.example.com/api",
+          "description": "shop",
+          "x-vb": {
+            "forceProxy": "always",
+            "anonymousAccess": true
+          }
+        }
+      ]
+    },
+    "fusion": {
+      "servers": [
+        {
+          "url": "https://fusion-dev.example.com",
+          "description": "Fusion",
+          "x-vb": {
+            "authentication": {
+              "authenticated": {
+                "type": "basic",
+                "credentials": "vb_sample_credential"
+              },
+              "anonymous": {
+                "type": "as_authenticated_user"
+              }
+            },
+            "anonymousAccess": true
+          }
+        }
+      ]
+    },
+    "bipService": {
+      "servers": [
+        {
+          "url": "https://fusion-dev.example.com",
+          "description": "BI Publisher",
+          "x-vb": {
+            "authentication": {
+              "authenticated": {
+                "type": "basic",
+                "credentials": "vb_sample_credential"
+              },
+              "anonymous": {
+                "type": "as_authenticated_user"
+              }
+            },
+            "anonymousAccess": true
+          }
+        }
+      ]
+    }
+  }
+}

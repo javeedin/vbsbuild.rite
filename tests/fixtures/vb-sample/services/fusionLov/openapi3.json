@@ -1,0 +1,35 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Fusion: project tasks (list of values)",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "vb-catalog://backends/fusion"
+    }
+  ],
+  "paths": {
+    "/fscmRestApi/resources/11.13.18.05/projectTasksLOV": {
+      "get": {
+        "operationId": "getProjectTasksLov",
+        "summary": "Project tasks",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "A filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

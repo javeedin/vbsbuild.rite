@@ -65,6 +65,26 @@ Some of what Build.Rite saves is shared with the team through git, on a branch o
 covers the Application pages' sheets and screenshots, the FDD library and the change history. Build.Rite checks the
 branch out next to the code in `.buildrite-data/`, and it commits and pushes there, never to the code branch.
 
+## Every VB app is different: Build.Rite reads it
+
+Build.Rite assumes nothing about an app. When it runs, builds or tests one, it first reads the app's own files
+(`desktop/lib/appProfile.js`). You can see what it found in **Run console → Your app**, and **Scan again** reads it
+again.
+
+| What it reads | What it does with it |
+|---|---|
+| Where the VB project is: the working folder itself, or a subfolder of the repo | builds and runs that folder |
+| The Visual Builder version (`visual-application.json`) and the build tool the app's `package.json` names | builds with that build tool version: Build.Rite's own copy when it is the same, otherwise one installed once into its data folder (`build-tools/`) and shared by every app on that version |
+| The service connections, both the project's (`services/`) and the app's own (`webApps/<app>/services/`), and how each backend signs in | every backend that signs in gets your app's login (**File → Sign in for your app…**), whatever it is named. A backend that doesn't sign in gets no login. |
+| The BI Publisher report call, whatever its service is named | the API tester runs the app's reports through it |
+| The roles in its code, and the report its users' roles are read from | **Run as** offers those roles; the local server answers that report, and `/_currentuser`, with them |
+| Its Component Exchange components: on Oracle's CDN, or only in the exchange | warns about the ones the CDN doesn't serve |
+| An App UI extension of Oracle Cloud Applications | says it runs inside those apps, not on its own |
+
+Calls to backends also trust your PC's certificate store, so a corporate network that inspects HTTPS works. A Fusion
+404 page answering a call that needs a login is reported as a refused login, because that's how Fusion answers a wrong
+password.
+
 ## Run any VB app from its own folder
 
 Your workspace's working folder, or any other VB Studio app on this PC, can run straight from its folder without

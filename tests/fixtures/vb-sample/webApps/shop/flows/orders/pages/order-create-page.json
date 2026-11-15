@@ -1,0 +1,44 @@
+{
+  "description": "New Order \u2014 a customer and the lines, then Submit",
+  "variables": {
+    "customer": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "note": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "customers": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "credit": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "customersADP": {
+      "type": "vb/ArrayDataProvider2",
+      "defaultValue": {
+        "keyAttributes": "id",
+        "data": "{{ $page.variables.customers }}"
+      }
+    }
+  },
+  "eventListeners": {
+    "vbEnter": {
+      "chains": [
+        {
+          "chain": "LoadCustomersChain"
+        }
+      ]
+    },
+    "onSubmit": {
+      "chains": [
+        {
+          "chain": "SubmitChain"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,10 @@
+<!--
+  Order Workbench — every order, filtered by status
+  (a page of the sample shop app)
+-->
+<div class="oj-flex">
+  <oj-sp-general-overview-page page-title="Order Workbench">
+    <oj-input-text label-hint="Find an order" value="{{ $variables.q }}"></oj-input-text>
+    <oj-table id="orders" data="[[ $variables.ordersADP ]]" on-oj-row-action="[[ $listeners.onRowClick ]]" columns='[{"headerText": "Order", "field": "number"}, {"headerText": "Customer", "field": "customer"}, {"headerText": "Total", "field": "total"}]'></oj-table>
+  </oj-sp-general-overview-page>
+</div>

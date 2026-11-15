@@ -66,7 +66,8 @@ function codesOnLine(line) {
   while ((m = lit.exec(line))) out.push(m[2]);
   const key = /(?:^|[{,\s])([A-Z][A-Z0-9_]{3,})\s*:/g;
   while ((m = key.exec(line))) out.push(m[1]);
-  return out.filter((c) => validRole(c) && !NOT_ROLES.has(c) && /_/.test(c) && !/_$/.test(c) && !NOT_ROLE_PARTS.test(c));
+  // (a BI Publisher report's parameters, P_…, are named beside the roles report but are not roles)
+  return out.filter((c) => validRole(c) && !NOT_ROLES.has(c) && /_/.test(c) && !/_$/.test(c) && !/^P_/.test(c) && !NOT_ROLE_PARTS.test(c));
 }
 
 /** "roles": [...] lists in app-flow.json's security and userConfig. */

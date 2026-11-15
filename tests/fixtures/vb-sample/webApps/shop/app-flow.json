@@ -1,0 +1,54 @@
+{
+  "id": "shop",
+  "description": "Shop: customers and their orders",
+  "defaultPage": "shell",
+  "routerStrategy": "path",
+  "chains": {},
+  "types": {},
+  "variables": {
+    "userRoles": {
+      "type": "string[]",
+      "defaultValue": [],
+      "description": "The user's roles (USER_ROLES report)"
+    },
+    "rolesLoaded": {
+      "type": "boolean",
+      "defaultValue": false
+    }
+  },
+  "eventListeners": {
+    "vbEnter": {
+      "chains": [
+        {
+          "chain": "loadRolesChain"
+        }
+      ]
+    }
+  },
+  "security": {
+    "access": {
+      "requiresAuthentication": false
+    }
+  },
+  "userConfig": {
+    "type": "vb/DefaultSecurityProvider",
+    "configuration": {},
+    "embedding": "any"
+  },
+  "flows": {
+    "customers": {
+      "path": "flows/customers"
+    },
+    "orders": {
+      "path": "flows/orders"
+    }
+  },
+  "pages": {
+    "shell": {
+      "path": "pages/shell-page"
+    }
+  },
+  "imports": {
+    "css": []
+  }
+}

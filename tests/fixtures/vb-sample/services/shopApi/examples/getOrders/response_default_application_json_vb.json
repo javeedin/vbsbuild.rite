@@ -1,0 +1,27 @@
+{
+  "data": [
+    {
+      "id": 101,
+      "orderNumber": "SO-101",
+      "customerName": "Acme Tools",
+      "orderYear": 2026,
+      "status": "OPEN"
+    },
+    {
+      "id": 102,
+      "orderNumber": "SO-102",
+      "customerName": "Blue River",
+      "orderYear": 2026,
+      "status": "DRAFT"
+    },
+    {
+      "id": 103,
+      "orderNumber": "SO-103",
+      "customerName": "Acme Tools",
+      "orderYear": 2025,
+      "status": "CLOSED"
+    }
+  ],
+  "count": 3,
+  "hasMore": false
+}

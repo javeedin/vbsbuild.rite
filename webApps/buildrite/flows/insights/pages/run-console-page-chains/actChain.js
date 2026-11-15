@@ -9,6 +9,13 @@ define(['vb/action/actionChain', 'resources/js/vbsClient', 'resources/js/runCons
       const v = context.$page.variables;
       const input = () => { try { return document.getElementById('rcCmd'); } catch (e) { return null; } };
       if (act === 'filter') { v.filter = String(key || ''); return; }
+      if (act === 'appToggle') { v.appOpen = !v.appOpen; return; }
+      if (act === 'profile') {
+        const pr = await VC.workProfile(true);
+        v.profile = pr.body || { error: 'Your app could not be read.' };
+        bus.toast(pr.ok && pr.body && pr.body.profile ? 'Your app read again.' : ((pr.body && pr.body.error) || 'Your app could not be read.'), pr.ok ? 'success' : 'error');
+        return;
+      }
       // Run as: a role chosen or not; Apply (the app's window reloads); back to the sign-in
       if (act === 'role') { const r = String(key || ''); v.asRoles = (v.asRoles || []).indexOf(r) !== -1 ? v.asRoles.filter((x) => x !== r) : (v.asRoles || []).concat([r]); v.asTouched = true; return; }
       if (act === 'asApply' || act === 'asClear') {

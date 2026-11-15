@@ -1,0 +1,109 @@
+/*
+ * The Standup minutes rules (webApps/buildrite/resources/js/minutes.js): the roll-ups that track minutes by Jira
+ * story and by its epic and by customer, the open-action list, the formatted email and the Teams message, and the
+ * prompt that cleans a note up with AI. Pure — loaded straight, no page, no DOM.
+ *
+ * Run:  node tests/minutes.test.js
+ */
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+const H = require('./_harness');
+
+const T = H.makeAsserter();
+const FILE = path.join(__dirname, '..', 'webApps', 'buildrite', 'resources', 'js', 'minutes.js');
+const sandbox = { console, Date, JSON, Math };
+let M;
+sandbox.define = (names, factory) => { M = factory(); };
+vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync(FILE, 'utf8'), sandbox, { filename: 'minutes.js' });
+
+// The Jira backlog rows the page already read (jiraBacklog shape: key, summary, epicKey, epicName, labels, statusCat).
+const ROWS = [
+  { key: 'ABC-12', summary: 'Order Master List', status: 'DEVELOPMENT', epicKey: 'ABC-1', epicName: 'Order Registry', labels: ['acme'], statusCat: 'indeterminate' },
+  { key: 'ABC-13', summary: 'Order Master Edit', status: 'DEVELOPMENT', epicKey: 'ABC-1', epicName: 'Order Registry', labels: ['acme', 'globex'], statusCat: 'indeterminate' },
+  { key: 'ABC-20', summary: 'Rate schedule list', status: 'Done', epicKey: 'ABC-62', epicName: 'Rate & Pricing', labels: ['globex'], statusCat: 'done' },
+];
+const MEETINGS = [
+  { id: 'm1', date: '2026-11-09', time: '09:30', title: 'Daily standup', customer: 'Acme', attendees: ['Sam', 'Priya'],
+    discussion: 'The team reviewed sprint progress.\n- Map view is still pending on ABC-12\n- Release plan agreed for 27A', lines: [
+    { jiraKey: 'ABC-12', text: 'Smart search still missing columns.', action: 'Add the missing filters', owner: 'Priya', due: '2026-01-05', status: 'open' },
+    { jiraKey: 'ABC-20', text: 'Rate list looks good.', action: 'Close the story', owner: 'Aditi', due: '2026-11-11', status: 'done' },
+    { jiraKey: '', text: 'Agreed the release plan for 27A.', action: 'Circulate the plan', owner: 'Sam', due: '2030-01-01', status: 'open' },
+  ] },
+  { id: 'm2', date: '2026-11-10', time: '09:30', title: 'Daily standup', customer: 'Globex', attendees: ['Sam'], lines: [
+    { jiraKey: 'ABC-13', text: 'Edit screen save fails on unique name.', action: 'Fix the validation', owner: 'Priya', due: '2026-11-25', status: 'open' },
+    { jiraKey: 'ABC-12', text: 'Type column added, map view still open.', action: '', owner: '', due: '', status: 'open' },
+  ] },
+];
+
+T.section('a blank meeting and line are dated today and sensible');
+T.check('blankMeeting has today, a title, an empty discussion body and no lines', /^\d{4}-\d{2}-\d{2}$/.test(M.blankMeeting().date) && M.blankMeeting().title && M.blankMeeting().discussion === '' && M.blankMeeting().lines.length === 0);
+T.check('blankLine is generic and open', M.blankLine().generic === true && M.blankLine().status === 'open');
+
+T.section('summarise a meeting');
+const su = M.summarise(MEETINGS[0]);
+T.eq('lines, linked, generic, open actions', [su.lines, su.linked, su.generic, su.openActions].join('/'), '3/2/1/2');
+
+T.section('track by Jira story (the full history per story)');
+const st = M.stories(MEETINGS, ROWS);
+T.eq('one row per story, most open actions first', st.map((s) => s.key).join(','), 'ABC-12,ABC-13,ABC-20');
+const s12 = st.find((s) => s.key === 'ABC-12');
+T.eq('ABC-12 spans both meetings, named from the backlog', s12.name + ' · ' + s12.meetings + ' meetings · ' + s12.lines + ' lines', 'ABC-12 Order Master List · 2 meetings · 2 lines');
+
+T.section('roll up by epic (what the user tracks by)');
+const ep = M.epics(MEETINGS, ROWS);
+T.eq('epics named from the backlog, plus a General bucket for generic lines', ep.map((e) => e.name).sort().join(' | '),
+  'ABC-1 Order Registry | ABC-62 Rate & Pricing | General (no story)');
+const e1 = ep.find((e) => e.key === 'ABC-1');
+T.eq('the Order Registry epic gathers ABC-12 and ABC-13 lines', e1.lines + ' lines, ' + e1.openActions + ' open actions', '3 lines, 2 open actions');
+
+T.section('roll up by customer (entered on the meeting)');
+const cu = M.customers(MEETINGS);
+T.eq('a group per customer', cu.map((c) => c.name).sort().join(','), 'Acme,Globex');
+
+T.section('every open action item, earliest due first, overdue flagged');
+const oa = M.openActions(MEETINGS);
+T.eq('open actions only (done excluded), earliest due first', oa.map((a) => a.action).join(' | '), 'Add the missing filters | Fix the validation | Circulate the plan');
+T.check('the past-due one is flagged overdue, the future one is not', oa[0].overdue === true && oa[2].overdue === false);
+
+T.section('a formatted minutes email');
+const em = M.emailFor(MEETINGS[0], ROWS);
+T.check('the subject names the meeting, date and customer', em.subject === '[Standup] Daily standup — 2026-11-09 · Acme');
+T.check('the HTML has the header, the discussion body, a story heading, and an action-items table', em.html.indexOf('Standup minutes') !== -1
+  && em.html.indexOf('The team reviewed sprint progress.') !== -1 && em.html.indexOf('<li style="margin-bottom:4px">Release plan agreed for 27A</li>') !== -1
+  && em.html.indexOf('ABC-12 — Order Master List') !== -1 && em.html.indexOf('Action items') !== -1 && em.html.indexOf('Add the missing filters') !== -1);
+T.check('the action-items table credits "Actioned by" rather than "Owner"', em.html.indexOf('Actioned by') !== -1 && em.html.indexOf('>Owner<') === -1);
+T.check('the action items show the story number, its description and the current Jira status', em.html.indexOf('Story &amp; current status') !== -1
+  && em.html.indexOf('<b>ABC-12</b>') !== -1 && em.html.indexOf('Order Master List') !== -1 && em.html.indexOf('>DEVELOPMENT</span>') !== -1);
+T.check('the plain-text fallback lists the discussion body and the action items with the story and status', em.text.indexOf('DISCUSSION') !== -1 && em.text.indexOf('The team reviewed sprint progress.') !== -1
+  && em.text.indexOf('ACTION ITEMS') !== -1 && em.text.indexOf('[ABC-12 Order Master List — DEVELOPMENT]') !== -1);
+
+T.section('a meeting with no discussion body still renders cleanly');
+const emNoBody = M.emailFor({ date: '2026-11-09', title: 'Quick sync', lines: [{ jiraKey: '', text: '', action: 'Ship it', owner: 'JS', due: '', status: 'open' }] }, ROWS);
+T.check('an action-only meeting says "No discussion recorded" and still lists the action', emNoBody.html.indexOf('No discussion recorded') !== -1 && emNoBody.html.indexOf('Ship it') !== -1);
+
+T.section('a Teams message');
+const tm = M.teamsFor(MEETINGS[0], ROWS);
+T.check('Markdown with a heading, the discussion body and the action items (story + status)', tm.text.indexOf('## ') === 0 && tm.text.indexOf('**Discussion**') !== -1
+  && tm.text.indexOf('The team reviewed sprint progress.') !== -1 && tm.text.indexOf('**Action items**') !== -1 && tm.text.indexOf('**ABC-12**') !== -1 && tm.text.indexOf('`ABC-12`') !== -1 && tm.text.indexOf('_(DEVELOPMENT)_') !== -1);
+
+T.section('the AI format prompts clean up text without inventing anything');
+const fp = M.formatPrompt('map not loading n edit btn doesnt work');
+T.check('the note prompt: a system instruction and the raw note as the user turn', /simple|clear/i.test(fp.system) && fp.user === 'map not loading n edit btn doesnt work');
+const fb = M.formatBodyPrompt('discussed map view\nagreed 27a plan');
+T.check('the body prompt: tidies into a Discussion section, keeps every fact, invents nothing', /discussion/i.test(fb.system) && /do not add|invent/i.test(fb.system) && fb.user === 'discussed map view\nagreed 27a plan');
+
+T.section('the discussion body is rich text (HTML) with a plain-text fallback');
+T.check('isHtml tells rich HTML from plain text', M.isHtml('<p>hi</p>') === true && M.isHtml('plain\n- bullet') === false);
+T.check('toEditorHtml keeps HTML, converts plain to HTML, and leaves empty empty',
+  M.toEditorHtml('<ul><li>a</li></ul>') === '<ul><li>a</li></ul>' && /<ul><li>one<\/li><\/ul>/.test(M.toEditorHtml('- one')) && M.toEditorHtml('   ') === '');
+T.check('plainText strips HTML back to text for the AI prompt', M.plainText('<p>Alpha</p><ul><li>Beta</li></ul>') === 'Alpha\n- Beta');
+const emRich = M.emailFor({ date: '2026-11-09', title: 'T', discussion: '<h2>Topic</h2><p>Body</p><script>evil()</script><ul><li>x</li></ul>', lines: [] }, ROWS);
+T.check('a rich-text discussion is sanitised into the email: headings/lists kept, <script> stripped',
+  emRich.html.indexOf('<h2>Topic</h2>') !== -1 && emRich.html.indexOf('<li>x</li>') !== -1 && emRich.html.toLowerCase().indexOf('<script') === -1);
+T.check('a rich-text discussion becomes plain lines in the text/Teams output', emRich.text.indexOf('Topic') !== -1 && emRich.text.indexOf('Body') !== -1 && emRich.text.indexOf('- x') !== -1);
+
+T.report();

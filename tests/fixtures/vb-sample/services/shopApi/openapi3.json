@@ -1,0 +1,152 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Shop API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "vb-catalog://backends/shop"
+    }
+  ],
+  "paths": {
+    "/shop/v1/orders": {
+      "get": {
+        "operationId": "getOrders",
+        "summary": "The orders",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "How many"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "A filter"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Their status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createOrder",
+        "summary": "A new order",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {}
+            }
+          }
+        }
+      }
+    },
+    "/shop/v1/orders/{id}": {
+      "get": {
+        "operationId": "getOrderById",
+        "summary": "One order",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/shop/v1/customers": {
+      "get": {
+        "operationId": "getCustomers",
+        "summary": "The customers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/shop/v1/invoices": {
+      "get": {
+        "operationId": "getInvoices",
+        "summary": "A customer's invoices",
+        "parameters": [
+          {
+            "name": "customer",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "The customer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/shop/v1/roles/{id}": {
+      "get": {
+        "operationId": "getRoleById",
+        "summary": "One role",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/shop/v1/invoice-notes": {
+      "post": {
+        "operationId": "createInvoiceNote",
+        "summary": "A note on an invoice",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {}
+            }
+          }
+        }
+      }
+    }
+  }
+}

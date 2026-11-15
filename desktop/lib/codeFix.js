@@ -1145,7 +1145,7 @@ function open(opts) {
       behind: behind.code === 0 ? Number(behind.stdout.trim()) || 0 : 0, built: isFile(path.join(sbx.dir, 'build', 'processed', 'webApps', sbx.app || '', 'index.html')) };
     if (opts && opts.diff) out.diff = str((await git(sbx.dir, ['diff', '--no-color', head !== sbx.baseCommit ? sbx.baseCommit : 'HEAD', '--', '.', ':(exclude)build'])).stdout).slice(0, 120000);
     // where its data comes from: the same services as the app (its Fusion, from the code's catalog) — real data
-    const fusion = (() => { try { const c = JSON.parse(fs.readFileSync(path.join(sbx.dir, 'services', 'catalog.json'), 'utf8')).backends || {}; const bk = c.fusion || c.bipService; return bk && bk.servers && bk.servers[0] ? String(bk.servers[0].url || '') : ''; } catch (e) { return ''; } })();
+    const fusion = (() => { try { const c = JSON.parse(fs.readFileSync(path.join(sbx.dir, 'services', 'catalog.json'), 'utf8')).backends || {}; const names = Object.keys(c); const signs = (n) => { const a = (((c[n].servers || [])[0] || {})['x-vb'] || {}).authentication; return !!(a && a.authenticated); }; const bk = c[names.filter(signs)[0] || names[0]]; return bk && bk.servers && bk.servers[0] ? String(bk.servers[0].url || '') : ''; } catch (e) { return ''; } })();
     const host = (/^https?:\/\/([^/:]+)/.exec(fusion) || [])[1] || '';
     out.data = { fusion: fusion, host: host, prod: !!host && !/(dev|test|tst|uat|sit|stag|stg|demo|qa|sandbox|train)/i.test(host) };
     return out;

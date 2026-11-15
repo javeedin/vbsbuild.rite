@@ -600,7 +600,7 @@ define([], function () {
       })
       .sort(function (a, b) { return b.open - a.open || b.total - a.total; });
 
-    // By customer: a story's labels are its customers (cianbro, oceaneering, …). A story can carry more than one
+    // By customer: a story's labels are its customers (acme, globex, …). A story can carry more than one
     // label, so it is counted under each; stories with none fall into "No label" (last). Because of the shared
     // stories, the customer totals can add up to more than the item count.
     var custBy = {};

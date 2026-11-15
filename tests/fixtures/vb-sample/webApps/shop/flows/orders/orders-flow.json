@@ -1,0 +1,19 @@
+{
+  "id": "orders",
+  "description": "Orders: the workbench, one order, a new order",
+  "defaultPage": "order-list",
+  "pages": {
+    "order-list": {
+      "path": "pages/order-list-page"
+    },
+    "order-detail": {
+      "path": "pages/order-detail-page"
+    },
+    "order-create": {
+      "path": "pages/order-create-page"
+    }
+  },
+  "chains": {},
+  "types": {},
+  "variables": {}
+}

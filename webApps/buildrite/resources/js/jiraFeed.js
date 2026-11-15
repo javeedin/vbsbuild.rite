@@ -9,12 +9,14 @@ define([], function () {
   // The Jira project key, from the connection (Jira stories → Connect Jira → Project key: the desktop app's
   // /__jira/settings). '' when none is set: the searches then cover every project the account can see.
   var PROJECT = '';
+  var CONNECTED = null; // the desktop app's answer: Jira connected (true), not connected (false), not asked (null)
   async function projectKey() {
     if (typeof fetch !== 'function') return PROJECT;
     try {
       var r = await fetch('/__jira/settings', { credentials: 'same-origin', headers: { 'X-Build-Rite-Jira': '1' } });
       var s = r && r.ok ? await r.json() : null;
       if (s && typeof s.project === 'string') PROJECT = s.project.trim().toUpperCase();
+      if (s && typeof s.connected === 'boolean') CONNECTED = s.connected;
     } catch (e) { /* not in the desktop app */ }
     return PROJECT;
   }
@@ -119,6 +121,8 @@ define([], function () {
   async function load(context, Actions, opts) {
     var o = opts || {};
     var project = o.project || await projectKey();
+    // not connected (the desktop app says so): nothing is asked of Jira until it is
+    if (!o.project && CONNECTED === false) return { ok: false, events: [], me: meCache, notConnected: true, message: 'Jira is not connected (Jira stories → Connect Jira).' };
     var days = Math.max(1, Math.min(14, Number(o.days) || 2));
     var now = o.now || Date.now();
     if (meCache === null) {

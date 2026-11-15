@@ -1,0 +1,40 @@
+{
+  "description": "Customer Billing \u2014 the customer's invoices, newest first",
+  "variables": {
+    "q": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "status": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "invoices": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "invoicesADP": {
+      "type": "vb/ArrayDataProvider2",
+      "defaultValue": {
+        "keyAttributes": "number",
+        "data": "{{ $page.variables.invoices }}"
+      }
+    }
+  },
+  "eventListeners": {
+    "vbEnter": {
+      "chains": [
+        {
+          "chain": "LoadInvoicesChain"
+        }
+      ]
+    },
+    "onBack": {
+      "chains": [
+        {
+          "chain": "BackChain"
+        }
+      ]
+    }
+  }
+}

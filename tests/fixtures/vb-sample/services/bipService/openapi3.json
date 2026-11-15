@@ -1,0 +1,42 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "BI Publisher: runs a report (SOAP)",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "vb-catalog://backends/bipService",
+      "description": "Oracle BI Publisher (SOAP)"
+    }
+  ],
+  "paths": {
+    "/xmlpserver/services/ExternalReportWSSService": {
+      "post": {
+        "operationId": "runBIPReport",
+        "summary": "Run a BI Publisher report and return its data (base64 XML)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/soap+xml": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "The SOAP answer"
+          }
+        },
+        "x-vb": {
+          "actionHint": "create",
+          "headers": {
+            "Content-Type": "application/soap+xml;charset=UTF-8"
+          }
+        }
+      }
+    }
+  }
+}

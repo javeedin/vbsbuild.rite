@@ -99,11 +99,9 @@ function scanUsage(appDir, serviceNames) {
   return usage;
 }
 
+/** How a backend signs in: 'anon' (no login, as deployed) or 'login' (a VB credential: the app's login stands in). */
 function authOf(backend) {
-  if (!backend || !backend.basic) {
-    return 'anon';
-  }
-  return backend.isFusion ? 'fusion' : 'other';
+  return backend && backend.basic ? 'login' : 'anon';
 }
 
 /**
@@ -119,8 +117,6 @@ function buildCatalog(repoRoot, webApp) {
     const auth = ((server['x-vb'] || {}).authentication || {}).authenticated || null;
     backends[name] = { url: String(server.url || '').replace(/\/+$/, ''), basic: !!(auth && auth.type === 'basic'), credentials: (auth && auth.credentials) || '' };
   });
-  const fusionCred = (backends.fusion || backends.bipService || {}).credentials;
-  Object.values(backends).forEach((b) => { b.isFusion = !!b.credentials && b.credentials === fusionCred; });
 
   const names = fs.readdirSync(servicesDir).filter((n) => fs.existsSync(path.join(servicesDir, n, 'openapi3.json'))).sort();
   // which app files call each endpoint: the app asked for, else every app of the project (paths start with the app)

@@ -1,0 +1,16 @@
+{
+  "id": "customers",
+  "description": "Customers: their dashboard and their billing",
+  "defaultPage": "customer-dashboard",
+  "pages": {
+    "customer-dashboard": {
+      "path": "pages/customer-dashboard-page"
+    },
+    "customer-billing": {
+      "path": "pages/customer-billing-page"
+    }
+  },
+  "chains": {},
+  "types": {},
+  "variables": {}
+}

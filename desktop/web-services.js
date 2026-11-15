@@ -32,15 +32,14 @@
   const who = DATA.identity || {};
   const AUTH = {
     anon: ['Anonymous', 'No login, as in VBCS (forceProxy only forwards the call).'],
-    fusion: ['Fusion credential', who.hasFusionLogin
-      ? `Basic auth with the Fusion login from the sign-in window (${esc(who.fusionUser)}), standing in for the VBCS stored credential.`
-      : 'Needs the Fusion login from the sign-in window (File → Sign in as… in the app window); without it Fusion answers 401.'],
-    other: ['Own credential', 'Uses its own VBCS stored credential, which is not available locally; expect 401.'],
+    login: ['Signs in', who.hasFusionLogin
+      ? `Basic auth with your app's login (${esc(who.fusionUser)}, File → Sign in for your app…), standing in for the stored VB credential.`
+      : 'Needs your app\'s login (File → Sign in for your app… in Build.Rite); without it the backend refuses the call.'],
   };
 
   $('lede').innerHTML = `<b>${total} endpoints</b> across <b>${DATA.services.length} service connections</b>, read from
     <code>services/</code> just now; <b>${used}</b> are called by the app's pages and chains. Signed in as
-    <b>${esc(who.username || 'nobody')}</b>${who.hasFusionLogin ? ' with a Fusion login' : ', no Fusion login'}.
+    <b>${esc(who.username || 'nobody')}</b>${who.hasFusionLogin ? ' with a backend login' : ', no backend login'}.
     Open a GET to test it against the live backend.`;
 
   function renderServices() {
@@ -196,7 +195,7 @@
       }
       const cut = body.length > MAX_SHOWN;
       const hint = res.status === 401 && s.auth !== 'anon'
-        ? `<span class="err">${s.auth === 'fusion' ? 'Fusion refused the login. Set or fix it with File → Sign in as… in the app window.' : 'This backend needs its own credential, which is not available locally.'}</span>`
+        ? `<span class="err">The backend refused the login. Set or fix it with File → Sign in for your app… in Build.Rite.</span>`
         : res.status === 502 ? `<span class="err">The local server could not reach ${esc(s.backend)} from this PC.</span>` : '';
       out.innerHTML = `<div class="sent">GET ${esc(s.url + p + query)}</div>
         <div class="head"><span class="pill ${res.ok ? 'ok' : 'bad'}">${res.status} ${esc(res.statusText)}</span>
