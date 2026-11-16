@@ -1,0 +1,173 @@
+<!-- API Scenarios: a page's REST calls and BI Publisher reports in order, run purely through the APIs — no page, no sign-in
+     screen — a value one call answers feeding the next, each answer checked, every run recorded (desktop/lib/apiScenarios.js). -->
+<div class="nx-page nx-sc">
+  <div class="nx-pagehead">
+    <div>
+      <div class="nx-kicker">Build.Rite · Application</div>
+      <h1 id="scTitle">API Scenarios</h1>
+      <div class="nx-sub">A page's calls put in order and tested through the APIs alone, with your app's login: a value one call answers feeds the next, each answer checked, every run kept on this PC.</div>
+    </div>
+  </div>
+
+  <oj-bind-if test="[[ !!$variables.result ]]"><div :class="[[ 'nx-flib-result ' + ($variables.result.ok ? 'nx-flib-result--ok' : 'nx-flib-result--err') ]]" id="scResult"><oj-bind-text value="[[ $variables.result.text ]]"></oj-bind-text></div></oj-bind-if>
+
+  <div class="nx-sc-cols">
+    <!-- the pages -->
+    <aside class="nx-card nx-sc-pages" aria-label="Pages">
+      <input type="search" class="nx-cm-input" id="scFind" placeholder="Find a page…" data-field="q" :value="[[ $variables.q ]]" on-input="[[ $listeners.onField ]]">
+      <div class="nx-sc-pagelist" id="scPages" role="list">
+        <oj-bind-for-each data="[[ $functions.pagesShown($variables.pages, $variables.q) ]]">
+          <template data-oj-as="p">
+            <button type="button" role="listitem" :class="[[ 'nx-sc-pagerow' + ($variables.page === p.data.id ? ' nx-sc-pagerow--on' : '') ]]" data-act="page" :data-key="[[ p.data.id ]]" on-click="[[ $listeners.onAct ]]">
+              <b><oj-bind-text value="[[ p.data.label ]]"></oj-bind-text></b>
+              <span><oj-bind-text value="[[ p.data.id ]]"></oj-bind-text></span>
+            </button>
+          </template>
+        </oj-bind-for-each>
+        <oj-bind-if test="[[ !$variables.pages.length ]]"><p class="nx-note" id="scNoPages">No pages: set up your workspace (its pages show in Application pages).</p></oj-bind-if>
+      </div>
+    </aside>
+
+    <section class="nx-sc-main">
+      <oj-bind-if test="[[ !$variables.page ]]"><div class="nx-card nx-card-pad nx-empty" id="scPick">Choose a page: its scenarios — its calls in order, each answer checked — show here.</div></oj-bind-if>
+      <oj-bind-if test="[[ !!$variables.page ]]">
+        <!-- the page's scenarios -->
+        <div class="nx-card nx-sc-sec" id="scList">
+          <div class="nx-sc-head">
+            <div><h2><oj-bind-text value="[[ $functions.pageLabel($variables.pages, $variables.page) ]]"></oj-bind-text></h2><span class="nx-note"><oj-bind-text value="[[ $variables.page ]]"></oj-bind-text></span></div>
+            <span class="nx-min-flex"></span>
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="scDraft" data-act="draft" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]"><span class="oj-ux-ico-ai-sparkle" aria-hidden="true"></span> Draft from the page</button>
+            <button type="button" class="nx-btn nx-btn--sm" id="scNew" data-act="new" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]">New scenario</button>
+            <button type="button" class="nx-btn nx-btn--sm" id="scRunAll" data-act="runAll" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy || !$variables.scenarios.length ]]">Run all</button>
+          </div>
+          <oj-bind-if test="[[ !$variables.scenarios.length ]]"><p class="nx-note" id="scNone">No scenario yet. <b>Draft from the page</b> puts its calls in the order the page makes them (from its code); or start one yourself.</p></oj-bind-if>
+          <div class="nx-sc-cards">
+            <oj-bind-for-each data="[[ $functions.cards($variables.scenarios, $variables.sc) ]]">
+              <template data-oj-as="s">
+                <div :class="[[ s.data.cls ]]" :id="[[ 'scCard-' + s.data.id ]]">
+                  <button type="button" class="nx-sc-cardmain" data-act="open" :data-key="[[ s.data.id ]]" on-click="[[ $listeners.onAct ]]">
+                    <b><oj-bind-text value="[[ s.data.name ]]"></oj-bind-text></b>
+                    <span class="nx-note"><oj-bind-text value="[[ s.data.sub ]]"></oj-bind-text></span>
+                    <span :class="[[ 'nx-sc-last nx-sc-last--' + s.data.lastTone ]]"><oj-bind-text value="[[ s.data.last ]]"></oj-bind-text></span>
+                  </button>
+                  <button type="button" class="nx-btn nx-btn--sm" :id="[[ 'scRun-' + s.data.id ]]" data-act="run" :data-key="[[ s.data.id ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]">▶ Run</button>
+                </div>
+              </template>
+            </oj-bind-for-each>
+          </div>
+        </div>
+
+        <!-- one scenario: its steps -->
+        <oj-bind-if test="[[ !!$variables.sc ]]">
+          <div class="nx-card nx-sc-sec" id="scEdit">
+            <div class="nx-sc-head">
+              <input class="nx-cm-input nx-sc-name" id="scName" data-field="name" :value="[[ $variables.sc.name ]]" on-change="[[ $listeners.onField ]]" aria-label="The scenario's name">
+              <select class="nx-cm-input nx-sc-kind" id="scKind" data-field="kind" on-change="[[ $listeners.onField ]]" aria-label="Kind">
+                <oj-bind-for-each data="[[ $functions.kinds($variables.sc) ]]"><template data-oj-as="k"><option :value="[[ k.data.id ]]" :selected="[[ k.data.on ]]"><oj-bind-text value="[[ k.data.label ]]"></oj-bind-text></option></template></oj-bind-for-each>
+              </select>
+              <label class="nx-cc-check" title="Steps that change data run only with this on — and never on a production backend"><input type="checkbox" id="scWrites" data-act="toggleWrites" on-click="[[ $listeners.onAct ]]" :checked="[[ !!$variables.sc.allowWrites ]]"> Allow writes</label>
+              <span class="nx-min-flex"></span>
+              <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="scSave" data-act="save" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]">Save</button>
+              <button type="button" class="nx-btn nx-btn--sm" id="scRunThis" data-act="saveRun" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]">Save &amp; run</button>
+              <oj-bind-if test="[[ !!$variables.sc.allowWrites ]]"><button type="button" class="nx-btn nx-btn--sm" id="scRunWrites" data-act="saveRunWrites" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]">Run with writes</button></oj-bind-if>
+              <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="scDelete" data-act="delete" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy || !$variables.sc.id ]]">Delete</button>
+            </div>
+            <oj-text-area class="nx-sc-ta nx-sc-notes" id="scNotes" rows="2" data-field="notes" on-value-changed="[[ $listeners.onTaField ]]" placeholder="What this scenario checks (e.g. a closed project gives no tasks)" value="[[ $variables.sc.notes ]]"></oj-text-area>
+
+            <ol class="nx-sc-steps" id="scSteps">
+              <oj-bind-for-each data="[[ $functions.stepRows($variables.sc) ]]">
+                <template data-oj-as="st">
+                  <li :class="[[ 'nx-sc-step' + (st.data.writes ? ' nx-sc-step--writes' : '') ]]" :id="[[ 'scStep-' + st.data.id ]]">
+                    <div class="nx-sc-stephead">
+                      <span class="nx-sc-stepn"><oj-bind-text value="[[ st.data.n ]]"></oj-bind-text></span>
+                      <input class="nx-cm-input nx-sc-stepname" data-field="name" :data-step="[[ st.data.id ]]" :value="[[ st.data.name ]]" on-change="[[ $listeners.onStep ]]" aria-label="Step name">
+                      <code class="nx-sc-call"><oj-bind-text value="[[ st.data.call ]]"></oj-bind-text></code>
+                      <oj-bind-if test="[[ st.data.writes ]]"><span class="nx-sc-wchip" title="Changes data">changes data</span></oj-bind-if>
+                      <span class="nx-min-flex"></span>
+                      <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="up" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Move up" title="Move up">↑</button>
+                      <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="down" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Move down" title="Move down">↓</button>
+                      <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="removeStep" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Remove the step" title="Remove">✕</button>
+                    </div>
+                    <div class="nx-sc-stepbody">
+                      <label class="nx-sc-f"><span>Values sent (name = value, {{var}} from an earlier step)</span>
+                        <oj-text-area class="nx-sc-ta" rows="3" data-field="params" :data-step="[[ st.data.id ]]" on-value-changed="[[ $listeners.onTaStep ]]" placeholder="[[ st.data.paramHint ]]" value="[[ st.data.params ]]"></oj-text-area></label>
+                      <label class="nx-sc-f"><span>Hands on (var = where in the answer)</span>
+                        <oj-text-area class="nx-sc-ta" rows="3" data-field="extract" :data-step="[[ st.data.id ]]" on-value-changed="[[ $listeners.onTaStep ]]" placeholder="ProjectId = auto:ProjectId&#10;OrderId = items[0].id" value="[[ st.data.extract ]]"></oj-text-area></label>
+                      <div class="nx-sc-f nx-sc-checks"><span>Checks</span>
+                        <label>Status <input class="nx-cm-input nx-cm-input--sm" data-field="status" :data-step="[[ st.data.id ]]" :value="[[ st.data.status ]]" on-change="[[ $listeners.onStep ]]" placeholder="2xx"></label>
+                        <label>Rows ≥ <input class="nx-cm-input nx-cm-input--sm" data-field="minRows" :data-step="[[ st.data.id ]]" :value="[[ st.data.minRows ]]" on-change="[[ $listeners.onStep ]]" placeholder="—"></label>
+                        <label>Within ms <input class="nx-cm-input nx-cm-input--sm" data-field="maxMs" :data-step="[[ st.data.id ]]" :value="[[ st.data.maxMs ]]" on-change="[[ $listeners.onStep ]]" placeholder="—"></label>
+                        <label class="nx-cc-check"><input type="checkbox" data-act="toggleShape" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" :checked="[[ st.data.sameShape ]]"> Same shape as its example</label>
+                        <oj-text-area class="nx-sc-ta" rows="2" data-field="fields" :data-step="[[ st.data.id ]]" on-value-changed="[[ $listeners.onTaStep ]]" placeholder="items[0].status = DRAFT&#10;items[0].id" value="[[ st.data.fields ]]"></oj-text-area>
+                      </div>
+                      <oj-bind-if test="[[ st.data.hasBody ]]"><label class="nx-sc-f nx-sc-body"><span>Body (JSON, {{var}} allowed)</span>
+                        <oj-text-area class="nx-sc-ta" rows="4" data-field="body" :data-step="[[ st.data.id ]]" on-value-changed="[[ $listeners.onTaStep ]]" value="[[ st.data.body ]]"></oj-text-area></label></oj-bind-if>
+                    </div>
+                  </li>
+                </template>
+              </oj-bind-for-each>
+            </ol>
+            <div class="nx-sc-add">
+              <select class="nx-cm-input" id="scAddCall" data-field="addCall" on-change="[[ $listeners.onField ]]" aria-label="A call of the page">
+                <option value="">Add a step: one of the page's calls…</option>
+                <oj-bind-for-each data="[[ $functions.callOptions($variables.facts) ]]"><template data-oj-as="c"><option :value="[[ c.data.id ]]"><oj-bind-text value="[[ c.data.label ]]"></oj-bind-text></option></template></oj-bind-for-each>
+              </select>
+              <button type="button" class="nx-btn nx-btn--sm" id="scAddStep" data-act="addStep" on-click="[[ $listeners.onAct ]]">Add step</button>
+              <label class="nx-sc-f nx-sc-data"><span>Data (optional): a header line, then one row per run — runs the scenario once per row; {{column}} in the values</span>
+                <oj-text-area class="nx-sc-ta" rows="3" id="scData" data-field="data" on-value-changed="[[ $listeners.onTaField ]]" placeholder="CustomerId,Status&#10;300100,OPEN&#10;300200,CLOSED" value="[[ $functions.dataText($variables.sc) ]]"></oj-text-area></label>
+            </div>
+          </div>
+        </oj-bind-if>
+
+        <!-- a run: each step's checks, what it handed on, its answer -->
+        <oj-bind-if test="[[ !!$variables.run ]]">
+          <div class="nx-card nx-sc-sec" id="scRun">
+            <div class="nx-sc-head">
+              <h2 :class="[[ 'nx-sc-runh nx-sc-runh--' + ($variables.run.ok ? 'ok' : 'fail') ]]"><oj-bind-text value="[[ $functions.runHead($variables.run) ]]"></oj-bind-text></h2>
+            </div>
+            <oj-bind-for-each data="[[ $functions.runRows($variables.run) ]]">
+              <template data-oj-as="row">
+                <oj-bind-if test="[[ !!row.data.label ]]"><h3 class="nx-sc-rowh"><oj-bind-text value="[[ row.data.label ]]"></oj-bind-text></h3></oj-bind-if>
+                <ol class="nx-sc-results">
+                  <oj-bind-for-each data="[[ row.data.steps ]]">
+                    <template data-oj-as="r">
+                      <li :class="[[ 'nx-sc-res nx-sc-res--' + r.data.state ]]">
+                        <div class="nx-sc-reshead"><span class="nx-sc-resico"><oj-bind-text value="[[ r.data.icon ]]"></oj-bind-text></span><b><oj-bind-text value="[[ r.data.name ]]"></oj-bind-text></b>
+                          <code><oj-bind-text value="[[ r.data.call ]]"></oj-bind-text></code><span class="nx-note"><oj-bind-text value="[[ r.data.facts ]]"></oj-bind-text></span></div>
+                        <oj-bind-if test="[[ !!r.data.note ]]"><p class="nx-note nx-sc-resnote"><oj-bind-text value="[[ r.data.note ]]"></oj-bind-text></p></oj-bind-if>
+                        <ul class="nx-sc-checklist">
+                          <oj-bind-for-each data="[[ r.data.checks ]]"><template data-oj-as="c"><li :class="[[ c.data.ok ? 'nx-sc-ok' : 'nx-sc-bad' ]]"><oj-bind-text value="[[ (c.data.ok ? '✓ ' : '✗ ') + c.data.name + ' — ' + c.data.detail ]]"></oj-bind-text></li></template></oj-bind-for-each>
+                        </ul>
+                        <oj-bind-if test="[[ !!r.data.handed ]]"><p class="nx-sc-handed"><oj-bind-text value="[[ 'Handed on: ' + r.data.handed ]]"></oj-bind-text></p></oj-bind-if>
+                        <oj-bind-if test="[[ !!r.data.answer ]]"><details class="nx-sc-answer"><summary><oj-bind-text value="[[ r.data.url ]]"></oj-bind-text></summary><pre><oj-bind-text value="[[ r.data.answer ]]"></oj-bind-text></pre></details></oj-bind-if>
+                      </li>
+                    </template>
+                  </oj-bind-for-each>
+                </ol>
+              </template>
+            </oj-bind-for-each>
+          </div>
+        </oj-bind-if>
+
+        <!-- the page's runs, newest first -->
+        <div class="nx-card nx-sc-sec" id="scRuns">
+          <h2>Runs</h2>
+          <oj-bind-if test="[[ !$variables.runs.length ]]"><p class="nx-note">No run yet.</p></oj-bind-if>
+          <table class="nx-sc-runtable">
+            <tbody>
+              <oj-bind-for-each data="[[ $functions.runList($variables.runs) ]]">
+                <template data-oj-as="h">
+                  <tr :class="[[ 'nx-sc-runrow' + (h.data.ok ? '' : ' nx-sc-runrow--fail') ]]">
+                    <td><oj-bind-text value="[[ h.data.icon ]]"></oj-bind-text></td><td><oj-bind-text value="[[ h.data.name ]]"></oj-bind-text></td>
+                    <td><oj-bind-text value="[[ h.data.counts ]]"></oj-bind-text></td><td><oj-bind-text value="[[ h.data.when ]]"></oj-bind-text></td><td><oj-bind-text value="[[ h.data.by ]]"></oj-bind-text></td>
+                    <td><button type="button" class="nx-linkbtn" data-act="showRun" :data-key="[[ h.data.id ]]" on-click="[[ $listeners.onAct ]]">Open</button></td>
+                  </tr>
+                </template>
+              </oj-bind-for-each>
+            </tbody>
+          </table>
+        </div>
+      </oj-bind-if>
+    </section>
+  </div>
+</div>

@@ -309,6 +309,7 @@ async function buildRiteOptions() {
     issuesStore: await issuesStore(),
     // The API tester: a page's REST calls and reports, tried against the real backend
     apiStore: apiStore(),
+    scenarioStore: scenarioStore(),
     // …sent to your workspace's backends (its services/catalog.json), with who its app runs as (Run as, Sign in for your app)
     apiProject: () => { const c = currentWorkspace(); if (!c) return null; const p = profileOf(c.working); return { catalogFiles: ((p.services && p.services.catalogs) || []).map((x) => x.file), getIdentity: () => workspaceIdentity() }; },
     // What Build.Rite read from your workspace's app (Run console → Your app); scan: read it again
@@ -676,6 +677,14 @@ function apiStore() {
   if (!apiStoreInst) apiStoreInst = require('./lib/apiTest').open({ root: REPO_ROOT, rootFn: () => { const c = currentWorkspace(); return c ? projectOf(c) : ''; },
     bipFn: () => { const c = currentWorkspace(); const p = c ? profileOf(c.working) : null; return p && p.bip ? p.bip.endpoint : ''; }, file: path.join(app.getPath('userData'), 'api-tests.json'), log: (l) => { try { pushLog(l); } catch (e) { console.log(l); } } });
   return apiStoreInst;
+}
+// API Scenarios (lib/apiScenarios.js): a page's calls in order, run purely through the APIs (the API tester's engine,
+// the app's login), every run kept — on this PC only (answers hold live data), per VB Studio project (its hashed space)
+let scenarioStoreInst = null;
+function scenarioStore() {
+  if (!scenarioStoreInst) scenarioStoreInst = require('./lib/apiScenarios').open({ api: apiStore(),
+    dir: () => { const c = currentWorkspace(); return c ? path.join(app.getPath('userData'), 'api-scenarios', spaceOf(c)) : ''; } });
+  return scenarioStoreInst;
 }
 let analysisStoreInst = null;
 function analysisStore() {

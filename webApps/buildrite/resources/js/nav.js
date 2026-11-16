@@ -46,6 +46,10 @@ define([], function () {
       // integrations — and the Jira stories mapped to it, kept in git (flows/insights app-pages).
       { id: 'app-pages', label: 'Application pages', icon: 'oj-ux-ico-layers', route: { flow: 'insights', page: 'app-pages' },
         keywords: 'application pages vb page code technical sheet screenshot business logic integrations rest fusion oic bip chains jira map story developer' },
+      // API Scenarios: a page's calls in order, tested purely through the APIs — values handed from one call to the
+      // next, each answer checked, every run kept on this PC (flows/insights api-scenarios; desktop/lib/apiScenarios.js)
+      { id: 'api-scenarios', label: 'API Scenarios', icon: 'oj-ux-ico-check-circle', route: { flow: 'insights', page: 'api-scenarios' },
+        keywords: 'api scenarios test tests rest calls web services sequence order run record results regression bip report check' },
       // The FDD documents "Analyze with AI" reads (flows/fdd library): uploaded into the project's data and pushed to
       // git, so every user has them; one is the latest.
       { id: 'fdd-library', label: 'FDD library', icon: 'oj-ux-ico-upload', route: { flow: 'fdd', page: 'library' },

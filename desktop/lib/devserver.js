@@ -1034,6 +1034,44 @@ function createDevServer(o) {
             return jsonA(200, r);
           }
           if (pathname === '/__api/last' && post) return jsonA(200, api.last(b.keys));
+          // API Scenarios (lib/apiScenarios.js): a page's calls in order, run purely through the APIs, every run kept
+          const sc = o.scenarioStore;
+          if (pathname.startsWith('/__api/scenarios')) {
+            if (!sc) return jsonA(200, { ok: false, error: 'API Scenarios need the desktop app.' });
+            const who = () => { try { const id = o.getIdentity && o.getIdentity(); return (id && (id.displayName || id.username)) || ''; } catch (e) { return ''; } };
+            if (pathname === '/__api/scenarios' && !post) return jsonA(200, sc.list(q('page')));
+            if (pathname === '/__api/scenarios/get' && !post) return jsonA(200, sc.get(q('id')));
+            if (pathname === '/__api/scenarios/runs' && !post) return jsonA(200, sc.runs(q('page')));
+            if (pathname === '/__api/scenarios/run-of' && !post) return jsonA(200, sc.runOf(q('page'), q('run')));
+            if (pathname === '/__api/scenarios/save' && post) return jsonA(200, sc.save(b.scenario, who()));
+            if (pathname === '/__api/scenarios/remove' && post) return jsonA(200, sc.remove(b.id));
+            if (pathname === '/__api/scenarios/draft' && post) {
+              const ps = o.pagesStore;
+              const sh = ps && ps.sheet ? ps.sheet(String(b.page || '')) : null;
+              const facts = sh && (sh.facts || (sh.sheet && sh.sheet.facts));
+              if (!facts) return jsonA(200, { ok: false, error: 'This page has no technical sheet yet: open it in Application pages and Build its sheet first.' });
+              // its reports as the API tester finds them in the page's code: a name (XX_RP) to its path and parameters
+              let reports = [];
+              const names = ((facts.integrations && facts.integrations.reports) || []).map(String);
+              if (names.length && ps.code && ps.codeFile && api && api.reports) {
+                try {
+                  const pid = String(b.page || '');
+                  const c = ps.code(pid);
+                  if (c && c.ok) {
+                    const files = c.files.map((f) => { const t = ps.codeFile(pid, f.path); return { path: f.path, text: t.ok ? t.text : '' }; });
+                    const r = api.reports(files, names, pid.split('/')[0]);
+                    reports = r && r.ok ? r.reports : [];
+                  }
+                } catch (e) { reports = []; }
+              }
+              return jsonA(200, sc.draft(String(b.page || ''), facts, who(), { reports }));
+            }
+            if (pathname === '/__api/scenarios/run' && post) {
+              const r = await sc.run(String(b.id || ''), env, { allowWrites: !!b.allowWrites, by: who() });
+              log(`API scenario ${b.id} -> ${r.ok ? (r.run.ok ? 'passed' : 'failed') + ' (' + r.run.passed + ' ok, ' + r.run.failed + ' failed, ' + r.run.skipped + ' skipped, ' + r.run.ms + ' ms)' : r.error}`);
+              return jsonA(200, r);
+            }
+          }
           if (pathname === '/__api/reports' && !post) {
             const ps = o.pagesStore;
             const c = ps && ps.code ? ps.code(q('page')) : { ok: false, error: 'The page catalog is not set up here.' };

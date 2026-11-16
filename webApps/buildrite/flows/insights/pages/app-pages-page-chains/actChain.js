@@ -18,6 +18,8 @@ define([
 
   class actChain extends ActionChain {
     async run(context, { act, key }) {
+      // API Scenarios of a page (the API icon beside it in the list): that screen, opened on its scenarios
+      if (act === 'scenarios') { bus.focus('api-scenarios', { page: key }); return; }
       const v = context.$page.variables;
       const base = context.$application.path;
       if (!act) return;

@@ -14,7 +14,7 @@ It is an independent app: it works with any VB Studio project and keeps its own 
 |---|---|
 | **Workspace** | **Organizations & projects**: your VB Studio organizations (the sign-in is kept encrypted on this PC) and their projects and workspaces. **Set up your workspace**: a wizard that clones a workspace into `main` and `working` (a worktree on its own branch). **▶ Run** and the **Run console**: your workspace's app built from its working folder and run in a window of its own, with the build, its requests and its console shown live, and commands typed as in an editor's terminal. **Run as**: the user and roles the app runs as; the roles offered are the ones found in the app's own code. |
 | **Work** | **Issues**: an issue is logged against a page, then written up and analysed by the AI against the page's code and the FDD. Once approved, the agent applies it on a branch with a pull request, and Jira is kept up to date. **Jira stories**, sprints, daily progress and AI analyses of one story or several. **Standup minutes** and **Follow-ups**. |
-| **Application** | **Application pages**: every VB page of your workspace's app, with its technical sheet, screenshots, navigation maps, page code (lines changed since VB Studio are highlighted) and **Code fix**. Code fix writes a change into your working folder only after you approve it, and marks each change in the code with who asked for it, when, and its issue or Jira story. **FDD library**: the FDDs that Analyze with AI reads. **Flows explained**: how Build.Rite's own flows work. |
+| **Application** | **Application pages**: every VB page of your workspace's app, with its technical sheet, screenshots, navigation maps, page code (lines changed since VB Studio are highlighted) and **Code fix**. Code fix writes a change into your working folder only after you approve it, and marks each change in the code with who asked for it, when, and its issue or Jira story. **API Scenarios**: a page's web services put in order and tested through the APIs alone, with no need to open the page (see below). **FDD library**: the FDDs that Analyze with AI reads. **Flows explained**: how Build.Rite's own flows work. |
 | **Tools** | **SQL**: a worksheet against an Oracle database, with Ask AI. **AI settings**: which AI Build.Rite asks, either **Claude Code** on your Claude subscription (no API key, no per-call cost) or an **API key** paid per use (Anthropic, OpenAI, Gemini, OCI Generative AI, or any OpenAI-compatible service). You pick one default for everything, and can give a feature its own: Code fix, Issues, Analyze with AI, Application pages, Standup minutes or SQL. **Try it** checks each one; Code fix also has a quick switch on its own tab. |
 
 ## Start
@@ -84,6 +84,26 @@ again.
 Calls to backends also trust your PC's certificate store, so a corporate network that inspects HTTPS works. A Fusion
 404 page answering a call that needs a login is reported as a refused login, because that's how Fusion answers a wrong
 password.
+
+## API Scenarios: test a page's web services without opening it
+
+**Application → API Scenarios**, or the **API** button beside any page in Application pages. Pick a page and press
+**Draft from the page**: Build.Rite reads the page's code and lays out its calls in the order the page makes them. Calls
+made on entry come first, then the rest; calls that only read come before calls that change data. BI Publisher is run as
+the page's report, at the point where the page calls it, with the report's parameters taken from the code.
+
+- **Values handed on.** A value one call answers feeds the next: `id = auto:id` takes `id` from the first row of the
+  answer, and `{{id}}` uses it. A value the page gets from the screen before it is asked for under **Data**. Each row
+  of Data runs the scenario once, so one scenario can cover many cases.
+- **Checks on every answer.** The status (`2xx`, or `200,404` when a 404 is expected), how many rows, how long it took,
+  whether the answer still has the same shape as the example the page was built with, and given fields
+  (`items[0].status = OPEN`).
+- **Writes held.** A call that changes data runs only when the scenario and the run both allow writes, and never
+  against a host that looks like production.
+- **Every run kept** on this PC (`userData/api-scenarios`, under each project's hashed key), with who ran it, the
+  result of each step and its answer. The runs list shows a page's history; the scenario card shows its last run.
+
+Calls go out the same way as from the API tester: through the app's own backends, with the app's login.
 
 ## Run any VB app from its own folder
 

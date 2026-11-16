@@ -1,0 +1,172 @@
+{
+  "description": "API Scenarios: a page's REST calls and BI Publisher reports in order, run purely through the APIs with the app's login — a value one call answers feeding the next, each answer checked (status, rows, time, shape, fields), data rows, writes only when allowed and never on production, every run kept on this PC (desktop/lib/apiScenarios.js, /__api/scenarios*).",
+  "navigation": {
+    "embeddable": "enabled"
+  },
+  "variables": {
+    "pages": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "The workspace app's pages (the Application pages catalog)."
+    },
+    "q": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "page": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "The page chosen (its id: app/flow/page)."
+    },
+    "facts": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The page's facts (its technical sheet): its calls, chains, reports."
+    },
+    "scenarios": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "sc": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The scenario open (a copy being edited)."
+    },
+    "addCall": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "run": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The run shown."
+    },
+    "runs": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "busy": {
+      "type": "boolean",
+      "defaultValue": false
+    },
+    "result": {
+      "type": "any",
+      "defaultValue": null
+    }
+  },
+  "events": {
+    "focusRequest": {
+      "description": "Another screen handed this one a page (shellBus.focus('api-scenarios', { page }))",
+      "payloadType": "object"
+    }
+  },
+  "eventListeners": {
+    "vbEnter": {
+      "chains": [
+        {
+          "chain": "scChain",
+          "parameters": {
+            "act": "load",
+            "key": "",
+            "value": "",
+            "step": ""
+          }
+        }
+      ]
+    },
+    "focusRequest": {
+      "chains": [
+        {
+          "chain": "scChain",
+          "parameters": {
+            "act": "load",
+            "key": "",
+            "value": "",
+            "step": ""
+          }
+        }
+      ]
+    },
+    "onAct": {
+      "chains": [
+        {
+          "chain": "scChain",
+          "parameters": {
+            "act": "{{ $event.currentTarget.dataset.act }}",
+            "key": "{{ $event.currentTarget.dataset.key || '' }}",
+            "value": "",
+            "step": ""
+          }
+        }
+      ]
+    },
+    "onField": {
+      "chains": [
+        {
+          "chain": "scChain",
+          "parameters": {
+            "act": "field",
+            "key": "{{ $event.currentTarget.dataset.field }}",
+            "value": "{{ $event.currentTarget.value }}",
+            "step": ""
+          }
+        }
+      ]
+    },
+    "onStep": {
+      "chains": [
+        {
+          "chain": "scChain",
+          "parameters": {
+            "act": "stepField",
+            "key": "{{ $event.currentTarget.dataset.field }}",
+            "value": "{{ $event.currentTarget.value }}",
+            "step": "{{ $event.currentTarget.dataset.step }}"
+          }
+        }
+      ]
+    },
+    "onTaField": {
+      "chains": [
+        {
+          "chain": "scChain",
+          "parameters": {
+            "act": "{{ $event.detail.updatedFrom === 'internal' ? 'field' : 'none' }}",
+            "key": "{{ $event.currentTarget.dataset.field }}",
+            "value": "{{ $event.detail.value || '' }}",
+            "step": ""
+          }
+        }
+      ]
+    },
+    "onTaStep": {
+      "chains": [
+        {
+          "chain": "scChain",
+          "parameters": {
+            "act": "{{ $event.detail.updatedFrom === 'internal' ? 'stepField' : 'none' }}",
+            "key": "{{ $event.currentTarget.dataset.field }}",
+            "value": "{{ $event.detail.value || '' }}",
+            "step": "{{ $event.currentTarget.dataset.step }}"
+          }
+        }
+      ]
+    }
+  },
+  "imports": {
+    "components": {
+      "oj-bind-for-each": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-bind-if": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-bind-text": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-text-area": {
+        "path": "ojs/ojinputtext"
+      }
+    }
+  }
+}

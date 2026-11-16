@@ -80,6 +80,7 @@
       <div class="nx-pg-rows" id="pgRows" role="list">
         <oj-bind-for-each data="[[ $functions.shown($variables.pages, $variables.q, $variables.appF, $variables.onlyMapped, $variables.onlySheet, $variables.showDeleted) ]]">
           <template data-oj-as="p">
+            <div class="nx-pg-rowwrap">
             <button type="button" role="listitem" :class="[[ 'nx-pg-row' + ($variables.selId === p.data.id ? ' nx-pg-row--on' : '') + (p.data.deleted ? ' nx-pg-row--deleted' : '') ]]" :data-id="[[ p.data.id ]]" on-click="[[ $listeners.onSelect ]]">
               <span :class="[[ 'nx-pg-appmark nx-pg-appmark--' + $functions.appTone(p.data.app) ]]"><oj-bind-text value="[[ $functions.appShort(p.data.app) ]]"></oj-bind-text></span>
               <span class="nx-pg-rowmain">
@@ -94,6 +95,8 @@
                 </oj-bind-if>
               </span>
             </button>
+            <button type="button" class="nx-pg-apibtn" data-act="scenarios" :data-key="[[ p.data.id ]]" on-click="[[ $listeners.onAct ]]" :title="[[ 'API Scenarios: ' + p.data.label + '\'s calls in order, tested through the APIs' ]]" aria-label="API Scenarios of this page"><span class="oj-ux-ico-check-circle" aria-hidden="true"></span> API</button>
+            </div>
           </template>
         </oj-bind-for-each>
         <oj-bind-if test="[[ $functions.shown($variables.pages, $variables.q, $variables.appF, $variables.onlyMapped, $variables.onlySheet, $variables.showDeleted).length === 0 && $variables.checked ]]"><div class="nx-empty" id="pgNone">No page matches.</div></oj-bind-if>
