@@ -156,7 +156,9 @@ function open(o) {
     return { id: str(s.id) || (old && old.id) || newId('sc'), page: str(s.page || (old && old.page)), name: str(s.name).slice(0, 200) || 'Scenario',
       kind: ['happy', 'edge', 'role', 'data'].indexOf(s.kind) !== -1 ? s.kind : 'happy', notes: str(s.notes).slice(0, 4000), allowWrites: !!s.allowWrites,
       data: (Array.isArray(s.data) ? s.data : []).slice(0, MAX_ROWS).filter(isObj).map((r) => Object.keys(r).slice(0, 40).reduce((a, k) => { a[str(k).slice(0, 60)] = str(r[k]).slice(0, 2000); return a; }, {})),
-      steps, journey: (Array.isArray(s.journey) ? s.journey : []).filter(isObj).slice(0, 12).map((j) => ({ page: str(j.page).slice(0, 200), label: str(j.label).slice(0, 200) })).filter((j) => j.page),
+      steps, choices: (Array.isArray(s.choices) ? s.choices : []).filter(isObj).slice(0, 12).map((c) => ({ target: str(c.target).replace(/[^\w.-]/g, '').slice(0, 60), field: str(c.field).slice(0, 120),
+        values: (Array.isArray(c.values) ? c.values : []).filter(isObj).slice(0, 30).map((x) => ({ key: str(x.key).slice(0, 120), text: str(x.text).slice(0, 160) })), value: str(c.value).slice(0, 120) })).filter((c) => c.target && c.values.length),
+      journey: (Array.isArray(s.journey) ? s.journey : []).filter(isObj).slice(0, 12).map((j) => ({ page: str(j.page).slice(0, 200), label: str(j.label).slice(0, 200) })).filter((j) => j.page),
       by: (old && old.by) || str(by), createdAt: (old && old.createdAt) || now().toISOString(), updatedAt: now().toISOString(), updatedBy: str(by) };
   }
 
@@ -334,8 +336,17 @@ function open(o) {
   const blank = (st) => ({ step: st.id, name: st.name, call: st.report ? 'report ' + st.report.path : st.endpoint, state: 'skip', checks: [], extracted: {}, status: 0, ms: 0, rows: null });
 
   /** One step: its values filled from vars (and what it hands on put there), sent, its answer checked. */
+  /** The values the scenario chose for the page ({ requestTypeSel: 'INTERNAL' }). */
+  const choiceVals = (s) => ((s && s.choices) || []).reduce((a, c) => { a[c.target] = c.value; return a; }, {});
   async function runOne(s, st, vars, env, op) {
     const res = blank(st);
+    // a part of the page not shown for the values chosen (the other Customer field): not run, said why
+    if (st.when && evalWhen(st.when, choiceVals(s)) === false) {
+      const why = (s.choices || []).filter((c) => new RegExp('\\b' + c.target + '\\b').test(st.when)).map((c) => c.field + ' is ' + ((c.values.filter((x) => x.key === c.value)[0] || {}).text || c.value)).join(', ');
+      res.note = 'not on the page' + (why ? ' when ' + why : '') + ' (it shows only when ' + st.when.slice(0, 120) + ')';
+      res.off = true;
+      return res;
+    }
     const missing = [];
     const params = {};
     Object.keys(st.params || {}).forEach((k) => { params[k] = fill(st.params[k], vars, missing); });
@@ -424,7 +435,7 @@ function open(o) {
       const steps = stepsFor(f, opts, ctx);
       if (!steps.length) return no('This page makes no REST call to put in order (its technical sheet lists none: Build the sheet first).');
       const s = clean({ page: page, name: 'Happy path — ' + (f.label || str(page).split('/').pop()), kind: 'happy', steps,
-        journey: [{ page: str(page), label: str(f.label || str(page).split('/').pop()) }],
+        journey: [{ page: str(page), label: str(f.label || str(page).split('/').pop()) }], choices: choicesOf(f),
         data: ctx.start.length ? [ctx.start.reduce((a, k) => { a[k] = ''; return a; }, {})] : [],
         notes: notesOf(ctx) }, by, null);
       return store.save(s, by, isObj(opts) ? opts.env : null);
@@ -448,7 +459,8 @@ function open(o) {
       if (!more.length) return no('That page makes no call to add (its code lists none).');
       journey.push({ page: str(page), label: str(f.label || str(page).split('/').pop()) });
       const data = (s0.data && s0.data.length ? s0.data : [{}]).map((r, i) => (i ? r : Object.assign({}, r, ctx.start.filter((k) => !(k in r)).reduce((a, k) => { a[k] = ''; return a; }, {}))));
-      const s = Object.assign({}, s0, { steps: s0.steps.concat(more), journey, data: data.some((r) => Object.keys(r).length) ? data : [],
+      const choices = (s0.choices || []).concat(choicesOf(f).filter((c) => !(s0.choices || []).some((x) => x.target === c.target)));
+      const s = Object.assign({}, s0, { steps: s0.steps.concat(more), journey, choices, data: data.some((r) => Object.keys(r).length) ? data : [],
         name: /^Happy path — /.test(s0.name) || /^Journey — /.test(s0.name) ? 'Journey — ' + journey.map((j) => j.label).filter(Boolean).join(' → ') : s0.name,
         notes: s0.notes + ' Then ' + (f.label || page) + ': ' + notesOf(ctx, true) });
       return store.save(s, by, isObj(opts) ? opts.env : null);
@@ -463,8 +475,9 @@ function open(o) {
       const t0 = Date.now();
       const rowsIn = s.data.length ? s.data : [{}];
       const rows = [];
+      const chosen = choiceVals(s);
       for (const row of rowsIn) {
-        const vars = Object.assign({}, row);
+        const vars = Object.assign({}, chosen, row);
         const steps = [];
         let stop = false;
         for (const st of s.steps) {
@@ -496,7 +509,7 @@ function open(o) {
       const s = clean(scenario, o.by, null);
       const st = s.steps.filter((x) => x.id === str(stepId))[0];
       if (!st) return no('No such step.');
-      const vars = {};
+      const vars = Object.assign({}, choiceVals(s));
       Object.keys(isObj(o.vars) ? o.vars : {}).slice(0, 200).forEach((k) => { if (/^[\w.-]+$/.test(k) && o.vars[k] !== null && o.vars[k] !== undefined && str(o.vars[k]) !== '') vars[k] = str(o.vars[k]).slice(0, 2000); });
       // a list of values searched as you type: the text typed sent as its search parameter (as the page sends it)
       if (o.search !== undefined && o.search !== null && st.lov && st.lov.search) st.params = Object.assign({}, st.params, { [st.lov.search]: str(o.search).slice(0, 200) });
@@ -509,6 +522,45 @@ function open(o) {
     runOf(page, runId) { const r = readJson(path.join(rDir(page), slug(runId) + '.json'), null); return r ? { ok: true, run: r } : no('No such run.'); },
   };
   return store;
+}
+
+/**
+ * Is a part of the page shown, for the values chosen (its oj-bind-if: "requestTypeSel !== 'EXTERNAL' || $application…")?
+ * true / false, or null when it hangs on something else (a function, a value not chosen): then it is taken as shown.
+ */
+function evalWhen(expr, vals) {
+  const v = isObj(vals) ? vals : {};
+  const close = (t) => { let d = 0, q = ''; for (let i = 0; i < t.length; i++) { const c = t[i]; if (q) { if (c === q) q = ''; continue; } if (c === '"' || c === "'") { q = c; continue; } if (c === '(') d++; else if (c === ')' && --d === 0) return i; } return -1; };
+  const strip = (t) => { let x = t.trim(); while (x[0] === '(' && close(x) === x.length - 1) x = x.slice(1, -1).trim(); return x; };
+  const split = (t, op) => { const out = []; let d = 0, q = '', cur = ''; for (let i = 0; i < t.length; i++) { const c = t[i]; if (q) { cur += c; if (c === q) q = ''; continue; } if (c === '"' || c === "'") { q = c; cur += c; continue; } if (c === '(') d++; if (c === ')') d--; if (!d && t.substr(i, op.length) === op) { out.push(cur); cur = ''; i += op.length - 1; continue; } cur += c; } out.push(cur); return out; };
+  const name = (x) => x.split('.').pop();
+  const ev = (t0) => {
+    const t = strip(t0);
+    const ors = split(t, '||');
+    if (ors.length > 1) { const r = ors.map(ev); return r.some((x) => x === true) ? true : (r.some((x) => x === null) ? null : false); }
+    const ands = split(t, '&&');
+    if (ands.length > 1) { const r = ands.map(ev); return r.some((x) => x === false) ? false : (r.some((x) => x === null) ? null : true); }
+    let m = /^([\w$.]+)\s*(===|!==|==|!=)\s*(['"])(.*)\3$/.exec(t);
+    if (!m) { const r = /^(['"])(.*)\1\s*(===|!==|==|!=)\s*([\w$.]+)$/.exec(t); if (r) m = [r[0], r[4], r[3], r[1], r[2]]; }
+    if (m) { const n = name(m[1]); if (!(n in v)) return null; const eq = str(v[n]) === m[4]; return m[2][0] === '!' ? !eq : eq; }
+    m = /^(!?)\s*([\w$.]+)$/.exec(t);
+    if (m) { const n = name(m[2]); if (!(n in v)) return null; const b = !!v[n] && v[n] !== 'false'; return m[1] ? !b : b; }
+    return null;
+  };
+  return str(expr).trim() ? ev(str(expr)) : true;
+}
+
+/** The choices a page makes on itself (Customer Type, Location Type: lists written in the code that its parts are shown by). */
+function choicesOf(facts) {
+  const lovs = ((facts && facts.integrations && facts.integrations.lovs) || []).filter(isObj);
+  const whens = lovs.map((l) => str(l.when)).join('\n');
+  const out = [];
+  lovs.filter((l) => l.source === 'static' && l.target && Array.isArray(l.values) && l.values.length && new RegExp('\\b' + l.target + '\\b').test(whens)).forEach((l) => {
+    if (out.some((c) => c.target === l.target)) return;
+    const vals = l.values.filter((x) => x && str(x.key)).map((x) => ({ key: str(x.key), text: str(x.text || x.key) }));
+    out.push({ target: str(l.target), field: str(l.field), values: vals, value: l.start && vals.some((x) => x.key === l.start) ? str(l.start) : vals[0].key });
+  });
+  return out;
 }
 
 /**
@@ -530,4 +582,4 @@ function pageOfUrl(pages, url) {
   return hits.length ? hits[0].x : null;
 }
 
-module.exports = { open, readPath, fill, statusOk, pageOfUrl };
+module.exports = { open, readPath, fill, statusOk, pageOfUrl, evalWhen, choicesOf };

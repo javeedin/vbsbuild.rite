@@ -216,3 +216,12 @@ html[data-nx-product="buildrite"] .nx-nav-scroll { scrollbar-color: rgba(255, 25
 .nx-sc-when { margin: 4px 0 0; font-size: 12px; color: #8a5300; }
 .nx-sc-next { margin-top: 10px; border: 1px dashed #9fb8d8; border-radius: 10px; padding: 8px 12px; background: #f7faff; display: grid; gap: 6px; }
 .nx-sc-nextbtns { display: flex; flex-wrap: wrap; gap: 6px; }
+/* API Scenarios: the page as on your screen (its choices); a step for a field not shown in that case */
+.nx-sc-choices { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 2px 0 10px; padding: 8px 10px; border: 1px solid #d9e0e7; border-radius: 10px; background: #fbfcfd; }
+.nx-sc-chlbl { font-size: 12px; font-weight: 700; color: #4a5865; text-transform: uppercase; letter-spacing: .04em; }
+.nx-sc-choice { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.nx-sc-choice b { margin-right: 2px; }
+.nx-sc-chip { border: 1px solid #d3dce6; background: #fff; border-radius: 14px; padding: 2px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.nx-sc-chip--on { border-color: #2e6fd8; background: #e6f0fc; font-weight: 600; }
+.nx-sc-step--off { opacity: .55; background: #f6f7f8; }
+.nx-sc-when--off { color: #6b7886; font-style: italic; }

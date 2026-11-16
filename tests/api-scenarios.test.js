@@ -149,6 +149,23 @@ const ROOT = path.join(__dirname, 'fixtures', 'vb-sample');
     const onlyGo = store.draft('shop/orders/order-detail', p2, 'jane.doe').scenario.steps.map((x) => x.endpoint).join();
     T.check('a page\'s journey: what runs as it opens and what its actions that go on call (Submit), not the rest (Cancel)', onlyGo === 'shopApi/getOrderById,shopApi/createOrder', onlyGo);
 
+    T.section('the page as on your screen: its choices, the parts shown in one case only');
+    T.check('shown or not, for the values chosen; null when it hangs on something not chosen (taken as shown)', S.evalWhen("requestTypeSel === 'EXTERNAL'", { requestTypeSel: 'INTERNAL' }) === false
+      && S.evalWhen("requestTypeSel !== 'EXTERNAL' || $application.functions.flag($application.variables.f, 'A')", { requestTypeSel: 'INTERNAL' }) === true
+      && S.evalWhen("requestTypeSel !== 'EXTERNAL' || $application.functions.flag($application.variables.f, 'A')", { requestTypeSel: 'EXTERNAL' }) === null
+      && S.evalWhen("(x === 'a') && (locationType === 'INV_ORG')", { locationType: 'PROJECT_SITE' }) === false && S.evalWhen('', {}) === true);
+    const bf = { label: 'New request', integrations: { rest: [{ endpoint: 'shopApi/getOrders', method: 'GET' }, { endpoint: 'shopApi/getOrderById', method: 'GET' }], reports: [], lovs: [
+      { field: 'Customer Type', source: 'static', target: 'requestTypeSel', values: [{ key: 'INTERNAL', text: 'Internal' }, { key: 'EXTERNAL', text: 'External' }], when: '' },
+      { field: 'Order (external)', source: 'chain', endpoint: 'shopApi/getOrders', target: 'extOrder', key: 'id', itemsPath: 'items', when: "requestTypeSel === 'EXTERNAL'" }] },
+      logic: { chains: [{ name: 'InitChain', calls: ['shopApi/getOrders'] }] }, features: { lifecycle: [{ when: 'when the page opens', chains: ['InitChain'] }], actions: [] } };
+    T.check('its choices: the lists written in the code its parts are shown by, the first value to start', JSON.stringify(S.choicesOf(bf)) === '[{"target":"requestTypeSel","field":"Customer Type","values":[{"key":"INTERNAL","text":"Internal"},{"key":"EXTERNAL","text":"External"}],"value":"INTERNAL"}]');
+    const bd = store.draft('shop/orders/order-new', bf, 'jane.doe').scenario;
+    r = await store.run(bd.id, env, {});
+    T.check('run as Internal: the External-only list not run, said why', r.run.rows[0].steps[0].state === 'skip' && /not on the page when Customer Type is Internal/.test(r.run.rows[0].steps[0].note), r.run.rows[0].steps[0].note);
+    const be = store.save(Object.assign({}, bd, { choices: bd.choices.map((c) => Object.assign({}, c, { value: 'EXTERNAL' })) })).scenario;
+    r = await store.run(be.id, env, {});
+    T.check('…as External: it runs; the value chosen is there for the calls ({{requestTypeSel}})', r.run.rows[0].steps[0].status === 200 && be.choices[0].value === 'EXTERNAL', JSON.stringify(r.run.rows[0].steps[0].checks));
+
     T.section('kept, listed');
     const list = store.list(page);
     T.check('the page\'s scenarios, each with its last run', list.ok && list.scenarios.length === 7 && list.scenarios.filter((x) => x.name === 'Open an order')[0].last !== null);

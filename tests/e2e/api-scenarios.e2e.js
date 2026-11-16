@@ -26,13 +26,24 @@ function writeSearchPage(root) {
   const dir = path.join(root, 'webApps', 'shop', 'flows', 'customers', 'pages');
   fs.mkdirSync(path.join(dir, 'customer-pick-page-chains'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'customer-pick-page.html'), '<div class="oj-web-applayout-max-width"><h1>New Order</h1>\n'
+    + '  <oj-select-single label-hint="Customer Type" data="[[ $variables.requestTypeADP ]]" item-text="label" value="{{ $variables.requestTypeSel }}"></oj-select-single>\n'
+    + '  <oj-bind-if test="[[ $variables.requestTypeSel !== ' + "'" + 'EXTERNAL' + "'" + ' ]]">\n'
     + '  <oj-select-single aria-label="Customer" value="[[ $page.variables.picked && $page.variables.picked.CustomerId != null ? String($page.variables.picked.CustomerId) : null ]]"\n'
     + '    data="[[ $functions.customerProvider() ]]" item-text="Customer">\n'
     + '    <template slot="itemTemplate"><span><oj-bind-text value="[[ $current.data.Customer ]]"></oj-bind-text></span><small><oj-bind-text value="[[ $current.data.CustomerNumber ]]"></oj-bind-text></small></template>\n'
-    + '  </oj-select-single>\n</div>\n');
-  fs.writeFileSync(path.join(dir, 'customer-pick-page.json'), JSON.stringify({ description: 'New Order', variables: { picked: { type: 'any', defaultValue: null } },
+    + '  </oj-select-single>\n  </oj-bind-if>\n'
+    + '  <oj-bind-if test="[[ $variables.requestTypeSel === ' + "'" + 'EXTERNAL' + "'" + ' ]]">\n'
+    + '  <oj-select-single label-hint="Customer (external)" data="[[ $variables.extADP ]]" item-text="name" value="{{ $variables.extCustomerId }}"></oj-select-single>\n'
+    + '  </oj-bind-if>\n</div>\n');
+  fs.writeFileSync(path.join(dir, 'customer-pick-page.json'), JSON.stringify({ description: 'New Order', variables: { picked: { type: 'any', defaultValue: null },
+    requestTypeSel: { type: 'string' }, requestTypeArray: { type: 'any[]', defaultValue: [{ value: 'INTERNAL', label: 'Internal' }, { value: 'EXTERNAL', label: 'External' }] },
+    requestTypeADP: { type: 'vb/ArrayDataProvider2', defaultValue: { keyAttributes: 'value', data: '{{ $page.variables.requestTypeArray }}' } },
+    extCustomers: { type: 'any[]', defaultValue: [] }, extADP: { type: 'vb/ArrayDataProvider2', defaultValue: { keyAttributes: 'id', data: '{{ $page.variables.extCustomers }}' } }, extCustomerId: { type: 'string' } },
     events: { customerSearchRequested: { payloadType: 'object' } },
-    eventListeners: { customerSearchRequested: { chains: [{ chain: 'CustomerSearchChain', parameters: { searchValue: '[[ $event.text ]]' } }] } } }, null, 2));
+    eventListeners: { vbEnter: { chains: [{ chain: 'LoadExternalChain' }] }, customerSearchRequested: { chains: [{ chain: 'CustomerSearchChain', parameters: { searchValue: '[[ $event.text ]]' } }] } } }, null, 2));
+  fs.writeFileSync(path.join(dir, 'customer-pick-page-chains', 'LoadExternalChain.js'), "define(['vb/action/actionChain', 'vb/action/actions'], (ActionChain, Actions) => {\n  'use strict';\n"
+    + "  class LoadExternalChain extends ActionChain {\n    async run(context) {\n      const res = await Actions.callRest(context, { endpoint: 'shopApi/getCustomers' });\n"
+    + "      context.$page.variables.extCustomers = res.ok ? res.body.items || [] : [];\n    }\n  }\n  return LoadExternalChain;\n});\n");
   fs.writeFileSync(path.join(dir, 'customer-pick-page.js'), "define([], () => {\n  'use strict';\n  class PageModule {\n    constructor(context) {\n      const self = this;\n"
     + "      this._custDP = new SearchProvider(function (text) { self._emit('customerSearchRequested', text); }, 'CustomerId');\n    }\n"
     + "    customerProvider() {\n      return this._custDP;\n    }\n  }\n  return PageModule;\n});\n");
@@ -215,6 +226,10 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     const t1 = '#scSteps .nx-sc-step:first-child';
     T.check('the Customer search found in the code: its report, the text typed as P_SEARCH, the fixed value as written', /^List of values: Customer — report CUST_LOV_RP \(a search as you type\)/.test(await page.$eval(t1 + ' .nx-sc-stepname', (e) => e.value))
       && /P_SEARCH = the text typed/.test(await text(page, t1 + ' .nx-sc-lovinfo')) && /P_SEARCH_BY = ALL/.test(await page.$eval(t1 + ' oj-text-area[data-field="params"] textarea', (t) => t.value)), await text(page, t1 + ' .nx-sc-lovinfo'));
+    // the page as on your screen: Customer Type (Internal) — the External-only Customer shown as not on the page
+    T.check('the page as: Customer Type, Internal chosen (as the page starts); the External-only Customer not on the page', /The page as\s*Customer Type\s*Internal\s*External/.test(await text(page, '#scChoices'))
+      && (await text(page, '#scChoices .nx-sc-chip--on')) === 'Internal' && (await page.$$('#scSteps .nx-sc-step--off')).length === 1
+      && /Not on the page as chosen \(Customer Type is Internal\): skipped when run/.test(await text(page, '#scSteps .nx-sc-step--off .nx-sc-when')), await text(page, '#scChoices'));
     await page.click(t1 + ' .nx-sc-picker oj-select-single input');
     // opened: the report's first rows (a blank search), as the page shows them when the field is clicked
     await page.locator(OPT, { hasText: 'MAPLE FREIGHT CO' }).first().waitFor({ timeout: 15000 });
@@ -231,6 +246,12 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
       && /CustomerId = rows\[CUSTOMERID=300100\]\.CUSTOMERID/.test(await page.$eval(t1 + ' oj-text-area[data-field="extract"] textarea', (t) => t.value)));
     await saveRun();
     T.check('Save & run: the report searched for CR10042, the customer handed on (CustomerId = 300100)', searches[searches.length - 1] === 'CR10042' && /CustomerId = 300100/.test(await text(page, '#scRun .nx-sc-handed')), searches.join(' | ') + ' / ' + await text(page, '#scRun .nx-sc-handed'));
+    T.check('…the External-only list not run: not on the page as Internal', /not on the page when Customer Type is Internal/.test(JSON.stringify(await results())), JSON.stringify((await results()).map((x) => x.state + ':' + x.note)));
+    await page.click('#scChoices .nx-sc-chip[data-value="EXTERNAL"]');
+    await page.waitForFunction(() => (document.querySelector('#scChoices .nx-sc-chip--on') || {}).textContent === 'External', null, { timeout: 5000 });
+    await page.waitForTimeout(300);
+    T.check('External chosen: the report-backed Customer is the one not on the page now', (await page.$$('#scSteps .nx-sc-step--off')).length === 1
+      && /report \/Custom\/Shop\/CUST_LOV_RP/.test(await text(page, '#scSteps .nx-sc-step--off .nx-sc-call')), await text(page, '#scSteps .nx-sc-step--off .nx-sc-call'));
     await env.shot('api-scenarios-search.png');
 
     T.section('opened on a page from Application pages');

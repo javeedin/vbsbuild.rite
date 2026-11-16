@@ -88,11 +88,29 @@
               <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="scDelete" data-act="delete" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy || !$variables.sc.id ]]">Delete</button>
             </div>
             <oj-text-area class="nx-sc-ta nx-sc-notes" id="scNotes" rows="2" data-field="notes" on-value-changed="[[ $listeners.onTaField ]]" placeholder="What this scenario checks (e.g. a closed project gives no tasks)" value="[[ $variables.sc.notes ]]"></oj-text-area>
+            <!-- the page as on your screen: the choices its parts are shown by (Customer Type, Location Type) -->
+            <oj-bind-if test="[[ (($variables.sc && $variables.sc.choices) || []).length > 0 ]]">
+              <div class="nx-sc-choices" id="scChoices">
+                <span class="nx-sc-chlbl">The page as</span>
+                <oj-bind-for-each data="[[ $variables.sc.choices ]]">
+                  <template data-oj-as="c">
+                    <span class="nx-sc-choice" :data-target="[[ c.data.target ]]"><b><oj-bind-text value="[[ c.data.field ]]"></oj-bind-text></b>
+                      <oj-bind-for-each data="[[ c.data.values ]]">
+                        <template data-oj-as="x">
+                          <button type="button" :class="[[ 'nx-sc-chip' + (x.data.key === c.data.value ? ' nx-sc-chip--on' : '') ]]" :data-key="[[ c.data.target ]]" :data-value="[[ x.data.key ]]" on-click="[[ $listeners.onChoice ]]"><oj-bind-text value="[[ x.data.text ]]"></oj-bind-text></button>
+                        </template>
+                      </oj-bind-for-each>
+                    </span>
+                  </template>
+                </oj-bind-for-each>
+                <span class="nx-note">as on your screen: a step for a field not shown in this case is skipped when run</span>
+              </div>
+            </oj-bind-if>
 
             <ol class="nx-sc-steps" id="scSteps">
               <oj-bind-for-each data="[[ $functions.stepRows($variables.sc, $variables.run, $variables.tries, $variables.trying) ]]">
                 <template data-oj-as="st">
-                  <li :class="[[ 'nx-sc-step' + (st.data.writes ? ' nx-sc-step--writes' : '') + (st.data.pageHead ? ' nx-sc-step--pagestart' : '') ]]" :id="[[ 'scStep-' + st.data.id ]]">
+                  <li :class="[[ 'nx-sc-step' + (st.data.writes ? ' nx-sc-step--writes' : '') + (st.data.pageHead ? ' nx-sc-step--pagestart' : '') + (st.data.off ? ' nx-sc-step--off' : '') ]]" :id="[[ 'scStep-' + st.data.id ]]">
                     <oj-bind-if test="[[ !!st.data.pageHead ]]"><p class="nx-sc-pagehead"><oj-bind-text value="[[ st.data.pageHead ]]"></oj-bind-text></p></oj-bind-if>
                     <div class="nx-sc-stephead">
                       <span class="nx-sc-stepn"><oj-bind-text value="[[ st.data.n ]]"></oj-bind-text></span>
@@ -108,7 +126,7 @@
                     </div>
                     <!-- the API in full: method, the backend's address, its path and values (the ones known so far filled in) -->
                     <p class="nx-sc-api"><code><oj-bind-text value="[[ st.data.api ]]"></oj-bind-text></code></p>
-                    <oj-bind-if test="[[ !!st.data.when ]]"><p class="nx-sc-when"><oj-bind-text value="[[ st.data.when ]]"></oj-bind-text></p></oj-bind-if>
+                    <oj-bind-if test="[[ !!st.data.when ]]"><p :class="[[ 'nx-sc-when' + (st.data.off ? ' nx-sc-when--off' : '') ]]"><oj-bind-text value="[[ st.data.off ? st.data.offNote : st.data.when ]]"></oj-bind-text></p></oj-bind-if>
                     <!-- a list of values on the page (a dropdown this call fills): what it shows, keeps and hands on -->
                     <oj-bind-if test="[[ !!st.data.lov ]]">
                       <p class="nx-sc-lovinfo"><span class="nx-sc-lovchip">List of values</span>

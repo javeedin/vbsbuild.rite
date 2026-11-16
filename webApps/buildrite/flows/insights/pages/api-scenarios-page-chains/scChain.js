@@ -130,6 +130,15 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         } finally { v.trying = ''; }
         return;
       }
+      // the page as on your screen: a choice its parts are shown by (Customer Type = Internal)
+      if (act === 'choice') {
+        if (!v.sc) return;
+        const ch = (v.sc.choices || []).map((c) => (c.target === key ? Object.assign({}, c, { value }) : c));
+        v.sc = Object.assign({}, v.sc, { choices: ch });
+        const c = ch.filter((x) => x.target === key)[0];
+        v.result = { ok: true, text: (c ? c.field + ': ' + ((c.values.filter((x) => x.key === value)[0] || {}).text || value) : value) + ' — the steps for fields not shown in this case are skipped. Save & run.' };
+        return;
+      }
       if (act === 'toggleWrites') { if (v.sc) v.sc = Object.assign({}, v.sc, { allowWrites: !v.sc.allowWrites }); return; }
       if (act === 'stepField' || act === 'toggleShape') {
         const id = act === 'toggleShape' ? key : step;

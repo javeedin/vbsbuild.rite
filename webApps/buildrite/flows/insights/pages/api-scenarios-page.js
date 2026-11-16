@@ -9,6 +9,27 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
   const MIN_SEARCH = 2;
   const uniq = (a) => a.filter((x, i) => x && a.indexOf(x) === i);
 
+  /** Is a part of the page shown for the values chosen? (lib/apiScenarios.js evalWhen, the same): true / false / null (not known). */
+  function evalWhen(expr, v) {
+    const close = (t) => { let d = 0, q = ''; for (let i = 0; i < t.length; i++) { const c = t[i]; if (q) { if (c === q) q = ''; continue; } if (c === '"' || c === "'") { q = c; continue; } if (c === '(') d++; else if (c === ')' && --d === 0) return i; } return -1; };
+    const strip = (t) => { let x = t.trim(); while (x[0] === '(' && close(x) === x.length - 1) x = x.slice(1, -1).trim(); return x; };
+    const split = (t, op) => { const out = []; let d = 0, q = '', cur = ''; for (let i = 0; i < t.length; i++) { const c = t[i]; if (q) { cur += c; if (c === q) q = ''; continue; } if (c === '"' || c === "'") { q = c; cur += c; continue; } if (c === '(') d++; if (c === ')') d--; if (!d && t.substr(i, op.length) === op) { out.push(cur); cur = ''; i += op.length - 1; continue; } cur += c; } out.push(cur); return out; };
+    const name = (x) => x.split('.').pop();
+    const ev = (t0) => {
+      const t = strip(t0);
+      const ors = split(t, '||');
+      if (ors.length > 1) { const r = ors.map(ev); return r.some((x) => x === true) ? true : (r.some((x) => x === null) ? null : false); }
+      const ands = split(t, '&&');
+      if (ands.length > 1) { const r = ands.map(ev); return r.some((x) => x === false) ? false : (r.some((x) => x === null) ? null : true); }
+      let m = /^([\w$.]+)\s*(===|!==|==|!=)\s*(['"])(.*)\3$/.exec(t);
+      if (m) { const n = name(m[1]); if (!(n in v)) return null; const eq = String(v[n]) === m[4]; return m[2][0] === '!' ? !eq : eq; }
+      m = /^(!?)\s*([\w$.]+)$/.exec(t);
+      if (m) { const n = name(m[2]); if (!(n in v)) return null; const b = !!v[n] && v[n] !== 'false'; return m[1] ? !b : b; }
+      return null;
+    };
+    return String(expr || '').trim() ? ev(String(expr)) : true;
+  }
+
   /**
    * A list of values' values for an oj-select-single, as the app's own search providers work: a search as you type sends
    * the text typed to the server (the step tried with it as its search parameter: lib/apiScenarios.js tryStep), a list
@@ -220,14 +241,18 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
         const pg = st.page || (sc && sc.page) || '';
         const prevPg = i ? (steps[i - 1].page || (sc && sc.page) || '') : null;
         const pageHead = multi && pg !== prevPg ? (i ? 'Then, on ' : 'On ') + (jl[pg] || pg.split('/').pop()) + '  ·  ' + pg : '';
-        const sig = JSON.stringify([st, i, pageHead, used.map((n) => vars[n]), uses.map((u) => [u, resOf(u.id) ? (resOf(u.id).at || run && run.id) : '']), T[st.id] ? T[st.id].at : '', trying === st.id]);
+        // a part of the page not shown for the values chosen (the other Customer field)
+        const chosen = ((sc && sc.choices) || []).reduce((a, c) => { a[c.target] = c.value; return a; }, {});
+        const off = !!st.when && evalWhen(st.when, chosen) === false;
+        const offNote = off ? 'Not on the page as chosen (' + ((sc && sc.choices) || []).filter((c) => new RegExp('\\b' + c.target + '\\b').test(st.when)).map((c) => c.field + ' is ' + ((c.values.filter((x) => x.key === c.value)[0] || {}).text || c.value)).join(', ') + '): skipped when run' : '';
+        const sig = JSON.stringify([st, i, pageHead, off, used.map((n) => vars[n]), uses.map((u) => [u, resOf(u.id) ? (resOf(u.id).at || run && run.id) : '']), T[st.id] ? T[st.id].at : '', trying === st.id]);
         keep.add(st.id);
         const hit = this._rows.get(st.id);
         if (hit && hit.sig === sig) return hit.row;
         const ex = st.expect || {};
         const acc = st.accepts || [];
         const row = { id: st.id, n: i + 1, name: st.name, call: st.report ? 'report ' + st.report.path : st.endpoint, writes: !!st.writes, pageHead,
-          when: st.when ? 'On the page only when ' + st.when : '',
+          when: st.when ? 'On the page only when ' + st.when : '', off, offNote,
           api: fullApi(st), trying: trying === st.id, tried: triedOf(st),
           params: linesOf(st.params, '='), extract: (st.extract || []).map((e) => e.var + ' = ' + e.from).join('\n'),
           // what the call accepts, from its service (the values the page sends are filled in already)

@@ -499,8 +499,9 @@ function lovsOf(htmlSrc, json, chainSrcs) {
   const whenAt = (pos) => {
     const st = [];
     ifs.forEach((x) => { if (x.at >= pos) return; if (x.open) st.push(x.test); else st.pop(); });
-    const t = st[st.length - 1] || '';
-    return t.replace(/^\s*\[\[\s*|\s*\]\]\s*$/g, '').replace(/\$(?:page\.|flow\.|app\.)?variables\./g, '').replace(/\s+/g, ' ').slice(0, 120);
+    const clean1 = (t) => t.replace(/^\s*\[\[\s*|\s*\]\]\s*$/g, '').replace(/\$(?:page\.|flow\.|app\.)?variables\./g, '').replace(/\s+/g, ' ').trim();
+    const all = st.map(clean1).filter(Boolean);
+    return (all.length > 1 ? all.map((t) => '(' + t + ')').join(' && ') : (all[0] || '')).slice(0, 300);
   };
   for (const m of html.matchAll(re)) {
     const a = m[2];
@@ -554,6 +555,11 @@ function lovsOf(htmlSrc, json, chainSrcs) {
         lov.keyFrom = from(lov.key); lov.textFrom = from(lov.text); lov.subFrom = from(lov.sub);
         break;
       }
+    } else if (dv && (() => { const a = (/variables\.(\w+)/.exec(String(def.data || '')) || [])[1]; const d = a && vars[a] && vars[a].defaultValue; return Array.isArray(d) && d.length; })()) {
+      // the provider reads an array whose values are written in the page ("{{ $page.variables.requestTypeArray }}")
+      const a = (/variables\.(\w+)/.exec(String(def.data || '')) || [])[1];
+      lov.source = 'static';
+      lov.values = vars[a].defaultValue.slice(0, 50).filter(isObjS).map((r) => ({ key: String(r[lov.key || 'value'] == null ? '' : r[lov.key || 'value']), text: String(r[lov.text || 'label'] == null ? '' : r[lov.text || 'label']) }));
     } else if (dv) {
       // the array the provider reads ("{{ $page.variables.customerRefsArray }}"), filled in a chain from a call's answer
       const arr = (/variables\.(\w+)/.exec(String(def.data || '')) || [])[1];
@@ -609,6 +615,8 @@ function lovsOf(htmlSrc, json, chainSrcs) {
         break;
       }
     }
+    // a list written in the code: the value its page value starts with, if the page gives one
+    if (lov.source === 'static' && target && vars[target] && vars[target].defaultValue !== undefined && vars[target].defaultValue !== null) lov.start = String(vars[target].defaultValue);
     // the same dropdown twice (shown in one case or another) once
     if (!out.some((x) => x.field === lov.field && x.target === lov.target && x.endpoint === lov.endpoint && x.source === lov.source && x.report === lov.report)) out.push(lov);
   }

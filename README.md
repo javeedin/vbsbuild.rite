@@ -123,6 +123,11 @@ the report's parameters taken from the code.
 - **Every run kept** on this PC (`userData/api-scenarios`, under each project's hashed key), with who ran it, the
   result of each step and its answer. The runs list shows a page's history; the scenario card shows its last run.
 
+- **The page as on your screen.** A page can show different fields in different cases (Customer Type Internal:
+  a Customer searched in a BI Publisher report; External: the app's own customer refs). Build.Rite reads the
+  choices its parts are shown by (lists written in the code, such as Customer Type or Location Type) and each
+  field's condition (its oj-bind-if). The scenario starts as the page does (the first value); a step for a field not
+  shown in the case chosen is shown as such and skipped when run, and the values chosen are there for the calls.
 - **The page your app's window shows.** An app can have two pages with one title (two "Create Equipment Request"s,
   each with its own lists). When you come back from your app's window (▶ Run), API Scenarios says which page it is on
   and offers to test that one; the page list marks it, and marks pages that share a title.

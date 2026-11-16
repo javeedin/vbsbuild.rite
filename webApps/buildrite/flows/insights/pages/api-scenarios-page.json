@@ -201,6 +201,19 @@
           }
         }
       ]
+    },
+    "onChoice": {
+      "chains": [
+        {
+          "chain": "scChain",
+          "parameters": {
+            "act": "choice",
+            "key": "{{ $event.currentTarget.dataset.key }}",
+            "value": "{{ $event.currentTarget.dataset.value }}",
+            "step": ""
+          }
+        }
+      ]
     }
   },
   "imports": {
