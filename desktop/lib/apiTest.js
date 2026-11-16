@@ -333,9 +333,25 @@ function curlOf(c) {
   return parts.join(' \\\n  ');
 }
 
+/**
+ * An answer's bytes as sent before compression: some servers (BI Publisher behind a gateway, among others) gzip their
+ * answers, a SOAP fault too, even unasked. By its Content-Encoding (gzip, deflate, br), else by gzip's own first bytes.
+ */
+function unzipped(buf, encoding) {
+  const zlib = require('zlib');
+  const enc = str(encoding).toLowerCase();
+  const gz = buf.length > 2 && buf[0] === 0x1f && buf[1] === 0x8b;
+  try {
+    if (/gzip/.test(enc) || gz) return zlib.gunzipSync(buf);
+    if (/deflate/.test(enc)) { try { return zlib.inflateSync(buf); } catch (e) { return zlib.inflateRawSync(buf); } }
+    if (/\bbr\b/.test(enc)) return zlib.brotliDecompressSync(buf);
+  } catch (e) { /* not compressed after all: as it came */ }
+  return buf;
+}
+
 /** The answer read: pretty text, its rows as a table, a report's rows decoded, a SOAP fault's reason. */
 function decode(res, op) {
-  const buf = res.body || Buffer.alloc(0);
+  const buf = unzipped(res.body || Buffer.alloc(0), (res.headers || {})['content-encoding']);
   const ct = str((res.headers || {})['content-type']);
   const text = buf.toString('utf8');
   const out = { contentType: ct, pretty: '', table: null, report: null, fault: '', json: undefined, error: '' };
@@ -361,11 +377,17 @@ function decode(res, op) {
   return out;
 }
 
+/** A file's code without its comments (JavaScript); other files as they are. */
+function codeOnly(f) {
+  const t = str(f && f.text);
+  return /\.js$/i.test(str(f && f.path)) ? require('./pageScan').stripComments(t) : t;
+}
+
 /** The page's BI Publisher reports, from its code: each path, the parameters (P_…) given after it, its row element. */
 function reportsIn(files) {
   const out = {};
   (files || []).forEach((f) => {
-    const s = str(f.text);
+    const s = codeOnly(f);
     const re = /['"`](\/Custom\/[^'"`\s]+?\/([A-Za-z0-9_]+)\.xdo)['"`]/g;
     let m;
     while ((m = re.exec(s))) {
@@ -580,7 +602,10 @@ function open(o) {
   /** The page's reports: read from its files; one it names (XX_RP) but whose path is in shared code, found in its app. */
   function reports(files, names, app) {
     const list = reportsIn(files);
-    const want = uniq((names || []).map(str).filter((n) => /^[A-Z][A-Z0-9_]+$/.test(n) && !list.some((r) => r.name === n)));
+    // a name only in a comment ("this used to call OLD_RP") is not a report the page runs (a sheet saved before may list it)
+    const live = (files || []).map(codeOnly).join('\n');
+    const inApp = (n) => appJs(rootNow(), app).some((f) => { try { const t = fs.readFileSync(f, 'utf8'); return t.indexOf(n) !== -1 && codeOnly({ path: f, text: t }).indexOf(n) !== -1; } catch (e) { return false; } });
+    const want = uniq((names || []).map(str).filter((n) => /^[A-Z][A-Z0-9_]+$/.test(n) && !list.some((r) => r.name === n) && (live.indexOf(n) !== -1 || (app && inApp(n)))));
     if (want.length && app) {
       const more = reportsIn(appJs(rootNow(), app).filter((f) => { try { return want.some((n) => fs.readFileSync(f, 'utf8').indexOf(n + '.xdo') !== -1); } catch (e) { return false; } })
         .map((f) => ({ path: path.relative(rootNow(), f).split(path.sep).join('/'), text: fs.readFileSync(f, 'utf8') })));
@@ -598,4 +623,4 @@ function open(o) {
   return { op, report, run, check, last, reports, flush, root: root0, rootNow, catalogFile };
 }
 
-module.exports = { open, opOf, urlOf, extraPairs, skeleton, soapBody, reportBytesOf, rowTagOf, xmlRows, rowsOf, shapeOf, compareShape, prettyXml, curlOf, decode, reportsIn, normKey, BIP };
+module.exports = { open, opOf, urlOf, extraPairs, skeleton, soapBody, unzipped, reportBytesOf, rowTagOf, xmlRows, rowsOf, shapeOf, compareShape, prettyXml, curlOf, decode, reportsIn, normKey, BIP };

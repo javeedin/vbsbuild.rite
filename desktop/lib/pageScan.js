@@ -179,8 +179,26 @@ function serviceOps(root) {
 }
 
 /** What a piece of code does to the outside: endpoints, reports, local services, screens it opens, modules it uses. */
-function scanCode(src) {
+/**
+ * Code without its comments ("// This used to call OLD_REPORT_RP" names nothing the page does): strings kept as they are
+ * ('http://…' is not a comment), // taken as a comment only where code would have ended or begun a part.
+ */
+function stripComments(src) {
   const s = String(src || '');
+  let out = '', q = '';
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (q) { out += c; if (c === '\\') { out += s[++i] || ''; } else if (c === q) q = ''; continue; }
+    if (c === '"' || c === "'" || c === '`') { q = c; out += c; continue; }
+    if (c === '/' && s[i + 1] === '*') { const e = s.indexOf('*/', i + 2); const gap = s.slice(i, e < 0 ? s.length : e + 2); out += gap.replace(/[^\n]/g, ' '); i = e < 0 ? s.length : e + 1; continue; }
+    if (c === '/' && s[i + 1] === '/' && /(^|[\s;{}(),=:[])$/.test(out.slice(-1) || '\n')) { const e = s.indexOf('\n', i); i = (e < 0 ? s.length : e) - 1; continue; }
+    out += c;
+  }
+  return out;
+}
+
+function scanCode(src) {
+  const s = stripComments(src);
   const all = (re, g) => { const out = []; let m; const r = new RegExp(re.source, 'g'); while ((m = r.exec(s))) out.push(m[g || 1]); return uniq(out); };
   return {
     endpoints: all(/endpoint['"]?\s*:\s*['"]([A-Za-z0-9_-]+\/[A-Za-z0-9_]+)['"]/),
@@ -661,7 +679,7 @@ function analyze(root, id) {
   const local = uniq(pageCode.local.concat(...chains.map((c) => c.local), ...modules.map((m) => m.local))).map((l) => ({ route: '/' + l + '/', what: LOCAL[l] || l }));
   const backends = uniq(rest.map((r) => r.backendLabel).concat(reports.length ? ['Oracle BI Publisher (SOAP)'] : []));
   // the values the page sends with each call, and its lists of values (the dropdowns and the calls that fill them)
-  const chainSrcs = chainFiles.map((f) => ({ name: f.replace(/\.js$/, ''), src: read(path.join(p.chainsDir, f)) })).concat([{ name: 'page module', src: jsSrc }]);
+  const chainSrcs = chainFiles.map((f) => ({ name: f.replace(/\.js$/, ''), src: stripComments(read(path.join(p.chainsDir, f))) })).concat([{ name: 'page module', src: stripComments(jsSrc) }]);
   const sent = callParamsOf(chainSrcs.map((c) => c.src));
   rest.forEach((r) => { if (sent[r.endpoint]) r.params = sent[r.endpoint]; });
   const lovs = lovsOf(htmlSrc, json, chainSrcs);
@@ -681,4 +699,4 @@ function analyze(root, id) {
   };
 }
 
-module.exports = { list, analyze, links, appFlows, pagesOf, headerComment, scanCode, serviceOps, APPS, BACKENDS };
+module.exports = { stripComments, list, analyze, links, appFlows, pagesOf, headerComment, scanCode, serviceOps, APPS, BACKENDS };

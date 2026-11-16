@@ -46,6 +46,16 @@ const REPORT_XML = '<?xml version="1.0"?><DATA_DS><P_PROJECT_ID>42</P_PROJECT_ID
   T.check('a report: its bytes found whatever the prefix, decoded; its rows (G_1), fields unescaped, an empty one empty', rows.tag === 'G_1' && rows.rows.length === 2
     && rows.rows[0].CONTRACT_NUMBER === 'C-7 & co' && rows.rows[1].STATUS === '' && !('P_PROJECT_ID' in rows.rows[0]), JSON.stringify(rows));
   T.eq('…without G_1: the most repeated element that holds others', A.rowTagOf('<R><ROW><A>1</A></ROW><ROW><A>2</A></ROW></R>'), 'ROW');
+  // answers gzip'd unasked (BI Publisher behind a gateway): unpacked first, then read as any other
+  const zlib = require('zlib');
+  const okZ = A.decode({ status: 200, headers: { 'content-type': 'application/soap+xml', 'content-encoding': 'gzip' }, body: zlib.gzipSync(Buffer.from(soap)) }, { rowTag: 'G_1' });
+  T.check('a report answer gzip\'d: unpacked, its base64 decoded to XML, its rows', okZ.report && okZ.report.rows === 2 && /<G_1>/.test(okZ.pretty) && okZ.table.total === 2, JSON.stringify(okZ.report));
+  const fault = '<env:Envelope><env:Body><env:Fault><env:Code><env:Value>env:Receiver</env:Value></env:Code><env:Reason><env:Text xml:lang="en">oracle.xdo.webservice.exception.OperationFailedException: PublicReportService::executeRunReport Failure: /Custom/X/NOPE_RP.xdo not found</env:Text></env:Reason></env:Fault></env:Body></env:Envelope>';
+  const fz = A.decode({ status: 500, headers: { 'content-type': 'application/soap+xml' }, body: zlib.gzipSync(Buffer.from(fault)) }, {});
+  T.check('…a SOAP fault gzip\'d (no Content-Encoding even): unpacked by its first bytes, its reason said in words', /executeRunReport Failure: \/Custom\/X\/NOPE_RP\.xdo not found/.test(fz.fault) && /<env:Fault>/.test(fz.pretty), fz.fault);
+  T.check('…deflate and br too; plain bytes left as they are', A.unzipped(zlib.deflateSync(Buffer.from('<a/>')), 'deflate').toString() === '<a/>' && A.unzipped(zlib.brotliCompressSync(Buffer.from('<a/>')), 'br').toString() === '<a/>'
+    && A.unzipped(Buffer.from('<a/>'), '').toString() === '<a/>');
+  T.check('a report named only in a comment is not one the page runs', A.reportsIn([{ path: 'x.js', text: "// this used to call '/Custom/X/OLD_RP.xdo'\nrun('/Custom/X/NEW_RP.xdo', [{ name: 'P_A', value: 1 }]);" }]).map((r) => r.name).join() === 'NEW_RP');
   const t1 = A.rowsOf({ items: [{ a: 1, b: { c: 2 } }, { a: 3, d: null }], count: 2, hasMore: true });
   T.check('rows of an answer: its list, the columns its records have, an object shown short, count and hasMore', t1.from === 'items' && t1.columns.join() === 'a,b,d' && t1.rows[0][1] === '{"c":2}' && t1.rows[1][2] === '' && t1.meta === 'count 2 · hasMore true');
   T.check('…a bare list, one record, a list of values', A.rowsOf([{ x: 1 }]).from === 'the answer' && A.rowsOf({ id: 1 }).from === 'one record' && A.rowsOf(['a', 'b']).columns[0] === 'value');

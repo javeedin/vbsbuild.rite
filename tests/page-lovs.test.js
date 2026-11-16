@@ -171,6 +171,10 @@ T.check('a step that sends it: the page\'s own values, {{customerRefId}} from th
 T.check('a value the page gets from the screen (projectId) asked for under Data; the notes name the lists', JSON.stringify(d.scenario.data) === '[{"projectId":""}]'
   && /Customer Name, Contact, Agreement, Yard are lists of values on the page/.test(d.scenario.notes), JSON.stringify(d.scenario.data) + ' ' + d.scenario.notes);
 
+T.section('comments are not code');
+T.check('a report or call only named in a comment is not the page\'s; a // inside a string stays', JSON.stringify(S.scanCode("// This used to call OLD_LOV_RP and endpoint: 'x/old'\nconst u = 'http://h//p'; run('NEW_LOV_RP'); /* BLOCK_RP */ callRest({ endpoint: 'shop/getIt' });"))
+  === JSON.stringify(Object.assign(S.scanCode("run('NEW_LOV_RP'); callRest({ endpoint: 'shop/getIt' });"), {})), JSON.stringify(S.scanCode("// OLD_LOV_RP\nrun('NEW_LOV_RP');").reports));
+
 T.section('reading a value picked');
 const ans = { status: 200, json: { data: [{ id: 5, customerName: 'Acme' }, { id: 7, customerName: 'Blue River' }] }, rows: null };
 T.check('[n] the nth row, [field=value] the row picked, gone → nothing', SC.readPath(ans, 'data[0].id') === 5 && SC.readPath(ans, 'data[id=7].customerName') === 'Blue River' && SC.readPath(ans, 'data[id=9].id') === undefined);

@@ -68,6 +68,7 @@ async function start(o) {
         xml: (t, s) => { raw.writeHead(s || 200, { 'content-type': 'text/xml' }); raw.end(t); return true; },
         bytes: (buf, type) => { raw.writeHead(200, { 'content-type': type || 'application/octet-stream' }); raw.end(buf); return true; },
         bip: (rows) => res.xml(bipReport(rows)),
+        raw: (status, headers, buf) => { raw.writeHead(status, headers || {}); raw.end(buf); return true; },
       };
       const r = { method: req.method, path: u.pathname, query: u.searchParams, body, json: () => (body ? JSON.parse(body) : null),
         headers: req.headers, auth: req.headers.authorization || '' };

@@ -31,6 +31,12 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     handle: (r, res) => {
       if (r.path === '/shop/v1/orders' && r.method === 'GET') return res.json(EXAMPLE);
       if (/^\/shop\/v1\/orders\/\d+$/.test(r.path)) return res.json(EXAMPLE.data[0]);
+      // a report that fails: BI Publisher's SOAP fault, gzip'd unasked (as a gateway in front of it does)
+      if (r.path.endsWith('/ExternalReportWSSService') && /<pub:item>500<\/pub:item>/.test(r.body)) {
+        return res.raw(500, { 'content-type': 'application/soap+xml; charset=UTF-8', 'content-encoding': 'gzip' }, require('zlib').gzipSync(Buffer.from(
+          '<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope"><env:Body><env:Fault><env:Code><env:Value>env:Receiver</env:Value></env:Code>'
+          + '<env:Reason><env:Text xml:lang="en">PublicReportService::executeRunReport Failure: no data for P_CUSTOMER_ID 500</env:Text></env:Reason></env:Fault></env:Body></env:Envelope>')));
+      }
       if (r.path.endsWith('/ExternalReportWSSService') && /CUSTOMERS_RP/.test(r.body)) {
         reportBodies.push(r.body);
         return res.bip([{ CUSTOMER_ID: '7', CUSTOMER_NAME: 'Acme Tools', CREDIT_STATUS: 'OK' }, { CUSTOMER_ID: '8', CUSTOMER_NAME: 'Blue River', CREDIT_STATUS: 'ON HOLD' }]);
@@ -116,6 +122,14 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     T.check('run: the envelope the app sends (its path, P_CUSTOMER_ID=42); the report\'s rows decoded', /reportAbsolutePath>\/Custom\/Shop\/CUSTOMERS_RP\.xdo</.test(reportBodies[0] || '') && /<pub:name>P_CUSTOMER_ID<\/pub:name><pub:values><pub:item>42</.test(reportBodies[0] || '')
       && (await page.$$('#apiTable .nx-api-tr:not(.nx-api-tr--head)')).length === 2 && /Acme Tools[\s\S]*OK/.test(await text(page, '#apiTable')) && /report rows <G_1>/.test(await text(page, '#apiFacts')));
     await env.shot('api-test-report.png');
+    // a report that fails, its fault gzip'd: unpacked, its reason said, its body readable XML
+    await page.fill('#apiParams [data-param="P_CUSTOMER_ID"]', '500');
+    await page.click('#apiSend');
+    await page.waitForFunction(() => /^500/.test((document.getElementById('apiStatus') || {}).textContent || ''), null, { timeout: 10000 });
+    await page.waitForTimeout(300);
+    await page.click('.nx-api-tab[data-key="body"]').catch(() => {});
+    T.check('a report that fails (its SOAP fault gzip\'d): the reason in words, the body readable XML', /executeRunReport Failure: no data for P_CUSTOMER_ID 500/.test(await text(page, '#apiErr'))
+      && /<env:Fault>/.test(await text(page, '#apiBodyOut')), (await text(page, '#apiErr')) + ' / ' + (await text(page, '#apiBodyOut')).slice(0, 80));
     await page.click('#apiClose');
     // BI Publisher's own service in the REST calls: its Test opens the page's report (its path from the code), not a blank one
     await page.waitForTimeout(300);
