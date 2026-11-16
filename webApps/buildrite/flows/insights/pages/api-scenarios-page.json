@@ -67,6 +67,11 @@
       "type": "any",
       "defaultValue": null,
       "description": "The page your app's window is on: { open, url, page, label } (/__api/scenarios/where)."
+    },
+    "nextPages": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "Where the journey's last page goes next in the app: [{ id, label, via }]."
     }
   },
   "events": {

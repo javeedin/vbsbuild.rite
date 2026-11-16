@@ -210,3 +210,9 @@ html[data-nx-product="buildrite"] .nx-nav-scroll { scrollbar-color: rgba(255, 25
 .nx-sc-appsame { color: #1f7a45; font-weight: 600; }
 .nx-sc-pagetag { display: inline-block; margin-top: 3px; margin-right: 6px; font-style: normal; font-size: 11px; font-weight: 600; color: #8a5300; background: #fff1db; border-radius: 9px; padding: 1px 7px; }
 .nx-sc-pagetag--open { color: #1f7a45; background: #e3f5ea; }
+/* API Scenarios: the journey — where each page starts, a field shown in one case only, where to go next */
+.nx-sc-step--pagestart { margin-top: 10px; }
+.nx-sc-pagehead { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .02em; color: #1d4f91; text-transform: none; border-bottom: 1px dashed #cfdcec; padding-bottom: 4px; }
+.nx-sc-when { margin: 4px 0 0; font-size: 12px; color: #8a5300; }
+.nx-sc-next { margin-top: 10px; border: 1px dashed #9fb8d8; border-radius: 10px; padding: 8px 12px; background: #f7faff; display: grid; gap: 6px; }
+.nx-sc-nextbtns { display: flex; flex-wrap: wrap; gap: 6px; }

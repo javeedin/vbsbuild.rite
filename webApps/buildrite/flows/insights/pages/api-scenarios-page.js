@@ -213,13 +213,21 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
         Object.keys(st.params || {}).forEach((k) => varsIn(st.params[k]).forEach((n) => { const l = lists[n]; if (l && l !== st && uses.indexOf(l) === -1) uses.push(l); }));
         const used = uniq([].concat(...Object.keys(st.params || {}).map((k) => varsIn(st.params[k]))).concat(uses.map((u) => u.lov.target)));
         // shown again only when it (or what it shows) changed: the page keeps its place
-        const sig = JSON.stringify([st, i, used.map((n) => vars[n]), uses.map((u) => [u, resOf(u.id) ? (resOf(u.id).at || run && run.id) : '']), T[st.id] ? T[st.id].at : '', trying === st.id]);
+        // the journey: where a page starts, its name over its first step
+        const jl = {};
+        ((sc && sc.journey) || []).forEach((x) => { jl[x.page] = x.label; });
+        const multi = ((sc && sc.journey) || []).length > 1;
+        const pg = st.page || (sc && sc.page) || '';
+        const prevPg = i ? (steps[i - 1].page || (sc && sc.page) || '') : null;
+        const pageHead = multi && pg !== prevPg ? (i ? 'Then, on ' : 'On ') + (jl[pg] || pg.split('/').pop()) + '  ·  ' + pg : '';
+        const sig = JSON.stringify([st, i, pageHead, used.map((n) => vars[n]), uses.map((u) => [u, resOf(u.id) ? (resOf(u.id).at || run && run.id) : '']), T[st.id] ? T[st.id].at : '', trying === st.id]);
         keep.add(st.id);
         const hit = this._rows.get(st.id);
         if (hit && hit.sig === sig) return hit.row;
         const ex = st.expect || {};
         const acc = st.accepts || [];
-        const row = { id: st.id, n: i + 1, name: st.name, call: st.report ? 'report ' + st.report.path : st.endpoint, writes: !!st.writes,
+        const row = { id: st.id, n: i + 1, name: st.name, call: st.report ? 'report ' + st.report.path : st.endpoint, writes: !!st.writes, pageHead,
+          when: st.when ? 'On the page only when ' + st.when : '',
           api: fullApi(st), trying: trying === st.id, tried: triedOf(st),
           params: linesOf(st.params, '='), extract: (st.extract || []).map((e) => e.var + ' = ' + e.from).join('\n'),
           // what the call accepts, from its service (the values the page sends are filled in already)

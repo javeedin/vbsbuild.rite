@@ -88,9 +88,14 @@ password.
 ## API Scenarios: test a page's web services without opening it
 
 **Application → API Scenarios**, or the **API** button beside any page in Application pages. Pick a page and press
-**Draft from the page**: Build.Rite reads the page's code and lays out its calls in the order the page makes them. Calls
-made on entry come first, then the rest; calls that only read come before calls that change data. BI Publisher is run as
-the page's report, at the point where the page calls it, with the report's parameters taken from the code.
+**Draft from the page**: Build.Rite reads the page's code and lays out the user's journey through it, in APIs only:
+its lists of values in the order the form shows them (a list that depends on another, such as Task on Project or
+Delivery Location on Contract, sends what that one handed on; a field shown in one case only says when), the calls
+run as the page opens, then the calls of the actions that take a user on (Next, Add to cart, Submit…, its primary
+action, with the modules their chains use). Calls that change data come last, creates first. **Continue the
+journey** offers the pages the last page goes to (Next → the catalog → the cart): their steps are added after these,
+under the page they are on, with the values picked so far handed on. BI Publisher is run as the page's report, with
+the report's parameters taken from the code.
 
 - **Values handed on.** A value one call answers feeds the next: `id = auto:id` takes `id` from the first row of the
   answer, and `{{id}}` uses it. The values the page itself sends with a call are filled in from its code (a page value

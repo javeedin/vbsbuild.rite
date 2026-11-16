@@ -1066,29 +1066,41 @@ function createDevServer(o) {
             if (pathname === '/__api/scenarios/run-of' && !post) return jsonA(200, sc.runOf(q('page'), q('run')));
             if (pathname === '/__api/scenarios/save' && post) return jsonA(200, sc.save(b.scenario, who(), env));
             if (pathname === '/__api/scenarios/remove' && post) return jsonA(200, sc.remove(b.id));
-            if (pathname === '/__api/scenarios/draft' && post) {
+            // a page's facts read from its code now (its dropdowns and the values it sends), else its saved sheet; its
+            // reports as the API tester finds them in its code (a name XX_RP → its path and parameters)
+            const factsOf = (pid) => {
               const ps = o.pagesStore;
-              // the page's code as it is now (its dropdowns and the values it sends), else its saved sheet
               let live = null;
-              try { live = ps && ps.facts ? ps.facts(String(b.page || '')) : null; } catch (e) { live = null; }
-              const sh = live ? null : (ps && ps.sheet ? ps.sheet(String(b.page || '')) : null);
-              const facts = live || (sh && (sh.facts || (sh.sheet && sh.sheet.facts)));
-              if (!facts) return jsonA(200, { ok: false, error: 'This page has no technical sheet yet: open it in Application pages and Build its sheet first.' });
-              // its reports as the API tester finds them in the page's code: a name (XX_RP) to its path and parameters
+              try { live = ps && ps.facts ? ps.facts(pid) : null; } catch (e) { live = null; }
+              const sh = live ? null : (ps && ps.sheet ? ps.sheet(pid) : null);
+              return live || (sh && (sh.facts || (sh.sheet && sh.sheet.facts))) || null;
+            };
+            const optsOf = (pid, facts) => {
               let reports = [];
               const names = ((facts.integrations && facts.integrations.reports) || []).map(String);
               if (names.length && api && api.reports) {
-                try {
-                  const pid = String(b.page || '');
-                  const c = codeTexts(ps, pid);
-                  if (c && c.ok) {
-                    const r = api.reports(c.files, names, pid.split('/')[0]);
-                    reports = r && r.ok ? r.reports : [];
-                  }
-                } catch (e) { reports = []; }
+                try { const c = codeTexts(o.pagesStore, pid); if (c && c.ok) { const r = api.reports(c.files, names, pid.split('/')[0]); reports = r && r.ok ? r.reports : []; } } catch (e) { reports = []; }
               }
-              return jsonA(200, sc.draft(String(b.page || ''), facts, who(), { reports, env }));
+              return { reports, env };
+            };
+            // where a page goes next in the app (to continue the journey there)
+            const nextOf = (facts) => ((facts && facts.next) || []).filter((n) => n && n.id && n.id !== facts.id).map((n) => ({ id: n.id, label: n.label || n.id, via: (n.via || []).slice(0, 3) }));
+            if (pathname === '/__api/scenarios/draft' && post) {
+              const pid = String(b.page || '');
+              const facts = factsOf(pid);
+              if (!facts) return jsonA(200, { ok: false, error: 'This page has no technical sheet yet: open it in Application pages and Build its sheet first.' });
+              const r = sc.draft(pid, facts, who(), optsOf(pid, facts));
+              return jsonA(200, r.ok ? Object.assign(r, { next: nextOf(facts) }) : r);
             }
+            // the journey continued on the next page (Next → the catalog → the cart)
+            if (pathname === '/__api/scenarios/extend' && post) {
+              const pid = String(b.page || '');
+              const facts = factsOf(pid);
+              if (!facts) return jsonA(200, { ok: false, error: 'That page is not in the code.' });
+              const r = sc.extend(b.scenario, pid, facts, who(), optsOf(pid, facts));
+              return jsonA(200, r.ok ? Object.assign(r, { next: nextOf(facts) }) : r);
+            }
+            if (pathname === '/__api/scenarios/next' && !post) { const facts = factsOf(q('page')); return jsonA(200, { ok: true, next: nextOf(facts) }); }
             // one step tried on its own (▶ beside it): its answer, not kept as a run
             if (pathname === '/__api/scenarios/try' && post) {
               const r = await sc.tryStep(b.scenario, String(b.step || ''), env, { vars: b.vars, search: b.search, allowWrites: !!b.allowWrites, by: who() });

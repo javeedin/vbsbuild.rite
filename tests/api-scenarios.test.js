@@ -131,9 +131,27 @@ const ROOT = path.join(__dirname, 'fixtures', 'vb-sample');
       && S.pageOfUrl(pgs, 'http://localhost:9/vp/shell/orders/order-create-quick/').id === 'app/orders/order-create-quick' && S.pageOfUrl(pgs, 'http://localhost:9/other/main/home').id === 'app/main/home'
       && S.pageOfUrl(pgs, 'http://localhost:9/vp/shell/nowhere') === null && S.pageOfUrl(pgs, '') === null);
 
+    T.section('a journey: the next page\'s steps after these, values handed on');
+    const p1 = { label: 'Orders', integrations: { rest: [{ endpoint: 'shopApi/getOrders', method: 'GET' }], reports: [], lovs: [] },
+      logic: { chains: [{ name: 'LoadOrdersChain', calls: ['shopApi/getOrders'] }] }, features: { lifecycle: [{ when: 'when the page opens', chains: ['LoadOrdersChain'] }], actions: [] } };
+    const p2 = { label: 'Order', integrations: { rest: [{ endpoint: 'shopApi/getOrderById', method: 'GET' }, { endpoint: 'shopApi/createOrder', method: 'POST', path: '/shop/v1/orders' }], reports: [], lovs: [] },
+      logic: { chains: [{ name: 'LoadOrderChain', calls: ['shopApi/getOrderById'] }, { name: 'SubmitChain', calls: ['shopApi/createOrder'] }, { name: 'RemoveChain', calls: [] }] },
+      features: { lifecycle: [{ when: 'when the page opens', chains: ['LoadOrderChain'] }], actions: [{ label: 'Submit', chains: ['SubmitChain'] }, { label: 'Cancel', chains: ['RemoveChain'] }] } };
+    const j1 = store.draft('shop/orders/order-list', p1, 'jane.doe');
+    const j2 = store.extend(j1.scenario, 'shop/orders/order-detail', p2, 'jane.doe');
+    const js = j2.scenario.steps;
+    T.check('the next page\'s steps after the first\'s, each marked with its page; the journey named', j2.ok && js.length === 3 && js[0].page === 'shop/orders/order-list' && js[1].page === 'shop/orders/order-detail'
+      && js[2].endpoint === 'shopApi/createOrder' && js[2].writes && j2.scenario.journey.map((x) => x.label).join(' → ') === 'Orders → Order' && /^Journey — Orders → Order$/.test(j2.scenario.name), JSON.stringify(js.map((x) => [x.page, x.endpoint])));
+    T.check('…a value the next page needs (the order\'s id) handed on from the first page\'s answer (a row of the list opened)', js[1].params.id === '{{id}}' && js[0].extract.some((e) => e.var === 'id' && e.from === 'auto:id')
+      && JSON.stringify(j2.scenario.data) === '[]', JSON.stringify([js[0].extract, j2.scenario.data]));
+    r = await store.run(j2.scenario.id, env, {});
+    T.check('run as one: the list, then the order it opened (41), the create held', r.run.rows[0].steps[0].extracted.id === '41' && r.run.rows[0].steps[1].state === 'ok' && r.run.rows[0].steps[2].state === 'skip', JSON.stringify(r.run.rows[0].steps.map((x) => x.state)));
+    const onlyGo = store.draft('shop/orders/order-detail', p2, 'jane.doe').scenario.steps.map((x) => x.endpoint).join();
+    T.check('a page\'s journey: what runs as it opens and what its actions that go on call (Submit), not the rest (Cancel)', onlyGo === 'shopApi/getOrderById,shopApi/createOrder', onlyGo);
+
     T.section('kept, listed');
     const list = store.list(page);
-    T.check('the page\'s scenarios, each with its last run', list.ok && list.scenarios.length === 6 && list.scenarios.filter((x) => x.name === 'Open an order')[0].last !== null);
+    T.check('the page\'s scenarios, each with its last run', list.ok && list.scenarios.length === 7 && list.scenarios.filter((x) => x.name === 'Open an order')[0].last !== null);
     const runs = store.runs(page);
     T.check('its runs, newest first; one opened again in full', runs.ok && runs.runs.length >= 5 && runs.runs[0].at >= runs.runs[1].at && store.runOf(page, runs.runs[0].id).run.rows.length >= 1);
     T.check('no workspace (no folder): said', S.open({ api, dir: () => '' }).list(page).ok === false);

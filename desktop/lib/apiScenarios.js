@@ -42,6 +42,14 @@ const uniq = (a) => a.filter((x, i) => x && a.indexOf(x) === i);
 const slug = (s) => str(s).replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 120) || 'x';
 const PROD_FREE = /(dev|test|tst|uat|sit|stag|stg|demo|qa|sandbox|train|localhost|127\.0\.0\.1|example)/i;
 
+/** A field of an object, its name in any case when not exactly (the page keeps taskId, the answer says TaskId). */
+function field(o, name) {
+  if (o === null || o === undefined || typeof o !== 'object') return undefined;
+  if (name in o) return o[name];
+  const k = Object.keys(o).filter((x) => x.toLowerCase() === String(name).toLowerCase())[0];
+  return k === undefined ? undefined : o[k];
+}
+
 /** A value read from an answer: 'items[0].CustomerId', 'rows[0].PROJECT_ID', '$count', '$status', 'auto:Name'. */
 function readPath(answer, from) {
   const f = str(from).trim();
@@ -53,15 +61,19 @@ function readPath(answer, from) {
     const first = (answer.rows && answer.rows[0]) || (Array.isArray(answer.json) ? answer.json[0] : answer.json);
     const look = (o) => { if (!isObj(o)) return undefined; const k = Object.keys(o).filter((x) => x.toLowerCase().replace(/[^a-z0-9]/g, '') === want)[0]; return k === undefined ? undefined : o[k]; };
     const v = look(first);
-    return v !== undefined ? v : look(answer.json);
+    const w = v !== undefined ? v : look(answer.json);
+    // requestId from what a create answered: its own id
+    if (w === undefined && /.id$/.test(want) && want !== 'id') { const o = isObj(answer.json) && answer.json.id !== undefined ? answer.json : first; return isObj(o) ? o.id : undefined; }
+    return w;
   }
   let cur = /^rows(\[|\.|$)/.test(f) ? { rows: answer.rows } : answer.json;
   // a name, [n] (the nth row) or [field=value] (the row whose field is that value: a value picked from a list)
   for (const t of f.matchAll(/\[([\w.-]+)=([^\]]*)\]|\[(\d+)\]|([^.[\]]+)/g)) {
     if (cur == null) return undefined;
-    if (t[1] !== undefined) cur = Array.isArray(cur) ? cur.filter((x) => isObj(x) && str(x[t[1]]) === t[2])[0] : undefined;
+    if (t[1] !== undefined) cur = Array.isArray(cur) ? cur.filter((x) => isObj(x) && str(field(x, t[1])) === t[2])[0] : undefined;
     else if (t[3] !== undefined) cur = Array.isArray(cur) ? cur[Number(t[3])] : cur[t[3]];
-    else cur = /^\d+$/.test(t[4]) && Array.isArray(cur) ? cur[Number(t[4])] : cur[t[4]];
+    else if (/^\d+$/.test(t[4]) && Array.isArray(cur)) cur = cur[Number(t[4])];
+    else cur = field(cur, t[4]);
   }
   return cur;
 }
@@ -135,7 +147,7 @@ function open(o) {
         expect: { status: str(ex.status || '2xx').slice(0, 40), minRows: ex.minRows === '' || ex.minRows == null ? null : Number(ex.minRows), maxRows: ex.maxRows === '' || ex.maxRows == null ? null : Number(ex.maxRows),
           maxMs: ex.maxMs === '' || ex.maxMs == null ? null : Number(ex.maxMs), sameShape: !!ex.sameShape,
           fields: (Array.isArray(ex.fields) ? ex.fields : []).slice(0, 20).map((f) => ({ path: str(f && f.path).slice(0, 200), equals: f && f.equals !== undefined && f.equals !== null ? str(f.equals).slice(0, 500) : null })).filter((f) => f.path) },
-        writes: !!st.writes,
+        writes: !!st.writes, page: str(st.page).slice(0, 200), when: str(st.when).slice(0, 160),
         lov: isObj(st.lov) && str(st.lov.target) ? { field: str(st.lov.field).slice(0, 120), target: str(st.lov.target).replace(/[^\w.-]/g, '').slice(0, 60), key: str(st.lov.key).replace(/[^\w.-]/g, '').slice(0, 60),
           text: str(st.lov.text).replace(/[^\w.-]/g, '').slice(0, 60), sub: str(st.lov.sub).replace(/[^\w.-]/g, '').slice(0, 60), search: str(st.lov.search).replace(/[^\w.-]/g, '').slice(0, 60),
           itemsPath: str(st.lov.itemsPath).replace(/[^\w.[\]-]/g, '').slice(0, 120),
@@ -144,7 +156,162 @@ function open(o) {
     return { id: str(s.id) || (old && old.id) || newId('sc'), page: str(s.page || (old && old.page)), name: str(s.name).slice(0, 200) || 'Scenario',
       kind: ['happy', 'edge', 'role', 'data'].indexOf(s.kind) !== -1 ? s.kind : 'happy', notes: str(s.notes).slice(0, 4000), allowWrites: !!s.allowWrites,
       data: (Array.isArray(s.data) ? s.data : []).slice(0, MAX_ROWS).filter(isObj).map((r) => Object.keys(r).slice(0, 40).reduce((a, k) => { a[str(k).slice(0, 60)] = str(r[k]).slice(0, 2000); return a; }, {})),
-      steps, by: (old && old.by) || str(by), createdAt: (old && old.createdAt) || now().toISOString(), updatedAt: now().toISOString(), updatedBy: str(by) };
+      steps, journey: (Array.isArray(s.journey) ? s.journey : []).filter(isObj).slice(0, 12).map((j) => ({ page: str(j.page).slice(0, 200), label: str(j.label).slice(0, 200) })).filter((j) => j.page),
+      by: (old && old.by) || str(by), createdAt: (old && old.createdAt) || now().toISOString(), updatedAt: now().toISOString(), updatedBy: str(by) };
+  }
+
+  /** What the draft says of itself: the lists to pick from, the values to give. */
+  function notesOf(ctx, short) {
+    const lf = uniq(ctx.lovFields);
+    return (short ? '' : 'Drafted from the page\'s code as a user goes through it: its lists in the order the form shows them (a list that depends on another sends what that one handed on), then its other calls; calls that change data come last and run only when you allow writes.')
+      + (lf.length ? ' ' + lf.join(', ') + (lf.length > 1 ? ' are lists of values' : ' is a list of values') + ' on the page: run once, then pick a value as a user would (the first is used until you pick one).' : '')
+      + (ctx.start.length ? ' Give ' + ctx.start.join(', ') + ' under Data (the page gets ' + (ctx.start.length > 1 ? 'them' : 'it') + ' from the screen before it).' : '')
+      + (short ? '' : ' Check each step\'s values and checks, then run it.');
+  }
+
+  /**
+   * One page's steps, as a user goes through it: its lists of values in the order the form shows them (each list's
+   * values from the call or report the page runs for it, lib/pageScan.js lovsOf; a list shown in one case only says
+   * when), then its other reads (its chains' calls, those run as it opens first), then the calls that change data.
+   * A value a step sends is one an earlier step hands on, else a value to start with (ctx.start, asked for under Data).
+   *   ctx: { known: { var: stepId }, start: [var], lovFields: [field], prefix: 'p2-', page }
+   */
+  function stepsFor(facts, opts, ctx) {
+    const f = facts || {};
+    const integ = f.integrations || {};
+    const rest = (integ.rest || []).filter((r) => r && r.endpoint);
+    const byEp = {};
+    rest.forEach((r) => { byEp[r.endpoint] = r; });
+    const chains = (f.logic && f.logic.chains) || [];
+    const entry = new Set([].concat(...((f.features && f.features.lifecycle) || []).map((l) => (Array.isArray(l.chains) ? l.chains : [l.chain || l.name || '']).map(str))).concat(chains.filter((c) => /enter|load|init|fetch/i.test(c.name)).map((c) => c.name)));
+    let seq = [];
+    chains.slice().sort((x, y) => (entry.has(y.name) ? 1 : 0) - (entry.has(x.name) ? 1 : 0)).forEach((c) => (c.calls || []).forEach((e) => { if (seq.indexOf(e) === -1) seq.push(e); }));
+    rest.forEach((r) => { if (seq.indexOf(r.endpoint) === -1) seq.push(r.endpoint); });
+    // the journey (the page's actions known): the calls run as it opens, then those of the actions that take a user on
+    // (Next, Continue, Add to cart, Submit…, its primary action) with the modules their chains use — not every call in
+    // its code (resuming a draft, removing from the cart, going back)
+    const acts = f.features && Array.isArray(f.features.actions) ? f.features.actions : null;
+    let journey = false;
+    if (acts) {
+      const chainBy = {};
+      chains.forEach((c) => { chainBy[c.name] = c; });
+      const modCalls = {};
+      ((f.logic && f.logic.modules) || []).forEach((m) => { modCalls[str(m.name)] = m.calls || []; });
+      // a chain's calls; with the modules it uses (a submit builds its requests there) or not (as a page opens they are
+      // helpers: a draft resumed, storage)
+      const callsOf = (names, withModules) => {
+        const out = [];
+        const push = (e) => { if (out.indexOf(e) === -1) out.push(e); };
+        names.forEach((n) => { const c = chainBy[n]; if (!c) return; (c.calls || []).forEach(push); if (withModules) (c.modules || []).forEach((m) => (modCalls[str(m).replace(/^resources\/js\//, '')] || []).forEach(push)); });
+        return out;
+      };
+      const GO = /^(next|continue|proceed|add( selected)? to (the )?cart|go to (the )?cart|view cart|checkout|check out|submit|create|place|confirm|finish|done|send|search|save request|request)\b/i;
+      const goChains = uniq([].concat(...acts.filter((a) => GO.test(str(a.label).trim()) || /primary action/i.test(str(a.label))).map((a) => a.chains || [])));
+      const js = uniq(callsOf(Array.from(entry), false).concat(callsOf(goChains, true)));
+      if (js.length || (integ.lovs || []).length) { seq = js; journey = true; }
+    }
+    const reports = (integ.reports || []).slice(0, 12);
+    // a report the page names (XX_RP) or gives as a path: its path and parameters as the API tester found them in the code
+    const known0 = (isObj(opts) && Array.isArray(opts.reports) ? opts.reports : []).filter(isObj);
+    const reportOf = (rp) => {
+      const k = known0.filter((r) => r.name === str(rp) || r.path === str(rp))[0];
+      const p = k && k.path ? str(k.path) : str(rp);
+      return { path: p, name: (k && k.name) || path.posix.basename(p, '.xdo'), rowTag: (k && str(k.rowTag)) || '', params: (k && Array.isArray(k.params) ? k.params : []).map(str).filter(Boolean), guessed: !!(k && k.guessed) };
+    };
+    const isBip = (e) => /runBIPReport$/i.test(e) || /\/xmlpserver\//i.test(str(byEp[e] && byEp[e].path));
+    const lovs = (integ.lovs || []).filter((l) => isObj(l) && ((l.endpoint && !isBip(l.endpoint) && (l.source === 'chain' || l.source === 'service')) || (l.source === 'report' && l.report)));
+    const known = ctx.known, start = ctx.start;
+    const steps = [];
+    let nS = 0, nR = 0;
+    const pfx = str(ctx.prefix);
+    // the last plain call (not a list), here or on the page before (a row of the list there is the one opened here)
+    const lastPlain = () => steps.filter((x) => !x.report && !x.lov).slice(-1)[0] || (ctx.prev || []).filter((x) => !x.report && !x.lov && !x.writes).slice(-1)[0];
+    // each {{var}} a step sends: handed on by an earlier step, else a value to start with
+    const resolve = (st, need) => {
+      Object.keys(st.params || {}).forEach((k) => Array.from(str(st.params[k]).matchAll(/\{\{\s*([\w.-]+)\s*\}\}/g)).map((m) => m[1]).forEach((v) => {
+        if (known[v]) return;
+        const src = (need || []).some((p) => p.name === v) ? lastPlain() : null; // a list of values holds what to pick, not this
+        if (src) { src.extract.push({ var: v, from: 'auto:' + v }); known[v] = src.id; } else { start.push(v); known[v] = 'start'; }
+      }));
+    };
+    const handOn = (st, l) => {
+      if (!l || !l.target) return;
+      ctx.lovFields.push(l.field);
+      if (known[l.target]) return;
+      st.extract.push({ var: l.target, from: lovFrom(st.lov && st.lov.target === l.target ? st.lov : { itemsPath: st.report ? 'rows' : str(l.itemsPath), key: str(l.keyFrom || l.key || l.target || 'id') }) });
+      known[l.target] = st.id;
+    };
+    const restStep = (e, mine) => {
+      const op = api ? api.op(e) : { ok: false };
+      const r = byEp[e] || { endpoint: e };
+      const isWrite = !(op && op.ok ? !!op.op.reads : /^GET$/i.test(r.method || ''));
+      const need = op && op.ok ? (op.op.params || []).filter((p) => p.required && !p.def) : [];
+      const params = {};
+      need.forEach((p) => { params[p.name] = '{{' + p.name + '}}'; });
+      // the values the page itself sends with the call (a page value → {{name}}), and its list's own parameters
+      Object.assign(params, isObj(r.params) ? r.params : {}, mine[0] && isObj(mine[0].params) ? mine[0].params : {});
+      const summary = str(r.summary || (op && op.ok && op.op.summary) || e).slice(0, 120);
+      nS += 1;
+      const st = { id: pfx + 's' + nS, page: ctx.page, name: summary, endpoint: e, report: null, params, extra: '',
+        body: isWrite && op && op.ok && op.op.body ? str(op.op.body.template || '') : '', extract: [], lov: null, when: '',
+        expect: { status: '2xx', minRows: null, maxRows: null, maxMs: 10000, sameShape: !isWrite, fields: [] }, writes: isWrite };
+      if (mine.length) {
+        const l = mine[0];
+        st.name = ('List of values: ' + uniq(mine.map((x) => x.field)).join(', ') + ' — ' + summary).slice(0, 200);
+        st.lov = { field: str(l.field), target: str(l.target), key: str(l.keyFrom || l.key || l.target || 'id'), text: str(l.textFrom || l.text || ''), sub: str(l.subFrom || ''), itemsPath: str(l.itemsPath), search: '' };
+        st.when = str(l.when).slice(0, 160);
+      }
+      resolve(st, need);
+      mine.forEach((l) => handOn(st, l));
+      return st;
+    };
+    const reportStep = (name, l) => {
+      const r = reportOf(name);
+      const pathOf = l && l.reportPath && (r.guessed || !/\.xdo$/.test(r.path)) ? l.reportPath : r.path;
+      nR += 1;
+      const st = { id: pfx + 'r' + nR, page: ctx.page, name: 'Report ' + r.name + (r.guessed && !(l && l.reportPath) ? ' (its folder guessed: check the path)' : ''), endpoint: '',
+        report: { path: pathOf, name: r.name, rowTag: (l && l.rowTag) || r.rowTag },
+        params: Object.assign(r.params.reduce((a, n) => { a[n] = ''; return a; }, {}), l && isObj(l.params) ? l.params : {}), extra: '', body: '', extract: [], lov: null, when: '',
+        expect: { status: '2xx', minRows: null, maxRows: null, maxMs: 15000, sameShape: false, fields: [] }, writes: false };
+      if (l) {
+        st.name = ('List of values: ' + l.field + ' — report ' + r.name + (l.search ? ' (a search as you type)' : '')).slice(0, 200);
+        st.lov = { field: str(l.field), target: str(l.target), key: str(l.keyFrom || l.key || l.target), text: str(l.textFrom || l.text), sub: str(l.subFrom || l.sub), itemsPath: 'rows', search: str(l.search) };
+        st.when = str(l.when).slice(0, 160);
+      }
+      resolve(st, []);
+      if (l) handOn(st, l);
+      return st;
+    };
+    // 1) its lists, in the order the form shows them
+    const byCall = {};
+    lovs.forEach((l) => {
+      const k = l.source === 'report' ? 'report:' + l.report : l.endpoint;
+      if (byCall[k]) { handOn(byCall[k], l); return; }
+      const st = l.source === 'report' ? reportStep(l.report, l) : restStep(l.endpoint, lovs.filter((x) => x.endpoint === l.endpoint && x.source !== 'report'));
+      byCall[k] = st;
+      steps.push(st);
+    });
+    // 2) its other reads (its reports where the page calls BI Publisher), then 3) the calls that change data
+    const writes = [];
+    let bipAt = false;
+    seq.forEach((e) => {
+      if (byCall[e]) return;
+      if (isBip(e)) {
+        if (bipAt) return;
+        bipAt = true;
+        reports.filter((rp) => !byCall['report:' + rp]).forEach((rp) => { const st = reportStep(rp, null); byCall['report:' + rp] = st; steps.push(st); });
+        return;
+      }
+      const op = api ? api.op(e) : { ok: false };
+      const r = byEp[e] || {};
+      const isRead = op && op.ok ? !!op.op.reads : /^GET$/i.test(r.method || '');
+      if (isRead) { const st = restStep(e, []); byCall[e] = st; steps.push(st); } else writes.push(e);
+    });
+    if (!bipAt && !journey) reports.filter((rp) => !byCall['report:' + rp]).forEach((rp) => { const st = reportStep(rp, null); byCall['report:' + rp] = st; steps.push(st); });
+    // what creates first (a POST to a collection), then what changes or removes what was made
+    const rank = (e) => { const r = byEp[e] || {}; const m = str(r.method).toUpperCase(); return m === 'POST' && !/\{[^}]+\}/.test(str(r.path)) ? 0 : m === 'POST' ? 1 : m === 'DELETE' ? 3 : 2; };
+    writes.map((e, i) => ({ e, i })).sort((x, y) => rank(x.e) - rank(y.e) || x.i - y.i).forEach((x) => { const st = restStep(x.e, []); byCall[x.e] = st; steps.push(st); });
+    return steps;
   }
 
   /** A scenario as shown: each step with the values its call accepts (from its service), never kept with it. */
@@ -207,9 +374,9 @@ function open(o) {
     // a list of values: its values kept with the run (to pick from), as the page shows them
     if (st.lov) {
       const list = listRows(answer, st.lov.itemsPath).filter(isObj);
-      const textOf = (r) => { const t = st.lov.text && r[st.lov.text] != null ? r[st.lov.text] : Object.keys(r).map((k) => r[k]).filter((x) => typeof x === 'string' && x.trim())[0]; return str(t).slice(0, 160); };
+      const textOf = (r) => { const t = st.lov.text && field(r, st.lov.text) != null ? field(r, st.lov.text) : Object.keys(r).map((k) => r[k]).filter((x) => typeof x === 'string' && x.trim())[0]; return str(t).slice(0, 160); };
       res.lov = { field: st.lov.field, target: st.lov.target, key: st.lov.key, text: st.lov.text, total: list.length };
-      res.values = list.slice(0, MAX_VALUES).map((r) => ({ key: str(r[st.lov.key || 'id']).slice(0, 120), text: textOf(r), sub: st.lov.sub && r[st.lov.sub] != null ? str(r[st.lov.sub]).slice(0, 120) : '' }));
+      res.values = list.slice(0, MAX_VALUES).map((r) => ({ key: str(field(r, st.lov.key || 'id')).slice(0, 120), text: textOf(r), sub: st.lov.sub && field(r, st.lov.sub) != null ? str(field(r, st.lov.sub)).slice(0, 120) : '' }));
       check('the list has values (' + st.lov.field + ')', list.length > 0, list.length + ' value(s)');
     }
     (st.extract || []).forEach((e) => {
@@ -250,109 +417,40 @@ function open(o) {
     },
 
     /** The page's happy path, drafted from its facts: its chains in the order the page runs them, the calls each makes. */
+    /** The page's happy path, drafted from its facts, as a user goes through it (stepsFor). */
     draft(page, facts, by, opts) {
       const f = facts || {};
-      const rest = ((f.integrations && f.integrations.rest) || []).filter((r) => r && r.endpoint);
-      if (!rest.length) return no('This page makes no REST call to put in order (its technical sheet lists none: Build the sheet first).');
-      const chains = (f.logic && f.logic.chains) || [];
-      const entry = new Set([].concat(...((f.features && f.features.lifecycle) || []).map((l) => (Array.isArray(l.chains) ? l.chains : [l.chain || l.name || '']).map(str))).concat(chains.filter((c) => /enter|load|init|fetch/i.test(c.name)).map((c) => c.name)));
-      const order = chains.slice().sort((a, b) => (entry.has(b.name) ? 1 : 0) - (entry.has(a.name) ? 1 : 0));
-      const seq = [];
-      order.forEach((c) => (c.calls || []).forEach((e) => { if (seq.indexOf(e) === -1) seq.push(e); }));
-      rest.forEach((r) => { if (seq.indexOf(r.endpoint) === -1) seq.push(r.endpoint); });
-      const byEp = {};
-      rest.forEach((r) => { byEp[r.endpoint] = r; });
-      const steps = [];
-      const known = {}; // var → the step that hands it on
-      const start = []; // values no earlier step hands on: asked for in the data row
-      const lovFields = []; // the dropdowns drafted as lists of values
-      const reports = ((f.integrations && f.integrations.reports) || []).slice(0, 8);
-      // a report the page names (XX_RP) or gives as a path: its path and parameters as the API tester found them in the code
-      const known0 = (isObj(opts) && Array.isArray(opts.reports) ? opts.reports : []).filter(isObj);
-      const reportOf = (rp) => {
-        const k = known0.filter((r) => r.name === str(rp) || r.path === str(rp))[0];
-        const p = k && k.path ? str(k.path) : str(rp);
-        return { path: p, name: (k && k.name) || path.posix.basename(p, '.xdo'), rowTag: (k && str(k.rowTag)) || '', params: (k && Array.isArray(k.params) ? k.params : []).map(str).filter(Boolean), guessed: !!(k && k.guessed) };
-      };
-      // a report the page runs as a list of values (a dropdown, often a search as you type: lib/pageScan.js lovsOf)
-      const lovReports = ((f.integrations && f.integrations.lovs) || []).filter((l) => isObj(l) && l.source === 'report' && l.report);
-      const reportSteps = () => {
-        const list = reports.map((rp, i) => {
-          const r = reportOf(rp);
-          const l = lovReports.filter((x) => x.report === r.name)[0];
-          const pathOf = l && l.reportPath && (r.guessed || !/\.xdo$/.test(r.path)) ? l.reportPath : r.path;
-          const st = { id: 'r' + (i + 1), name: 'Report ' + r.name + (r.guessed && !(l && l.reportPath) ? ' (its folder guessed: check the path)' : ''), endpoint: '',
-            report: { path: pathOf, name: r.name, rowTag: (l && l.rowTag) || r.rowTag },
-            params: Object.assign(r.params.reduce((a, n) => { a[n] = ''; return a; }, {}), l && isObj(l.params) ? l.params : {}), extra: '', body: '', extract: [], lov: null,
-            expect: { status: '2xx', minRows: null, maxRows: null, maxMs: 15000, sameShape: false, fields: [] }, writes: false };
-          if (l) {
-            st.name = ('List of values: ' + l.field + ' — report ' + r.name + (l.search ? ' (a search as you type)' : '')).slice(0, 200);
-            st.lov = { field: str(l.field), target: str(l.target), key: str(l.keyFrom || l.key), text: str(l.textFrom || l.text), sub: str(l.subFrom || l.sub), itemsPath: 'rows', search: str(l.search) };
-          }
-          return st;
-        });
-        // lists first (they load as the page opens), then the reports that send what they hand on
-        return list.filter((x) => x.lov).concat(list.filter((x) => !x.lov));
-      };
-      // BI Publisher's own SOAP call (any app's: /xmlpserver/…) is run as the page's reports, where the page calls it
-      const isBip = (r) => /\/xmlpserver\//i.test(str(r && r.path));
-      const reads = [], writes = [];
-      seq.forEach((e) => {
-        const op = api ? api.op(e) : { ok: false };
-        const r = byEp[e] || {};
-        if (isBip(r)) { if (reports.length && !reads.some((x) => x.bip)) reads.push({ bip: true }); return; }
-        const isRead = op && op.ok ? !!op.op.reads : /^GET$/i.test(r.method || '');
-        (isRead ? reads : writes).push({ e, op, r });
-      });
-      if (reports.length && !reads.some((x) => x.bip)) reads.push({ bip: true });
-      // the page's lists of values (lib/pageScan.js lovsOf): the dropdowns a call fills, the value each one sets
-      const lovs = ((f.integrations && f.integrations.lovs) || []).filter((l) => isObj(l) && l.endpoint && (l.source === 'chain' || l.source === 'service'));
-      let n = 0;
-      reads.concat(writes).forEach((x) => {
-        if (x.bip) {
-          reportSteps().forEach((r) => {
-            if (r.lov && r.lov.target && !known[r.lov.target]) { r.extract.push({ var: r.lov.target, from: lovFrom(r.lov) }); known[r.lov.target] = r.id; lovFields.push(r.lov.field); }
-            Object.keys(r.params).forEach((k) => Array.from(str(r.params[k]).matchAll(/\{\{\s*([\w.-]+)\s*\}\}/g)).forEach((m) => { if (!known[m[1]]) { start.push(m[1]); known[m[1]] = 'start'; } }));
-            steps.push(r);
-          });
-          return;
-        }
-        const mine = lovs.filter((l) => l.endpoint === x.e);
-        const params = {};
-        const need = x.op && x.op.ok ? (x.op.op.params || []).filter((p) => p.required && !p.def) : [];
-        need.forEach((p) => { params[p.name] = '{{' + p.name + '}}'; });
-        // the values the page itself sends with the call (a page value → {{name}}), and its list's own parameters
-        Object.assign(params, isObj(x.r.params) ? x.r.params : {}, mine[0] && isObj(mine[0].params) ? mine[0].params : {});
-        Object.keys(params).forEach((k) => {
-          Array.from(str(params[k]).matchAll(/\{\{\s*([\w.-]+)\s*\}\}/g)).map((m) => m[1]).forEach((v) => {
-            if (known[v]) return;
-            // an earlier step hands it on (a field of that name in its first row), or it is a value to start with
-            const src = need.some((p) => p.name === v) ? steps.filter((s) => !s.report && !s.lov).slice(-1)[0] : null; // a list of values holds what to pick, not this
-            if (src) { src.extract.push({ var: v, from: 'auto:' + v }); known[v] = src.id; } else { start.push(v); known[v] = 'start'; }
-          });
-        });
-        const isWrite = writes.indexOf(x) !== -1;
-        n += 1;
-        const summary = (x.r.summary || (x.op && x.op.ok && x.op.op.summary) || x.e).slice(0, 120);
-        const st = { id: 's' + n, name: mine.length ? ('List of values: ' + uniq(mine.map((l) => l.field)).join(', ') + ' — ' + summary).slice(0, 200) : summary,
-          endpoint: x.e, report: null, params, extra: '',
-          body: isWrite && x.op && x.op.ok && x.op.op.body ? str(x.op.op.body.template || '') : '', extract: [], lov: null,
-          expect: { status: '2xx', minRows: null, maxRows: null, maxMs: 10000, sameShape: !isWrite, fields: [] }, writes: isWrite };
-        // a list of values: shown as the page shows it; the value a user picks (the first, until you pick another) handed on
-        mine.forEach((l, i) => {
-          const info = { field: str(l.field), target: str(l.target), key: str(l.keyFrom || l.key || 'id'), text: str(l.textFrom || l.text || ''), itemsPath: str(l.itemsPath) };
-          if (!i) st.lov = info;
-          if (info.target && !known[info.target]) { st.extract.push({ var: info.target, from: lovFrom(info) }); known[info.target] = st.id; }
-          lovFields.push(info.field);
-        });
-        steps.push(st);
-      });
+      const ctx = { known: {}, start: [], lovFields: [], prefix: '', page: str(page) };
+      const steps = stepsFor(f, opts, ctx);
+      if (!steps.length) return no('This page makes no REST call to put in order (its technical sheet lists none: Build the sheet first).');
       const s = clean({ page: page, name: 'Happy path — ' + (f.label || str(page).split('/').pop()), kind: 'happy', steps,
-        data: start.length ? [start.reduce((a, k) => { a[k] = ''; return a; }, {})] : [],
-        notes: 'Drafted from the page\'s code: its chains in the order it runs them, the calls each makes. Calls that change data come last and run only when you allow writes.'
-          + (lovFields.length ? ' ' + uniq(lovFields).join(', ') + (uniq(lovFields).length > 1 ? ' are lists of values' : ' is a list of values') + ' on the page: run once, then pick a value as a user would (the first is used until you pick one).' : '')
-          + (start.length ? ' Give ' + start.join(', ') + ' under Data (the page gets ' + (start.length > 1 ? 'them' : 'it') + ' from the screen before it).' : '')
-          + ' Check each step\'s values and checks, then run it.' }, by, null);
+        journey: [{ page: str(page), label: str(f.label || str(page).split('/').pop()) }],
+        data: ctx.start.length ? [ctx.start.reduce((a, k) => { a[k] = ''; return a; }, {})] : [],
+        notes: notesOf(ctx) }, by, null);
+      return store.save(s, by, isObj(opts) ? opts.env : null);
+    },
+
+    /**
+     * The journey continued on the next page (Next → the catalog → the cart): that page's steps after these, with the
+     * values picked so far handed on (a {{projectId}} the cart sends is the Project picked on the first page).
+     */
+    extend(scenario, page, facts, by, opts) {
+      if (!isObj(scenario) || !str(scenario.page)) return no('No scenario to continue.');
+      const f = facts || {};
+      const s0 = clean(scenario, by, null);
+      const known = {};
+      (s0.steps || []).forEach((st) => { (st.extract || []).forEach((e) => { known[e.var] = st.id; }); if (st.lov && st.lov.target) known[st.lov.target] = st.id; });
+      const start = Object.keys((s0.data && s0.data[0]) || {});
+      start.forEach((k) => { if (!known[k]) known[k] = 'start'; });
+      const journey = (s0.journey && s0.journey.length ? s0.journey : [{ page: s0.page, label: '' }]).slice();
+      const ctx = { known, start: start.slice(), lovFields: [], prefix: 'p' + (journey.length + 1) + '-', page: str(page), prev: s0.steps };
+      const more = stepsFor(f, opts, ctx);
+      if (!more.length) return no('That page makes no call to add (its code lists none).');
+      journey.push({ page: str(page), label: str(f.label || str(page).split('/').pop()) });
+      const data = (s0.data && s0.data.length ? s0.data : [{}]).map((r, i) => (i ? r : Object.assign({}, r, ctx.start.filter((k) => !(k in r)).reduce((a, k) => { a[k] = ''; return a; }, {}))));
+      const s = Object.assign({}, s0, { steps: s0.steps.concat(more), journey, data: data.some((r) => Object.keys(r).length) ? data : [],
+        name: /^Happy path — /.test(s0.name) || /^Journey — /.test(s0.name) ? 'Journey — ' + journey.map((j) => j.label).filter(Boolean).join(' → ') : s0.name,
+        notes: s0.notes + ' Then ' + (f.label || page) + ': ' + notesOf(ctx, true) });
       return store.save(s, by, isObj(opts) ? opts.env : null);
     },
 

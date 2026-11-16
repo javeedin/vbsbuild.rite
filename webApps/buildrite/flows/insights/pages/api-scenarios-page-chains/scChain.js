@@ -10,7 +10,7 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
       const v = context.$page.variables;
       const say = (r, text) => { v.result = r.ok ? (text ? { ok: true, text } : null) : { ok: false, text: (r.body && r.body.error) || 'It did not work.' }; if (text || !r.ok) bus.toast(r.ok ? text : v.result.text, r.ok ? 'success' : 'error'); };
       const loadPage = async (id) => {
-        v.page = id; v.sc = null; v.run = null; v.result = null; v.tries = {};
+        v.page = id; v.sc = null; v.run = null; v.result = null; v.tries = {}; v.nextPages = [];
         const [l, sh, rs] = await Promise.all([SC.list(id), PC.sheet(context.$application.path, id), SC.runs(id)]);
         v.scenarios = l.ok ? l.body.scenarios || [] : [];
         if (!l.ok) say(l);
@@ -40,6 +40,22 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
       // the page your app's window is on (it follows you back from that window)
       const where = async () => { const r = await SC.where(); v.appAt = r.ok && r.body && r.body.open ? { open: true, url: r.body.url || '', page: r.body.page || '', label: r.body.label || '' } : null; };
       if (act === 'where') { await where(); return; }
+      // where the journey's last page goes next (offered to continue there)
+      const nextFor = async () => { if (!v.sc) return; const j = v.sc.journey || []; const last = j.length ? j[j.length - 1].page : v.sc.page; const r = await SC.next(last); if (r.ok) v.nextPages = r.body.next || []; };
+      if (act === 'extend') {
+        if (!v.sc || v.busy) return;
+        v.busy = true;
+        try {
+          const r = await SC.extend(v.sc, key);
+          if (r.ok) {
+            v.sc = copy(r.body.scenario); v.nextPages = r.body.next || [];
+            await reloadList();
+            const j = v.sc.journey || [];
+            say(r, 'The journey goes on to ' + ((j[j.length - 1] || {}).label || key) + ': its calls added after these, with the values picked so far. Save & run it.');
+          } else say(r);
+        } finally { v.busy = false; }
+        return;
+      }
       if (act === 'load') {
         const c = await PC.catalog(context.$application.path);
         v.pages = c && c.ok && c.body ? (c.body.pages || []) : [];
@@ -54,12 +70,12 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         v.busy = true;
         try {
           const r = await SC.draft(v.page);
-          if (r.ok) { v.sc = copy(r.body.scenario); v.run = null; v.tries = {}; await reloadList(); say(r, 'Drafted: ' + v.sc.steps.length + ' step(s) in the order the page makes them. Check the values and checks, then Save & run.'); } else say(r);
+          if (r.ok) { v.sc = copy(r.body.scenario); v.run = null; v.tries = {}; v.nextPages = r.body.next || []; await reloadList(); say(r, 'Drafted: ' + v.sc.steps.length + ' step(s) in the order the page makes them. Check the values and checks, then Save & run.'); } else say(r);
         } finally { v.busy = false; }
         return;
       }
-      if (act === 'new') { v.sc = { page: v.page, name: 'New scenario', kind: 'edge', notes: '', allowWrites: false, data: [], steps: [] }; v.run = null; v.tries = {}; return; }
-      if (act === 'open') { const s = (v.scenarios || []).filter((x) => x.id === key)[0]; v.sc = copy(s); v.run = null; v.tries = {}; if (s && s.last) { const r = await SC.runOf(v.page, s.last.id); if (r.ok) v.run = r.body.run; } return; }
+      if (act === 'new') { v.sc = { page: v.page, name: 'New scenario', kind: 'edge', notes: '', allowWrites: false, data: [], steps: [] }; v.run = null; v.tries = {}; v.nextPages = []; return; }
+      if (act === 'open') { const s = (v.scenarios || []).filter((x) => x.id === key)[0]; v.sc = copy(s); v.run = null; v.tries = {}; v.nextPages = []; nextFor();  if (s && s.last) { const r = await SC.runOf(v.page, s.last.id); if (r.ok) v.run = r.body.run; } return; }
       if (act === 'run') { await doRun(key, false); return; }
       if (act === 'runAll') { for (const s of (v.scenarios || []).slice()) { await doRun(s.id, false); } return; }
       if (act === 'save') { const r = await save(); say(r, 'Saved.'); return; }

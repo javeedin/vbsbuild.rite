@@ -122,6 +122,21 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     T.check('…kept: the run listed, the scenario card shows its last run', (await page.$$('#scRuns .nx-sc-runrow')).length === 1 && /✓ passed/.test(await text(page, '.nx-sc-card .nx-sc-last')));
     await env.shot('api-scenarios.png');
 
+    T.section('the journey: where the page goes next in the app');
+    await page.waitForSelector('#scNext', { timeout: 10000 });
+    T.check('Continue the journey: where Order Workbench goes (a row opens the order)', /→ Order\b/.test(await text(page, '#scNext')), await text(page, '#scNext'));
+    await page.click('#scNext button[data-key="' + DETAIL + '"]');
+    await page.waitForSelector('#scSteps .nx-sc-pagehead', { timeout: 10000 });
+    await page.waitForTimeout(300);
+    const heads = await page.$$eval('#scSteps .nx-sc-pagehead', (a) => a.map((x) => x.textContent.trim()));
+    const jcalls = await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()));
+    T.check('its steps after the list\'s, under the page they are on', heads.length === 2 && /^On Order Workbench/.test(heads[0]) && /^Then, on Order/.test(heads[1]) && jcalls.join() === 'shopApi/getOrders,shopApi/getOrderById', heads.join(' | ') + ' / ' + jcalls.join());
+    T.check('…the order\'s id handed on from the list (as a row clicked), nothing to give under Data', /id = auto:id/.test(await page.$eval('#scSteps .nx-sc-step:first-child oj-text-area[data-field="extract"] textarea', (t) => t.value))
+      && /^id = \{\{id\}\}$/.test((await page.$$eval('#scSteps oj-text-area[data-field="params"] textarea', (a) => a[1].value)).trim()), await page.$eval('#scSteps .nx-sc-step:first-child oj-text-area[data-field="extract"] textarea', (t) => t.value));
+    await saveRun();
+    res = await results();
+    T.check('Save & run: the list, then the order it opened, as one journey', res.length === 2 && res.every((x) => x.state === 'ok') && /handed|id =/.test(res[0].handed || 'id =') && env.calls.some((c) => /^GET \/shop\/v1\/orders\/\w+$/.test(c)), JSON.stringify(res));
+
     T.section('a value the page gets from the screen before it');
     await pick(DETAIL);
     await draft();

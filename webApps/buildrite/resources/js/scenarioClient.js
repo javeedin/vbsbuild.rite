@@ -22,6 +22,9 @@ define([], function () {
     save: function (scenario) { return call('/save', 'POST', { scenario: scenario }); },
     remove: function (id) { return call('/remove', 'POST', { id: id }); },
     draft: function (page) { return call('/draft', 'POST', { page: page }); },
+    // the journey continued on a page the last one goes to; where a page goes next
+    extend: function (scenario, page) { return call('/extend', 'POST', { scenario: scenario, page: page }); },
+    next: function (page) { return call('/next?' + q('page', page)); },
     run: function (id, allowWrites) { return call('/run', 'POST', { id: id, allowWrites: !!allowWrites }); },
     // one step tried on its own, from the scenario as it is on the screen, with the values handed on so far
     tryStep: function (scenario, step, vars, allowWrites, search) { return call('/try', 'POST', { scenario: scenario, step: step, vars: vars || {}, allowWrites: !!allowWrites, search: search }); },
