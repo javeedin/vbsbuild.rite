@@ -518,10 +518,21 @@ function open(o) {
     apis(page, facts, opts) {
       const f = Object.assign({}, facts || {}, { id: str(page) });
       const cat = catalogOf(f, opts).map((c) => Object.assign(c, { page: str(page) }));
+      // BI Publisher's own SOAP service (runBIPReport): listed with the reports it runs (each a row of its own)
+      const integ = f.integrations || {};
+      const bip = (integ.rest || []).filter((r) => /runBIPReport$/i.test(str(r.endpoint)) || /\/xmlpserver\//i.test(str(r.path)))[0];
+      if (bip) {
+        const runs = (integ.reports || []).slice();
+        cat.splice(cat.findIndex((c) => c.step.report) >= 0 ? cat.findIndex((c) => c.step.report) : cat.length, 0, { key: str(bip.endpoint), page: str(page), role: 'transport', order: 0, chains: (bip.usedBy || []).slice(0, 6), actions: [], field: '', when: '', runs,
+          step: { id: 'api-bip', page: str(page), name: 'BI Publisher\'s own service — runs the page\'s reports', endpoint: str(bip.endpoint), report: null, params: {}, extra: '', body: '', extract: [], lov: null, when: '', expect: { status: '2xx', fields: [] }, writes: false } });
+      }
       const acc = accepts(isObj(opts) ? opts.env : null);
       const shown = acc({ steps: cat.map((c) => c.step) }).steps;
       cat.forEach((c, i) => { c.step = shown[i]; });
-      return { ok: true, page: str(page), apis: cat, choices: choicesOf(f) };
+      // the same counts Application pages shows for the page
+      const overview = { rest: (integ.rest || []).length, reports: (integ.reports || []).length, chains: ((f.logic && f.logic.chains) || []).length,
+        modules: ((f.logic && f.logic.modules) || []).length, actions: ((f.features && f.features.actions) || []).length, backends: (integ.backends || []).slice(0, 8) };
+      return { ok: true, page: str(page), label: str(f.label || ''), apis: cat, choices: choicesOf(f), overview };
     },
     /** The order to run a scenario's steps in and what they miss (suggestFor), from the pages it goes through. */
     suggest(scenario, factsByPage, opts) {

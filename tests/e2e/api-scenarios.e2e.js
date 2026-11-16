@@ -262,7 +262,13 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     await page.click('#scNew');
     await page.waitForSelector('#scApiList .nx-sc-apirow', { timeout: 15000 });
     const apiKeys = await page.$$eval('#scApiList .nx-sc-apirow', (a) => a.map((x) => x.getAttribute('data-key')));
-    T.check('New scenario (from APIs): the APIs tab, every API of the page — its list, its report, its create', apiKeys.join() === 'shopApi/getCustomers,report:CUSTOMERS_RP,shopApi/createOrder'
+    await page.waitForSelector('#scApiOverview', { timeout: 10000 });
+    T.check('the page\'s counts as Application pages shows them (3 REST calls with BI Publisher\'s own, 1 BI report); its backends', /3 REST calls/.test(await text(page, '#scApiOverview'))
+      && /1 BI reports/.test(await text(page, '#scApiOverview')) && /Oracle BI Publisher \(SOAP\)/.test(await text(page, '#scApiOverview')), await text(page, '#scApiOverview'));
+    T.check('another page with the same title: named, with its counts, to open', /Another page has this title: shop\/customers\/customer-pick — \d+ REST calls, 1 BI reports/.test(await text(page, '#scApiTwin')), await text(page, '#scApiTwin'));
+    T.check('BI Publisher\'s own service listed with the reports it runs (no Test of its own)', /Runs the reports below: CUSTOMERS_RP/.test(await text(page, '#scApiList .nx-sc-apirow[data-key="bipService/runBIPReport"]'))
+      && !(await page.$('#scApiList .nx-sc-apirow[data-key="bipService/runBIPReport"] .nx-sc-apitry')));
+    T.check('New scenario (from APIs): the APIs tab, every API of the page — its list, BI Publisher\'s service, its report, its create', apiKeys.join() === 'shopApi/getCustomers,bipService/runBIPReport,report:CUSTOMERS_RP,shopApi/createOrder'
       && /a list of values/.test(await text(page, '#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-apiwhere')) && /Building: My scenario — New Order · 0 step/.test(await text(page, '#scApiBar')), apiKeys.join());
     await page.click('#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-apitry');
     await page.waitForSelector('#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-tried', { timeout: 15000 });

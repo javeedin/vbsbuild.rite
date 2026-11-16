@@ -248,3 +248,11 @@ html[data-nx-product="buildrite"] .nx-nav-scroll { scrollbar-color: rgba(255, 25
 .nx-sc-missing { margin-top: 8px; border-top: 1px dashed #a7d7b8; padding-top: 6px; font-size: 13px; color: #8a5300; }
 .nx-sc-missing p { margin: 4px 0; }
 .nx-sc-carddel { flex: 0 0 auto; }
+
+/* API Scenarios › APIs of this page: the page's counts (as Application pages shows them); another page with its title */
+.nx-sc-overview { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 2px 0 8px; }
+.nx-sc-tile { border: 1px solid #d9e0e7; border-radius: 8px; padding: 4px 10px; font-size: 13px; background: #fff; }
+.nx-sc-tile b { font-size: 15px; }
+.nx-sc-backend { font-size: 12px; font-weight: 600; color: #5b2a86; background: #f1e8fb; border-radius: 10px; padding: 2px 9px; }
+.nx-sc-twin { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border: 1px solid #f0c27a; background: #fffaf0; border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; font-size: 13px; }
+.nx-sc-apivia { font-size: 12px; color: #5b2a86; max-width: 420px; }

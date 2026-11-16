@@ -10,10 +10,10 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
       const v = context.$page.variables;
       const say = (r, text) => { v.result = r.ok ? (text ? { ok: true, text } : null) : { ok: false, text: (r.body && r.body.error) || 'It did not work.' }; if (text || !r.ok) bus.toast(r.ok ? text : v.result.text, r.ok ? 'success' : 'error'); };
       // every API of the page (the APIs tab)
-      const loadApis = async (id) => { const r = await SC.apis(id || v.page); if ((id || v.page) !== v.page) return; if (r.ok) { v.apis = r.body.apis || []; v.apiChoices = r.body.choices || []; } else say(r); };
+      const loadApis = async (id) => { const r = await SC.apis(id || v.page); if ((id || v.page) !== v.page) return; if (r.ok) { v.apis = r.body.apis || []; v.apiChoices = r.body.choices || []; v.apiInfo = { overview: r.body.overview || null, twins: r.body.twins || [] }; } else say(r); };
       const newId = () => 'u' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
       const loadPage = async (id) => {
-        v.page = id; v.sc = null; v.run = null; v.result = null; v.tries = {}; v.nextPages = []; v.apis = []; v.apiTries = {}; v.apiVals = {}; v.apiOpen = ''; v.suggestion = null;
+        v.page = id; v.sc = null; v.run = null; v.result = null; v.tries = {}; v.nextPages = []; v.apis = []; v.apiInfo = null; v.apiTries = {}; v.apiVals = {}; v.apiOpen = ''; v.suggestion = null;
         if (v.tab === 'apis') loadApis(id);
         const [l, sh, rs] = await Promise.all([SC.list(id), PC.sheet(context.$application.path, id), SC.runs(id)]);
         v.scenarios = l.ok ? l.body.scenarios || [] : [];

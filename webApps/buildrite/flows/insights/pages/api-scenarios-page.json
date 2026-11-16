@@ -107,6 +107,11 @@
       "type": "any",
       "defaultValue": null,
       "description": "The order suggested for the scenario's steps, and what they miss."
+    },
+    "apiInfo": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The page's counts (as Application pages shows them) and the pages with the same title."
     }
   },
   "events": {

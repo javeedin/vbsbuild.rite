@@ -286,13 +286,14 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
       const t = String(q || '').trim().toLowerCase();
       const inSc = {};
       ((sc && sc.steps) || []).forEach((st) => { inSc[st.report ? 'report:' + (st.report.name || '') : st.endpoint] = true; });
-      const ROLE = { list: 'a list of values', opens: 'runs as the page opens', next: 'runs when you go on', other: 'used elsewhere on the page' };
+      const ROLE = { list: 'a list of values', opens: 'runs as the page opens', next: 'runs when you go on', other: 'used elsewhere on the page', transport: 'BI Publisher\'s SOAP service' };
       return (apis || []).filter((a) => !t || (a.key + ' ' + a.step.name + ' ' + (a.field || '') + ' ' + ((a.step.api && a.step.api.path) || '')).toLowerCase().indexOf(t) !== -1).map((a) => {
         const st = a.step;
         const m = st.report ? 'REPORT' : ((st.api && st.api.method) || 'CALL');
         const tr = tries && tries[a.key];
         const acc = st.accepts || [];
-        return { key: a.key, method: m, mclass: m.toLowerCase(), name: st.name, path: st.report ? st.report.path : ((st.api && st.api.path) || st.endpoint),
+        return { key: a.key, transport: a.role === 'transport', runsNote: a.role === 'transport' ? 'Runs the reports below: ' + (a.runs || []).join(', ') + ' — test them there' : '',
+          method: m, mclass: m.toLowerCase(), name: st.name, path: st.report ? st.report.path : ((st.api && st.api.path) || st.endpoint),
           where: (a.field ? a.field + ' (' + ROLE.list + ')' : ROLE[a.role] || '') + (a.actions && a.actions.length ? ' · ' + a.actions.join(', ') : '') + (a.when ? ' · only when ' + a.when.slice(0, 80) : ''),
           inScenario: !!inSc[a.key], open: open === a.key,
           params: vals && vals[a.key] !== undefined ? vals[a.key] : linesOf(st.params, '='),
@@ -300,6 +301,11 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
           tried: tr ? { state: tr.state, icon: tr.state === 'ok' ? '✓' : tr.state === 'fail' ? '✗' : '–', head: tr.status ? tr.status + ' · ' + tr.ms + ' ms' + (tr.rows != null ? ' · ' + tr.rows + ' row(s)' : '') : 'not sent',
             url: tr.request ? tr.request.method + ' ' + tr.request.url : '', note: tr.note || '', values: tr.values && tr.lov ? tr.lov.total + ' value(s): ' + tr.values.slice(0, 8).map((v) => v.text + (v.sub ? ' (' + v.sub + ')' : '')).join(', ') : '', answer: tr.answer || '' } : null };
       });
+    }
+    /** The page's counts, as Application pages shows them. */
+    overviewTiles(info) {
+      const o = (info && info.overview) || {};
+      return [[o.rest, 'REST calls'], [o.chains, 'action chains'], [o.modules, 'rules modules'], [o.reports, 'BI reports'], [o.actions, 'actions']].filter((x) => x[0] !== undefined).map((x) => ({ n: String(x[0]), what: x[1] }));
     }
     apiBar(sc) {
       if (!sc) return 'No scenario open: + Add to scenario starts a new one with that API.';

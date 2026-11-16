@@ -57,10 +57,28 @@
         <oj-bind-if test="[[ $variables.tab === 'apis' ]]">
           <div class="nx-card nx-sc-sec" id="scApis">
             <div class="nx-sc-head">
-              <div><h2>APIs of this page</h2><span class="nx-note">every REST call and BI Publisher report its code makes: Test one, or + Add it to your scenario, then Suggest the order</span></div>
+              <div><h2><oj-bind-text value="[[ 'APIs of ' + $functions.pageLabel($variables.pages, $variables.page) ]]"></oj-bind-text></h2>
+                <span class="nx-note"><oj-bind-text value="[[ $variables.page + ' — every REST call and BI Publisher report its code makes: Test one, or + Add it to your scenario, then Suggest the order' ]]"></oj-bind-text></span></div>
               <span class="nx-min-flex"></span>
               <input type="search" class="nx-cm-input nx-sc-apifind" id="scApiFind" placeholder="Find an API…" data-field="apiQ" :value="[[ $variables.apiQ ]]" on-input="[[ $listeners.onField ]]">
             </div>
+            <!-- the same counts Application pages shows for this page -->
+            <oj-bind-if test="[[ !!$variables.apiInfo ]]">
+              <div class="nx-sc-overview" id="scApiOverview">
+                <oj-bind-for-each data="[[ $functions.overviewTiles($variables.apiInfo) ]]"><template data-oj-as="o">
+                  <span class="nx-sc-tile"><b><oj-bind-text value="[[ o.data.n ]]"></oj-bind-text></b> <oj-bind-text value="[[ o.data.what ]]"></oj-bind-text></span>
+                </template></oj-bind-for-each>
+                <oj-bind-for-each data="[[ ($variables.apiInfo.overview && $variables.apiInfo.overview.backends) || [] ]]"><template data-oj-as="b">
+                  <span class="nx-sc-backend"><oj-bind-text value="[[ b.data ]]"></oj-bind-text></span>
+                </template></oj-bind-for-each>
+              </div>
+              <oj-bind-for-each data="[[ $variables.apiInfo.twins || [] ]]"><template data-oj-as="t">
+                <div class="nx-sc-twin" id="scApiTwin">
+                  <span><oj-bind-text value="[[ 'Another page has this title: ' + t.data.id + ' — ' + t.data.rest + ' REST calls, ' + t.data.reports + ' BI reports. Make sure you are on the one your app shows.' ]]"></oj-bind-text></span>
+                  <button type="button" class="nx-btn nx-btn--sm" data-act="page" :data-key="[[ t.data.id ]]" on-click="[[ $listeners.onAct ]]">Open it</button>
+                </div>
+              </template></oj-bind-for-each>
+            </oj-bind-if>
             <div class="nx-sc-apibar" id="scApiBar">
               <span><oj-bind-text value="[[ $functions.apiBar($variables.sc) ]]"></oj-bind-text></span>
               <oj-bind-if test="[[ !!$variables.sc ]]"><button type="button" class="nx-btn nx-btn--sm" id="scApiGo" data-act="tab" data-key="scenarios" on-click="[[ $listeners.onAct ]]">Go to the scenario</button></oj-bind-if>
@@ -77,8 +95,11 @@
                         <code><oj-bind-text value="[[ a.data.path ]]"></oj-bind-text></code>
                         <span class="nx-sc-apiwhere"><oj-bind-text value="[[ a.data.where ]]"></oj-bind-text></span>
                       </button>
+                      <oj-bind-if test="[[ !a.data.transport ]]">
                       <button type="button" class="nx-btn nx-btn--sm nx-sc-apitry" data-act="apiTry" :data-key="[[ a.data.key ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]">▶ Test</button>
                       <button type="button" class="nx-btn nx-btn--sm nx-sc-apiadd" data-act="apiAdd" :data-key="[[ a.data.key ]]" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ a.data.inScenario ? '✓ In the scenario (add again)' : '+ Add to scenario' ]]"></oj-bind-text></button>
+                      </oj-bind-if>
+                      <oj-bind-if test="[[ a.data.transport ]]"><span class="nx-sc-apivia"><oj-bind-text value="[[ a.data.runsNote ]]"></oj-bind-text></span></oj-bind-if>
                     </div>
                     <oj-bind-if test="[[ a.data.open ]]">
                       <label class="nx-sc-f nx-sc-apivals"><span><oj-bind-text value="[[ a.data.hint ]]"></oj-bind-text></span>

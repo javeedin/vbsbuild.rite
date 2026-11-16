@@ -1105,7 +1105,15 @@ function createDevServer(o) {
               const pid = q('page');
               const facts = factsOf(pid);
               if (!facts) return jsonA(200, { ok: false, error: 'That page is not in the code.' });
-              return jsonA(200, sc.apis(pid, facts, optsOf(pid, facts)));
+              const r = sc.apis(pid, facts, optsOf(pid, facts));
+              // another page with the same title (two "Create Equipment Request"s): named, with its counts
+              try {
+                const ps = o.pagesStore;
+                const label = String(facts.label || '').trim().toLowerCase();
+                const twins = label && ps && ps.catalog ? (ps.catalog().pages || []).filter((x) => x.id !== pid && !x.deleted && String(x.label || '').trim().toLowerCase() === label).slice(0, 4) : [];
+                r.twins = twins.map((x) => { const tf = factsOf(x.id); return { id: x.id, label: x.label, rest: tf ? (tf.integrations.rest || []).length : 0, reports: tf ? (tf.integrations.reports || []).length : 0 }; });
+              } catch (e) { r.twins = []; }
+              return jsonA(200, r);
             }
             // the order to run a scenario's steps in, and what they miss
             if (pathname === '/__api/scenarios/suggest' && post) {
