@@ -97,6 +97,13 @@ journey** offers the pages the last page goes to (Next → the catalog → the c
 under the page they are on, with the values picked so far handed on. BI Publisher is run as the page's report, with
 the report's parameters taken from the code.
 
+- **Build it yourself from the page's APIs.** The **APIs of this page** tab lists every REST call and BI Publisher
+  report the page's code makes, with where the page uses it (a list of values and its field, as it opens, when you go
+  on, elsewhere): **▶ Test** one with its values, **+ Add to scenario** the ones you want (New scenario starts an
+  empty one). Then **Suggest order** proposes the order to run them in: a step after the one that hands it what it
+  sends, otherwise as the page runs them, writes last; it says what is missing ("sends {{projectId}}, which no step
+  hands on — Add: the Project list") with **+ Add it**, and **Apply this order** puts the steps in it.
+- **Delete** a scenario from its card (🗑), or all of a page's at once.
 - **Values handed on.** A value one call answers feeds the next: `id = auto:id` takes `id` from the first row of the
   answer, and `{{id}}` uses it. The values the page itself sends with a call are filled in from its code (a page value
   becomes `{{name}}`), and the hint lists every value the call accepts. A value the page gets from the screen before it

@@ -39,6 +39,7 @@ const MAX_STEPS = 60;
 const str = (v) => (v == null ? '' : String(v));
 const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 const uniq = (a) => a.filter((x, i) => x && a.indexOf(x) === i);
+const varsIn = (t) => Array.from(str(t).matchAll(/\{\{\s*([\w.-]+)\s*\}\}/g)).map((m) => m[1]);
 const slug = (s) => str(s).replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 120) || 'x';
 const PROD_FREE = /(dev|test|tst|uat|sit|stag|stg|demo|qa|sandbox|train|localhost|127\.0\.0\.1|example)/i;
 
@@ -194,7 +195,7 @@ function open(o) {
     // its code (resuming a draft, removing from the cart, going back)
     const acts = f.features && Array.isArray(f.features.actions) ? f.features.actions : null;
     let journey = false;
-    if (acts) {
+    if (acts && !ctx.all) {
       const chainBy = {};
       chains.forEach((c) => { chainBy[c.name] = c; });
       const modCalls = {};
@@ -316,6 +317,91 @@ function open(o) {
     return steps;
   }
 
+  /**
+   * Every API a page's code calls (REST and BI Publisher reports), each as a step ready to test or add to a scenario,
+   * with where the page uses it: as it opens, a list of values (its field, shown when…), an action that takes a user
+   * on (Next, Submit…), or elsewhere. → [{ key, step, role, order, chains, field, when }]
+   */
+  function catalogOf(facts, opts) {
+    const f = facts || {};
+    const ctx = { known: {}, start: [], lovFields: [], prefix: 'api-', page: str(f.id || ''), all: true };
+    const steps = stepsFor(f, opts, ctx);
+    const chains = (f.logic && f.logic.chains) || [];
+    const modCalls = {};
+    ((f.logic && f.logic.modules) || []).forEach((m) => { modCalls[str(m.name)] = m.calls || []; });
+    const callsOfChain = (c) => (c.calls || []).concat(...(c.modules || []).map((m) => modCalls[str(m).replace(/^resources\/js\//, '')] || []));
+    const entry = new Set([].concat(...((f.features && f.features.lifecycle) || []).map((l) => (l.chains || []).map(str))));
+    const GO = /^(next|continue|proceed|add( selected)? to (the )?cart|go to (the )?cart|view cart|checkout|check out|submit|create|place|confirm|finish|done|send|search|save request|request)\b/i;
+    const acts = (f.features && f.features.actions) || [];
+    const goChains = new Set([].concat(...acts.filter((a) => GO.test(str(a.label).trim()) || /primary action/i.test(str(a.label))).map((a) => a.chains || [])));
+    const actOf = {}; // chain → the action's label
+    acts.forEach((a) => (a.chains || []).forEach((c) => { if (!actOf[c]) actOf[c] = str(a.label).replace(/: sp primary action$/, ' (its primary action)'); }));
+    const lovs = ((f.integrations && f.integrations.lovs) || []).filter(isObj);
+    const reportName = (st) => (st.report ? str(st.report.name || path.posix.basename(str(st.report.path), '.xdo')) : '');
+    return steps.map((st, i) => {
+      const key = st.report ? 'report:' + reportName(st) : st.endpoint;
+      const by = chains.filter((c) => (st.report ? (c.reports || []).indexOf(reportName(st)) !== -1 : callsOfChain(c).indexOf(st.endpoint) !== -1)).map((c) => c.name);
+      const lovIdx = lovs.findIndex((l) => (st.report ? l.report === reportName(st) : l.endpoint === st.endpoint));
+      const role = st.lov ? 'list' : by.some((c) => entry.has(c)) ? 'opens' : by.some((c) => goChains.has(c)) ? 'next' : 'other';
+      const acting = by.filter((c) => actOf[c]).map((c) => actOf[c]);
+      return { key, step: Object.assign({}, st, { extract: st.lov ? st.extract.filter((e) => st.lov && e.var === st.lov.target) : [] }), role, order: lovIdx >= 0 ? lovIdx : i,
+        chains: by.slice(0, 6), actions: uniq(acting).slice(0, 4), field: st.lov ? st.lov.field : '', when: str(st.when) };
+    });
+  }
+
+  /**
+   * The order a scenario's steps should run in, and what they miss: a step after the one that hands it what it sends;
+   * otherwise as the page does it (page by page in the journey; as it opens, its lists in the form's order, the actions
+   * that go on; writes last, creates first). Missing: a value a step sends that no step hands on (nor Data, nor the
+   * page's choices), with the API that would. → { ok, order: [id], changed, moves: [text], missing: [{ var, step, api }] }
+   */
+  function suggestFor(s, catalog) {
+    const steps = (s.steps || []).slice();
+    const cat = {};
+    (catalog || []).forEach((c) => { cat[c.page + '|' + c.key] = c; cat['*|' + c.key] = cat['*|' + c.key] || c; });
+    const pages = ((s.journey && s.journey.length ? s.journey.map((j) => j.page) : [s.page]));
+    const keyOf = (st) => (st.report ? 'report:' + str(st.report.name || path.posix.basename(str(st.report.path), '.xdo')) : st.endpoint);
+    const ROLE = { opens: 0, list: 1, next: 2, other: 3 };
+    const base = (st, i) => {
+      const c = cat[(st.page || s.page) + '|' + keyOf(st)] || cat['*|' + keyOf(st)];
+      const pi = Math.max(0, pages.indexOf(st.page || s.page));
+      const w = st.writes ? 4 + (/^(post)$/i.test(str(c && c.step && c.step.method)) ? 0 : 0) : 0;
+      return pi * 100000 + (w + (c ? ROLE[c.role] : 3)) * 10000 + (c ? c.order : 500) * 10 + i * 0.001;
+    };
+    const handed = {};
+    steps.forEach((st) => { (st.extract || []).forEach((e) => { if (!handed[e.var]) handed[e.var] = st.id; }); if (st.lov && st.lov.target && !handed[st.lov.target]) handed[st.lov.target] = st.id; });
+    const needs = (st) => uniq([].concat(...Object.keys(st.params || {}).map((k) => varsIn(st.params[k])), varsIn(st.body), varsIn(st.extra)));
+    const given = new Set(Object.keys((s.data && s.data[0]) || {}).concat((s.choices || []).map((c) => c.target)));
+    const placed = [], done = new Set();
+    const left = steps.map((st, i) => ({ st, b: base(st, i) }));
+    while (left.length) {
+      const ready = left.filter((x) => needs(x.st).every((v) => !handed[v] || handed[v] === x.st.id || done.has(handed[v])));
+      const pick = (ready.length ? ready : left).slice().sort((a, b) => a.b - b.b)[0];
+      placed.push(pick.st);
+      done.add(pick.st.id);
+      left.splice(left.indexOf(pick), 1);
+    }
+    const order = placed.map((x) => x.id);
+    const moves = [];
+    placed.forEach((st, i) => {
+      const was = steps.indexOf(st);
+      if (was === i) return;
+      const why = needs(st).filter((v) => handed[v] && handed[v] !== st.id).map((v) => '{{' + v + '}} from ' + (steps.filter((x) => x.id === handed[v])[0] || {}).name);
+      moves.push((i + 1) + '. ' + st.name + (why.length ? ' — after what hands it ' + why.join(', ') : ' — where the page runs it'));
+    });
+    const missing = [];
+    steps.forEach((st) => needs(st).forEach((v) => {
+      if (handed[v] || given.has(v)) return;
+      const api = (catalog || []).filter((c) => (c.step.lov && c.step.lov.target === v) || (c.step.extract || []).some((e) => e.var === v))[0];
+      missing.push({ var: v, step: st.name, stepId: st.id, api: api ? { key: api.key, name: api.step.name, page: api.page } : null });
+    }));
+    const list = placed.map((st, i) => {
+      const why = needs(st).filter((v) => handed[v] && handed[v] !== st.id).map((v) => '{{' + v + '}} from ' + ((steps.filter((x) => x.id === handed[v])[0] || {}).name || v));
+      return { id: st.id, name: st.name, moved: steps.indexOf(st) !== i, why: why.length ? 'after what hands it ' + why.join(', ') : '' };
+    });
+    return { ok: true, order, changed: order.some((id, i) => id !== steps[i].id), moves, missing, list };
+  }
+
   /** A scenario as shown: each step with the values its call accepts (from its service), never kept with it. */
   function accepts(env) {
     const seen = {};
@@ -428,6 +514,23 @@ function open(o) {
     },
 
     /** The page's happy path, drafted from its facts: its chains in the order the page runs them, the calls each makes. */
+    /** Every API of a page, ready to test or add (catalogOf), its steps with what their calls accept; and its choices. */
+    apis(page, facts, opts) {
+      const f = Object.assign({}, facts || {}, { id: str(page) });
+      const cat = catalogOf(f, opts).map((c) => Object.assign(c, { page: str(page) }));
+      const acc = accepts(isObj(opts) ? opts.env : null);
+      const shown = acc({ steps: cat.map((c) => c.step) }).steps;
+      cat.forEach((c, i) => { c.step = shown[i]; });
+      return { ok: true, page: str(page), apis: cat, choices: choicesOf(f) };
+    },
+    /** The order to run a scenario's steps in and what they miss (suggestFor), from the pages it goes through. */
+    suggest(scenario, factsByPage, opts) {
+      if (!isObj(scenario)) return no('No scenario.');
+      const s = clean(scenario, '', null);
+      if (!s.steps.length) return no('The scenario has no step yet: add APIs from "APIs of this page".');
+      const catalog = [].concat(...Object.keys(factsByPage || {}).map((pg) => catalogOf(Object.assign({}, factsByPage[pg], { id: pg }), opts).map((c) => Object.assign(c, { page: pg }))));
+      return suggestFor(s, catalog);
+    },
     /** The page's happy path, drafted from its facts, as a user goes through it (stepsFor). */
     draft(page, facts, by, opts) {
       const f = facts || {};

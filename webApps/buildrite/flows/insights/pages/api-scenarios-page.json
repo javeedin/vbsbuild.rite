@@ -72,6 +72,41 @@
       "type": "any[]",
       "defaultValue": [],
       "description": "Where the journey's last page goes next in the app: [{ id, label, via }]."
+    },
+    "tab": {
+      "type": "string",
+      "defaultValue": "scenarios",
+      "description": "scenarios | apis (every API of the page)"
+    },
+    "apis": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "Every API of the page: [{ key, step, role, order, chains, actions, field, when }]."
+    },
+    "apiChoices": {
+      "type": "any[]",
+      "defaultValue": []
+    },
+    "apiQ": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "apiOpen": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "apiTries": {
+      "type": "any",
+      "defaultValue": {}
+    },
+    "apiVals": {
+      "type": "any",
+      "defaultValue": {}
+    },
+    "suggestion": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The order suggested for the scenario's steps, and what they miss."
     }
   },
   "events": {
@@ -210,6 +245,19 @@
             "act": "choice",
             "key": "{{ $event.currentTarget.dataset.key }}",
             "value": "{{ $event.currentTarget.dataset.value }}",
+            "step": ""
+          }
+        }
+      ]
+    },
+    "onApiVals": {
+      "chains": [
+        {
+          "chain": "scChain",
+          "parameters": {
+            "act": "{{ $event.detail.updatedFrom === 'internal' ? 'apiVals' : 'none' }}",
+            "key": "{{ $event.currentTarget.dataset.key }}",
+            "value": "{{ $event.detail.value || '' }}",
             "step": ""
           }
         }

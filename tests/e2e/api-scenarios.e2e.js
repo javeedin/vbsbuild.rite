@@ -254,6 +254,69 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
       && /report \/Custom\/Shop\/CUST_LOV_RP/.test(await text(page, '#scSteps .nx-sc-step--off .nx-sc-call')), await text(page, '#scSteps .nx-sc-step--off .nx-sc-call'));
     await env.shot('api-scenarios-search.png');
 
+    T.section('built by you from the page\'s APIs, the order suggested; deleted');
+    page.on('dialog', (d) => d.accept().catch(() => {}));
+    await env.open('/?open=api-scenarios');
+    await page.waitForSelector('#scPages .nx-sc-pagerow', { timeout: 30000 });
+    await pick(CREATE);
+    await page.click('#scNew');
+    await page.waitForSelector('#scApiList .nx-sc-apirow', { timeout: 15000 });
+    const apiKeys = await page.$$eval('#scApiList .nx-sc-apirow', (a) => a.map((x) => x.getAttribute('data-key')));
+    T.check('New scenario (from APIs): the APIs tab, every API of the page — its list, its report, its create', apiKeys.join() === 'shopApi/getCustomers,report:CUSTOMERS_RP,shopApi/createOrder'
+      && /a list of values/.test(await text(page, '#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-apiwhere')) && /Building: My scenario — New Order · 0 step/.test(await text(page, '#scApiBar')), apiKeys.join());
+    await page.click('#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-apitry');
+    await page.waitForSelector('#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-tried', { timeout: 15000 });
+    T.check('▶ Test: that API alone — 200, its values, what was sent', /^200 · \d+ ms/.test(await text(page, '#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-tried b'))
+      && /2 value\(s\): Acme Tools, Blue River/.test(await text(page, '#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-resvalues')), await text(page, '#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-tried'));
+    await env.shot('api-scenarios-apis.png');
+    // added in the wrong order: the create, the report, then the list
+    for (const k of ['shopApi/createOrder', 'report:CUSTOMERS_RP', 'shopApi/getCustomers']) { await page.click('#scApiList .nx-sc-apirow[data-key="' + k + '"] .nx-sc-apiadd'); await page.waitForTimeout(200); }
+    T.check('+ Add to scenario: three steps in the order added', /Building: My scenario — New Order · 3 step\(s\) \(not saved yet\)/.test(await text(page, '#scApiBar'))
+      && /In the scenario/.test(await text(page, '#scApiList .nx-sc-apirow[data-key="shopApi/createOrder"] .nx-sc-apiadd')), await text(page, '#scApiBar'));
+    await page.click('#scApiGo');
+    await page.waitForSelector('#scSteps .nx-sc-step', { timeout: 10000 });
+    const rp = (await page.$$('#scSteps oj-text-area[data-field="params"] textarea'))[1];
+    await rp.fill('P_CUSTOMER_ID = {{customer}}'); await rp.press('Tab'); await page.waitForTimeout(400);
+    await page.click('#scSuggestBtn');
+    await page.waitForSelector('#scSuggest', { timeout: 10000 });
+    const sug = await page.$$eval('#scSuggest .nx-sc-suggorder li', (a) => a.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    T.check('Suggest order: the list first (it hands on {{customer}}), the report after it, the create last — why said', /^Suggested order/.test(await text(page, '#scSuggest .nx-sc-sugghead'))
+      && /^List of values: Customer/.test(sug[0]) && /CUSTOMERS_RP/.test(sug[1]) && /after what hands it \{\{customer\}\} from List of values: Customer/.test(sug[1]) && /createOrder|order/i.test(sug[2]), sug.join(' | '));
+    await env.shot('api-scenarios-suggest.png');
+    await page.click('#scApplyOrder');
+    await page.waitForTimeout(400);
+    const after = await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()));
+    T.check('Apply this order: the steps in it', after[0] === 'shopApi/getCustomers' && /CUSTOMERS_RP/.test(after[1]) && after[2] === 'shopApi/createOrder', after.join(' | '));
+    await page.click('#scSave'); await page.waitForTimeout(800);
+    // one that misses a value: the report alone, sending {{customer}}
+    await page.click('#scNew');
+    await page.waitForSelector('#scApiList .nx-sc-apirow', { timeout: 15000 });
+    await page.click('#scApiList .nx-sc-apirow[data-key="report:CUSTOMERS_RP"] .nx-sc-apiname');
+    await page.waitForSelector('#scApiList .nx-sc-apirow[data-key="report:CUSTOMERS_RP"] .nx-sc-apivals textarea', { timeout: 5000 });
+    const av = await page.$('#scApiList .nx-sc-apirow[data-key="report:CUSTOMERS_RP"] .nx-sc-apivals textarea');
+    await av.fill('P_CUSTOMER_ID = {{customer}}'); await av.press('Tab'); await page.waitForTimeout(300);
+    await page.click('#scApiList .nx-sc-apirow[data-key="report:CUSTOMERS_RP"] .nx-sc-apiadd');
+    await page.click('#scApiGo');
+    await page.waitForSelector('#scSuggestBtn', { timeout: 10000 });
+    await page.click('#scSuggestBtn');
+    await page.waitForSelector('#scMissing', { timeout: 10000 });
+    T.check('…a value no step hands on: said, with the API that would (the Customer list)', /sends \{\{customer\}\}, which no step hands on\. Add: List of values: Customer/.test(await text(page, '#scMissing')), await text(page, '#scMissing'));
+    await page.click('#scMissing button');
+    await page.waitForFunction(() => document.querySelectorAll('#scSteps .nx-sc-step').length === 2, null, { timeout: 10000 });
+    await page.waitForTimeout(300);
+    T.check('+ Add it: added, the order suggested again (the list first)', /^List of values: Customer/.test(await text(page, '#scSuggest .nx-sc-suggorder li:first-child')) && !(await page.$('#scMissing')), await text(page, '#scSuggest'));
+    await page.click('#scSave'); await page.waitForTimeout(800);
+    // delete: one by its card, then all of the page's
+    await page.click('#scTabScenarios').catch(() => {});
+    const cardsBefore = (await page.$$('#scList .nx-sc-card')).length;
+    await page.click('#scList .nx-sc-card .nx-sc-carddel');
+    await page.waitForFunction((n) => document.querySelectorAll('#scList .nx-sc-card').length === n - 1, cardsBefore, { timeout: 10000 });
+    T.check('🗑 on a card: that scenario deleted', (await page.$$('#scList .nx-sc-card')).length === cardsBefore - 1, cardsBefore + ' → ' + (await page.$$('#scList .nx-sc-card')).length);
+    await page.click('#scDeleteAll');
+    await page.waitForSelector('#scNone', { timeout: 10000 });
+    T.check('Delete all: none left on the page', (await page.$$('#scList .nx-sc-card')).length === 0);
+    await env.shot('api-scenarios-build.png');
+
     T.section('opened on a page from Application pages');
     await env.open('/?open=app-pages');
     await page.waitForSelector('#pgRows .nx-pg-row', { timeout: 30000 });

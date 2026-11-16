@@ -9,8 +9,12 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
     async run(context, { act, key, value, step }) {
       const v = context.$page.variables;
       const say = (r, text) => { v.result = r.ok ? (text ? { ok: true, text } : null) : { ok: false, text: (r.body && r.body.error) || 'It did not work.' }; if (text || !r.ok) bus.toast(r.ok ? text : v.result.text, r.ok ? 'success' : 'error'); };
+      // every API of the page (the APIs tab)
+      const loadApis = async (id) => { const r = await SC.apis(id || v.page); if ((id || v.page) !== v.page) return; if (r.ok) { v.apis = r.body.apis || []; v.apiChoices = r.body.choices || []; } else say(r); };
+      const newId = () => 'u' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
       const loadPage = async (id) => {
-        v.page = id; v.sc = null; v.run = null; v.result = null; v.tries = {}; v.nextPages = [];
+        v.page = id; v.sc = null; v.run = null; v.result = null; v.tries = {}; v.nextPages = []; v.apis = []; v.apiTries = {}; v.apiVals = {}; v.apiOpen = ''; v.suggestion = null;
+        if (v.tab === 'apis') loadApis(id);
         const [l, sh, rs] = await Promise.all([SC.list(id), PC.sheet(context.$application.path, id), SC.runs(id)]);
         v.scenarios = l.ok ? l.body.scenarios || [] : [];
         if (!l.ok) say(l);
@@ -74,7 +78,14 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         } finally { v.busy = false; }
         return;
       }
-      if (act === 'new') { v.sc = { page: v.page, name: 'New scenario', kind: 'edge', notes: '', allowWrites: false, data: [], steps: [] }; v.run = null; v.tries = {}; v.nextPages = []; return; }
+      if (act === 'new') {
+        const label = ((v.pages || []).filter((p) => p.id === v.page)[0] || {}).label || v.page;
+        if (!v.apis.length) await loadApis(v.page);
+        v.sc = { page: v.page, name: 'My scenario — ' + label, kind: 'happy', notes: 'Built from the page\'s APIs.', allowWrites: false, data: [], steps: [], choices: copy(v.apiChoices || []), journey: [{ page: v.page, label }] };
+        v.run = null; v.tries = {}; v.nextPages = []; v.suggestion = null; v.tab = 'apis';
+        v.result = { ok: true, text: 'A new scenario: + Add the APIs you want from this list, then Suggest order and Save.' };
+        return;
+      }
       if (act === 'open') { const s = (v.scenarios || []).filter((x) => x.id === key)[0]; v.sc = copy(s); v.run = null; v.tries = {}; v.nextPages = []; nextFor();  if (s && s.last) { const r = await SC.runOf(v.page, s.last.id); if (r.ok) v.run = r.body.run; } return; }
       if (act === 'run') { await doRun(key, false); return; }
       if (act === 'runAll') { for (const s of (v.scenarios || []).slice()) { await doRun(s.id, false); } return; }
@@ -89,6 +100,7 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
       if (act === 'showRun') { const r = await SC.runOf(v.page, key); if (r.ok) v.run = r.body.run; else say(r); return; }
       if (act === 'field') {
         if (key === 'q') { v.q = value; return; }
+        if (key === 'apiQ') { v.apiQ = value; return; }
         if (key === 'lovQ') { v.lovQ = value; return; }
         if (key === 'addCall') { v.addCall = value; return; }
         if (!v.sc) return;
@@ -137,6 +149,90 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         v.sc = Object.assign({}, v.sc, { choices: ch });
         const c = ch.filter((x) => x.target === key)[0];
         v.result = { ok: true, text: (c ? c.field + ': ' + ((c.values.filter((x) => x.key === value)[0] || {}).text || value) : value) + ' — the steps for fields not shown in this case are skipped. Save & run.' };
+        return;
+      }
+      // the tabs: the page's scenarios; every API of the page
+      if (act === 'tab') { v.tab = key === 'apis' ? 'apis' : 'scenarios'; if (v.tab === 'apis' && !v.apis.length && v.page) await loadApis(v.page); return; }
+      if (act === 'apiOpen') { v.apiOpen = v.apiOpen === key ? '' : key; return; }
+      if (act === 'apiVals') { v.apiVals = Object.assign({}, v.apiVals, { [key]: value }); return; }
+      const apiStep = (k) => {
+        const a = (v.apis || []).filter((x) => x.key === k)[0];
+        if (!a) return null;
+        const st = copy(a.step);
+        if (v.apiVals[k] !== undefined) st.params = pairs(v.apiVals[k], '=').reduce((o, p) => { o[p[0]] = p[1]; return o; }, {});
+        return st;
+      };
+      // ▶ Test: this API alone, now, with its values (and those the scenario open has handed on)
+      if (act === 'apiTry') {
+        const st = apiStep(key);
+        if (!st || v.busy) return;
+        v.busy = true; v.apiOpen = key;
+        try {
+          const fns = context.$page && context.$page.functions;
+          const vars = v.sc && fns && typeof fns.varsFor === 'function' ? fns.varsFor(v.sc, v.run, v.tries) : {};
+          const r = await SC.tryStep({ page: v.page, name: 'Test', steps: [st], choices: [] }, st.id, vars, false);
+          if (r.ok) v.apiTries = Object.assign({}, v.apiTries, { [key]: r.body.result }); else say(r);
+        } finally { v.busy = false; }
+        return;
+      }
+      // + Add to scenario: the API as a step at the end of the scenario open (or of a new one)
+      const addApi = (k) => {
+        const st = apiStep(k);
+        if (!st) return null;
+        st.id = newId(); st.page = st.page || v.page;
+        if (!v.sc) v.sc = { page: v.page, name: 'My scenario — ' + ((v.pages || []).filter((p) => p.id === v.page)[0] || {}).label, kind: 'happy', notes: 'Built from the page\'s APIs.', allowWrites: false, data: [], steps: [], choices: copy(v.apiChoices || []), journey: [{ page: v.page, label: ((v.pages || []).filter((p) => p.id === v.page)[0] || {}).label || v.page }] };
+        v.sc = Object.assign({}, v.sc, { steps: (v.sc.steps || []).concat([st]) });
+        return st;
+      };
+      if (act === 'apiAdd') {
+        const st = addApi(key);
+        if (st) v.result = { ok: true, text: 'Added "' + st.name + '" as step ' + v.sc.steps.length + '. Add more, then Suggest order and Save.' };
+        return;
+      }
+      // Suggest order: what each step needs and hands on, how the page runs them; what is missing
+      if (act === 'suggest') {
+        if (!v.sc || v.busy) return;
+        v.busy = true;
+        try { const r = await SC.suggest(v.sc); if (r.ok) v.suggestion = r.body; else say(r); } finally { v.busy = false; }
+        return;
+      }
+      if (act === 'applySuggest') {
+        if (!v.sc || !v.suggestion) return;
+        const by = {};
+        steps().forEach((x) => { by[x.id] = x; });
+        const order = (v.suggestion.order || []).filter((id) => by[id]);
+        setSteps(order.map((id) => by[id]).concat(steps().filter((x) => order.indexOf(x.id) === -1)));
+        v.suggestion = null;
+        v.result = { ok: true, text: 'Steps put in the suggested order. Save & run.' };
+        return;
+      }
+      if (act === 'closeSuggest') { v.suggestion = null; return; }
+      if (act === 'addMissing') {
+        if (!v.apis.length) await loadApis(v.page);
+        const st = addApi(key);
+        if (!st) { say({ ok: false, body: { error: 'That API is on another page: add it from that page\'s APIs.' } }); return; }
+        const r = await SC.suggest(v.sc);
+        if (r.ok) v.suggestion = r.body;
+        return;
+      }
+      // delete: one scenario (its card), or all of the page's
+      if (act === 'deleteCard') {
+        const s0 = (v.scenarios || []).filter((x) => x.id === key)[0];
+        if (!s0) return;
+        if (typeof window !== 'undefined' && window.confirm && !window.confirm('Delete the scenario "' + s0.name + '"? (Its runs stay.)')) return;
+        const r = await SC.remove(key);
+        if (r.ok) { if (v.sc && v.sc.id === key) { v.sc = null; v.run = null; } await reloadList(); }
+        say(r, 'Deleted "' + s0.name + '".');
+        return;
+      }
+      if (act === 'deleteAll') {
+        const all = (v.scenarios || []).slice();
+        if (!all.length) return;
+        if (typeof window !== 'undefined' && window.confirm && !window.confirm('Delete all ' + all.length + ' scenario(s) of this page? (Their runs stay.)')) return;
+        for (const s0 of all) await SC.remove(s0.id);
+        v.sc = null; v.run = null; v.suggestion = null;
+        await reloadList();
+        say({ ok: true }, 'Deleted ' + all.length + ' scenario(s).');
         return;
       }
       if (act === 'toggleWrites') { if (v.sc) v.sc = Object.assign({}, v.sc, { allowWrites: !v.sc.allowWrites }); return; }

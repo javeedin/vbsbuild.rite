@@ -1100,6 +1100,22 @@ function createDevServer(o) {
               const r = sc.extend(b.scenario, pid, facts, who(), optsOf(pid, facts));
               return jsonA(200, r.ok ? Object.assign(r, { next: nextOf(facts) }) : r);
             }
+            // every API of a page, to test one or build a scenario from them
+            if (pathname === '/__api/scenarios/apis' && !post) {
+              const pid = q('page');
+              const facts = factsOf(pid);
+              if (!facts) return jsonA(200, { ok: false, error: 'That page is not in the code.' });
+              return jsonA(200, sc.apis(pid, facts, optsOf(pid, facts)));
+            }
+            // the order to run a scenario's steps in, and what they miss
+            if (pathname === '/__api/scenarios/suggest' && post) {
+              const scn = b.scenario || {};
+              const pages = Array.from(new Set([String(scn.page || '')].concat((scn.journey || []).map((j) => String(j.page || '')), (scn.steps || []).map((st) => String(st.page || ''))).filter(Boolean)));
+              const fb = {};
+              pages.slice(0, 8).forEach((pg) => { const f = factsOf(pg); if (f) fb[pg] = f; });
+              const first = pages[0] || '';
+              return jsonA(200, sc.suggest(scn, fb, fb[first] ? optsOf(first, fb[first]) : { env }));
+            }
             if (pathname === '/__api/scenarios/next' && !post) { const facts = factsOf(q('page')); return jsonA(200, { ok: true, next: nextOf(facts) }); }
             // one step tried on its own (▶ beside it): its answer, not kept as a run
             if (pathname === '/__api/scenarios/try' && post) {

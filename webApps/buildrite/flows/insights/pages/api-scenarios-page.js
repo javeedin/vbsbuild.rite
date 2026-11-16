@@ -281,6 +281,30 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
       const cols = Object.keys(rows[0]);
       return [cols.join(',')].concat(rows.map((r) => cols.map((c) => r[c] || '').join(','))).join('\n');
     }
+    /** The APIs tab: every API of the page, each with where it is used, its values to test, its last test. */
+    apiRows(apis, q, tries, sc, open, vals) {
+      const t = String(q || '').trim().toLowerCase();
+      const inSc = {};
+      ((sc && sc.steps) || []).forEach((st) => { inSc[st.report ? 'report:' + (st.report.name || '') : st.endpoint] = true; });
+      const ROLE = { list: 'a list of values', opens: 'runs as the page opens', next: 'runs when you go on', other: 'used elsewhere on the page' };
+      return (apis || []).filter((a) => !t || (a.key + ' ' + a.step.name + ' ' + (a.field || '') + ' ' + ((a.step.api && a.step.api.path) || '')).toLowerCase().indexOf(t) !== -1).map((a) => {
+        const st = a.step;
+        const m = st.report ? 'REPORT' : ((st.api && st.api.method) || 'CALL');
+        const tr = tries && tries[a.key];
+        const acc = st.accepts || [];
+        return { key: a.key, method: m, mclass: m.toLowerCase(), name: st.name, path: st.report ? st.report.path : ((st.api && st.api.path) || st.endpoint),
+          where: (a.field ? a.field + ' (' + ROLE.list + ')' : ROLE[a.role] || '') + (a.actions && a.actions.length ? ' · ' + a.actions.join(', ') : '') + (a.when ? ' · only when ' + a.when.slice(0, 80) : ''),
+          inScenario: !!inSc[a.key], open: open === a.key,
+          params: vals && vals[a.key] !== undefined ? vals[a.key] : linesOf(st.params, '='),
+          hint: st.report ? 'Values sent (P_NAME = value): ' + (Object.keys(st.params || {}).join(', ') || 'none in the code') : 'Values sent (name = value)' + (acc.length ? ' — it accepts: ' + acc.map((x) => x.name + (x.required ? ' (needed)' : '')).join(', ') : ''),
+          tried: tr ? { state: tr.state, icon: tr.state === 'ok' ? '✓' : tr.state === 'fail' ? '✗' : '–', head: tr.status ? tr.status + ' · ' + tr.ms + ' ms' + (tr.rows != null ? ' · ' + tr.rows + ' row(s)' : '') : 'not sent',
+            url: tr.request ? tr.request.method + ' ' + tr.request.url : '', note: tr.note || '', values: tr.values && tr.lov ? tr.lov.total + ' value(s): ' + tr.values.slice(0, 8).map((v) => v.text + (v.sub ? ' (' + v.sub + ')' : '')).join(', ') : '', answer: tr.answer || '' } : null };
+      });
+    }
+    apiBar(sc) {
+      if (!sc) return 'No scenario open: + Add to scenario starts a new one with that API.';
+      return 'Building: ' + sc.name + ' · ' + ((sc.steps || []).length) + ' step(s)' + (sc.id ? '' : ' (not saved yet)') + '. Add the APIs you want, then Suggest order in the scenario.';
+    }
     runHead(r) { return !r ? '' : (r.ok ? '✓ Passed' : '✗ Failed') + ' — ' + r.name + ' · ' + r.passed + ' ok, ' + r.failed + ' failed, ' + r.skipped + ' not run · ' + Math.round(r.ms / 100) / 10 + ' s · ' + when(r.at) + (r.by ? ' · ' + r.by : ''); }
     runRows(r) {
       const rows = (r && r.rows) || [];
