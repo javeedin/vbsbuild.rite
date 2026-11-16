@@ -52,6 +52,11 @@
     "result": {
       "type": "any",
       "defaultValue": null
+    },
+    "lovQ": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "Find a value in a list of values."
     }
   },
   "events": {
@@ -148,6 +153,19 @@
             "key": "{{ $event.currentTarget.dataset.field }}",
             "value": "{{ $event.detail.value || '' }}",
             "step": "{{ $event.currentTarget.dataset.step }}"
+          }
+        }
+      ]
+    },
+    "onPick": {
+      "chains": [
+        {
+          "chain": "scChain",
+          "parameters": {
+            "act": "pick",
+            "key": "{{ $event.currentTarget.dataset.key }}",
+            "value": "{{ $event.currentTarget.dataset.value }}",
+            "step": "{{ $event.currentTarget.dataset.label || '' }}"
           }
         }
       ]

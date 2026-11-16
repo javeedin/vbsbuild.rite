@@ -93,8 +93,14 @@ made on entry come first, then the rest; calls that only read come before calls 
 the page's report, at the point where the page calls it, with the report's parameters taken from the code.
 
 - **Values handed on.** A value one call answers feeds the next: `id = auto:id` takes `id` from the first row of the
-  answer, and `{{id}}` uses it. A value the page gets from the screen before it is asked for under **Data**. Each row
-  of Data runs the scenario once, so one scenario can cover many cases.
+  answer, and `{{id}}` uses it. The values the page itself sends with a call are filled in from its code (a page value
+  becomes `{{name}}`), and the hint lists every value the call accepts. A value the page gets from the screen before it
+  is asked for under **Data**. Each row of Data runs the scenario once, so one scenario can cover many cases.
+- **Lists of values, as on the page.** Build.Rite finds each dropdown in the page's code: the field, the call that
+  fills it (a ServiceDataProvider, or the call whose answer a chain puts in the dropdown's array), what it shows and
+  keeps, and the page value it sets. Its step shows the list's values after a run; pick one as a user would, on that
+  step or on any later step that sends it, and it is handed on (`customerRefId = data[id=7].id`). The first value is
+  used until you pick one, and a picked value that has gone from the list is reported.
 - **Checks on every answer.** The status (`2xx`, or `200,404` when a 404 is expected), how many rows, how long it took,
   whether the answer still has the same shape as the example the page was built with, and given fields
   (`items[0].status = OPEN`).

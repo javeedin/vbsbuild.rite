@@ -32,6 +32,7 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     handle: (r, res) => {
       if (r.path === '/shop/v1/orders' && r.method === 'GET') return res.json(EXAMPLE);
       if (/^\/shop\/v1\/orders\/41$/.test(r.path)) return res.json(EXAMPLE.data[0]);
+      if (r.path === '/shop/v1/customers' && r.method === 'GET') return res.json({ items: [{ id: 7, name: 'Acme Tools' }, { id: 8, name: 'Blue River' }] });
       if (r.path.endsWith('/ExternalReportWSSService') && /CUSTOMERS_RP/.test(r.body)) { reportBodies.push(r.body); return res.bip([{ CUSTOMER_ID: '7', CUSTOMER_NAME: 'Acme Tools' }]); }
       return false;
     } });
@@ -100,6 +101,30 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     res = await results();
     T.check('run: the reads and the report checked, the create not sent (writes not allowed)', res[0].state === 'ok' && res[1].state === 'ok' && res[2].state === 'skip' && env.writes.length === 0, JSON.stringify(res));
     T.check('…the report sent with the value given (P_CUSTOMER_ID = 42)', reportBodies.some((b) => /reportAbsolutePath>\/Custom\/Shop\/CUSTOMERS_RP\.xdo</.test(b) && /P_CUSTOMER_ID[\s\S]{0,200}>42</.test(b)), (reportBodies[reportBodies.length - 1] || '').slice(0, 300));
+
+    T.section('a list of values: its values shown, picked as on the page, here and in the steps that send it');
+    const lovInfo = await text(page, '#scSteps .nx-sc-step:first-child .nx-sc-lovinfo');
+    T.check('the Customer dropdown found in the code: its step says so (what it keeps, the value it hands on)', /^List of values: Customer/.test(await page.$eval('#scSteps .nx-sc-step:first-child .nx-sc-stepname', (e) => e.value))
+      && /Customer on the page: .*keeps id → hands it on as \{\{customer\}\}/.test(lovInfo), lovInfo);
+    T.check('…its values there, from the run (the first one used until another is picked)', /Acme Tools/.test(await text(page, '#scSteps .nx-sc-step:first-child .nx-sc-values')) && /Blue River/.test(await text(page, '#scSteps .nx-sc-step:first-child .nx-sc-values'))
+      && /the first value: Acme Tools \(7\)/.test(await text(page, '#scSteps .nx-sc-step:first-child .nx-sc-picked')), await text(page, '#scSteps .nx-sc-step:first-child .nx-sc-picker'));
+    T.check('…and in the run: how many, which', /Customer: 2 value\(s\) — Acme Tools, Blue River/.test(await text(page, '#scRun .nx-sc-resvalues')), await text(page, '#scRun .nx-sc-resvalues'));
+    // the report sends the customer picked: the same list shows on its step too
+    const pBox2 = (await page.$$('#scSteps oj-text-area[data-field="params"] textarea'))[1];
+    await pBox2.fill('P_CUSTOMER_ID = {{customer}}'); await pBox2.press('Tab'); await page.waitForTimeout(400);
+    const repStep = '#scSteps .nx-sc-step:nth-child(2)';
+    T.check('a step that sends {{customer}}: the list\'s values right there', (await page.$$(repStep + ' .nx-sc-picker .nx-sc-value')).length === 2, await text(page, repStep + ' .nx-sc-picker').catch(() => ''));
+    await page.click(repStep + ' .nx-sc-value[data-value="8"]');
+    await page.waitForTimeout(400);
+    T.check('picked there (Blue River): marked on both steps', /picked: Blue River \(8\)/.test(await text(page, repStep + ' .nx-sc-picked')) && /picked: Blue River \(8\)/.test(await text(page, '#scSteps .nx-sc-step:first-child .nx-sc-picked'))
+      && (await page.$$('#scSteps .nx-sc-value--on[data-value="8"]')).length === 2, await text(page, repStep + ' .nx-sc-picked'));
+    const before = reportBodies.length;
+    await saveRun();
+    T.check('Save & run: the value picked handed on and sent (P_CUSTOMER_ID = 8)', reportBodies.length > before && /P_CUSTOMER_ID[\s\S]{0,200}>8</.test(reportBodies[reportBodies.length - 1])
+      && /customer = 8/.test(await text(page, '#scRun .nx-sc-handed')), (reportBodies[reportBodies.length - 1] || '').slice(0, 200));
+    await page.fill('#scSteps .nx-sc-step:first-child .nx-sc-pickq', 'acme'); await page.waitForTimeout(300);
+    T.check('find a value by name', (await page.$$('#scSteps .nx-sc-step:first-child .nx-sc-value')).length === 1, String((await page.$$('#scSteps .nx-sc-step:first-child .nx-sc-value')).length));
+    await env.shot('api-scenarios-lov.png');
 
     T.section('opened on a page from Application pages');
     await env.open('/?open=app-pages');

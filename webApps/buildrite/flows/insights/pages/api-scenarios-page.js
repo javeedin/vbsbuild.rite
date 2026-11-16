@@ -26,12 +26,42 @@ define(['resources/js/shellBus'], (bus) => {
       });
     }
     kinds(sc) { return KINDS.map((k) => ({ id: k[0], label: k[1], on: !!sc && sc.kind === k[0] })); }
-    stepRows(sc) {
-      return ((sc && sc.steps) || []).map((st, i) => {
+    stepRows(sc, run, lovQ) {
+      const steps = (sc && sc.steps) || [];
+      // the last run of this scenario: the values each list of values gave (lib/apiScenarios.js run → res.values)
+      const runSteps = run && sc && run.scenario === sc.id && run.rows && run.rows[0] ? run.rows[0].steps || [] : [];
+      const lists = {}; // target → { step, lov }
+      steps.forEach((st) => { if (st.lov && st.lov.target) lists[st.lov.target] = { step: st, lov: st.lov }; });
+      const q = String(lovQ || '').trim().toLowerCase();
+      const picker = (l) => {
+        const res = runSteps.filter((x) => x.step === l.step.id)[0];
+        const all = (res && res.values) || [];
+        const ex = (l.step.extract || []).filter((e) => e.var === l.lov.target)[0];
+        const m = ex ? /\[[\w.-]+=([^\]]*)\]/.exec(ex.from) : null;
+        const pick = m ? m[1] : (all[0] ? all[0].key : '');
+        const pickedRow = all.filter((v) => v.key === pick)[0];
+        const shown = all.filter((v) => !q || (v.text + ' ' + v.key).toLowerCase().indexOf(q) !== -1);
+        return { lovStep: l.step.id, field: l.lov.field, target: l.lov.target, has: all.length > 0,
+          pickedLabel: !all.length ? (m ? 'picked: ' + pick : 'the first value, once loaded') : (m ? 'picked: ' : 'the first value: ') + (pickedRow ? pickedRow.text + ' (' + pick + ')' : pick + ' — no longer in the list'),
+          note: res ? (res.state === 'fail' ? 'Its last run gave no values: see the run below.' : 'Its last run gave no values.') : 'Run the scenario once to load its values, then pick one as a user would. The first value is used until you pick one.',
+          values: shown.slice(0, 80).map((v) => ({ key: v.key, text: v.text || v.key, on: v.key === pick })),
+          countNote: (res && res.lov ? res.lov.total : all.length) + ' value(s)' + (q ? ', ' + shown.length + ' match' : '') + (shown.length > 80 ? ' — the first 80 shown, find one by name' : '') + '. Pick one to use it in the steps after (then Save & run).' };
+      };
+      return steps.map((st, i) => {
         const ex = st.expect || {};
+        const acc = st.accepts || [];
+        // the lists whose value this step sends ({{customerRefId}}), and its own list
+        const uses = [];
+        if (st.lov && lists[st.lov.target]) uses.push(lists[st.lov.target]);
+        Object.keys(st.params || {}).forEach((k) => {
+          Array.from(String(st.params[k] || '').matchAll(/\{\{\s*([\w.-]+)\s*\}\}/g)).forEach((mm) => { const l = lists[mm[1]]; if (l && l.step.id !== st.id && uses.indexOf(l) === -1) uses.push(l); });
+        });
         return { id: st.id, n: i + 1, name: st.name, call: st.report ? 'report ' + st.report.path : st.endpoint, writes: !!st.writes,
           params: linesOf(st.params, '='), extract: (st.extract || []).map((e) => e.var + ' = ' + e.from).join('\n'),
-          paramHint: st.report ? 'P_CUSTOMER_ID = {{CustomerId}}' : 'ProjectId = {{ProjectId}}',
+          // what the call accepts, from its service (the values the page sends are filled in already)
+          paramHint: st.report ? 'P_NAME = value (the report\'s parameters)' : acc.length ? 'It accepts: ' + acc.map((a) => a.name + (a.required ? ' (needed)' : '')).join(', ') + '\nOne per line: name = value, or {{var}} from an earlier step' : 'This call takes no values',
+          lov: st.lov ? st.lov.field + ' on the page: shows ' + (st.lov.text || 'its name') + ', keeps ' + (st.lov.key || 'id') + ' → hands it on as {{' + st.lov.target + '}}' : '',
+          pickers: uses.map(picker),
           status: ex.status || '2xx', minRows: ex.minRows == null ? '' : String(ex.minRows), maxMs: ex.maxMs == null ? '' : String(ex.maxMs), sameShape: !!ex.sameShape,
           fields: (ex.fields || []).map((f) => f.path + (f.equals === null || f.equals === undefined ? '' : ' = ' + f.equals)).join('\n'),
           hasBody: !!st.body || !!st.writes, body: st.body || '' };
@@ -55,6 +85,7 @@ define(['resources/js/shellBus'], (bus) => {
       return rows.map((row, i) => ({ label: rows.length > 1 ? 'Row ' + (i + 1) + ': ' + Object.keys(row.vars || {}).map((k) => k + '=' + row.vars[k]).join(', ') : '',
         steps: (row.steps || []).map((s) => ({ name: s.name, call: s.call, state: s.state, icon: s.state === 'ok' ? '✓' : s.state === 'fail' ? '✗' : '–',
           facts: s.status ? s.status + ' · ' + s.ms + ' ms' + (s.rows != null ? ' · ' + s.rows + ' row(s)' : '') : '', note: s.note || '', checks: s.checks || [],
+          values: s.lov && s.values ? s.lov.field + ': ' + s.lov.total + ' value(s) — ' + s.values.slice(0, 6).map((v) => v.text || v.key).join(', ') + (s.lov.total > 6 ? ', …' : '') : '',
           handed: Object.keys(s.extracted || {}).map((k) => k + ' = ' + s.extracted[k]).join(', '), answer: s.answer || '', url: s.request ? s.request.method + ' ' + s.request.url : 'Its answer' })) }));
     }
     runList(runs) { return (runs || []).map((h) => ({ id: h.id, ok: h.ok, icon: h.ok ? '✓' : '✗', name: h.name, counts: h.passed + ' ok · ' + h.failed + ' failed · ' + h.skipped + ' not run · ' + Math.round(h.ms / 100) / 10 + ' s', when: when(h.at), by: h.by || '' })); }

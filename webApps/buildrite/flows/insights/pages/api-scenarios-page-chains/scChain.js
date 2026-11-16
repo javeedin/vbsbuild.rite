@@ -1,7 +1,7 @@
 define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pagesClient', 'resources/js/shellBus'], (ActionChain, SC, PC, bus) => {
   'use strict';
 
-  // API Scenarios: load | page (id) | draft | new | open (id) | run (id) | runAll | save | saveRun | saveRunWrites | delete
+  // API Scenarios: load | page (id) | draft | new | open (id) | run (id) | runAll | save | saveRun | saveRunWrites | delete | pick (step, value)
   //   | field (key, value) | stepField (step, key, value) | addStep | up | down | removeStep | toggleWrites | toggleShape | showRun
   const copy = (o) => JSON.parse(JSON.stringify(o || null));
   const pairs = (text, sep) => String(text || '').split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const i = l.indexOf(sep); return i === -1 ? [l.trim(), ''] : [l.slice(0, i).trim(), l.slice(i + sep.length).trim()]; }).filter((p) => p[0]);
@@ -69,6 +69,7 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
       if (act === 'showRun') { const r = await SC.runOf(v.page, key); if (r.ok) v.run = r.body.run; else say(r); return; }
       if (act === 'field') {
         if (key === 'q') { v.q = value; return; }
+        if (key === 'lovQ') { v.lovQ = value; return; }
         if (key === 'addCall') { v.addCall = value; return; }
         if (!v.sc) return;
         if (key === 'data') {
@@ -78,6 +79,17 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
           return;
         }
         v.sc = Object.assign({}, v.sc, { [key]: value });
+        return;
+      }
+      // a value picked from a list of values (as a user picks it on the page): read from that row from now on
+      if (act === 'pick') {
+        const st = steps().filter((x) => x.id === key)[0];
+        if (!st || !st.lov) return;
+        const l = st.lov;
+        const from = (l.itemsPath || '') + (value !== '' ? '[' + (l.key || 'id') + '=' + value + ']' : '[0]') + '.' + (l.key || 'id');
+        const others = (st.extract || []).filter((e) => e.var !== l.target);
+        setSteps(steps().map((x) => (x.id === key ? Object.assign(copy(x), { extract: [{ var: l.target, from }].concat(others) }) : x)));
+        v.result = { ok: true, text: 'Picked ' + (step || value) + ' for ' + l.field + ' ({{' + l.target + '}}). Save & run to use it.' };
         return;
       }
       if (act === 'toggleWrites') { if (v.sc) v.sc = Object.assign({}, v.sc, { allowWrites: !v.sc.allowWrites }); return; }

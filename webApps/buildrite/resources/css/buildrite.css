@@ -147,6 +147,22 @@ html[data-nx-product="buildrite"] .nx-nav-scroll { scrollbar-color: rgba(255, 25
 .nx-sc-stepbody { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; margin-top: 8px; }
 .nx-sc-f { display: grid; gap: 3px; font-size: 12px; color: #4a5865; }
 .nx-sc-ta { width: 100%; max-width: none; }
+/* a list of values on the page (a dropdown a call fills) and its values, to pick from as a user does */
+.nx-sc-lovinfo { margin: 8px 0 0; font-size: 12.5px; color: #3b4a58; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nx-sc-lovchip { font-size: 11px; font-weight: 700; color: #1d4f91; background: #e6f0fc; border-radius: 9px; padding: 1px 8px; }
+.nx-sc-picker { margin-top: 8px; border: 1px solid #cfdcec; border-radius: 10px; background: #f7faff; padding: 8px 10px; }
+.nx-sc-pickhead { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.nx-sc-pickhead code { font-size: 11.5px; color: #1d4f91; }
+.nx-sc-picked { font-size: 12.5px; color: #1f7a45; font-weight: 600; }
+.nx-sc-pickq { height: 30px; max-width: 220px; font-size: 13px; }
+.nx-sc-values { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-height: 168px; overflow: auto; }
+.nx-sc-value { display: inline-flex; gap: 6px; align-items: baseline; border: 1px solid #d3dce6; background: #fff; border-radius: 16px; padding: 3px 10px; cursor: pointer; font: inherit; font-size: 12.5px; max-width: 100%; }
+.nx-sc-value span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+.nx-sc-value code { font-size: 11px; color: #6b7886; }
+.nx-sc-value:hover { border-color: #2e6fd8; }
+.nx-sc-value--on { border-color: #2e6fd8; background: #e6f0fc; box-shadow: 0 0 0 1px #2e6fd8; font-weight: 600; }
+.nx-sc-valnote { margin: 6px 0 0; font-size: 12px; }
+.nx-sc-resvalues { margin: 4px 0 0; font-size: 12.5px; color: #1d4f91; }
 .nx-sc-f .nx-sc-ta textarea, #scData textarea { font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; }
 .nx-sc-checks label { display: inline-flex; gap: 4px; align-items: center; margin-right: 8px; }
 .nx-sc-checks input.nx-cm-input--sm { width: 72px; }

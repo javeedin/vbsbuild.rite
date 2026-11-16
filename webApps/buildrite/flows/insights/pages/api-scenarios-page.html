@@ -75,7 +75,7 @@
             <oj-text-area class="nx-sc-ta nx-sc-notes" id="scNotes" rows="2" data-field="notes" on-value-changed="[[ $listeners.onTaField ]]" placeholder="What this scenario checks (e.g. a closed project gives no tasks)" value="[[ $variables.sc.notes ]]"></oj-text-area>
 
             <ol class="nx-sc-steps" id="scSteps">
-              <oj-bind-for-each data="[[ $functions.stepRows($variables.sc) ]]">
+              <oj-bind-for-each data="[[ $functions.stepRows($variables.sc, $variables.run, $variables.lovQ) ]]">
                 <template data-oj-as="st">
                   <li :class="[[ 'nx-sc-step' + (st.data.writes ? ' nx-sc-step--writes' : '') ]]" :id="[[ 'scStep-' + st.data.id ]]">
                     <div class="nx-sc-stephead">
@@ -88,6 +88,41 @@
                       <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="down" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Move down" title="Move down">↓</button>
                       <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="removeStep" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Remove the step" title="Remove">✕</button>
                     </div>
+                    <!-- a list of values on the page (a dropdown this call fills): what it shows, keeps and hands on -->
+                    <oj-bind-if test="[[ !!st.data.lov ]]">
+                      <p class="nx-sc-lovinfo"><span class="nx-sc-lovchip">List of values</span>
+                        <oj-bind-text value="[[ st.data.lov ]]"></oj-bind-text></p>
+                    </oj-bind-if>
+                    <!-- the values to pick from, as on the page: on the list's own step and on every step that sends its value -->
+                    <oj-bind-for-each data="[[ st.data.pickers ]]">
+                      <template data-oj-as="pk">
+                        <div class="nx-sc-picker" :data-lov="[[ pk.data.lovStep ]]" :data-target="[[ pk.data.target ]]">
+                          <div class="nx-sc-pickhead">
+                            <b><oj-bind-text value="[[ pk.data.field ]]"></oj-bind-text></b>
+                            <code><oj-bind-text value="[[ '{{' + pk.data.target + '}}' ]]"></oj-bind-text></code>
+                            <span class="nx-sc-picked"><oj-bind-text value="[[ pk.data.pickedLabel ]]"></oj-bind-text></span>
+                            <span class="nx-min-flex"></span>
+                            <oj-bind-if test="[[ pk.data.has ]]">
+                              <input class="nx-cm-input nx-sc-pickq" data-field="lovQ" :value="[[ $variables.lovQ ]]" on-input="[[ $listeners.onField ]]" placeholder="Find a value…" aria-label="Find a value">
+                            </oj-bind-if>
+                          </div>
+                          <oj-bind-if test="[[ !pk.data.has ]]"><p class="nx-note"><oj-bind-text value="[[ pk.data.note ]]"></oj-bind-text></p></oj-bind-if>
+                          <oj-bind-if test="[[ pk.data.has ]]">
+                            <div class="nx-sc-values" role="listbox" :aria-label="[[ pk.data.field ]]">
+                              <oj-bind-for-each data="[[ pk.data.values ]]">
+                                <template data-oj-as="vv">
+                                  <button type="button" role="option" :aria-selected="[[ vv.data.on ? 'true' : 'false' ]]" :class="[[ 'nx-sc-value' + (vv.data.on ? ' nx-sc-value--on' : '') ]]"
+                                    :data-key="[[ pk.data.lovStep ]]" :data-value="[[ vv.data.key ]]" :data-label="[[ vv.data.text ]]" on-click="[[ $listeners.onPick ]]">
+                                    <span><oj-bind-text value="[[ vv.data.text ]]"></oj-bind-text></span><code><oj-bind-text value="[[ vv.data.key ]]"></oj-bind-text></code>
+                                  </button>
+                                </template>
+                              </oj-bind-for-each>
+                            </div>
+                            <p class="nx-note nx-sc-valnote"><oj-bind-text value="[[ pk.data.countNote ]]"></oj-bind-text></p>
+                          </oj-bind-if>
+                        </div>
+                      </template>
+                    </oj-bind-for-each>
                     <div class="nx-sc-stepbody">
                       <label class="nx-sc-f"><span>Values sent (name = value, {{var}} from an earlier step)</span>
                         <oj-text-area class="nx-sc-ta" rows="3" data-field="params" :data-step="[[ st.data.id ]]" on-value-changed="[[ $listeners.onTaStep ]]" placeholder="[[ st.data.paramHint ]]" value="[[ st.data.params ]]"></oj-text-area></label>
@@ -138,6 +173,7 @@
                         <ul class="nx-sc-checklist">
                           <oj-bind-for-each data="[[ r.data.checks ]]"><template data-oj-as="c"><li :class="[[ c.data.ok ? 'nx-sc-ok' : 'nx-sc-bad' ]]"><oj-bind-text value="[[ (c.data.ok ? '✓ ' : '✗ ') + c.data.name + ' — ' + c.data.detail ]]"></oj-bind-text></li></template></oj-bind-for-each>
                         </ul>
+                        <oj-bind-if test="[[ !!r.data.values ]]"><p class="nx-sc-resvalues"><oj-bind-text value="[[ r.data.values ]]"></oj-bind-text></p></oj-bind-if>
                         <oj-bind-if test="[[ !!r.data.handed ]]"><p class="nx-sc-handed"><oj-bind-text value="[[ 'Handed on: ' + r.data.handed ]]"></oj-bind-text></p></oj-bind-if>
                         <oj-bind-if test="[[ !!r.data.answer ]]"><details class="nx-sc-answer"><summary><oj-bind-text value="[[ r.data.url ]]"></oj-bind-text></summary><pre><oj-bind-text value="[[ r.data.answer ]]"></oj-bind-text></pre></details></oj-bind-if>
                       </li>

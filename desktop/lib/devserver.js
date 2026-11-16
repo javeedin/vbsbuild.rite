@@ -1047,8 +1047,11 @@ function createDevServer(o) {
             if (pathname === '/__api/scenarios/remove' && post) return jsonA(200, sc.remove(b.id));
             if (pathname === '/__api/scenarios/draft' && post) {
               const ps = o.pagesStore;
-              const sh = ps && ps.sheet ? ps.sheet(String(b.page || '')) : null;
-              const facts = sh && (sh.facts || (sh.sheet && sh.sheet.facts));
+              // the page's code as it is now (its dropdowns and the values it sends), else its saved sheet
+              let live = null;
+              try { live = ps && ps.facts ? ps.facts(String(b.page || '')) : null; } catch (e) { live = null; }
+              const sh = live ? null : (ps && ps.sheet ? ps.sheet(String(b.page || '')) : null);
+              const facts = live || (sh && (sh.facts || (sh.sheet && sh.sheet.facts)));
               if (!facts) return jsonA(200, { ok: false, error: 'This page has no technical sheet yet: open it in Application pages and Build its sheet first.' });
               // its reports as the API tester finds them in the page's code: a name (XX_RP) to its path and parameters
               let reports = [];

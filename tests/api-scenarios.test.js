@@ -93,6 +93,26 @@ const ROOT = path.join(__dirname, 'fixtures', 'vb-sample');
     r = await store.run(ds.scenario.id, env, {});
     T.check('…run without it: the step says to give it under Data', !r.run.ok && /no value for id — give it under Data/.test(r.run.rows[0].steps[0].note), r.run.rows[0].steps[0].note);
 
+    T.section('a list of values: its values kept with the run, the value picked handed on');
+    const lov = { field: 'Order', target: 'orderId', key: 'id', text: 'status', itemsPath: 'items' };
+    const lovSc = store.save({ page: 'shop/orders/order-detail', name: 'Pick an order', steps: [
+      { name: 'Orders (a dropdown)', endpoint: 'shopApi/getOrders', lov, extract: [{ var: 'orderId', from: 'items[0].id' }] },
+      { name: 'The one picked', endpoint: 'shopApi/getOrderById', params: { id: '{{orderId}}' }, expect: { status: '200,404' } }] }).scenario;
+    T.check('kept with its list (field, value set, key, text, items path); each step shows what its call accepts', JSON.stringify(lovSc.steps[0].lov) === JSON.stringify(lov)
+      && lovSc.steps[1].accepts.some((a) => a.name === 'id' && a.required), JSON.stringify(lovSc.steps[1].accepts));
+    r = await store.run(lovSc.id, env, {});
+    let s0 = r.run.rows[0].steps[0];
+    T.check('run: its values as the page shows them (key, text), how many; "the list has values" checked; the first handed on', JSON.stringify(s0.values) === '[{"key":"41","text":"OPEN"},{"key":"42","text":"CLOSED"}]'
+      && s0.lov.total === 2 && s0.checks.some((c) => /the list has values/.test(c.name) && c.ok) && s0.extracted.orderId === '41' && sent.indexOf('GET /shop/v1/orders/41') !== -1, JSON.stringify(s0));
+    const picked = store.save(Object.assign({}, lovSc, { steps: [Object.assign({}, lovSc.steps[0], { extract: [{ var: 'orderId', from: 'items[id=42].id' }] }), lovSc.steps[1]] })).scenario;
+    r = await store.run(picked.id, env, {});
+    T.check('another value picked (42): handed on, sent', r.run.rows[0].steps[0].extracted.orderId === '42' && sent.indexOf('GET /shop/v1/orders/42') !== -1, JSON.stringify(r.run.rows[0].steps[0].extracted));
+    const gone = store.save(Object.assign({}, picked, { steps: [Object.assign({}, picked.steps[0], { extract: [{ var: 'orderId', from: 'items[id=77].id' }] }), picked.steps[1]] })).scenario;
+    r = await store.run(gone.id, env, {});
+    s0 = r.run.rows[0].steps[0];
+    T.check('a value picked that is no longer in the list: said so, the next step not run', s0.state === 'fail' && s0.checks.some((c) => /the value picked \(77\) is no longer in the list/.test(c.detail))
+      && r.run.rows[0].steps[1].state === 'skip', JSON.stringify(s0.checks));
+
     T.section('kept, listed');
     const list = store.list(page);
     T.check('the page\'s scenarios, each with its last run', list.ok && list.scenarios.length === 6 && list.scenarios.filter((x) => x.name === 'Open an order')[0].last !== null);

@@ -327,6 +327,175 @@ function list(root) {
   });
 }
 
+const isObjS = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+const firstKey = (k) => String(Array.isArray(k) ? k[0] || '' : k || '');
+/** Splits at a character outside quotes and brackets ("a: 'x,y', b: f(1, 2)" at ',' → ["a: 'x,y'", " b: f(1, 2)"]). */
+function splitTop(s, ch) {
+  const out = [];
+  let q = '', d = 0, cur = '';
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (q) { cur += c; if (c === '\\') { cur += s[++i] || ''; } else if (c === q) q = ''; continue; }
+    if (c === '"' || c === "'" || c === '`') { q = c; cur += c; continue; }
+    if ('([{'.indexOf(c) !== -1) d++;
+    if (')]}'.indexOf(c) !== -1) d--;
+    if (c === ch && d === 0) { out.push(cur); cur = ''; continue; }
+    cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+/** One statement from where it starts: up to its ';' (or a blank line) outside quotes and brackets, at most 4000 characters. */
+function stmtOf(s) {
+  let q = '', d = 0;
+  const n = Math.min(s.length, 4000);
+  for (let i = 0; i < n; i++) {
+    const c = s[i];
+    if (q) { if (c === '\\') i++; else if (c === q) q = ''; continue; }
+    if (c === '"' || c === "'" || c === '`') { q = c; continue; }
+    if (c === '/' && s[i + 1] === '/') { const e = s.indexOf('\n', i); i = e < 0 ? n : e; continue; }
+    if ('([{'.indexOf(c) !== -1) d++;
+    else if (')]}'.indexOf(c) !== -1) { if (--d < 0) return s.slice(0, i); }
+    else if (d === 0 && (c === ';' || (c === '\n' && /^\s*\n/.test(s.slice(i + 1, i + 40))))) return s.slice(0, i);
+  }
+  return s.slice(0, n);
+}
+/**
+ * A value as the page sends it, as a scenario value: "{{ $variables.formData.customerRefId }}", $page.variables.x.y,
+ * request.projectId or a bare name → "{{customerRefId}}"; 'OPEN', 500, true stay; "'ProjectId=' + request.projectId" →
+ * "ProjectId={{projectId}}". Anything else (a call, a condition) → '' (not known).
+ */
+function valueOf(expr) {
+  let s = String(expr == null ? '' : expr).trim().replace(/^\{\{\s*([\s\S]*?)\s*\}\}$/, '$1');
+  if (!s) return '';
+  const parts = splitTop(s, '+').map((x) => x.trim());
+  let out = '';
+  for (const x of parts) {
+    let m;
+    if ((m = /^(['"`])([^'"`]*)\1$/.exec(x))) out += m[2];
+    else if (/^-?\d+(\.\d+)?$/.test(x) || /^(true|false)$/.test(x)) out += x;
+    else if ((m = /^(?:Number|String|parseInt)\(\s*([\w$.]+)\s*\)$/.exec(x)) || (m = /^([\w$]+(?:\.[\w$]+)*)$/.exec(x))) {
+      const seg = m[1].split('.').pop();
+      if (!/^[A-Za-z_]\w*$/.test(seg) || /^(null|undefined|this|context)$/.test(seg)) return '';
+      out += '{{' + seg + '}}';
+    } else return '';
+  }
+  return out;
+}
+/** The text of a call's object literal "callRest(context, { … })" from where it starts (braces balanced). */
+function objectAt(src, from) {
+  const i = src.indexOf('{', from);
+  if (i < 0) return '';
+  let d = 0;
+  for (let j = i; j < Math.min(src.length, i + 3000); j++) { const c = src[j]; if (c === '{') d++; else if (c === '}' && --d === 0) return src.slice(i, j + 1); }
+  return src.slice(i, i + 3000);
+}
+/** The values a chain sends with each call: uriParams: { customerId: $page.variables.formData.customerRefId, status: 'OPEN' }. */
+function callParamsOf(srcs) {
+  const out = {};
+  srcs.forEach((src) => {
+    for (const m of src.matchAll(/callRest\(\s*context\s*,/g)) {
+      const obj = objectAt(src, m.index);
+      const ep = (/endpoint\s*:\s*['"]([\w-]+\/\w+)['"]/.exec(obj) || [])[1];
+      const ui = obj.search(/uriParams\s*:\s*\{/);
+      if (!ep || ui < 0 || out[ep]) continue;
+      const params = {};
+      const body = objectAt(obj, ui).slice(1, -1);
+      splitTop(body, ',').forEach((kv) => {
+        const at = splitTop(kv, ':');
+        if (at.length < 2) return;
+        const k = at[0].trim().replace(/^['"]|['"]$/g, '');
+        const v = valueOf(at.slice(1).join(':'));
+        if (/^[\w-]+$/.test(k) && v !== '') params[k] = v;
+      });
+      if (Object.keys(params).length) out[ep] = params;
+    }
+  });
+  return out;
+}
+/**
+ * The page's lists of values: each dropdown (oj-select-single, oj-combobox-one…), the field it fills (label-hint), what
+ * it shows (item-text) and keeps (the data provider's keyAttributes), the page value it sets (value="{{ … }}"), and where
+ * its values come from: a call (a ServiceDataProvider's endpoint, or the call whose answer a chain puts in the array the
+ * provider reads), a BI Publisher report, or values written in the code.
+ *   → [{ field, component, target, text, key, textFrom, keyFrom, source: 'service'|'chain'|'report'|'static'|'',
+ *        endpoint, report, itemsPath, params, values, via }]
+ */
+function lovsOf(htmlSrc, json, chainSrcs) {
+  const vars = (json && json.variables) || {};
+  const out = [];
+  const re = /<(oj-(?:c-)?(?:select-single|select-many|select-one|combobox-one|combobox-many))\b([\s\S]*?)>/g;
+  for (const m of String(htmlSrc || '').matchAll(re)) {
+    const a = m[2];
+    const attr = (n) => { const x = new RegExp('(?:^|\\s)' + n + '="([^"]*)"').exec(a); return x ? x[1] : ''; };
+    const dv = (/\$(?:page\.|flow\.|app\.)?variables\.(\w+)/.exec(attr('data') || attr('options')) || [])[1] || '';
+    const target = ((/variables\.([\w.]+)/.exec(attr('value')) || [])[1] || '').split('.').pop();
+    const it = attr('item-text');
+    const lov = { field: clean(attr('label-hint') || attr('aria-label') || attr('placeholder') || attr('label')) || humanize(target || dv), component: m[1], target,
+      text: /[[{]/.test(it) ? '' : it, key: '', textFrom: '', keyFrom: '', source: '', endpoint: '', report: '', itemsPath: '', params: {}, values: [], via: '' };
+    const v = vars[dv] || {};
+    const def = isObjS(v.defaultValue) ? v.defaultValue : {};
+    lov.key = firstKey(def.keyAttributes);
+    if (/ServiceDataProvider/.test(String(v.type || ''))) {
+      lov.source = 'service'; lov.endpoint = String(def.endpoint || ''); lov.itemsPath = String(def.itemsPath || '');
+      // in the page JSON a value is written as it is ('Y'), a page value in {{ }}
+      Object.keys(isObjS(def.uriParameters) ? def.uriParameters : {}).forEach((k) => { const raw = String(def.uriParameters[k] == null ? '' : def.uriParameters[k]); const x = /\{\{/.test(raw) ? valueOf(raw) : raw; if (x !== '') lov.params[k] = x; });
+    } else if (Array.isArray(def.data)) {
+      lov.source = 'static';
+      lov.values = def.data.slice(0, 50).filter(isObjS).map((r) => ({ key: String(r[lov.key || 'value'] == null ? '' : r[lov.key || 'value']), text: String(r[lov.text || 'label'] == null ? '' : r[lov.text || 'label']) }));
+    } else if (dv) {
+      // the array the provider reads ("{{ $page.variables.customerRefsArray }}"), filled in a chain from a call's answer
+      const arr = (/variables\.(\w+)/.exec(String(def.data || '')) || [])[1];
+      const names = uniq([arr, dv]).filter(Boolean).join('|');
+      for (const c of chainSrcs) {
+        const src = c.src;
+        const as = new RegExp('variables\\.(?:' + names + ')(?:\\.data)?\\s*=(?!=)').exec(src);
+        if (!as) continue;
+        const expr = stmtOf(src.slice(as.index + as[0].length));
+        // the answers' names: const res = await Actions.callRest(…endpoint…); const [a, b] = await Promise.all([callRest(…), callRest(…)])
+        const named = {};
+        for (const x of src.matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*await\s+Actions\.callRest\(\s*context\s*,/g)) { const ep = (/endpoint\s*:\s*['"]([\w-]+\/\w+)['"]/.exec(objectAt(src, x.index)) || [])[1]; if (ep) named[x[1]] = ep; }
+        for (const x of src.matchAll(/(?:const|let|var)\s*\[([^\]]+)\]\s*=\s*await\s+Promise\.all\(\s*\[([\s\S]*?)\]\s*\)/g)) {
+          const ns = x[1].split(',').map((s) => s.trim());
+          const eps = Array.from(x[2].matchAll(/endpoint\s*:\s*['"]([\w-]+\/\w+)['"]/g)).map((e) => e[1]);
+          ns.forEach((n, i) => { if (/^\w+$/.test(n) && eps[i]) named[n] = eps[i]; });
+        }
+        // followed back through the chain's own names (options ← headers ← headersResp), nearest first
+        const decl = {};
+        for (const x of src.slice(0, as.index).matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*/g)) decl[x[1]] = stmtOf(src.slice(x.index + x[0].length));
+        const idsIn = (t) => uniq(Array.from(t.matchAll(/\b([A-Za-z_]\w*)\b/g)).map((x) => x[1]));
+        let used = '', texts = [expr], frontier = [expr];
+        const seen = {};
+        for (let hop = 0; hop < 4 && !used; hop++) {
+          const next = [];
+          for (const t of frontier) {
+            const hit = idsIn(t).filter((n) => named[n])[0];
+            if (hit) { used = hit; break; }
+            idsIn(t).forEach((n) => { if (decl[n] && !seen[n]) { seen[n] = 1; next.push(decl[n]); } });
+          }
+          texts = texts.concat(next);
+          frontier = next;
+        }
+        const all = texts.join('\n');
+        const calls = Array.from(src.matchAll(/endpoint\s*:\s*['"]([\w-]+\/\w+)['"]/g)).map((e) => e[1]);
+        const ep = used ? named[used] : (uniq(calls).length === 1 ? calls[0] : '');
+        const rp = (/\b([A-Z][A-Z0-9_]*_RP)\b/.exec(expr) || [])[1] || (/decodeReportRows|parseXmlRows/.test(expr) ? (Array.from(src.slice(0, as.index).matchAll(/\/([A-Za-z0-9_]+)\.xdo/g)).map((e) => e[1]).pop() || '') : '');
+        if (rp && (/decodeReportRows|parseXmlRows/.test(expr) || !ep)) { lov.source = 'report'; lov.report = rp; } else if (ep) { lov.source = 'chain'; lov.endpoint = ep; }
+        else continue;
+        lov.via = c.name;
+        if (used) { const ip = new RegExp('\\b' + used + '\\.body\\.(\\w+)').exec(all) || new RegExp('\\b' + used + '\\.body\\.(\\w+)').exec(src); lov.itemsPath = ip ? ip[1] : ''; }
+        // a list mapped from the answer ({ id: Number(c.id), customerName: c.customerName || … }): the answer's own fields
+        const from = (k) => (k ? ((new RegExp('\\b' + k + '\\s*:\\s*\\(?\\s*(?:Number|String|parseInt)?\\(?\\s*\\w+\\.(\\w+)').exec(all) || [])[1] || '') : '');
+        lov.keyFrom = from(lov.key); lov.textFrom = from(lov.text);
+        break;
+      }
+    }
+    // the same dropdown twice (shown in one case or another) once
+    if (!out.some((x) => x.field === lov.field && x.target === lov.target && x.endpoint === lov.endpoint && x.source === lov.source)) out.push(lov);
+  }
+  return out.slice(0, 40);
+}
+
 function analyze(root, id) {
   const p = pagesOf(root).filter((x) => x.id === id)[0];
   if (!p) return null;
@@ -408,16 +577,25 @@ function analyze(root, id) {
   });
 
   // ── integrations ──
-  const endpoints = uniq(pageCode.endpoints.concat(...chains.map((c) => c.calls), ...modules.map((m) => m.calls)));
+  // a ServiceDataProvider in the page JSON (a table's or a dropdown's data) calls its endpoint itself
+  const sdp = uniq(Object.keys(vars).map((k) => vars[k]).filter((v) => v && /ServiceDataProvider/.test(String(v.type || '')) && v.defaultValue && typeof v.defaultValue.endpoint === 'string')
+    .map((v) => v.defaultValue.endpoint).filter((e) => /^[\w-]+\/\w+$/.test(e)));
+  const endpoints = uniq(pageCode.endpoints.concat(...chains.map((c) => c.calls), ...modules.map((m) => m.calls), sdp));
   const rest = endpoints.map((e) => {
     const o = ops[e] || {};
-    const usedBy = chains.filter((c) => c.calls.indexOf(e) !== -1).map((c) => c.name).concat(modules.filter((m) => m.calls.indexOf(e) !== -1).map((m) => m.name));
+    const usedBy = chains.filter((c) => c.calls.indexOf(e) !== -1).map((c) => c.name).concat(modules.filter((m) => m.calls.indexOf(e) !== -1).map((m) => m.name))
+      .concat(sdp.indexOf(e) !== -1 ? ['the page\'s data (ServiceDataProvider)'] : []);
     return { endpoint: e, service: e.split('/')[0], operation: e.split('/')[1], method: o.method || '', path: o.path || '', summary: o.summary || '',
       backend: o.backend || '', backendLabel: o.backendLabel || (o.backend ? o.backend : 'not in services/ (check the name)'), usedBy: uniq(usedBy) };
   });
   const reports = uniq(pageCode.reports.concat(...chains.map((c) => c.reports), ...modules.map((m) => m.reports))).sort();
   const local = uniq(pageCode.local.concat(...chains.map((c) => c.local), ...modules.map((m) => m.local))).map((l) => ({ route: '/' + l + '/', what: LOCAL[l] || l }));
   const backends = uniq(rest.map((r) => r.backendLabel).concat(reports.length ? ['Oracle BI Publisher (SOAP)'] : []));
+  // the values the page sends with each call, and its lists of values (the dropdowns and the calls that fill them)
+  const chainSrcs = chainFiles.map((f) => ({ name: f.replace(/\.js$/, ''), src: read(path.join(p.chainsDir, f)) })).concat([{ name: 'page module', src: jsSrc }]);
+  const sent = callParamsOf(chainSrcs.map((c) => c.src));
+  rest.forEach((r) => { if (sent[r.endpoint]) r.params = sent[r.endpoint]; });
+  const lovs = lovsOf(htmlSrc, json, chainSrcs);
 
   return {
     id: p.id, app: p.app, appName: p.appName, flow: p.flow, page: p.page,
@@ -425,7 +603,7 @@ function analyze(root, id) {
     files: files.map((f) => ({ path: rel(root, f), lines: read(f).split('\n').length })), codeHash: hash.digest('hex').slice(0, 16),
     features: { sections: sections, actions: actions.slice(0, 80), fields: fields.slice(0, 80), columns: columns, components: components, inputs: inputs, lifecycle: lifecycle },
     logic: { chains: chains, modules: modules, variables: Object.keys(vars).length },
-    integrations: { rest: rest, reports: reports, local: local, backends: backends },
+    integrations: { rest: rest, reports: reports, local: local, backends: backends, lovs: lovs },
     links: uniq(pageCode.opens.concat(...chains.map((c) => c.opens))),
     next: (() => { const L = links(root); const byId = {}; pagesOf(root).forEach((x) => { byId[x.id] = x; });
       return L.edges.filter((e) => e.from === p.id).map((e) => ({ id: e.to, label: byId[e.to] ? labelOf(root, byId[e.to], read(byId[e.to].html), (() => { try { return JSON.parse(read(byId[e.to].json)); } catch (x) { return {}; } })()) : e.to, via: e.via })); })(),

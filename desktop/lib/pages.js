@@ -16,6 +16,7 @@
  *     catalog()                       the catalog, with any page added to the code since (a fresh scan)
  *     rescan()                        writes that catalog (every page, labels as the code has them now)
  *     sheet(id)                       { ok, sheet, codeChanged } (the saved sheet, or the facts read now when there is none)
+ *     facts(id)                       the page's facts read from its code now (lib/pageScan.js analyze), or null
  *     build(id, { by })               reads the facts again and saves the sheet (keeping its screenshot, AI text, stories)
  *     assign(id, key, { by })         maps a Jira story to the page (building the sheet first when it has none) → { ok, sheet, built }
  *     unassign(id, key)               → { ok }
@@ -411,7 +412,7 @@ function open(opts) {
 
   return {
     remove: remove, restore: restore, removeShot: removeShot,
-    catalog: catalog, rescan: rescan, sheet: sheet, code: code, codeFile: codeFile, shotImages: shotImages, build: build, assign: assign, unassign: unassign, forStory: forStory,
+    catalog: catalog, rescan: rescan, sheet: sheet, facts: (id) => scan.analyze(rootNow(), str(id)), code: code, codeFile: codeFile, shotImages: shotImages, build: build, assign: assign, unassign: unassign, forStory: forStory,
     saveShot: saveShot, capture: capture, saveAi: saveAi, canCapture: () => typeof o.capture === 'function', run: run, canRun: () => typeof o.run === 'function',
     canWrite: () => { try { return fs.statSync(path.join(root, 'webApps', 'buildrite')).isDirectory(); } catch (e) { return false; } },
     gitStatus: () => repo.status(), gitSave: (b) => repo.save(b), gitPull: () => repo.pull(),

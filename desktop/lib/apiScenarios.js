@@ -33,10 +33,12 @@ const path = require('path');
 
 const KEEP_RUNS = 60; // runs kept per page
 const SHOW = 4000; // an answer's text kept with a run
+const MAX_VALUES = 300; // a list of values' values kept with a run (to pick from)
 const MAX_ROWS = 50; // data rows run
 const MAX_STEPS = 60;
 const str = (v) => (v == null ? '' : String(v));
 const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+const uniq = (a) => a.filter((x, i) => x && a.indexOf(x) === i);
 const slug = (s) => str(s).replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 120) || 'x';
 const PROD_FREE = /(dev|test|tst|uat|sit|stag|stg|demo|qa|sandbox|train|localhost|127\.0\.0\.1|example)/i;
 
@@ -54,12 +56,29 @@ function readPath(answer, from) {
     return v !== undefined ? v : look(answer.json);
   }
   let cur = /^rows(\[|\.|$)/.test(f) ? { rows: answer.rows } : answer.json;
-  const parts = f.replace(/\[(\d+)\]/g, '.$1').split('.').filter(Boolean);
-  for (const p of parts) {
+  // a name, [n] (the nth row) or [field=value] (the row whose field is that value: a value picked from a list)
+  for (const t of f.matchAll(/\[([\w.-]+)=([^\]]*)\]|\[(\d+)\]|([^.[\]]+)/g)) {
     if (cur == null) return undefined;
-    cur = cur[/^\d+$/.test(p) && Array.isArray(cur) ? Number(p) : p];
+    if (t[1] !== undefined) cur = Array.isArray(cur) ? cur.filter((x) => isObj(x) && str(x[t[1]]) === t[2])[0] : undefined;
+    else if (t[3] !== undefined) cur = Array.isArray(cur) ? cur[Number(t[3])] : cur[t[3]];
+    else cur = /^\d+$/.test(t[4]) && Array.isArray(cur) ? cur[Number(t[4])] : cur[t[4]];
   }
   return cur;
+}
+
+/** The rows of a list's answer: at its items path ('data', 'items'), else the answer itself, else its table. */
+function listRows(answer, itemsPath) {
+  const at = itemsPath ? readPath(answer, itemsPath) : answer.json;
+  if (Array.isArray(at)) return at;
+  if (isObj(answer.json)) { const k = ['items', 'data', 'rows', 'results'].filter((x) => Array.isArray(answer.json[x]))[0]; if (k) return answer.json[k]; }
+  return Array.isArray(answer.rows) ? answer.rows : [];
+}
+
+/** Where a list's value is read: its first row's key (as a user taking the first value), or the row picked. */
+function lovFrom(lov, pick) {
+  const base = lov.itemsPath ? lov.itemsPath : '';
+  const k = lov.key || 'id';
+  return (base ? base : '') + (pick !== undefined && pick !== null && str(pick) !== '' ? '[' + k + '=' + str(pick) + ']' : '[0]') + '.' + k;
 }
 
 /** {{var}} filled from the values so far; the names missing listed. */
@@ -116,7 +135,9 @@ function open(o) {
         expect: { status: str(ex.status || '2xx').slice(0, 40), minRows: ex.minRows === '' || ex.minRows == null ? null : Number(ex.minRows), maxRows: ex.maxRows === '' || ex.maxRows == null ? null : Number(ex.maxRows),
           maxMs: ex.maxMs === '' || ex.maxMs == null ? null : Number(ex.maxMs), sameShape: !!ex.sameShape,
           fields: (Array.isArray(ex.fields) ? ex.fields : []).slice(0, 20).map((f) => ({ path: str(f && f.path).slice(0, 200), equals: f && f.equals !== undefined && f.equals !== null ? str(f.equals).slice(0, 500) : null })).filter((f) => f.path) },
-        writes: !!st.writes };
+        writes: !!st.writes,
+        lov: isObj(st.lov) && str(st.lov.target) ? { field: str(st.lov.field).slice(0, 120), target: str(st.lov.target).replace(/[^\w.-]/g, '').slice(0, 60), key: str(st.lov.key).replace(/[^\w.-]/g, '').slice(0, 60),
+          text: str(st.lov.text).replace(/[^\w.-]/g, '').slice(0, 60), itemsPath: str(st.lov.itemsPath).replace(/[^\w.[\]-]/g, '').slice(0, 120) } : null };
     });
     return { id: str(s.id) || (old && old.id) || newId('sc'), page: str(s.page || (old && old.page)), name: str(s.name).slice(0, 200) || 'Scenario',
       kind: ['happy', 'edge', 'role', 'data'].indexOf(s.kind) !== -1 ? s.kind : 'happy', notes: str(s.notes).slice(0, 4000), allowWrites: !!s.allowWrites,
@@ -124,20 +145,32 @@ function open(o) {
       steps, by: (old && old.by) || str(by), createdAt: (old && old.createdAt) || now().toISOString(), updatedAt: now().toISOString(), updatedBy: str(by) };
   }
 
+  /** A scenario as shown: each step with the values its call accepts (from its service), never kept with it. */
+  function accepts() {
+    const seen = {};
+    const of = (e) => {
+      if (!e || !api) return [];
+      if (!seen[e]) { const o = api.op(e); seen[e] = o && o.ok && o.op ? (o.op.params || []).filter((p) => p && p.name && p.in !== 'body').slice(0, 40).map((p) => ({ name: str(p.name), required: !!p.required, in: str(p.in) })) : []; }
+      return seen[e];
+    };
+    return (s) => Object.assign({}, s, { steps: (s.steps || []).map((st) => Object.assign({}, st, { accepts: st.report ? [] : of(st.endpoint) })) });
+  }
+
   const store = {
     list(page) {
       if (!dirNow()) return no('Set up your workspace first: scenarios are kept per VB Studio project.');
       const p = str(page);
-      return { ok: true, scenarios: all().filter((s) => !p || s.page === p).sort((a, b) => (a.name < b.name ? -1 : 1)).map((s) => Object.assign({}, s, { last: lastRun(s) })) };
+      const acc = accepts();
+      return { ok: true, scenarios: all().filter((s) => !p || s.page === p).sort((a, b) => (a.name < b.name ? -1 : 1)).map((s) => Object.assign(acc(s), { last: lastRun(s) })) };
     },
-    get(id) { const s = all().filter((x) => x.id === str(id))[0]; return s ? { ok: true, scenario: s } : no('No such scenario.'); },
+    get(id) { const s = all().filter((x) => x.id === str(id))[0]; return s ? { ok: true, scenario: accepts()(s) } : no('No such scenario.'); },
     save(s, by) {
       if (!dirNow()) return no('Set up your workspace first.');
       if (!isObj(s) || !str(s.page)) return no('A scenario belongs to a page.');
       const old = s.id ? all().filter((x) => x.id === str(s.id))[0] : null;
       const c = clean(s, by, old);
       writeJson(path.join(sDir(), slug(c.id) + '.json'), c);
-      return { ok: true, scenario: c };
+      return { ok: true, scenario: accepts()(c) };
     },
     remove(id) {
       const s = all().filter((x) => x.id === str(id))[0];
@@ -187,27 +220,46 @@ function open(o) {
         (isRead ? reads : writes).push({ e, op, r });
       });
       if (reports.length && !reads.some((x) => x.bip)) reads.push({ bip: true });
+      // the page's lists of values (lib/pageScan.js lovsOf): the dropdowns a call fills, the value each one sets
+      const lovs = ((f.integrations && f.integrations.lovs) || []).filter((l) => isObj(l) && l.endpoint && (l.source === 'chain' || l.source === 'service'));
+      const lovFields = [];
       let n = 0;
       reads.concat(writes).forEach((x) => {
         if (x.bip) { reportSteps().forEach((r) => steps.push(r)); return; }
+        const mine = lovs.filter((l) => l.endpoint === x.e);
         const params = {};
         const need = x.op && x.op.ok ? (x.op.op.params || []).filter((p) => p.required && !p.def) : [];
-        need.forEach((p) => {
-          params[p.name] = '{{' + p.name + '}}';
-          if (known[p.name]) return;
-          // an earlier step hands it on (a field of that name in its first row), or it is a value to start with
-          const src = steps.filter((s) => !s.report).slice(-1)[0];
-          if (src) { src.extract.push({ var: p.name, from: 'auto:' + p.name }); known[p.name] = src.id; } else { start.push(p.name); known[p.name] = 'start'; }
+        need.forEach((p) => { params[p.name] = '{{' + p.name + '}}'; });
+        // the values the page itself sends with the call (a page value → {{name}}), and its list's own parameters
+        Object.assign(params, isObj(x.r.params) ? x.r.params : {}, mine[0] && isObj(mine[0].params) ? mine[0].params : {});
+        Object.keys(params).forEach((k) => {
+          Array.from(str(params[k]).matchAll(/\{\{\s*([\w.-]+)\s*\}\}/g)).map((m) => m[1]).forEach((v) => {
+            if (known[v]) return;
+            // an earlier step hands it on (a field of that name in its first row), or it is a value to start with
+            const src = need.some((p) => p.name === v) ? steps.filter((s) => !s.report && !s.lov).slice(-1)[0] : null; // a list of values holds what to pick, not this
+            if (src) { src.extract.push({ var: v, from: 'auto:' + v }); known[v] = src.id; } else { start.push(v); known[v] = 'start'; }
+          });
         });
         const isWrite = writes.indexOf(x) !== -1;
         n += 1;
-        steps.push({ id: 's' + n, name: (x.r.summary || (x.op && x.op.ok && x.op.op.summary) || x.e).slice(0, 120), endpoint: x.e, report: null, params, extra: '',
-          body: isWrite && x.op && x.op.ok && x.op.op.body ? str(x.op.op.body.template || '') : '', extract: [],
-          expect: { status: '2xx', minRows: null, maxRows: null, maxMs: 10000, sameShape: !isWrite, fields: [] }, writes: isWrite });
+        const summary = (x.r.summary || (x.op && x.op.ok && x.op.op.summary) || x.e).slice(0, 120);
+        const st = { id: 's' + n, name: mine.length ? ('List of values: ' + uniq(mine.map((l) => l.field)).join(', ') + ' — ' + summary).slice(0, 200) : summary,
+          endpoint: x.e, report: null, params, extra: '',
+          body: isWrite && x.op && x.op.ok && x.op.op.body ? str(x.op.op.body.template || '') : '', extract: [], lov: null,
+          expect: { status: '2xx', minRows: null, maxRows: null, maxMs: 10000, sameShape: !isWrite, fields: [] }, writes: isWrite };
+        // a list of values: shown as the page shows it; the value a user picks (the first, until you pick another) handed on
+        mine.forEach((l, i) => {
+          const info = { field: str(l.field), target: str(l.target), key: str(l.keyFrom || l.key || 'id'), text: str(l.textFrom || l.text || ''), itemsPath: str(l.itemsPath) };
+          if (!i) st.lov = info;
+          if (info.target && !known[info.target]) { st.extract.push({ var: info.target, from: lovFrom(info) }); known[info.target] = st.id; }
+          lovFields.push(info.field);
+        });
+        steps.push(st);
       });
       const s = clean({ page: page, name: 'Happy path — ' + (f.label || str(page).split('/').pop()), kind: 'happy', steps,
         data: start.length ? [start.reduce((a, k) => { a[k] = ''; return a; }, {})] : [],
         notes: 'Drafted from the page\'s code: its chains in the order it runs them, the calls each makes. Calls that change data come last and run only when you allow writes.'
+          + (lovFields.length ? ' ' + uniq(lovFields).join(', ') + (uniq(lovFields).length > 1 ? ' are lists of values' : ' is a list of values') + ' on the page: run once, then pick a value as a user would (the first is used until you pick one).' : '')
           + (start.length ? ' Give ' + start.join(', ') + ' under Data (the page gets ' + (start.length > 1 ? 'them' : 'it') + ' from the screen before it).' : '')
           + ' Check each step\'s values and checks, then run it.' }, by, null);
       return store.save(s, by);
@@ -264,9 +316,19 @@ function open(o) {
             const v = readPath(answer, fx.path);
             check(fx.path + (fx.equals === null ? ' is there' : ' = ' + fx.equals), fx.equals === null ? v !== undefined && v !== null && v !== '' : str(v) === fx.equals, v === undefined ? 'not in the answer' : str(v).slice(0, 120));
           });
+          // a list of values: its values kept with the run (to pick from), as the page shows them
+          if (st.lov) {
+            const list = listRows(answer, st.lov.itemsPath).filter(isObj);
+            const textOf = (r) => { const t = st.lov.text && r[st.lov.text] != null ? r[st.lov.text] : Object.keys(r).map((k) => r[k]).filter((x) => typeof x === 'string' && x.trim())[0]; return str(t).slice(0, 160); };
+            res.lov = { field: st.lov.field, target: st.lov.target, key: st.lov.key, text: st.lov.text, total: list.length };
+            res.values = list.slice(0, MAX_VALUES).map((r) => ({ key: str(r[st.lov.key || 'id']).slice(0, 120), text: textOf(r) }));
+            check('the list has values (' + st.lov.field + ')', list.length > 0, list.length + ' value(s)');
+          }
           (st.extract || []).forEach((e) => {
             const v = readPath(answer, e.from);
-            if (v !== undefined && v !== null && v !== '') { vars[e.var] = v; res.extracted[e.var] = str(v).slice(0, 200); } else res.checks.push({ name: 'hands on ' + e.var, ok: false, detail: e.from + ': not in the answer' });
+            const picked = /\[[\w.-]+=([^\]]*)\]/.exec(e.from);
+            if (v !== undefined && v !== null && v !== '') { vars[e.var] = v; res.extracted[e.var] = str(v).slice(0, 200); }
+            else res.checks.push({ name: 'hands on ' + e.var, ok: false, detail: picked ? 'the value picked (' + picked[1] + ') is no longer in the list' : e.from + ': not in the answer' });
           });
           res.state = res.checks.every((c) => c.ok) ? 'ok' : 'fail';
           res.status = r.status; res.ms = r.ms; res.rows = n;
