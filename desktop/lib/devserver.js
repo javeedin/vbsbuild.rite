@@ -1237,6 +1237,11 @@ function createDevServer(o) {
           if (pathname === '/__sql/ai/settings' && post) return json(200, ai.save(b));
           if (pathname === '/__sql/ai/forget' && post) return json(200, ai.forget(b.provider));
           // the default AI, and one feature's own (AI settings)
+          // Claude Code on this PC: found? install it, sign in (a window of its own), test it
+          if (pathname === '/__sql/ai/claude' && req.method === 'GET') return json(200, ai.claudeStatus ? await ai.claudeStatus() : { ok: false, error: 'Not here.' });
+          if (pathname === '/__sql/ai/claude/install' && post) { log('Claude Code: installing with npm'); const r = await ai.claudeInstall(); log('Claude Code install -> ' + (r.ok ? 'done' : r.error)); return json(200, r); }
+          if (pathname === '/__sql/ai/claude/signin' && post) return json(200, ai.claudeSignIn());
+          if (pathname === '/__sql/ai/claude/check' && post) { const r = await ai.claudeCheck(); log('Claude Code test -> ' + (r.ok ? 'answered' : r.error)); return json(200, r); }
           if (pathname === '/__sql/ai/default' && post) { try { return json(200, ai.setDefault(b.provider)); } catch (e) { return json(200, { error: e.message }); } }
           if (pathname === '/__sql/ai/use' && post) { try { return json(200, ai.setUse({ feature: b.feature, provider: b.provider })); } catch (e) { return json(200, { error: e.message }); } }
           if (pathname === '/__sql/ai/models' && post) {

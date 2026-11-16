@@ -36,8 +36,54 @@
         </oj-bind-for-each>
       </div>
 
+      <!-- Claude Code (your subscription): set up here, step by step — on this PC, signed in, used -->
+      <oj-bind-if test="[[ !!$variables.edit && $variables.edit.provider === 'claudecode' ]]">
+        <div class="nx-ai-form nx-cc" id="ccSetup">
+          <h3>Set up Claude Code — your Claude subscription, no API key</h3>
+          <ol class="nx-cc-steps">
+            <li :class="[[ $functions.ccStepClass($variables.cc, 1) ]]" id="ccStep1">
+              <b>Claude Code on this PC</b>
+              <span class="nx-cc-state" id="ccInstalled"><oj-bind-text value="[[ $functions.ccInstalledText($variables.cc) ]]"></oj-bind-text></span>
+              <span class="nx-cc-btns">
+                <oj-bind-if test="[[ !!$variables.cc && !$variables.cc.installed ]]"><button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="ccInstall" data-act="ccInstall" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]">Install Claude Code</button></oj-bind-if>
+                <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="ccRecheck" data-act="ccStatus" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]">Check again</button>
+                <a class="nx-cc-link" id="ccDocs" href="https://docs.anthropic.com/en/docs/claude-code/setup" target="_blank" rel="noopener">Other ways to install</a>
+              </span>
+              <oj-bind-if test="[[ !!$variables.ccLog ]]"><pre class="nx-cc-log" id="ccLog"><oj-bind-text value="[[ $variables.ccLog ]]"></oj-bind-text></pre></oj-bind-if>
+            </li>
+            <li :class="[[ $functions.ccStepClass($variables.cc, 2) ]]" id="ccStep2">
+              <b>Signed in with your Claude account</b>
+              <span class="nx-cc-state" id="ccSigned"><oj-bind-text value="[[ $functions.ccSignedText($variables.cc) ]]"></oj-bind-text></span>
+              <span class="nx-cc-btns">
+                <button type="button" class="nx-btn nx-btn--sm" id="ccSignIn" data-act="ccSignin" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy || !($variables.cc && $variables.cc.installed) ]]">Sign in…</button>
+                <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="ccTest" data-act="ccTest" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy || !($variables.cc && $variables.cc.installed) ]]">Test</button>
+                <a class="nx-cc-link" id="ccPlans" href="https://claude.ai/settings/billing" target="_blank" rel="noopener">Your Claude plan</a>
+              </span>
+              <span class="nx-note">Sign in… opens a window with Claude Code: choose to sign in with your Claude account (Pro or Max), finish in the browser, then close that window and press Test.</span>
+            </li>
+            <li :class="[[ $functions.ccStepClass($variables.cc, 3) ]]" id="ccStep3">
+              <b>Use it</b>
+              <span class="nx-cc-use">
+                <label class="nx-cm-field nx-ai-field"><span class="nx-cm-label">Model</span>
+                  <select class="nx-cm-input" id="ccModel" data-field="model" on-change="[[ $listeners.onField ]]">
+                    <oj-bind-for-each data="[[ $functions.modelOptions($variables.models, $variables.edit) ]]">
+                      <template data-oj-as="m"><option :value="[[ m.data.id ]]" :selected="[[ m.data.on ]]"><oj-bind-text value="[[ m.data.label ]]"></oj-bind-text></option></template>
+                    </oj-bind-for-each>
+                  </select></label>
+                <label class="nx-cc-check"><input type="checkbox" id="ccForAll" data-act="ccOpt" data-key="forAll" on-click="[[ $listeners.onAct ]]" :checked="[[ !!$variables.edit.forAll ]]"> For everything (the default)</label>
+                <label class="nx-cc-check"><input type="checkbox" id="ccForFix" data-act="ccOpt" data-key="forFix" on-click="[[ $listeners.onAct ]]" :checked="[[ !!$variables.edit.forFix ]]"> For Code fix</label>
+              </span>
+              <span class="nx-cc-btns">
+                <button type="button" class="nx-btn nx-btn--primary" id="ccUse" data-act="ccUse" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy || !($variables.cc && $variables.cc.installed) ]]">Use Claude Code</button>
+                <button type="button" class="nx-btn nx-btn--plain" id="ccCancel" data-act="cancel" on-click="[[ $listeners.onAct ]]">Cancel</button>
+              </span>
+            </li>
+          </ol>
+        </div>
+      </oj-bind-if>
+
       <!-- one AI being set up -->
-      <oj-bind-if test="[[ !!$variables.edit ]]">
+      <oj-bind-if test="[[ !!$variables.edit && $variables.edit.provider !== 'claudecode' ]]">
         <div class="nx-ai-form" id="aiForm">
           <h3><oj-bind-text value="[[ $functions.formTitle($variables.st, $variables.edit) ]]"></oj-bind-text></h3>
           <oj-bind-for-each data="[[ $functions.fields($variables.st, $variables.edit) ]]">

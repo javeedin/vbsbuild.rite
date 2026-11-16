@@ -94,3 +94,17 @@ html[data-nx-product="buildrite"] .nx-nav-scroll { scrollbar-color: rgba(255, 25
 .nx-ai-feat-name { display: grid; gap: 2px; min-width: 220px; }
 .nx-ai-feat-test { font-size: 12.5px; color: #4a5865; }
 .nx-fx-ai { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; margin-left: 6px; }
+
+/* AI settings → Claude Code's set-up steps */
+.nx-cc-steps { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 10px; counter-reset: cc; }
+.nx-cc-step { counter-increment: cc; display: grid; gap: 6px; padding: 10px 12px 10px 44px; border: 1px solid #e3e8ee; border-radius: 10px; position: relative; background: #fff; }
+.nx-cc-step::before { content: counter(cc); position: absolute; left: 12px; top: 10px; width: 22px; height: 22px; border-radius: 50%; background: #e6ebf0; color: #3b4a58; font-weight: 700; display: grid; place-items: center; font-size: 12px; }
+.nx-cc-step--now { border-color: #2e6fd8; box-shadow: 0 0 0 1px #2e6fd8 inset; }
+.nx-cc-step--done::before { content: '✓'; background: #1f9d55; color: #fff; }
+.nx-cc-state { font-size: 13px; color: #33414e; }
+.nx-cc-btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.nx-cc-link { font-weight: 600; font-size: 12.5px; }
+.nx-cc-log { margin: 0; max-height: 8em; overflow: auto; padding: 6px 8px; border-radius: 6px; background: #1e1e1e; color: #c5c5c5; font: 11.5px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; }
+.nx-cc-use { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+.nx-cc-use .nx-ai-field { min-width: 260px; }
+.nx-cc-check { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 600; }

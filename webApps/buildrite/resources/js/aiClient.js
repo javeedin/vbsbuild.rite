@@ -26,6 +26,11 @@ define([], function () {
     setDefault: function (provider) { return call('default', 'POST', { provider: provider || '' }); },
     /** The AI one feature uses ('' = the default). */
     use: function (feature, provider) { return call('use', 'POST', { feature: feature, provider: provider || '' }); },
+    // Claude Code on this PC: found? install (npm), sign in (a window of its own), test
+    claude: function () { return call('claude'); },
+    claudeInstall: function () { return call('claude/install', 'POST', {}); },
+    claudeSignIn: function () { return call('claude/signin', 'POST', {}); },
+    claudeCheck: function () { return call('claude/check', 'POST', {}); },
     /** A short question to the AI a feature uses, to see it answer (which one, how long). */
     test: function (feature) { return call('chat', 'POST', { feature: feature, system: 'Answer with one short sentence.', user: 'Say that you are ready, and name the AI you are.', maxTokens: 60 }); }
   };

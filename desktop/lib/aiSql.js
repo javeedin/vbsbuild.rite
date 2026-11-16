@@ -30,13 +30,45 @@ const LONG_MS = 6 * 60 * 1000; // a long answer (Code Fix: the analysis and the 
 const MAX_ASK = 32000; // the most tokens a caller may ask for
 const MAX_TOKENS = 2000;
 
+/**
+ * Where Claude Code is on this PC, however it was installed: { cmd, pre: [args before its own], env, path, how } or null.
+ * Its own installer puts claude(.exe) in ~/.local/bin; npm puts a claude.cmd shim on Windows (which Node cannot start
+ * without a shell — so its cli.js is run with this app's own Node instead); Homebrew, Scoop and winget their own places.
+ */
+function locateClaude(o) {
+  const env = (o && o.env) || process.env;
+  const win = process.platform === 'win32';
+  const home = env.USERPROFILE || env.HOME || '';
+  const isFile = (p) => { try { return fs.statSync(p).isFile(); } catch (e) { return false; } };
+  const found = [];
+  if (o && o.claudePath) found.push(o.claudePath);
+  try { const f = require('./findCommand').find('claude', { env }); if (f) found.push(f); } catch (e) { /* not here */ }
+  [path.join(home, '.local', 'bin', win ? 'claude.exe' : 'claude'), path.join(home, '.claude', 'local', win ? 'claude.exe' : 'claude'),
+    win ? path.join(env.APPDATA || '', 'npm', 'claude.cmd') : path.join(home, '.npm-global', 'bin', 'claude'),
+    win ? '' : '/usr/local/bin/claude', win ? '' : '/opt/homebrew/bin/claude'].forEach((p) => { if (p) found.push(p); });
+  for (const p of found) {
+    if (!p || !isFile(p)) continue;
+    if (/\.(cmd|bat)$/i.test(p)) {
+      // npm's shim: run its cli.js with Node (this app's own: Electron as Node) — no shell, no quoting of the prompt
+      const pkg = path.join(path.dirname(p), 'node_modules', '@anthropic-ai', 'claude-code');
+      const cli = ['cli.js', 'cli.mjs'].map((n) => path.join(pkg, n)).filter(isFile)[0];
+      if (cli) return { cmd: process.execPath, pre: [cli], env: Object.assign({}, env, process.versions.electron ? { ELECTRON_RUN_AS_NODE: '1' } : {}), path: p, how: 'npm' };
+      continue;
+    }
+    return { cmd: p, pre: [], env: env, path: p, how: /\.local|\.claude/.test(p) ? 'installer' : 'path' };
+  }
+  return null;
+}
+
 // Run the locally-installed Claude Code CLI (`claude -p`) for the "Claude Code (your subscription)" provider: the prompt
 // goes in on stdin, the answer comes back on stdout. No API key — it uses the Max/Pro login Claude Code is signed in with.
 function runClaudeCode(args, input, ms) {
   return new Promise((resolve) => {
     if (!childProcess) { resolve({ code: -1, stdout: '', stderr: 'No child_process in this app.' }); return; }
+    const where = locateClaude();
+    if (!where) { resolve({ code: -1, stdout: '', stderr: 'claude: not found — Claude Code is not installed on this PC (AI settings → Claude Code → Install).' }); return; }
     let cp;
-    try { cp = childProcess.spawn('claude', args, { stdio: ['pipe', 'pipe', 'pipe'] }); }
+    try { cp = childProcess.spawn(where.cmd, where.pre.concat(args), { stdio: ['pipe', 'pipe', 'pipe'], env: where.env, windowsHide: true }); }
     catch (e) { resolve({ code: -1, stdout: '', stderr: String((e && e.message) || e) }); return; }
     let out = '', err = '';
     const timer = setTimeout(() => { try { cp.kill('SIGKILL'); } catch (e) { /* gone */ } }, ms || TIMEOUT_MS);
@@ -427,6 +459,48 @@ async function open(opts) {
         return { ok: false, error: (e && e.message) || String(e), models: [], ms: now() - t0 };
       }
     },
+    // ── Claude Code on this PC (AI settings → Claude Code): found, installed, signed in, answering ──
+    /** Whether Claude Code is here: { ok, installed, path, how, version }. */
+    async claudeStatus() {
+      const where = (o.locate || locateClaude)();
+      if (!where) return { ok: true, installed: false };
+      const r = await run(['--version'], null, 20000);
+      return { ok: true, installed: r.code === 0, path: where.path, how: where.how, version: String(r.stdout || '').trim().split('\n')[0].slice(0, 80), error: r.code === 0 ? '' : String(r.stderr || '').trim().slice(0, 300) };
+    },
+    /** Installs Claude Code with npm (npm install -g @anthropic-ai/claude-code): { ok, text, tail }. */
+    async claudeInstall() {
+      if (!childProcess) return { ok: false, error: 'This app cannot run npm.' };
+      const win = process.platform === 'win32';
+      const r = await (o.npm || ((args) => new Promise((resolve) => {
+        childProcess.execFile(win ? 'npm.cmd' : 'npm', args, { shell: win, windowsHide: true, maxBuffer: 16 * 1024 * 1024, timeout: 6 * 60 * 1000 },
+          (err, stdout, stderr) => resolve({ code: err ? (typeof err.code === 'number' ? err.code : 1) : 0, stdout: String(stdout || ''), stderr: String(stderr || (err && err.message) || '') }));
+      })))(['install', '-g', '@anthropic-ai/claude-code']);
+      const tail = (String(r.stdout || '') + '\n' + String(r.stderr || '')).trim().split('\n').slice(-6).join('\n');
+      if (r.code !== 0) return { ok: false, error: 'npm could not install Claude Code' + (/EACCES|permission/i.test(tail) ? ' (no permission: install it from a terminal opened as administrator, or with Claude Code\'s own installer)' : /not recognized|ENOENT/i.test(tail) ? ' (npm is not on this PC: install Node.js first, or use Claude Code\'s own installer)' : '') + '.', tail };
+      return { ok: true, text: 'Claude Code is installed.', tail };
+    },
+    /** Opens a window with Claude Code running, to sign in with your Claude account there: { ok, text }. */
+    claudeSignIn() {
+      const where = (o.locate || locateClaude)();
+      if (!where) return { ok: false, error: 'Install Claude Code first.' };
+      if (typeof o.openTerminal === 'function') return o.openTerminal(where);
+      try {
+        const quoted = '"' + where.path + '"';
+        if (process.platform === 'win32') childProcess.spawn('cmd.exe', ['/c', 'start', '"Claude Code - sign in"', 'cmd', '/k', quoted], { detached: true, stdio: 'ignore', windowsVerbatimArguments: true }).unref();
+        else if (process.platform === 'darwin') childProcess.spawn('osascript', ['-e', 'tell application "Terminal" to do script "' + where.path.replace(/"/g, '\\"') + '"', '-e', 'tell application "Terminal" to activate'], { detached: true, stdio: 'ignore' }).unref();
+        else childProcess.spawn('x-terminal-emulator', ['-e', where.path], { detached: true, stdio: 'ignore' }).unref();
+        return { ok: true, text: 'A window with Claude Code is open: sign in there with your Claude account (Pro or Max), then close it and press Test.' };
+      } catch (e) { return { ok: false, error: 'Could not open a window for Claude Code: ' + ((e && e.message) || e) }; }
+    },
+    /** Asks Claude Code a one-line question: { ok, signedIn, text, ms }. */
+    async claudeCheck() {
+      const t0 = now();
+      const r = await run(['-p', '--output-format', 'text'], 'Reply with the single word READY.', 90000);
+      const out = String(r.stdout || '').trim(), errText = String(r.stderr || '').trim();
+      if (r.code === 0 && out) return { ok: true, signedIn: true, text: 'Claude Code answered: ' + out.slice(0, 80), ms: now() - t0 };
+      const login = /log ?in|logged|auth|credential|api key|subscription|\/login/i.test(out + ' ' + errText);
+      return { ok: false, signedIn: !login, error: login ? 'Claude Code is not signed in: press Sign in…, sign in with your Claude account, then Test again.' : 'Claude Code did not answer: ' + (errText || out || 'no answer').slice(0, 300), ms: now() - t0 };
+    },
     async ask(q) {
       const id = (q && q.provider) || store.providerFor('sql');
       const p = BY_ID[id];
@@ -467,4 +541,4 @@ async function open(opts) {
   return store;
 }
 
-module.exports = { open, PROVIDERS, FEATURES, SYSTEM, schemaText, userPrompt, parseAnswer, ociSign };
+module.exports = { open, PROVIDERS, FEATURES, SYSTEM, schemaText, userPrompt, parseAnswer, ociSign, locateClaude };

@@ -42,7 +42,7 @@ const SCHEMA = { owner: 'SHOPAPP', tables: [{ name: 'DEPT', kind: 'TABLE', colum
   T.section('the LLMs offered, and what each asks for');
   T.eq('six choices (incl. Claude Code on the subscription)', AI.PROVIDERS.map((p) => p.label).join(' | '), 'Claude (Anthropic) | ChatGPT (OpenAI) | Oracle OCI Generative AI | Google Gemini | Other (OpenAI-compatible) | Claude Code (your subscription)');
   T.eq('OCI asks for its tenancy and signing key', AI.PROVIDERS.filter((p) => p.id === 'oci')[0].fields.map((f) => f.key).join(), 'region,compartmentId,tenancyId,userId,fingerprint,privateKey,passphrase');
-  T.check('no model is named in the code: the list comes from the provider', !/claude-|gpt-[0-9]|gemini-[0-9]|llama-[0-9]/i.test(fs.readFileSync(path.join(__dirname, '..', 'desktop', 'lib', 'aiSql.js'), 'utf8')));
+  T.check('no model is named in the code: the list comes from the provider', !/claude-(?!code)|gpt-[0-9]|gemini-[0-9]|llama-[0-9]/i.test(fs.readFileSync(path.join(__dirname, '..', 'desktop', 'lib', 'aiSql.js'), 'utf8')));
 
   T.section('the prompt: the question and the schema\'s names, never a row');
   const up = AI.userPrompt({ question: 'employees without a salary', schema: SCHEMA, banner: 'Oracle Database 19c', sql: 'select * from dept' });

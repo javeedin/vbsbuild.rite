@@ -11,9 +11,48 @@ define(['vb/action/actionChain', 'resources/js/aiClient', 'resources/js/shellBus
       if (act === 'load') { await reload(); return; }
       if (act === 'edit') {
         const p = ((v.st && v.st.providers) || {})[key] || {};
-        v.edit = { provider: key, model: p.model || '' };
+        v.edit = { provider: key, model: p.model || '', forAll: key === 'claudecode' && !(v.st && v.st.active), forFix: key === 'claudecode' };
         v.models = [];
-        if (key === 'claudecode') { const m = await AI.models('claudecode'); v.models = (m.body && m.body.models) || []; }
+        if (key === 'claudecode') {
+          v.cc = null; v.ccLog = '';
+          const m = await AI.models('claudecode'); v.models = (m.body && m.body.models) || [];
+          const s = await AI.claude(); v.cc = s.body && s.body.ok !== false ? Object.assign({}, s.body, { signedIn: false }) : { installed: false, error: (s.body && s.body.error) || '' };
+        }
+        return;
+      }
+      // ── Claude Code: found? install, sign in, test, use ──
+      if (act === 'ccStatus') { const s = await AI.claude(); v.cc = Object.assign({}, v.cc || {}, s.body || {}, { busy: '' }); return; }
+      if (act === 'ccInstall') {
+        v.busy = true; v.cc = Object.assign({}, v.cc || {}, { busy: 'install' }); v.ccLog = '';
+        try {
+          const r = await AI.claudeInstall();
+          v.ccLog = (r.body && r.body.tail) || '';
+          const s = await AI.claude();
+          v.cc = Object.assign({}, s.body || {}, { busy: '', signedIn: false });
+          say(r, 'Claude Code is installed. Next: Sign in…');
+        } finally { v.busy = false; }
+        return;
+      }
+      if (act === 'ccSignin') { const r = await AI.claudeSignIn(); say(r, (r.body && r.body.text) || 'A window with Claude Code is open: sign in there.'); return; }
+      if (act === 'ccTest') {
+        v.busy = true; v.cc = Object.assign({}, v.cc || {}, { busy: 'test', error: '' });
+        try {
+          const r = await AI.claudeCheck();
+          const b = r.body || {};
+          v.cc = Object.assign({}, v.cc, { busy: '', signedIn: !!(r.ok && b.signedIn), answer: b.text || '', ms: b.ms || 0, error: r.ok ? '' : (b.error || 'No answer.') });
+        } finally { v.busy = false; }
+        return;
+      }
+      if (act === 'ccOpt') { if (v.edit) v.edit = Object.assign({}, v.edit, { [key]: !v.edit[key] }); return; }
+      if (act === 'ccUse') {
+        if (!v.edit) return;
+        v.busy = true;
+        try {
+          const r = await AI.save({ provider: 'claudecode', model: v.edit.model || '', makeDefault: !!v.edit.forAll || !(v.st && v.st.active) });
+          if (r.ok && v.edit.forFix) await AI.use('codefix', 'claudecode');
+          say(r, 'Claude Code is set up' + (v.edit.forAll ? ' — the default for everything' : '') + (v.edit.forFix ? (v.edit.forAll ? ', and for Code fix' : ' — for Code fix') : '') + '. Change where it is used below.');
+          if (r.ok) { v.edit = null; v.models = []; await reload(); }
+        } finally { v.busy = false; }
         return;
       }
       if (act === 'cancel') { v.edit = null; v.models = []; return; }

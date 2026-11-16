@@ -7,6 +7,24 @@ define([], () => {
   const named = (st, id) => labelOf(st, id) + (st.providers[id] && st.providers[id].model ? ' · ' + st.providers[id].model : '');
 
   class PageModule {
+    // ── Claude Code's set-up steps: 1 on this PC, 2 signed in, 3 used ──
+    ccStepClass(cc, n) {
+      const done = n === 1 ? !!(cc && cc.installed) : n === 2 ? !!(cc && cc.signedIn) : false;
+      const now = n === 1 ? !(cc && cc.installed) : n === 2 ? !!(cc && cc.installed && !cc.signedIn) : !!(cc && cc.signedIn);
+      return 'nx-cc-step' + (done ? ' nx-cc-step--done' : '') + (now ? ' nx-cc-step--now' : '');
+    }
+    ccInstalledText(cc) {
+      if (!cc) return 'Looking for Claude Code…';
+      if (cc.busy === 'install') return 'Installing Claude Code (npm install -g @anthropic-ai/claude-code)… a minute or two';
+      if (!cc.installed) return 'Not found on this PC. Install it here (with npm), or with Claude Code\'s own installer.';
+      return 'Found' + (cc.version ? ': ' + cc.version : '') + (cc.how === 'npm' ? ' (installed with npm)' : cc.how === 'installer' ? ' (its own installer)' : '');
+    }
+    ccSignedText(cc) {
+      if (!cc || !cc.installed) return 'After it is installed.';
+      if (cc.busy === 'test') return 'Asking Claude Code a one-line question…';
+      if (cc.signedIn) return '✓ ' + (cc.answer || 'Claude Code answered') + (cc.ms ? ' (' + Math.round(cc.ms / 100) / 10 + ' s)' : '');
+      return cc.error || 'Not tested yet: press Test. If it says to sign in, press Sign in… first.';
+    }
     /** Each AI: set up or not, how it is paid. */
     cards(st, edit) {
       return ((st && st.catalog) || []).map((c) => {
