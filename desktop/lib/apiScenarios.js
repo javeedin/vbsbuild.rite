@@ -158,7 +158,8 @@ function open(o) {
       kind: ['happy', 'edge', 'role', 'data'].indexOf(s.kind) !== -1 ? s.kind : 'happy', notes: str(s.notes).slice(0, 4000), allowWrites: !!s.allowWrites,
       data: (Array.isArray(s.data) ? s.data : []).slice(0, MAX_ROWS).filter(isObj).map((r) => Object.keys(r).slice(0, 40).reduce((a, k) => { a[str(k).slice(0, 60)] = str(r[k]).slice(0, 2000); return a; }, {})),
       steps, choices: (Array.isArray(s.choices) ? s.choices : []).filter(isObj).slice(0, 12).map((c) => ({ target: str(c.target).replace(/[^\w.-]/g, '').slice(0, 60), field: str(c.field).slice(0, 120),
-        values: (Array.isArray(c.values) ? c.values : []).filter(isObj).slice(0, 30).map((x) => ({ key: str(x.key).slice(0, 120), text: str(x.text).slice(0, 160) })), value: str(c.value).slice(0, 120) })).filter((c) => c.target && c.values.length),
+        values: (Array.isArray(c.values) ? c.values : []).filter(isObj).slice(0, 30).map((x) => ({ key: str(x.key).slice(0, 120), text: str(x.text).slice(0, 160) })), value: str(c.value).slice(0, 120),
+        start: str(c.start).slice(0, 120), startFrom: str(c.startFrom).replace(/[^\w.-]/g, '').slice(0, 80) })).filter((c) => c.target && c.values.length),
       journey: (Array.isArray(s.journey) ? s.journey : []).filter(isObj).slice(0, 12).map((j) => ({ page: str(j.page).slice(0, 200), label: str(j.label).slice(0, 200) })).filter((j) => j.page),
       by: (old && old.by) || str(by), createdAt: (old && old.createdAt) || now().toISOString(), updatedAt: now().toISOString(), updatedBy: str(by) };
   }
@@ -427,12 +428,23 @@ function open(o) {
   async function runOne(s, st, vars, env, op) {
     const res = blank(st);
     // a part of the page not shown for the values chosen (the other Customer field): not run, said why
+    let offNote = '';
     if (st.when && evalWhen(st.when, choiceVals(s)) === false) {
       const why = (s.choices || []).filter((c) => new RegExp('\\b' + c.target + '\\b').test(st.when)).map((c) => c.field + ' is ' + ((c.values.filter((x) => x.key === c.value)[0] || {}).text || c.value)).join(', ');
-      res.note = 'not on the page' + (why ? ' when ' + why : '') + ' (it shows only when ' + st.when.slice(0, 120) + ')';
-      res.off = true;
-      return res;
+      // a step run on its own (▶ Run) is sent all the same: you asked for that one
+      if (op && op.anyCase) offNote = 'not on the page as chosen' + (why ? ' (' + why + ')' : '') + ': run because you asked';
+      else {
+        res.note = 'not on the page' + (why ? ' when ' + why : '') + ' (it shows only when ' + st.when.slice(0, 120) + ')';
+        res.off = true;
+        return res;
+      }
     }
+    const done = await runSent(s, st, vars, env, op, res);
+    if (offNote) done.note = (done.note ? done.note + ' · ' : '') + offNote;
+    return done;
+  }
+  /** A step sent: its values filled, the call made, its answer checked (runOne, once it is to run). */
+  async function runSent(s, st, vars, env, op, res) {
     const missing = [];
     const params = {};
     Object.keys(st.params || {}).forEach((k) => { params[k] = fill(st.params[k], vars, missing); });
@@ -627,7 +639,7 @@ function open(o) {
       Object.keys(isObj(o.vars) ? o.vars : {}).slice(0, 200).forEach((k) => { if (/^[\w.-]+$/.test(k) && o.vars[k] !== null && o.vars[k] !== undefined && str(o.vars[k]) !== '') vars[k] = str(o.vars[k]).slice(0, 2000); });
       // a list of values searched as you type: the text typed sent as its search parameter (as the page sends it)
       if (o.search !== undefined && o.search !== null && st.lov && st.lov.search) st.params = Object.assign({}, st.params, { [st.lov.search]: str(o.search).slice(0, 200) });
-      const res = await runOne(s, st, vars, env, { allowWrites: !!o.allowWrites });
+      const res = await runOne(s, st, vars, env, { allowWrites: !!o.allowWrites, anyCase: true });
       delete res.stop;
       if (/^no value for /.test(str(res.note))) res.note = res.note.replace(/ — give it under Data, or hand it on from an earlier step$/, ' — run the steps before it (Save & run), pick it from a list of values, or give it under Data');
       return { ok: true, result: Object.assign(res, { at: now().toISOString() }), vars };
@@ -672,7 +684,8 @@ function choicesOf(facts) {
   lovs.filter((l) => l.source === 'static' && l.target && Array.isArray(l.values) && l.values.length && new RegExp('\\b' + l.target + '\\b').test(whens)).forEach((l) => {
     if (out.some((c) => c.target === l.target)) return;
     const vals = l.values.filter((x) => x && str(x.key)).map((x) => ({ key: str(x.key), text: str(x.text || x.key) }));
-    out.push({ target: str(l.target), field: str(l.field), values: vals, value: l.start && vals.some((x) => x.key === l.start) ? str(l.start) : vals[0].key });
+    const start = l.start && vals.some((x) => x.key === l.start) ? str(l.start) : vals[0].key;
+    out.push({ target: str(l.target), field: str(l.field), values: vals, value: start, start, startFrom: str(l.startFrom || '') });
   });
   return out;
 }

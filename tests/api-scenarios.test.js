@@ -158,13 +158,16 @@ const ROOT = path.join(__dirname, 'fixtures', 'vb-sample');
       { field: 'Customer Type', source: 'static', target: 'requestTypeSel', values: [{ key: 'INTERNAL', text: 'Internal' }, { key: 'EXTERNAL', text: 'External' }], when: '' },
       { field: 'Order (external)', source: 'chain', endpoint: 'shopApi/getOrders', target: 'extOrder', key: 'id', itemsPath: 'items', when: "requestTypeSel === 'EXTERNAL'" }] },
       logic: { chains: [{ name: 'InitChain', calls: ['shopApi/getOrders'] }] }, features: { lifecycle: [{ when: 'when the page opens', chains: ['InitChain'] }], actions: [] } };
-    T.check('its choices: the lists written in the code its parts are shown by, the first value to start', JSON.stringify(S.choicesOf(bf)) === '[{"target":"requestTypeSel","field":"Customer Type","values":[{"key":"INTERNAL","text":"Internal"},{"key":"EXTERNAL","text":"External"}],"value":"INTERNAL"}]');
+    T.check('its choices: the lists written in the code its parts are shown by, the first value to start', JSON.stringify(S.choicesOf(bf)) === '[{"target":"requestTypeSel","field":"Customer Type","values":[{"key":"INTERNAL","text":"Internal"},{"key":"EXTERNAL","text":"External"}],"value":"INTERNAL","start":"INTERNAL","startFrom":""}]');
     const bd = store.draft('shop/orders/order-new', bf, 'jane.doe').scenario;
     r = await store.run(bd.id, env, {});
     T.check('run as Internal: the External-only list not run, said why', r.run.rows[0].steps[0].state === 'skip' && /not on the page when Customer Type is Internal/.test(r.run.rows[0].steps[0].note), r.run.rows[0].steps[0].note);
     const be = store.save(Object.assign({}, bd, { choices: bd.choices.map((c) => Object.assign({}, c, { value: 'EXTERNAL' })) })).scenario;
     r = await store.run(be.id, env, {});
     T.check('…as External: it runs; the value chosen is there for the calls ({{requestTypeSel}})', r.run.rows[0].steps[0].status === 200 && be.choices[0].value === 'EXTERNAL', JSON.stringify(r.run.rows[0].steps[0].checks));
+
+    const tryOff = await store.tryStep(bd, bd.steps[0].id, env, {});
+    T.check('▶ Run on a step not on the page as chosen: sent all the same, said', tryOff.result.status === 200 && /not on the page as chosen \(Customer Type is Internal\): run because you asked/.test(tryOff.result.note), tryOff.result.note);
 
     T.section('kept, listed');
     const list = store.list(page);

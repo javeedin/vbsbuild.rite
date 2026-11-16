@@ -252,6 +252,12 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     await page.waitForTimeout(300);
     T.check('External chosen: the report-backed Customer is the one not on the page now', (await page.$$('#scSteps .nx-sc-step--off')).length === 1
       && /report \/Custom\/Shop\/CUST_LOV_RP/.test(await text(page, '#scSteps .nx-sc-step--off .nx-sc-call')), await text(page, '#scSteps .nx-sc-step--off .nx-sc-call'));
+    // ▶ Run on that step: sent all the same (you asked for that one), said
+    await page.click('#scSteps .nx-sc-step--off .nx-sc-trybtn');
+    await page.waitForSelector('#scSteps .nx-sc-step--off .nx-sc-tried', { timeout: 15000 });
+    T.check('▶ Run on a step not on the page as chosen: sent all the same, said why', /^200 · \d+ ms/.test(await text(page, '#scSteps .nx-sc-step--off .nx-sc-tried b'))
+      && /not on the page as chosen \(Customer Type is External\): run because you asked/.test(await text(page, '#scSteps .nx-sc-step--off .nx-sc-tried')), await text(page, '#scSteps .nx-sc-step--off .nx-sc-tried'));
+    T.check('the choices say how the page starts', /As on your screen/.test(await text(page, '#scChoices')), await text(page, '#scChoices'));
     await env.shot('api-scenarios-search.png');
 
     T.section('built by you from the page\'s APIs, the order suggested; deleted');

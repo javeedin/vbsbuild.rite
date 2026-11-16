@@ -175,6 +175,21 @@ T.section('comments are not code');
 T.check('a report or call only named in a comment is not the page\'s; a // inside a string stays', JSON.stringify(S.scanCode("// This used to call OLD_LOV_RP and endpoint: 'x/old'\nconst u = 'http://h//p'; run('NEW_LOV_RP'); /* BLOCK_RP */ callRest({ endpoint: 'shop/getIt' });"))
   === JSON.stringify(Object.assign(S.scanCode("run('NEW_LOV_RP'); callRest({ endpoint: 'shop/getIt' });"), {})), JSON.stringify(S.scanCode("// OLD_LOV_RP\nrun('NEW_LOV_RP');").reports));
 
+T.section('how a page starts its choices');
+{
+  const sp = path.join(pages, 'start-page');
+  fs.writeFileSync(path.join(pages, 'start-page.html'), '<oj-select-single label-hint="Customer Type" data="[[ $variables.typeADP ]]" item-text="label" value="{{ $variables.typeSel }}"></oj-select-single>'
+    + '<oj-bind-if test="[[ $variables.typeSel !== \'EXTERNAL\' ]]"><oj-select-single label-hint="Customer" data="[[ $variables.custADP ]]" value="{{ $variables.cust }}"></oj-select-single></oj-bind-if>');
+  fs.writeFileSync(path.join(pages, 'start-page.json'), JSON.stringify({ variables: { typeSel: { type: 'string' }, typeArray: { type: 'any[]', defaultValue: [{ value: 'EXTERNAL', label: 'External' }, { value: 'INTERNAL', label: 'Internal' }] },
+    typeADP: { type: 'vb/ArrayDataProvider2', defaultValue: { keyAttributes: 'value', data: '{{ $page.variables.typeArray }}' } }, custADP: { type: 'vb/ArrayDataProvider2', defaultValue: { keyAttributes: 'id', data: [] } } },
+    eventListeners: { vbEnter: { chains: [{ chain: 'HydrateDraftChain' }, { chain: 'SeedTypeChain' }] } } }));
+  fs.mkdirSync(sp + '-chains', { recursive: true });
+  fs.writeFileSync(path.join(sp + '-chains', 'HydrateDraftChain.js'), "define([], () => { class HydrateDraftChain { async run(context) { const req = {}; if (req.type === 'EXTERNAL') { context.$page.variables.typeSel = 'EXTERNAL'; } } } return HydrateDraftChain; });");
+  fs.writeFileSync(path.join(sp + '-chains', 'SeedTypeChain.js'), "define([], () => { class SeedTypeChain { async run(context) { const canChoose = false; const target = canChoose ? '' : 'INTERNAL'; context.$page.variables.typeSel = target; } } return SeedTypeChain; });");
+  const ct = S.analyze(root, 'depot/main/start').integrations.lovs.filter((l) => l.field === 'Customer Type')[0] || {};
+  T.check('the value its opening chains set (SeedTypeChain: Internal), not one a draft is restored with, nor the first in the list', ct.start === 'INTERNAL' && ct.startFrom === 'SeedTypeChain', JSON.stringify([ct.start, ct.startFrom]));
+}
+
 T.section('reading a value picked');
 const ans = { status: 200, json: { data: [{ id: 5, customerName: 'Acme' }, { id: 7, customerName: 'Blue River' }] }, rows: null };
 T.check('[n] the nth row, [field=value] the row picked, gone → nothing', SC.readPath(ans, 'data[0].id') === 5 && SC.readPath(ans, 'data[id=7].customerName') === 'Blue River' && SC.readPath(ans, 'data[id=9].id') === undefined);

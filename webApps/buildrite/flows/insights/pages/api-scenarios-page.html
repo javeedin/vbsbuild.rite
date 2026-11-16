@@ -182,7 +182,7 @@
                     </span>
                   </template>
                 </oj-bind-for-each>
-                <span class="nx-note">as on your screen: a step for a field not shown in this case is skipped when run</span>
+                <span class="nx-note"><oj-bind-text value="[[ $functions.choiceNote($variables.sc.choices) ]]"></oj-bind-text></span>
               </div>
             </oj-bind-if>
 

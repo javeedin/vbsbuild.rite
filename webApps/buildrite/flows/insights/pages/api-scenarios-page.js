@@ -307,6 +307,11 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
       const o = (info && info.overview) || {};
       return [[o.rest, 'REST calls'], [o.chains, 'action chains'], [o.modules, 'rules modules'], [o.reports, 'BI reports'], [o.actions, 'actions']].filter((x) => x[0] !== undefined).map((x) => ({ n: String(x[0]), what: x[1] }));
     }
+    /** Under the choices: how the page starts (its opening chain), and what a choice does. */
+    choiceNote(choices) {
+      const starts = (choices || []).filter((c) => c.start).map((c) => c.field + ' starts as ' + ((c.values.filter((x) => x.key === c.start)[0] || {}).text || c.start) + (c.startFrom ? ' (' + c.startFrom + ')' : ''));
+      return 'As on your screen' + (starts.length ? ' — the page: ' + starts.join(', ') : '') + '. A step for a field not shown in the case chosen is skipped when the scenario runs (▶ Run on a step still sends it).';
+    }
     apiBar(sc) {
       if (!sc) return 'No scenario open: + Add to scenario starts a new one with that API.';
       return 'Building: ' + sc.name + ' · ' + ((sc.steps || []).length) + ' step(s)' + (sc.id ? '' : ' (not saved yet)') + '. Add the APIs you want, then Suggest order in the scenario.';

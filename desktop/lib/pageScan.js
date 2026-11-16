@@ -723,6 +723,17 @@ function analyze(root, id) {
   const sent = callParamsOf(chainSrcs.map((c) => c.src));
   rest.forEach((r) => { if (sent[r.endpoint]) r.params = sent[r.endpoint]; });
   const lovs = lovsOf(htmlSrc, json, chainSrcs);
+  // a choice the page makes on itself (Customer Type): the value its opening chains set (SeedCustomerTypeChain: 'INTERNAL')
+  const opening = new Set([].concat(...lifecycle.map((l) => l.chains || [])));
+  lovs.filter((l) => l.source === 'static' && (l.values || []).length && !l.start).forEach((l) => {
+    // a value the chain sets (= 'X', ? … : 'X', || 'X', key: 'X'), not one it compares with (=== 'X'); a chain that
+    // restores a saved draft (Hydrate, Resume, Restore) is not how the page starts fresh
+    for (const c of chainSrcs) {
+      if (!opening.has(c.name) || /hydrate|resume|restore|reload/i.test(c.name)) continue;
+      const hit = l.values.map((x) => x.key).filter((k) => k && new RegExp('(?:[^=!<>]=|[:?]|\\|\\|)\\s*[\'"`]' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[\'"`]').test(c.src))[0];
+      if (hit) { l.start = hit; l.startFrom = c.name; break; }
+    }
+  });
 
   const L = links(root); // the app's navigation, once for this page
   return {
