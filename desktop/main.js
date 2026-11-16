@@ -310,6 +310,7 @@ async function buildRiteOptions() {
     // The API tester: a page's REST calls and reports, tried against the real backend
     apiStore: apiStore(),
     scenarioStore: scenarioStore(),
+    appWindow: () => (runWin && !runWin.isDestroyed() ? { url: runWin.webContents.getURL(), title: runWin.getTitle() } : null), // the page your app's window shows (API Scenarios follows it)
     // …sent to your workspace's backends (its services/catalog.json), with who its app runs as (Run as, Sign in for your app)
     apiProject: () => { const c = currentWorkspace(); if (!c) return null; const p = profileOf(c.working); return { catalogFiles: ((p.services && p.services.catalogs) || []).map((x) => x.file), getIdentity: () => workspaceIdentity() }; },
     // What Build.Rite read from your workspace's app (Run console → Your app); scan: read it again

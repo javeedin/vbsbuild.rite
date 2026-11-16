@@ -25,6 +25,8 @@ define([], function () {
     run: function (id, allowWrites) { return call('/run', 'POST', { id: id, allowWrites: !!allowWrites }); },
     // one step tried on its own, from the scenario as it is on the screen, with the values handed on so far
     tryStep: function (scenario, step, vars, allowWrites, search) { return call('/try', 'POST', { scenario: scenario, step: step, vars: vars || {}, allowWrites: !!allowWrites, search: search }); },
+    // the page your app's window is on: { open, url, page, label }
+    where: function () { return call('/where'); },
     runs: function (page) { return call('/runs?' + q('page', page)); },
     runOf: function (page, run) { return call('/run-of?' + q('page', page) + '&' + q('run', run)); }
   };

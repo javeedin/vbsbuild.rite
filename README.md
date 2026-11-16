@@ -118,6 +118,10 @@ the page's report, at the point where the page calls it, with the report's param
 - **Every run kept** on this PC (`userData/api-scenarios`, under each project's hashed key), with who ran it, the
   result of each step and its answer. The runs list shows a page's history; the scenario card shows its last run.
 
+- **The page your app's window shows.** An app can have two pages with one title (two "Create Equipment Request"s,
+  each with its own lists). When you come back from your app's window (▶ Run), API Scenarios says which page it is on
+  and offers to test that one; the page list marks it, and marks pages that share a title.
+
 Calls go out the same way as from the API tester: through the app's own backends, with the app's login.
 
 ## Run any VB app from its own folder

@@ -16,11 +16,13 @@
     <aside class="nx-card nx-sc-pages" aria-label="Pages">
       <input type="search" class="nx-cm-input" id="scFind" placeholder="Find a page…" data-field="q" :value="[[ $variables.q ]]" on-input="[[ $listeners.onField ]]">
       <div class="nx-sc-pagelist" id="scPages" role="list">
-        <oj-bind-for-each data="[[ $functions.pagesShown($variables.pages, $variables.q) ]]">
+        <oj-bind-for-each data="[[ $functions.pagesShown($variables.pages, $variables.q, $variables.appAt) ]]">
           <template data-oj-as="p">
             <button type="button" role="listitem" :class="[[ 'nx-sc-pagerow' + ($variables.page === p.data.id ? ' nx-sc-pagerow--on' : '') ]]" data-act="page" :data-key="[[ p.data.id ]]" on-click="[[ $listeners.onAct ]]">
               <b><oj-bind-text value="[[ p.data.label ]]"></oj-bind-text></b>
               <span><oj-bind-text value="[[ p.data.id ]]"></oj-bind-text></span>
+              <oj-bind-if test="[[ p.data.open ]]"><em class="nx-sc-pagetag nx-sc-pagetag--open">● open in your app</em></oj-bind-if>
+              <oj-bind-if test="[[ p.data.twin ]]"><em class="nx-sc-pagetag" :title="[[ 'Another page has this title: ' + p.data.twin ]]">same title as another page</em></oj-bind-if>
             </button>
           </template>
         </oj-bind-for-each>
@@ -29,6 +31,19 @@
     </aside>
 
     <section class="nx-sc-main">
+      <!-- the page your app's window is on (▶ Run): test the page you see -->
+      <oj-bind-if test="[[ !!($variables.appAt && $variables.appAt.open) ]]">
+        <div :class="[[ 'nx-sc-appat' + ($variables.appAt.page && $variables.appAt.page === $variables.page ? ' nx-sc-appat--same' : '') ]]" id="scAppAt">
+          <span class="nx-sc-appdot" aria-hidden="true"></span>
+          <span>Your app's window is on <b><oj-bind-text value="[[ $variables.appAt.label || 'a page Build.Rite cannot place' ]]"></oj-bind-text></b>
+            <code><oj-bind-text value="[[ $variables.appAt.page || $variables.appAt.url ]]"></oj-bind-text></code></span>
+          <span class="nx-min-flex"></span>
+          <oj-bind-if test="[[ $variables.appAt.page && $variables.appAt.page !== $variables.page ]]">
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="scAppAtOpen" data-act="page" :data-key="[[ $variables.appAt.page ]]" on-click="[[ $listeners.onAct ]]">Test this page</button>
+          </oj-bind-if>
+          <oj-bind-if test="[[ $variables.appAt.page && $variables.appAt.page === $variables.page ]]"><span class="nx-sc-appsame">✓ the page you are testing</span></oj-bind-if>
+        </div>
+      </oj-bind-if>
       <oj-bind-if test="[[ !$variables.page ]]"><div class="nx-card nx-card-pad nx-empty" id="scPick">Choose a page: its scenarios — its calls in order, each answer checked — show here.</div></oj-bind-if>
       <oj-bind-if test="[[ !!$variables.page ]]">
         <!-- the page's scenarios -->

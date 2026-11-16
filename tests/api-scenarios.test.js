@@ -124,6 +124,13 @@ const ROOT = path.join(__dirname, 'fixtures', 'vb-sample');
     tr = await store.tryStep(unsaved, gone.steps[0].id, env, {});
     T.check('…a list of values tried: its values come back to pick from', tr.result.values.length === 2 && tr.result.values[1].key === '42', JSON.stringify(tr.result.values));
 
+    T.section('the page an address of the app shows (its window)');
+    const pgs = [{ id: 'app/orders/order-create', label: 'New Order', route: { url: '/vp/shell/orders/order-create' } }, { id: 'app/orders/order-create-quick', label: 'New Order', route: { url: '/vp/shell/orders/order-create-quick' } },
+      { id: 'app/main/home', label: 'Home', route: { url: '/vp/shell/main/home' } }];
+    T.check('its route ends the address\'s path (query and trailing slash aside); the longest wins; none: null', S.pageOfUrl(pgs, 'http://localhost:9/vp/shell/orders/order-create?x=1').id === 'app/orders/order-create'
+      && S.pageOfUrl(pgs, 'http://localhost:9/vp/shell/orders/order-create-quick/').id === 'app/orders/order-create-quick' && S.pageOfUrl(pgs, 'http://localhost:9/other/main/home').id === 'app/main/home'
+      && S.pageOfUrl(pgs, 'http://localhost:9/vp/shell/nowhere') === null && S.pageOfUrl(pgs, '') === null);
+
     T.section('kept, listed');
     const list = store.list(page);
     T.check('the page\'s scenarios, each with its last run', list.ok && list.scenarios.length === 6 && list.scenarios.filter((x) => x.name === 'Open an order')[0].last !== null);

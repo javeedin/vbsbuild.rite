@@ -37,9 +37,13 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         return r;
       };
 
+      // the page your app's window is on (it follows you back from that window)
+      const where = async () => { const r = await SC.where(); v.appAt = r.ok && r.body && r.body.open ? { open: true, url: r.body.url || '', page: r.body.page || '', label: r.body.label || '' } : null; };
+      if (act === 'where') { await where(); return; }
       if (act === 'load') {
         const c = await PC.catalog(context.$application.path);
         v.pages = c && c.ok && c.body ? (c.body.pages || []) : [];
+        await where();
         const handed = typeof bus.takeFocus === 'function' ? bus.takeFocus('api-scenarios') : null;
         if (handed && handed.page) await loadPage(handed.page);
         else if (v.page) await loadPage(v.page);

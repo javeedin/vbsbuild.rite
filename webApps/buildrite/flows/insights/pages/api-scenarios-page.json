@@ -62,11 +62,20 @@
       "type": "string",
       "defaultValue": "",
       "description": "The step being run on its own."
+    },
+    "appAt": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The page your app's window is on: { open, url, page, label } (/__api/scenarios/where)."
     }
   },
   "events": {
     "focusRequest": {
       "description": "Another screen handed this one a page (shellBus.focus('api-scenarios', { page }))",
+      "payloadType": "object"
+    },
+    "appWhere": {
+      "description": "You came back from your app's window: where is it now?",
       "payloadType": "object"
     }
   },
@@ -170,6 +179,19 @@
             "act": "{{ $event.detail.updatedFrom === 'internal' ? 'pick' : 'none' }}",
             "key": "{{ $event.currentTarget.dataset.key }}",
             "value": "{{ $event.detail.value == null ? '' : String($event.detail.value) }}",
+            "step": ""
+          }
+        }
+      ]
+    },
+    "appWhere": {
+      "chains": [
+        {
+          "chain": "scChain",
+          "parameters": {
+            "act": "where",
+            "key": "",
+            "value": "",
             "step": ""
           }
         }

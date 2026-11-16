@@ -454,6 +454,7 @@ function createDevServer(o) {
 
   /** The API tester's send (lib/apiTest.js): through this server's own /__backend proxy, so a test goes where the app's
    *  calls go, with the same login, and shows in the log like them. Resolves { status, statusText, headers, body, ms }. */
+  let whereCache = null; // the page catalog, for /__api/scenarios/where (asked as you come back from the app's window)
   function sendBackend(name, rel, init) {
     const started = Date.now();
     const body = Buffer.from(init.body === undefined || init.body === null ? '' : String(init.body), 'utf8');
@@ -1050,6 +1051,16 @@ function createDevServer(o) {
             if (!sc) return jsonA(200, { ok: false, error: 'API Scenarios need the desktop app.' });
             const who = () => { try { const id = o.getIdentity && o.getIdentity(); return (id && (id.displayName || id.username)) || ''; } catch (e) { return ''; } };
             if (pathname === '/__api/scenarios' && !post) return jsonA(200, sc.list(q('page'), env));
+            // the page your app's window is on (▶ Run opens it): API Scenarios offers its scenarios
+            if (pathname === '/__api/scenarios/where' && !post) {
+              let w = null;
+              try { w = typeof o.appWindow === 'function' ? o.appWindow() : null; } catch (e) { w = null; }
+              if (!w || !w.url) return jsonA(200, { ok: true, open: false });
+              const ps = o.pagesStore;
+              if (!whereCache || Date.now() - whereCache.at > 30000) whereCache = { at: Date.now(), pages: ps && ps.catalog ? (ps.catalog().pages || []) : [] };
+              const pg = require('./apiScenarios').pageOfUrl(whereCache.pages, w.url);
+              return jsonA(200, { ok: true, open: true, url: String(w.url), page: pg ? pg.id : '', label: pg ? pg.label : '' });
+            }
             if (pathname === '/__api/scenarios/get' && !post) return jsonA(200, sc.get(q('id'), env));
             if (pathname === '/__api/scenarios/runs' && !post) return jsonA(200, sc.runs(q('page')));
             if (pathname === '/__api/scenarios/run-of' && !post) return jsonA(200, sc.runOf(q('page'), q('run')));

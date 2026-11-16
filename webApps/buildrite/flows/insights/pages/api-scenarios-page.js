@@ -104,12 +104,21 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
       // opened on one page (Application pages → API on a page): its scenarios shown
       const helper = context && typeof context.getEventHelper === 'function' ? context.getEventHelper() : null;
       try { bus.onFocus('api-scenarios', () => { if (helper) helper.fireCustomEvent('focusRequest', {}); }); } catch (e) { /* no shell */ }
+      // back from your app's window (Build.Rite's own window gets the focus again): which page is it on now?
+      try { if (typeof window !== 'undefined' && helper) window.addEventListener('focus', () => { try { helper.fireCustomEvent('appWhere', {}); } catch (e) { /* page gone */ } }); } catch (e) { /* no window */ }
       this._rows = new Map();   // step id → { sig, row }: a step shown again only when it changed (the page keeps its place)
       this._prov = new Map();   // scenario id|step id → LovProvider (one per list, kept while the scenario is open)
     }
-    pagesShown(pages, q) {
+    pagesShown(pages, q, appAt) {
       const t = String(q || '').trim().toLowerCase();
-      return (pages || []).filter((p) => !p.deleted && (!t || (p.label + ' ' + p.id).toLowerCase().indexOf(t) !== -1)).slice(0, 400);
+      const live = (pages || []).filter((p) => !p.deleted);
+      // pages that share a title (two "Create Equipment Request"s): said, so the one your app shows is the one tested
+      const byLabel = {};
+      live.forEach((p) => { const k = String(p.label || '').trim().toLowerCase(); (byLabel[k] = byLabel[k] || []).push(p.id); });
+      return live.filter((p) => !t || (p.label + ' ' + p.id).toLowerCase().indexOf(t) !== -1).slice(0, 400).map((p) => {
+        const twins = (byLabel[String(p.label || '').trim().toLowerCase()] || []).filter((x) => x !== p.id);
+        return Object.assign({}, p, { open: !!(appAt && appAt.page === p.id), twin: twins.join(', ') });
+      });
     }
     pageLabel(pages, id) { return ((pages || []).filter((p) => p.id === id)[0] || {}).label || id; }
     cards(list, sc) {

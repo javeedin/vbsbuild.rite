@@ -25,12 +25,12 @@ const LIST = 'shop/orders/order-list', CREATE = 'shop/orders/order-create', DETA
 function writeSearchPage(root) {
   const dir = path.join(root, 'webApps', 'shop', 'flows', 'customers', 'pages');
   fs.mkdirSync(path.join(dir, 'customer-pick-page-chains'), { recursive: true });
-  fs.writeFileSync(path.join(dir, 'customer-pick-page.html'), '<div class="oj-web-applayout-max-width"><h1>Pick a customer</h1>\n'
+  fs.writeFileSync(path.join(dir, 'customer-pick-page.html'), '<div class="oj-web-applayout-max-width"><h1>New Order</h1>\n'
     + '  <oj-select-single aria-label="Customer" value="[[ $page.variables.picked && $page.variables.picked.CustomerId != null ? String($page.variables.picked.CustomerId) : null ]]"\n'
     + '    data="[[ $functions.customerProvider() ]]" item-text="Customer">\n'
     + '    <template slot="itemTemplate"><span><oj-bind-text value="[[ $current.data.Customer ]]"></oj-bind-text></span><small><oj-bind-text value="[[ $current.data.CustomerNumber ]]"></oj-bind-text></small></template>\n'
     + '  </oj-select-single>\n</div>\n');
-  fs.writeFileSync(path.join(dir, 'customer-pick-page.json'), JSON.stringify({ description: 'Pick a customer', variables: { picked: { type: 'any', defaultValue: null } },
+  fs.writeFileSync(path.join(dir, 'customer-pick-page.json'), JSON.stringify({ description: 'New Order', variables: { picked: { type: 'any', defaultValue: null } },
     events: { customerSearchRequested: { payloadType: 'object' } },
     eventListeners: { customerSearchRequested: { chains: [{ chain: 'CustomerSearchChain', parameters: { searchValue: '[[ $event.text ]]' } }] } } }, null, 2));
   fs.writeFileSync(path.join(dir, 'customer-pick-page.js'), "define([], () => {\n  'use strict';\n  class PageModule {\n    constructor(context) {\n      const self = this;\n"
@@ -54,7 +54,9 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
   const apiProject = () => ({ catalogFile: path.join(pg.root, 'services', 'catalog.json'), getIdentity: () => ({ username: 'priya.raman', roles: ['SHOP_CLERK'], fusion: null }) });
   const reportBodies = [];
   const searches = []; // the text each search-as-you-type report was run with
-  const env = await E.start({ port: 19872, pagesStore: pg.store, apiStore, apiProject, scenarioStore,
+  let appUrl = 'http://localhost:18950/vp/shell/orders/order-create'; // the app's window (▶ Run): the page it shows
+  const appWindow = () => (appUrl ? { url: appUrl, title: 'Working copy — Shop' } : null);
+  const env = await E.start({ port: 19872, pagesStore: pg.store, apiStore, apiProject, scenarioStore, appWindow,
     handle: (r, res) => {
       if (r.path === '/shop/v1/orders' && r.method === 'GET') return res.json(EXAMPLE);
       if (/^\/shop\/v1\/orders\/41$/.test(r.path)) return res.json(EXAMPLE.data[0]);
@@ -91,6 +93,22 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     const ids = await page.$$eval('#scPages .nx-sc-pagerow', (r) => r.map((x) => x.getAttribute('data-key')));
     T.check('API Scenarios in the Application group; the workspace\'s pages listed', (await page.$('.nx-nav-item[data-nav-id="api-scenarios"], [data-nav-id="api-scenarios"]')) !== null
       && [LIST, CREATE, DETAIL].every((x) => ids.indexOf(x) !== -1), ids.join());
+
+    T.section('the page your app\'s window is on: the one you test');
+    await page.waitForSelector('#scAppAt', { timeout: 10000 });
+    T.check('said: your app\'s window is on New Order (order-create); it is marked in the list', /Your app's window is on New Order shop\/orders\/order-create/.test(await text(page, '#scAppAt'))
+      && /● open in your app/.test(await text(page, '#scPages .nx-sc-pagerow[data-key="' + CREATE + '"]')), await text(page, '#scAppAt'));
+    T.check('two pages with one title ("New Order"): each says so', /same title as another page/.test(await text(page, '#scPages .nx-sc-pagerow[data-key="' + CREATE + '"]'))
+      && /same title as another page/.test(await text(page, '#scPages .nx-sc-pagerow[data-key="' + PICK + '"]')) && !/same title/.test(await text(page, '#scPages .nx-sc-pagerow[data-key="' + LIST + '"]')));
+    await page.click('#scAppAtOpen');
+    await page.waitForSelector('#scDraft', { timeout: 10000 });
+    T.check('"Test this page": that page opened, said to be the one you test', (await text(page, '#scPages .nx-sc-pagerow--on span')) === CREATE && /✓ the page you are testing/.test(await text(page, '#scAppAt')));
+    // the app's window goes elsewhere; back in Build.Rite, it follows
+    appUrl = 'http://localhost:18950/vp/shell/orders/order-list?from=menu';
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await page.waitForFunction(() => /Order Workbench/.test((document.getElementById('scAppAt') || {}).textContent || ''), null, { timeout: 10000 });
+    T.check('back from the app\'s window (now on Order Workbench): it follows, offers that page', /Your app's window is on Order Workbench shop\/orders\/order-list/.test(await text(page, '#scAppAt')) && !!(await page.$('#scAppAtOpen')), await text(page, '#scAppAt'));
+    appUrl = '';
 
     T.section('a page\'s calls drafted, run through the APIs alone');
     await pick(LIST);

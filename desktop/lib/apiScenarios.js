@@ -413,4 +413,23 @@ function open(o) {
   return store;
 }
 
-module.exports = { open, readPath, fill, statusOk };
+/**
+ * The page an address of the app shows (the app's window: http://localhost:…/vp/shell/customer-portal/project-create-request?x=1):
+ * the page whose route ends the address's path, the longest match first. pages: [{ id, label, route: { url } }]. → page | null
+ */
+function pageOfUrl(pages, url) {
+  let p = '';
+  try { p = new URL(str(url), 'http://x').pathname; } catch (e) { p = str(url).split('?')[0]; }
+  p = p.replace(/\/+$/, '');
+  if (!p) return null;
+  const tail = (r) => str(r).replace(/\/+$/, '');
+  const hits = (pages || []).filter((x) => x && x.route && x.route.url && !x.deleted).map((x) => {
+    const r = tail(x.route.url);
+    const fp = '/' + str(x.id).split('/').slice(1).filter(Boolean).join('/'); // flow/page (an app's root page: /page)
+    const n = p.endsWith(r) ? r.length : (fp.length > 1 && p.endsWith(fp) ? fp.length : 0);
+    return { x, n };
+  }).filter((h) => h.n > 0).sort((a, b) => b.n - a.n);
+  return hits.length ? hits[0].x : null;
+}
+
+module.exports = { open, readPath, fill, statusOk, pageOfUrl };
