@@ -184,3 +184,21 @@ html[data-nx-product="buildrite"] .nx-nav-scroll { scrollbar-color: rgba(255, 25
 .nx-sc-runtable td { padding: 5px 6px; border-bottom: 1px solid #e3e8ee; }
 .nx-sc-runrow--fail td:first-child { color: #b42318; font-weight: 700; }
 @media (max-width: 960px) { .nx-sc-cols { grid-template-columns: 1fr; } .nx-sc-pages { position: static; max-height: 300px; } }
+/* API Scenarios: a step's API in full, its ▶ Run, its list of values searched as on the page, its result on its own */
+#scSteps, #scEdit { overflow-anchor: none; } /* a step shown again keeps the page where it is */
+.nx-sc-api { margin: 6px 0 0; font-size: 12px; overflow-wrap: anywhere; }
+.nx-sc-api code { color: #24405e; background: #f1f5f9; border-radius: 6px; padding: 2px 6px; display: inline-block; max-width: 100%; }
+.nx-sc-trybtn { white-space: nowrap; }
+.nx-sc-select { width: 100%; max-width: 560px; margin-top: 6px; }
+.nx-sc-opt { display: flex; flex-direction: column; line-height: 1.3; padding: 2px 0; }
+.nx-sc-opttext { font-weight: 600; }
+.nx-sc-optsub { font-size: 11.5px; color: #6b7886; }
+.nx-sc-tried { margin-top: 8px; border-left: 4px solid #c9d3dd; padding: 6px 10px; background: #fafbfc; border-radius: 0 8px 8px 0; }
+.nx-sc-tried.nx-sc-res--ok { border-left-color: #1f9d55; } .nx-sc-tried.nx-sc-res--fail { border-left-color: #b42318; background: #fff6f5; }
+.nx-sc-tried pre { max-height: 260px; overflow: auto; font-size: 11.5px; }
+.nx-sc-sent code { background: #eef6ee; }
+/* the API tester: the page's other BI Publisher reports, one click each */
+.nx-api-otherreps { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.nx-api-repchip { border: 1px solid #d3dce6; background: #fff; border-radius: 12px; padding: 1px 8px; font: inherit; font-size: 11.5px; cursor: pointer; }
+.nx-api-repchip:hover { border-color: #2e6fd8; }
+.nx-api-repchip--on { border-color: #2e6fd8; background: #e6f0fc; font-weight: 600; }

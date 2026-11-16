@@ -117,6 +117,13 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
       && (await page.$$('#apiTable .nx-api-tr:not(.nx-api-tr--head)')).length === 2 && /Acme Tools[\s\S]*OK/.test(await text(page, '#apiTable')) && /report rows <G_1>/.test(await text(page, '#apiFacts')));
     await env.shot('api-test-report.png');
     await page.click('#apiClose');
+    // BI Publisher's own service in the REST calls: its Test opens the page's report (its path from the code), not a blank one
+    await page.waitForTimeout(300);
+    await page.click('#pgRest [data-endpoint="bipService/runBIPReport"] .nx-api-test');
+    await page.waitForSelector('#apiParams [data-param="P_CUSTOMER_ID"]', { timeout: 10000 });
+    T.check('runBIPReport\'s Test: the page\'s report opened (its path, its parameter), said why', (await text(page, '#apiReportPath')) === '/Custom/Shop/CUSTOMERS_RP.xdo'
+      && /BI Publisher's own service: it runs this page's reports\. Showing CUSTOMERS_RP/.test(await text(page, '#apiDlg')), await text(page, '#apiReportPath'));
+    await page.click('#apiClose');
 
     T.section('Check all reads');
     await page.click('#apiCheckAll');

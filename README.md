@@ -101,6 +101,15 @@ the page's report, at the point where the page calls it, with the report's param
   keeps, and the page value it sets. Its step shows the list's values after a run; pick one as a user would, on that
   step or on any later step that sends it, and it is handed on (`customerRefId = data[id=7].id`). The first value is
   used until you pick one, and a picked value that has gone from the list is reported.
+- **Searched as on the page.** The picker is the same component the app uses (`oj-select-single`). A list the page
+  loads whole is loaded from the API and filtered as you type. A search as you type (a provider in the page module
+  that fires an event, answered by a chain that runs a BI Publisher report or a call with the text) runs that report
+  or call with what you type, so you search the real data: `P_SEARCH = harbor` → HARBOR STEEL WORKS INC · CR10042.
+  Once picked, the step searches for that value's number, so a full run finds the same row.
+- **Each API in full, and ▶ Run.** Every step shows the request as it will go: method, the backend this PC reaches,
+  the path and values, with the values known so far filled in. ▶ Run sends that one API now, with the values handed
+  on so far (the last run's, the data row, the values picked), and shows what was sent and what came back. It is not
+  kept as a run.
 - **Checks on every answer.** The status (`2xx`, or `200,404` when a 404 is expected), how many rows, how long it took,
   whether the answer still has the same shape as the example the page was built with, and given fields
   (`items[0].status = OPEN`).

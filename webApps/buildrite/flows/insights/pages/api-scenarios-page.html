@@ -75,7 +75,7 @@
             <oj-text-area class="nx-sc-ta nx-sc-notes" id="scNotes" rows="2" data-field="notes" on-value-changed="[[ $listeners.onTaField ]]" placeholder="What this scenario checks (e.g. a closed project gives no tasks)" value="[[ $variables.sc.notes ]]"></oj-text-area>
 
             <ol class="nx-sc-steps" id="scSteps">
-              <oj-bind-for-each data="[[ $functions.stepRows($variables.sc, $variables.run, $variables.lovQ) ]]">
+              <oj-bind-for-each data="[[ $functions.stepRows($variables.sc, $variables.run, $variables.tries, $variables.trying) ]]">
                 <template data-oj-as="st">
                   <li :class="[[ 'nx-sc-step' + (st.data.writes ? ' nx-sc-step--writes' : '') ]]" :id="[[ 'scStep-' + st.data.id ]]">
                     <div class="nx-sc-stephead">
@@ -84,10 +84,14 @@
                       <code class="nx-sc-call"><oj-bind-text value="[[ st.data.call ]]"></oj-bind-text></code>
                       <oj-bind-if test="[[ st.data.writes ]]"><span class="nx-sc-wchip" title="Changes data">changes data</span></oj-bind-if>
                       <span class="nx-min-flex"></span>
+                      <button type="button" class="nx-btn nx-btn--sm nx-sc-trybtn" data-act="tryStep" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ st.data.trying ]]"
+                        title="Run this API on its own, with the values handed on so far"><oj-bind-text value="[[ st.data.trying ? 'Running…' : '▶ Run' ]]"></oj-bind-text></button>
                       <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="up" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Move up" title="Move up">↑</button>
                       <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="down" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Move down" title="Move down">↓</button>
                       <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="removeStep" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Remove the step" title="Remove">✕</button>
                     </div>
+                    <!-- the API in full: method, the backend's address, its path and values (the ones known so far filled in) -->
+                    <p class="nx-sc-api"><code><oj-bind-text value="[[ st.data.api ]]"></oj-bind-text></code></p>
                     <!-- a list of values on the page (a dropdown this call fills): what it shows, keeps and hands on -->
                     <oj-bind-if test="[[ !!st.data.lov ]]">
                       <p class="nx-sc-lovinfo"><span class="nx-sc-lovchip">List of values</span>
@@ -101,25 +105,17 @@
                             <b><oj-bind-text value="[[ pk.data.field ]]"></oj-bind-text></b>
                             <code><oj-bind-text value="[[ '{{' + pk.data.target + '}}' ]]"></oj-bind-text></code>
                             <span class="nx-sc-picked"><oj-bind-text value="[[ pk.data.pickedLabel ]]"></oj-bind-text></span>
-                            <span class="nx-min-flex"></span>
-                            <oj-bind-if test="[[ pk.data.has ]]">
-                              <input class="nx-cm-input nx-sc-pickq" data-field="lovQ" :value="[[ $variables.lovQ ]]" on-input="[[ $listeners.onField ]]" placeholder="Find a value…" aria-label="Find a value">
-                            </oj-bind-if>
                           </div>
-                          <oj-bind-if test="[[ !pk.data.has ]]"><p class="nx-note"><oj-bind-text value="[[ pk.data.note ]]"></oj-bind-text></p></oj-bind-if>
-                          <oj-bind-if test="[[ pk.data.has ]]">
-                            <div class="nx-sc-values" role="listbox" :aria-label="[[ pk.data.field ]]">
-                              <oj-bind-for-each data="[[ pk.data.values ]]">
-                                <template data-oj-as="vv">
-                                  <button type="button" role="option" :aria-selected="[[ vv.data.on ? 'true' : 'false' ]]" :class="[[ 'nx-sc-value' + (vv.data.on ? ' nx-sc-value--on' : '') ]]"
-                                    :data-key="[[ pk.data.lovStep ]]" :data-value="[[ vv.data.key ]]" :data-label="[[ vv.data.text ]]" on-click="[[ $listeners.onPick ]]">
-                                    <span><oj-bind-text value="[[ vv.data.text ]]"></oj-bind-text></span><code><oj-bind-text value="[[ vv.data.key ]]"></oj-bind-text></code>
-                                  </button>
-                                </template>
-                              </oj-bind-for-each>
-                            </div>
-                            <p class="nx-note nx-sc-valnote"><oj-bind-text value="[[ pk.data.countNote ]]"></oj-bind-text></p>
-                          </oj-bind-if>
+                          <!-- searched as on the page: the same component, its values from the API -->
+                          <oj-select-single class="nx-sc-select" :aria-label="[[ pk.data.field ]]" :placeholder="[[ pk.data.placeholder ]]"
+                            data="[[ pk.data.provider ]]" item-text="text" value="[[ pk.data.pick ]]"
+                            :data-key="[[ pk.data.lovStep ]]" on-value-changed="[[ $listeners.onPickSel ]]">
+                            <template slot="itemTemplate">
+                              <div class="nx-sc-opt"><span class="nx-sc-opttext"><oj-bind-text value="[[ $current.data.text ]]"></oj-bind-text></span>
+                                <span class="nx-sc-optsub"><oj-bind-text value="[[ ($current.data.sub ? $current.data.sub + ' · ' : '') + $current.data.key ]]"></oj-bind-text></span></div>
+                            </template>
+                          </oj-select-single>
+                          <p class="nx-note nx-sc-valnote"><oj-bind-text value="[[ pk.data.note ]]"></oj-bind-text></p>
                         </div>
                       </template>
                     </oj-bind-for-each>
@@ -138,6 +134,21 @@
                       <oj-bind-if test="[[ st.data.hasBody ]]"><label class="nx-sc-f nx-sc-body"><span>Body (JSON, {{var}} allowed)</span>
                         <oj-text-area class="nx-sc-ta" rows="4" data-field="body" :data-step="[[ st.data.id ]]" on-value-changed="[[ $listeners.onTaStep ]]" value="[[ st.data.body ]]"></oj-text-area></label></oj-bind-if>
                     </div>
+                    <!-- this API run on its own (▶ Run): what was sent, what came back -->
+                    <oj-bind-if test="[[ !!st.data.tried ]]">
+                      <div :class="[[ 'nx-sc-tried nx-sc-res--' + st.data.tried.state ]]">
+                        <div class="nx-sc-reshead"><span class="nx-sc-resico"><oj-bind-text value="[[ st.data.tried.icon ]]"></oj-bind-text></span>
+                          <b><oj-bind-text value="[[ st.data.tried.head ]]"></oj-bind-text></b></div>
+                        <oj-bind-if test="[[ !!st.data.tried.url ]]"><p class="nx-sc-api nx-sc-sent"><code><oj-bind-text value="[[ 'Sent: ' + st.data.tried.url ]]"></oj-bind-text></code></p></oj-bind-if>
+                        <oj-bind-if test="[[ !!st.data.tried.note ]]"><p class="nx-note nx-sc-resnote"><oj-bind-text value="[[ st.data.tried.note ]]"></oj-bind-text></p></oj-bind-if>
+                        <ul class="nx-sc-checklist">
+                          <oj-bind-for-each data="[[ st.data.tried.checks ]]"><template data-oj-as="c"><li :class="[[ c.data.ok ? 'nx-sc-ok' : 'nx-sc-bad' ]]"><oj-bind-text value="[[ (c.data.ok ? '✓ ' : '✗ ') + c.data.name + ' — ' + c.data.detail ]]"></oj-bind-text></li></template></oj-bind-for-each>
+                        </ul>
+                        <oj-bind-if test="[[ !!st.data.tried.values ]]"><p class="nx-sc-resvalues"><oj-bind-text value="[[ st.data.tried.values ]]"></oj-bind-text></p></oj-bind-if>
+                        <oj-bind-if test="[[ !!st.data.tried.handed ]]"><p class="nx-sc-handed"><oj-bind-text value="[[ 'Hands on: ' + st.data.tried.handed ]]"></oj-bind-text></p></oj-bind-if>
+                        <oj-bind-if test="[[ !!st.data.tried.answer ]]"><details class="nx-sc-answer" open><summary>Its answer</summary><pre><oj-bind-text value="[[ st.data.tried.answer ]]"></oj-bind-text></pre></details></oj-bind-if>
+                      </div>
+                    </oj-bind-if>
                   </li>
                 </template>
               </oj-bind-for-each>

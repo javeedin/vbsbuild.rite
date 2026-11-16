@@ -17,6 +17,7 @@
  *     rescan()                        writes that catalog (every page, labels as the code has them now)
  *     sheet(id)                       { ok, sheet, codeChanged } (the saved sheet, or the facts read now when there is none)
  *     facts(id)                       the page's facts read from its code now (lib/pageScan.js analyze), or null
+ *     texts(id)                       { ok, files: [{ path, text }] } every file of the page, read now (no git: fast)
  *     build(id, { by })               reads the facts again and saves the sheet (keeping its screenshot, AI text, stories)
  *     assign(id, key, { by })         maps a Jira story to the page (building the sheet first when it has none) → { ok, sheet, built }
  *     unassign(id, key)               → { ok }
@@ -331,9 +332,20 @@ function open(opts) {
   const gitOut = (cwd, args) => {
     try { return { code: 0, out: require('child_process').execFileSync(o.gitPath || 'git', args, { cwd: cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 8000, windowsHide: true, maxBuffer: 16 * 1024 * 1024 }) }; } catch (e) { return { code: 1, out: str(e && e.stdout) }; }
   };
+  // the base is asked of git once in a while, not for every file (each git call blocks this process: on Windows,
+  // dozens of them froze the window)
+  const baseMemo = new Map(); // folder → { at, v }
   function baseOf(folder) {
     let b = null;
     try { b = typeof o.baseFn === 'function' ? o.baseFn() : null; } catch (e) { b = null; }
+    const key = folder + '|' + (b && b.ref ? b.ref : ''); // another VB Studio branch: asked again at once
+    const hit = baseMemo.get(key);
+    if (hit && Date.now() - hit.at < 30000) return hit.v;
+    const v = baseOfNow(folder, b);
+    baseMemo.set(key, { at: Date.now(), v });
+    return v;
+  }
+  function baseOfNow(folder, b) {
     const has = (ref) => gitOut(folder, ['rev-parse', '--verify', '--quiet', ref + '^{commit}']).code === 0;
     if (b && b.ref && has(b.ref)) return { ref: str(b.ref), label: str(b.label) || str(b.ref) };
     const up = gitOut(folder, ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']).out.trim();
@@ -375,22 +387,35 @@ function open(opts) {
 
   /** The page's code, as it is in the project now (the Page code tab, read only): its files — the page, its action
    *  chains, the rules modules it uses — and one file's text (only a file of that page), with what changed in each. */
-  function code(id) {
+  /** A page's files (its own, its chains, the modules it uses), read from the code — no git. */
+  function filesOf(id) {
     const facts = scan.analyze(rootNow(), id);
-    if (!facts) return { ok: false, error: 'This page is not in the code.' };
+    if (!facts) return null;
     const group = (p) => (/-page-chains\//.test(p) ? 'chain' : 'page');
     const files = facts.files.map((f) => ({ path: f.path, lines: f.lines, group: group(f.path), name: path.basename(f.path) }))
       .concat((facts.logic.modules || []).filter((m) => m.file).map((m) => ({ path: m.file, lines: m.lines || 0, group: 'module', name: path.basename(m.file), about: m.about || '' })));
-    const list = files.filter((f, i) => files.findIndex((x) => x.path === f.path) === i);
+    return { facts, list: files.filter((f, i) => files.findIndex((x) => x.path === f.path) === i) };
+  }
+  /** Every file of a page with its text, for reading its code (its reports, …): one scan, plain reads, no git. */
+  function texts(id) {
+    const fo = filesOf(id);
+    if (!fo) return { ok: false, error: 'This page is not in the code.' };
+    return { ok: true, files: fo.list.map((f) => { let text = ''; try { text = fs.readFileSync(path.join(rootNow(), f.path), 'utf8'); } catch (e) { text = ''; } return { path: f.path, text }; }) };
+  }
+  function code(id) {
+    const fo = filesOf(id);
+    if (!fo) return { ok: false, error: 'This page is not in the code.' };
+    const facts = fo.facts, list = fo.list;
     const base = baseOf(rootNow());
     const changed = filesChanged(rootNow(), base, list.map((f) => f.path));
     list.forEach((f) => { if (changed[f.path]) f.changed = changed[f.path]; });
     return { ok: true, id: facts.id, label: facts.label, folder: rootNow(), codeHash: facts.codeHash, files: list, base: base ? base.label : '' };
   }
   function codeFile(id, rel) {
-    const c = code(id);
-    if (!c.ok) return c;
-    const f = c.files.filter((x) => x.path === str(rel))[0];
+    // one file: checked to be the page's (no git for the others), its own changes marked
+    const fo = filesOf(id);
+    if (!fo) return { ok: false, error: 'This page is not in the code.' };
+    const f = fo.list.filter((x) => x.path === str(rel))[0];
     if (!f) return { ok: false, error: 'Not a file of this page.' };
     let text;
     try { text = fs.readFileSync(path.join(rootNow(), f.path), 'utf8'); } catch (e) { return { ok: false, error: 'Could not read ' + f.path + '.' }; }
@@ -412,7 +437,7 @@ function open(opts) {
 
   return {
     remove: remove, restore: restore, removeShot: removeShot,
-    catalog: catalog, rescan: rescan, sheet: sheet, facts: (id) => scan.analyze(rootNow(), str(id)), code: code, codeFile: codeFile, shotImages: shotImages, build: build, assign: assign, unassign: unassign, forStory: forStory,
+    catalog: catalog, rescan: rescan, sheet: sheet, facts: (id) => scan.analyze(rootNow(), str(id)), texts: texts, code: code, codeFile: codeFile, shotImages: shotImages, build: build, assign: assign, unassign: unassign, forStory: forStory,
     saveShot: saveShot, capture: capture, saveAi: saveAi, canCapture: () => typeof o.capture === 'function', run: run, canRun: () => typeof o.run === 'function',
     canWrite: () => { try { return fs.statSync(path.join(root, 'webApps', 'buildrite')).isDirectory(); } catch (e) { return false; } },
     gitStatus: () => repo.status(), gitSave: (b) => repo.save(b), gitPull: () => repo.pull(),

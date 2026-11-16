@@ -1,7 +1,7 @@
 define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pagesClient', 'resources/js/shellBus'], (ActionChain, SC, PC, bus) => {
   'use strict';
 
-  // API Scenarios: load | page (id) | draft | new | open (id) | run (id) | runAll | save | saveRun | saveRunWrites | delete | pick (step, value)
+  // API Scenarios: load | page (id) | draft | new | open (id) | run (id) | runAll | save | saveRun | saveRunWrites | delete | pick (step, value) | tryStep (step)
   //   | field (key, value) | stepField (step, key, value) | addStep | up | down | removeStep | toggleWrites | toggleShape | showRun
   const copy = (o) => JSON.parse(JSON.stringify(o || null));
   const pairs = (text, sep) => String(text || '').split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const i = l.indexOf(sep); return i === -1 ? [l.trim(), ''] : [l.slice(0, i).trim(), l.slice(i + sep.length).trim()]; }).filter((p) => p[0]);
@@ -10,7 +10,7 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
       const v = context.$page.variables;
       const say = (r, text) => { v.result = r.ok ? (text ? { ok: true, text } : null) : { ok: false, text: (r.body && r.body.error) || 'It did not work.' }; if (text || !r.ok) bus.toast(r.ok ? text : v.result.text, r.ok ? 'success' : 'error'); };
       const loadPage = async (id) => {
-        v.page = id; v.sc = null; v.run = null; v.result = null;
+        v.page = id; v.sc = null; v.run = null; v.result = null; v.tries = {};
         const [l, sh, rs] = await Promise.all([SC.list(id), PC.sheet(context.$application.path, id), SC.runs(id)]);
         v.scenarios = l.ok ? l.body.scenarios || [] : [];
         if (!l.ok) say(l);
@@ -50,12 +50,12 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         v.busy = true;
         try {
           const r = await SC.draft(v.page);
-          if (r.ok) { v.sc = copy(r.body.scenario); await reloadList(); say(r, 'Drafted: ' + v.sc.steps.length + ' step(s) in the order the page makes them. Check the values and checks, then Save & run.'); } else say(r);
+          if (r.ok) { v.sc = copy(r.body.scenario); v.run = null; v.tries = {}; await reloadList(); say(r, 'Drafted: ' + v.sc.steps.length + ' step(s) in the order the page makes them. Check the values and checks, then Save & run.'); } else say(r);
         } finally { v.busy = false; }
         return;
       }
-      if (act === 'new') { v.sc = { page: v.page, name: 'New scenario', kind: 'edge', notes: '', allowWrites: false, data: [], steps: [] }; v.run = null; return; }
-      if (act === 'open') { const s = (v.scenarios || []).filter((x) => x.id === key)[0]; v.sc = copy(s); v.run = null; if (s && s.last) { const r = await SC.runOf(v.page, s.last.id); if (r.ok) v.run = r.body.run; } return; }
+      if (act === 'new') { v.sc = { page: v.page, name: 'New scenario', kind: 'edge', notes: '', allowWrites: false, data: [], steps: [] }; v.run = null; v.tries = {}; return; }
+      if (act === 'open') { const s = (v.scenarios || []).filter((x) => x.id === key)[0]; v.sc = copy(s); v.run = null; v.tries = {}; if (s && s.last) { const r = await SC.runOf(v.page, s.last.id); if (r.ok) v.run = r.body.run; } return; }
       if (act === 'run') { await doRun(key, false); return; }
       if (act === 'runAll') { for (const s of (v.scenarios || []).slice()) { await doRun(s.id, false); } return; }
       if (act === 'save') { const r = await save(); say(r, 'Saved.'); return; }
@@ -81,15 +81,33 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         v.sc = Object.assign({}, v.sc, { [key]: value });
         return;
       }
-      // a value picked from a list of values (as a user picks it on the page): read from that row from now on
+      // a value picked from a list of values (as a user picks it on the page): read from that row from now on; a search
+      // as you type also searches for it (its number, else its name), so a full run finds the same row
       if (act === 'pick') {
         const st = steps().filter((x) => x.id === key)[0];
         if (!st || !st.lov) return;
         const l = st.lov;
+        const fns = context.$page && context.$page.functions;
+        const row = value !== '' && fns && typeof fns.lovRow === 'function' ? fns.lovRow(v.sc.id || 'new', key, value) : null;
         const from = (l.itemsPath || '') + (value !== '' ? '[' + (l.key || 'id') + '=' + value + ']' : '[0]') + '.' + (l.key || 'id');
-        const others = (st.extract || []).filter((e) => e.var !== l.target);
-        setSteps(steps().map((x) => (x.id === key ? Object.assign(copy(x), { extract: [{ var: l.target, from }].concat(others) }) : x)));
-        v.result = { ok: true, text: 'Picked ' + (step || value) + ' for ' + l.field + ' ({{' + l.target + '}}). Save & run to use it.' };
+        const n = copy(st);
+        n.extract = [{ var: l.target, from }].concat((st.extract || []).filter((e) => e.var !== l.target));
+        n.lov = Object.assign({}, l, { picked: value !== '' ? { key: value, text: row ? String(row.text || value) : value, sub: row ? String(row.sub || '') : '' } : null });
+        if (l.search) n.params = Object.assign({}, st.params, { [l.search]: value !== '' && row ? String(row.sub || row.text || '') : '' });
+        setSteps(steps().map((x) => (x.id === key ? n : x)));
+        v.result = { ok: true, text: value !== '' ? 'Picked ' + (row ? row.text + (row.sub ? ' (' + row.sub + ')' : '') : value) + ' for ' + l.field + ' → {{' + l.target + '}}. Save & run to use it in the steps after.' : 'No value picked for ' + l.field + ': the first is used.' };
+        return;
+      }
+      // one step run on its own (▶ Run): the API as it is on the screen, with the values handed on so far
+      if (act === 'tryStep') {
+        if (!v.sc || v.trying) return;
+        v.trying = key;
+        try {
+          const fns = context.$page && context.$page.functions;
+          const vars = fns && typeof fns.varsFor === 'function' ? fns.varsFor(v.sc, v.run, v.tries) : {};
+          const r = await SC.tryStep(v.sc, key, vars, !!v.sc.allowWrites);
+          if (r.ok) v.tries = Object.assign({}, v.tries, { [key]: r.body.result }); else say(r);
+        } finally { v.trying = ''; }
         return;
       }
       if (act === 'toggleWrites') { if (v.sc) v.sc = Object.assign({}, v.sc, { allowWrites: !v.sc.allowWrites }); return; }

@@ -278,6 +278,16 @@ function time() {
  *                                        Its JSON files are also written into this server's build copy, so the app sees an upload
  *                                        without a rebuild
  */
+/** Every file of a page with its text (lib/pages.js texts: one scan, no git — the git status of each file made the
+ *  window stop answering on Windows); an older store: its code() and codeFile(). */
+function codeTexts(ps, id) {
+  if (!ps) return { ok: false, error: 'The page catalog is not set up here.' };
+  if (typeof ps.texts === 'function') return ps.texts(id);
+  const c = ps.code ? ps.code(id) : { ok: false, error: 'The page catalog is not set up here.' };
+  if (!c.ok) return c;
+  return { ok: true, files: c.files.map((f) => { const t = ps.codeFile(id, f.path); return { path: f.path, text: t.ok ? t.text : '' }; }) };
+}
+
 function createDevServer(o) {
   const processed = path.join(o.buildDir, 'processed');
   const webRoot = path.join(processed, 'webApps', o.webApp || 'buildrite');
@@ -1039,11 +1049,11 @@ function createDevServer(o) {
           if (pathname.startsWith('/__api/scenarios')) {
             if (!sc) return jsonA(200, { ok: false, error: 'API Scenarios need the desktop app.' });
             const who = () => { try { const id = o.getIdentity && o.getIdentity(); return (id && (id.displayName || id.username)) || ''; } catch (e) { return ''; } };
-            if (pathname === '/__api/scenarios' && !post) return jsonA(200, sc.list(q('page')));
-            if (pathname === '/__api/scenarios/get' && !post) return jsonA(200, sc.get(q('id')));
+            if (pathname === '/__api/scenarios' && !post) return jsonA(200, sc.list(q('page'), env));
+            if (pathname === '/__api/scenarios/get' && !post) return jsonA(200, sc.get(q('id'), env));
             if (pathname === '/__api/scenarios/runs' && !post) return jsonA(200, sc.runs(q('page')));
             if (pathname === '/__api/scenarios/run-of' && !post) return jsonA(200, sc.runOf(q('page'), q('run')));
-            if (pathname === '/__api/scenarios/save' && post) return jsonA(200, sc.save(b.scenario, who()));
+            if (pathname === '/__api/scenarios/save' && post) return jsonA(200, sc.save(b.scenario, who(), env));
             if (pathname === '/__api/scenarios/remove' && post) return jsonA(200, sc.remove(b.id));
             if (pathname === '/__api/scenarios/draft' && post) {
               const ps = o.pagesStore;
@@ -1056,18 +1066,23 @@ function createDevServer(o) {
               // its reports as the API tester finds them in the page's code: a name (XX_RP) to its path and parameters
               let reports = [];
               const names = ((facts.integrations && facts.integrations.reports) || []).map(String);
-              if (names.length && ps.code && ps.codeFile && api && api.reports) {
+              if (names.length && api && api.reports) {
                 try {
                   const pid = String(b.page || '');
-                  const c = ps.code(pid);
+                  const c = codeTexts(ps, pid);
                   if (c && c.ok) {
-                    const files = c.files.map((f) => { const t = ps.codeFile(pid, f.path); return { path: f.path, text: t.ok ? t.text : '' }; });
-                    const r = api.reports(files, names, pid.split('/')[0]);
+                    const r = api.reports(c.files, names, pid.split('/')[0]);
                     reports = r && r.ok ? r.reports : [];
                   }
                 } catch (e) { reports = []; }
               }
-              return jsonA(200, sc.draft(String(b.page || ''), facts, who(), { reports }));
+              return jsonA(200, sc.draft(String(b.page || ''), facts, who(), { reports, env }));
+            }
+            // one step tried on its own (▶ beside it): its answer, not kept as a run
+            if (pathname === '/__api/scenarios/try' && post) {
+              const r = await sc.tryStep(b.scenario, String(b.step || ''), env, { vars: b.vars, search: b.search, allowWrites: !!b.allowWrites, by: who() });
+              log(`API scenario step tried: ${b.step} -> ${r.ok ? r.result.state + (r.result.status ? ' (' + r.result.status + ', ' + r.result.ms + ' ms)' : '') : r.error}`);
+              return jsonA(200, r);
             }
             if (pathname === '/__api/scenarios/run' && post) {
               const r = await sc.run(String(b.id || ''), env, { allowWrites: !!b.allowWrites, by: who() });
@@ -1077,10 +1092,9 @@ function createDevServer(o) {
           }
           if (pathname === '/__api/reports' && !post) {
             const ps = o.pagesStore;
-            const c = ps && ps.code ? ps.code(q('page')) : { ok: false, error: 'The page catalog is not set up here.' };
+            const c = codeTexts(ps, q('page'));
             if (!c.ok) return jsonA(200, c);
-            const files = c.files.map((f) => { const t = ps.codeFile(q('page'), f.path); return { path: f.path, text: t.ok ? t.text : '' }; });
-            return jsonA(200, api.reports(files, q('names').split(',').filter(Boolean), q('page').split('/')[0]));
+            return jsonA(200, api.reports(c.files, q('names').split(',').filter(Boolean), q('page').split('/')[0]));
           }
           return jsonA(404, { ok: false, error: 'Not found' });
         })().catch((e) => jsonA(200, { ok: false, error: e.message }));

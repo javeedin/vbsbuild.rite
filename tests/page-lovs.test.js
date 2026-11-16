@@ -83,6 +83,46 @@ fs.writeFileSync(path.join(chains, 'LoadAgreementsChain.js'), `define(['vb/actio
   return LoadAgreementsChain;
 });`);
 
+// a search as you type, as real apps write it: a provider in the page module fires an event, a chain runs a report with the text
+fs.writeFileSync(path.join(pages, 'pick-customer-page.html'), `<oj-select-single aria-label="Customer"
+  value="[[ $page.variables.sel && $page.variables.sel.CustomerId != null ? String($page.variables.sel.CustomerId) : null ]]"
+  data="[[ $functions.customerSuggestionsProvider() ]]" item-text="Customer">
+  <template slot="itemTemplate"><span><oj-bind-text value="[[ $current.data.Customer ]]"></oj-bind-text></span><span><oj-bind-text value="[[ $current.data.CustomerNumber ]]"></oj-bind-text></span></template>
+</oj-select-single>`);
+fs.writeFileSync(path.join(pages, 'pick-customer-page.json'), JSON.stringify({ variables: { sel: { type: 'any' } }, events: { customerSearchRequested: {} },
+  eventListeners: { customerSearchRequested: { chains: [{ chain: 'CustomerTypeaheadChain', parameters: { searchValue: '[[ $event.text ]]' } }] } } }));
+fs.writeFileSync(path.join(pages, 'pick-customer-page.js'), `define([], () => {
+  'use strict';
+  class PageModule {
+    constructor(context) {
+      var self = this;
+      this._custDP = new ReportSuggestProvider(function (text) { self._emitSearch('customerSearchRequested', text, self._custDP); }, 'CustomerId');
+    }
+    customerSuggestionsProvider() {
+      return this._custDP;
+    }
+  }
+  return PageModule;
+});`);
+fs.mkdirSync(path.join(pages, 'pick-customer-page-chains'), { recursive: true });
+fs.writeFileSync(path.join(pages, 'pick-customer-page-chains', 'CustomerTypeaheadChain.js'), `define(['vb/action/actionChain', 'vb/action/actions', 'resources/js/bipLov'], (ActionChain, Actions, bipLov) => {
+  'use strict';
+  class CustomerTypeaheadChain extends ActionChain {
+    async run(context, params) {
+      const text = (params && params.searchValue != null) ? String(params.searchValue).trim() : '';
+      const soapBody = bipLov.buildSoapBody('/Custom/Depot/DEPOT_CUSTOMERS_LOV_RP.xdo', [
+        { name: 'P_SEARCH', value: xmlEscape(text) },
+        { name: 'P_SEARCH_BY', value: 'ALL' },
+      ]);
+      const response = await Actions.callRest(context, { endpoint: 'bipService/runBIPReport', body: soapBody });
+      const found = bipLov.decodeReportRows(response.body, 'G_1', 'CUSTOMERID', 'CUSTOMER', 'CUSTOMERNUMBER');
+      const rows = found.map((r) => ({ CustomerId: r.CUSTOMERID, CustomerNumber: r.CUSTOMERNUMBER, Customer: r.CUSTOMER }));
+      $page.functions.deliverCustomers(text, rows);
+    }
+  }
+  return CustomerTypeaheadChain;
+});`);
+
 T.section('the sample app: a dropdown filled in a chain from a call');
 const oc = S.analyze(FIXTURE, 'shop/orders/order-create').integrations.lovs;
 T.check('Customer: getCustomers (its answer\'s items), keeps id, sets customer, in LoadCustomersChain', oc.length === 1 && oc[0].field === 'Customer' && oc[0].endpoint === 'shopApi/getCustomers'
@@ -109,6 +149,13 @@ T.check('the values a chain sends: literals as they are, a page value as {{name}
   && JSON.stringify(sent['depot-v1/getAgreementHeaders']) === '{"pageSize":"500","customerId":"{{customerRefId}}"}', JSON.stringify(sent));
 T.check('…a value joined from text and a page value: "ProjectId={{projectId}}"; a list of fields kept whole', sent['depot-v1/findProjects'].q === 'ProjectId={{projectId}}'
   && sent['depot-v1/findProjects'].fields === 'ProjectId,ProjectName' && sent['depot-v1/findProjects'].onlyData === 'true', JSON.stringify(sent['depot-v1/findProjects']));
+
+T.section('a search as you type: the provider, its event, the chain, the report and the text it sends');
+const sl = S.analyze(root, 'depot/main/pick-customer').integrations.lovs[0] || {};
+T.check('followed from $functions.customerSuggestionsProvider() → customerSearchRequested → CustomerTypeaheadChain → its report', sl.source === 'report' && sl.report === 'DEPOT_CUSTOMERS_LOV_RP'
+  && sl.reportPath === '/Custom/Depot/DEPOT_CUSTOMERS_LOV_RP.xdo' && sl.via === 'CustomerTypeaheadChain' && sl.rowTag === 'G_1', JSON.stringify(sl));
+T.check('…the text typed sent as P_SEARCH, the fixed value as written; shows CUSTOMER with CUSTOMERNUMBER under it, keeps CUSTOMERID, sets CustomerId',
+  sl.search === 'P_SEARCH' && JSON.stringify(sl.params) === '{"P_SEARCH":"","P_SEARCH_BY":"ALL"}' && sl.textFrom === 'CUSTOMER' && sl.subFrom === 'CUSTOMERNUMBER' && sl.keyFrom === 'CUSTOMERID' && sl.target === 'CustomerId', JSON.stringify(sl));
 
 T.section('API Scenarios: a list of values as a step; the value picked handed on');
 const store = SC.open({ api: null, dir: fs.mkdtempSync(path.join(os.tmpdir(), 'br-lovs-sc-')) });

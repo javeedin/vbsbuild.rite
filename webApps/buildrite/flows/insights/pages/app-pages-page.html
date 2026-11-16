@@ -762,6 +762,11 @@
               <div class="nx-api-target">
                 <div><span class="nx-api-lbl">Goes to</span><code id="apiTarget"><oj-bind-text value="[[ ($variables.apiDesc.backend.url || $variables.apiDesc.backend.name) + $functions.apiPath($variables.apiDesc) ]]"></oj-bind-text></code></div>
                 <oj-bind-if test="[[ $variables.apiDesc.op.report ]]"><div><span class="nx-api-lbl">Report</span><code id="apiReportPath"><oj-bind-text value="[[ $variables.apiDesc.op.reportPath ]]"></oj-bind-text></code></div></oj-bind-if>
+                <!-- the page's other reports: one click opens that one -->
+                <oj-bind-if test="[[ $variables.apiDesc.op.report && $variables.apiReports.length > 1 ]]"><div><span class="nx-api-lbl">Others</span><span class="nx-api-otherreps" id="apiOtherReports">
+                  <oj-bind-for-each data="[[ $variables.apiReports ]]"><template data-oj-as="x">
+                    <button type="button" :class="[[ 'nx-api-repchip' + (x.data.key === $variables.apiOpen ? ' nx-api-repchip--on' : '') ]]" data-act="report" :data-key="[[ x.data.key ]]" on-click="[[ $listeners.onApi ]]" :title="[[ x.data.path ]]"><oj-bind-text value="[[ x.data.name ]]"></oj-bind-text></button>
+                  </template></oj-bind-for-each></span></div></oj-bind-if>
                 <div><span class="nx-api-lbl">Login</span><span :class="[[ $functions.apiLoginClass($variables.apiDesc) ]]" id="apiLogin"><oj-bind-text value="[[ $variables.apiDesc.backend.login ]]"></oj-bind-text></span></div>
                 <div><span class="nx-api-lbl">Kind</span><span :class="[[ $variables.apiDesc.op.reads ? 'nx-api-kind' : 'nx-api-kind nx-api-kind--write' ]]" id="apiKind"><oj-bind-text value="[[ $functions.apiReads($variables.apiDesc) ]]"></oj-bind-text></span></div>
               </div>

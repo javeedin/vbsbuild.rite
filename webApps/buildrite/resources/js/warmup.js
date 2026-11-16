@@ -10,7 +10,7 @@ define(['require'], function (require) {
   // screen imports is here.
   var LISTS = {
     buildrite: ['ojs/ojtable', 'oj-sp/smart-search/loader', 'oj-sp/collection-container/loader', 'oj-sp/smart-search-page/loader', 'oj-c/button',
-      'oj-sp/general-overview-page/loader', 'ojs/ojinputtext', 'ojs/ojdrawerpopup', 'oj-sp/general-drawer-template/loader']
+      'oj-sp/general-overview-page/loader', 'ojs/ojinputtext', 'ojs/ojselectsingle', 'ojs/ojdrawerpopup', 'oj-sp/general-drawer-template/loader']
   };
   var started = false;
   var done = [];

@@ -69,7 +69,21 @@ define(['vb/action/actionChain', 'resources/js/apiClient'], (ActionChain, AC) =>
           r = rep ? await AC.report(rep) : { ok: false, body: { error: 'This report is not on the page any more.' } };
         } else r = await AC.op(k);
         if (v.apiOpen !== k) return;
+        // BI Publisher's own service (bipService/runBIPReport) runs reports: the page's own, with their paths and
+        // parameters from its code — not a blank report
+        let note = null;
+        if (act === 'open' && r.ok && r.body.op && r.body.op.report && !r.body.op.reportPath) {
+          const reps = v.apiReports || [];
+          if (reps.length) {
+            const rk = reps[0].key;
+            v.apiOpen = rk;
+            r = await AC.report(reps[0]);
+            if (v.apiOpen !== rk) return;
+            note = { ok: true, text: k + ' is BI Publisher\'s own service: it runs this page\'s reports. Showing ' + reps[0].name + (reps.length > 1 ? ' — the page\'s other reports are listed under Report.' : '.') };
+          } else note = { ok: false, text: 'This page names no BI Publisher report: give the report\'s path in the body (reportAbsolutePath).' };
+        }
         if (!r.ok) { v.apiMsg = { ok: false, text: r.body.error || 'Could not read this call.' }; return; }
+        if (note) v.apiMsg = note;
         v.apiDesc = r.body; v.apiHist = r.body.history || [];
         setTimeout(() => fill(r.body), 30);
         return;

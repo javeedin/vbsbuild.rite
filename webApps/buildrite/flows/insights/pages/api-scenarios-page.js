@@ -1,16 +1,111 @@
-define(['resources/js/shellBus'], (bus) => {
+define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
   'use strict';
 
-  // API Scenarios: binding helpers (the chains do the work through resources/js/scenarioClient.js). None uses `this`.
+  // API Scenarios: binding helpers (the chains do the work through resources/js/scenarioClient.js).
   const KINDS = [['happy', 'Happy path'], ['edge', 'Edge case'], ['role', 'Role'], ['data', 'Data-driven']];
   const linesOf = (obj, sep) => Object.keys(obj || {}).map((k) => k + ' ' + sep + ' ' + obj[k]).join('\n');
   const when = (iso) => { try { const d = new Date(iso); return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }); } catch (e) { return iso || ''; } };
+  const varsIn = (t) => Array.from(String(t || '').matchAll(/\{\{\s*([\w.-]+)\s*\}\}/g)).map((m) => m[1]);
+  const MIN_SEARCH = 2;
+  const uniq = (a) => a.filter((x, i) => x && a.indexOf(x) === i);
+
+  /**
+   * A list of values' values for an oj-select-single, as the app's own search providers work: a search as you type sends
+   * the text typed to the server (the step tried with it as its search parameter: lib/apiScenarios.js tryStep), a list
+   * the page loads whole is loaded once (the step tried) and filtered here. Rows: { key, text, sub }.
+   */
+  function LovProvider() {
+    this.ctx = null;            // { sc, step, vars }: set on every render
+    this._cache = new Map();    // key → row, so fetchByKeys shows the value picked
+    this._all = null;           // a whole list, once loaded
+    this._loading = null;
+    this._bySearch = new Map(); // text → Promise<rows>
+    this._listeners = {};
+  }
+  LovProvider.prototype = {
+    seed: function (rows) { const self = this; (rows || []).forEach(function (r) { if (r && r.key != null) self._cache.set(String(r.key), r); }); },
+    setAll: function (rows) { if (rows && rows.length) { this._all = rows; this.seed(rows); } },
+    _try: function (search) {
+      const c = this.ctx;
+      if (!c || !c.sc || !c.step) return Promise.resolve([]);
+      return SC.tryStep(c.sc, c.step.id, c.vars || {}, false, search).then(function (r) {
+        return r.ok && r.body.result && Array.isArray(r.body.result.values) ? r.body.result.values : [];
+      }, function () { return []; });
+    },
+    _rows: function (text) {
+      const self = this;
+      const c = this.ctx || {};
+      const t = String(text || '').trim();
+      if (c.step && c.step.lov && c.step.lov.search) {
+        // a search as you type: the server runs the step with the text (blank: the first rows, as the page shows them)
+        if (t.length > 0 && t.length < MIN_SEARCH) return Promise.resolve([]);
+        const k = t.toLowerCase();
+        if (!this._bySearch.has(k)) {
+          this._bySearch.set(k, new Promise(function (res) { setTimeout(res, t ? 250 : 0); }).then(function () { return self._try(t); }).then(function (rows) {
+            if (!rows.length) self._bySearch.delete(k);
+            return rows;
+          }));
+        }
+        return this._bySearch.get(k).then(function (rows) { self.seed(rows); return rows; });
+      }
+      // a whole list: loaded once, filtered here by name, second line or key
+      const load = this._all ? Promise.resolve(this._all) : (this._loading = this._loading || this._try(undefined).then(function (rows) { self._loading = null; self.setAll(rows); return rows; }));
+      return load.then(function (rows) {
+        const q = t.toLowerCase();
+        return !q ? rows : rows.filter(function (r) { return (String(r.text) + ' ' + String(r.sub || '') + ' ' + String(r.key)).toLowerCase().indexOf(q) !== -1; });
+      });
+    },
+    fetchFirst: function (params) {
+      const self = this;
+      const fc = params && params.filterCriterion;
+      const text = fc ? (fc.text != null ? fc.text : (fc.value != null ? fc.value : '')) : '';
+      let done = false;
+      const it = { next: function () {
+        if (done) return Promise.resolve({ done: true, value: { data: [], metadata: [], fetchParameters: params } });
+        done = true;
+        return self._rows(text).then(function (rows) {
+          const shown = rows.slice(0, 300);
+          return { done: true, value: { data: shown, metadata: shown.map(function (r) { return { key: String(r.key) }; }), fetchParameters: params } };
+        });
+      } };
+      const iterable = {};
+      iterable[Symbol.asyncIterator] = function () { return it; };
+      return iterable;
+    },
+    fetchByKeys: function (params) {
+      const self = this;
+      const map = new Map();
+      (params && params.keys ? Array.from(params.keys) : []).forEach(function (k) { const d = self._cache.get(String(k)); if (d) map.set(k, { metadata: { key: k }, data: d }); });
+      return Promise.resolve({ fetchParameters: params, results: map });
+    },
+    containsKeys: function (params) {
+      const self = this;
+      const found = new Set();
+      (params && params.keys ? Array.from(params.keys) : []).forEach(function (k) { if (self._cache.has(String(k))) found.add(k); });
+      return Promise.resolve({ containsParameters: params, results: found });
+    },
+    fetchByOffset: function (params) { return Promise.resolve({ fetchParameters: params, results: [], done: true }); },
+    getCapability: function (name) {
+      // text filtering advertised: oj-select-single passes the text typed and shows our rows as they are
+      if (name === 'filter') return { operators: ['$co'], textFilter: {} };
+      if (name === 'fetchFirst') return { iterationSpeed: 'immediate' };
+      if (name === 'fetchByKeys') return { implementation: 'lookup' };
+      return null;
+    },
+    getTotalSize: function () { return Promise.resolve(-1); },
+    isEmpty: function () { return 'unknown'; },
+    addEventListener: function (t, l) { (this._listeners[t] = this._listeners[t] || []).push(l); },
+    removeEventListener: function (t, l) { const a = this._listeners[t]; if (a) this._listeners[t] = a.filter(function (x) { return x !== l; }); },
+    dispatchEvent: function () { return true; }
+  };
 
   class PageModule {
     constructor(context) {
       // opened on one page (Application pages → API on a page): its scenarios shown
       const helper = context && typeof context.getEventHelper === 'function' ? context.getEventHelper() : null;
       try { bus.onFocus('api-scenarios', () => { if (helper) helper.fireCustomEvent('focusRequest', {}); }); } catch (e) { /* no shell */ }
+      this._rows = new Map();   // step id → { sig, row }: a step shown again only when it changed (the page keeps its place)
+      this._prov = new Map();   // scenario id|step id → LovProvider (one per list, kept while the scenario is open)
     }
     pagesShown(pages, q) {
       const t = String(q || '').trim().toLowerCase();
@@ -26,46 +121,111 @@ define(['resources/js/shellBus'], (bus) => {
       });
     }
     kinds(sc) { return KINDS.map((k) => ({ id: k[0], label: k[1], on: !!sc && sc.kind === k[0] })); }
-    stepRows(sc, run, lovQ) {
+
+    /** The values handed on so far, for a step tried on its own: the data row, the last run's, the steps tried, the values picked. */
+    varsFor(sc, run, tries) {
+      const vars = {};
+      const put = (k, v) => { if (k && v !== undefined && v !== null && String(v) !== '') vars[k] = String(v); };
+      const row0 = (sc && sc.data && sc.data[0]) || {};
+      Object.keys(row0).forEach((k) => put(k, row0[k]));
+      const runSteps = run && sc && run.scenario === sc.id && run.rows && run.rows[0] ? run.rows[0].steps || [] : [];
+      runSteps.forEach((r) => Object.keys(r.extracted || {}).forEach((k) => put(k, r.extracted[k])));
+      Object.keys(tries || {}).forEach((id) => { const t = tries[id]; Object.keys((t && t.extracted) || {}).forEach((k) => put(k, t.extracted[k])); });
+      ((sc && sc.steps) || []).forEach((st) => {
+        if (!st.lov || !st.lov.target) return;
+        const ex = (st.extract || []).filter((e) => e.var === st.lov.target)[0];
+        const m = ex ? /\[[\w.-]+=([^\]]*)\]/.exec(ex.from) : null;
+        if (m) put(st.lov.target, m[1]);
+      });
+      return vars;
+    }
+    /** A row of a list of values the user picked (for the chain: its name and second line). */
+    lovRow(scId, stepId, key) { const p = this._prov.get(scId + '|' + stepId); return (p && p._cache.get(String(key))) || null; }
+
+    stepRows(sc, run, tries, trying) {
       const steps = (sc && sc.steps) || [];
+      const T = tries || {};
+      const scId = sc ? sc.id || 'new' : '';
       // the last run of this scenario: the values each list of values gave (lib/apiScenarios.js run → res.values)
       const runSteps = run && sc && run.scenario === sc.id && run.rows && run.rows[0] ? run.rows[0].steps || [] : [];
-      const lists = {}; // target → { step, lov }
-      steps.forEach((st) => { if (st.lov && st.lov.target) lists[st.lov.target] = { step: st, lov: st.lov }; });
-      const q = String(lovQ || '').trim().toLowerCase();
-      const picker = (l) => {
-        const res = runSteps.filter((x) => x.step === l.step.id)[0];
-        const all = (res && res.values) || [];
-        const ex = (l.step.extract || []).filter((e) => e.var === l.lov.target)[0];
+      const vars = this.varsFor(sc, run, T);
+      const lists = {}; // target → its list's step
+      steps.forEach((st) => { if (st.lov && st.lov.target) lists[st.lov.target] = st; });
+      const resOf = (id) => T[id] || runSteps.filter((x) => x.step === id)[0] || null;
+      const picker = (ls) => {
+        const k = scId + '|' + ls.id;
+        let prov = this._prov.get(k);
+        if (!prov) { prov = new LovProvider(); this._prov.set(k, prov); }
+        prov.ctx = { sc, step: ls, vars };
+        const res = resOf(ls.id);
+        if (res && res.values && !ls.lov.search) prov.setAll(res.values); else if (res && res.values) prov.seed(res.values);
+        if (ls.lov.picked) prov.seed([ls.lov.picked]);
+        const ex = (ls.extract || []).filter((e) => e.var === ls.lov.target)[0];
         const m = ex ? /\[[\w.-]+=([^\]]*)\]/.exec(ex.from) : null;
-        const pick = m ? m[1] : (all[0] ? all[0].key : '');
-        const pickedRow = all.filter((v) => v.key === pick)[0];
-        const shown = all.filter((v) => !q || (v.text + ' ' + v.key).toLowerCase().indexOf(q) !== -1);
-        return { lovStep: l.step.id, field: l.lov.field, target: l.lov.target, has: all.length > 0,
-          pickedLabel: !all.length ? (m ? 'picked: ' + pick : 'the first value, once loaded') : (m ? 'picked: ' : 'the first value: ') + (pickedRow ? pickedRow.text + ' (' + pick + ')' : pick + ' — no longer in the list'),
-          note: res ? (res.state === 'fail' ? 'Its last run gave no values: see the run below.' : 'Its last run gave no values.') : 'Run the scenario once to load its values, then pick one as a user would. The first value is used until you pick one.',
-          values: shown.slice(0, 80).map((v) => ({ key: v.key, text: v.text || v.key, on: v.key === pick })),
-          countNote: (res && res.lov ? res.lov.total : all.length) + ' value(s)' + (q ? ', ' + shown.length + ' match' : '') + (shown.length > 80 ? ' — the first 80 shown, find one by name' : '') + '. Pick one to use it in the steps after (then Save & run).' };
+        const first = res && res.values && res.values[0];
+        const p = ls.lov.picked;
+        return { lovStep: ls.id, field: ls.lov.field, target: ls.lov.target, provider: prov, pick: m ? m[1] : null,
+          placeholder: ls.lov.search ? 'Search ' + ls.lov.field + ' (type 2 letters or more)…' : 'Search ' + ls.lov.field + '…',
+          pickedLabel: m ? 'picked: ' + (p && String(p.key) === m[1] ? p.text + (p.sub ? ' · ' + p.sub : '') : m[1]) : (first ? 'none picked: the first value is used (' + first.text + ')' : 'none picked: the first value is used'),
+          note: ls.lov.search ? 'Type to search, as on the page: it runs ' + (ls.report ? 'the report' : 'the call') + ' with what you type and shows what it finds. Pick one, then Save & run.'
+            : 'Open it to load its values from the API (or type to find one). Pick one, then Save & run.' };
       };
-      return steps.map((st, i) => {
-        const ex = st.expect || {};
-        const acc = st.accepts || [];
+      const fullApi = (st) => {
+        const a = st.api;
+        const fillV = (v) => String(v == null ? '' : v).replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (mm, n) => (vars[n] !== undefined ? vars[n] : '{{' + n + '}}'));
+        if (st.report) return 'REPORT ' + st.report.path + Object.keys(st.params || {}).map((k, i) => (i ? ' & ' : '  ·  ') + k + '=' + fillV(st.params[k])).join('') + '  ·  BI Publisher (runReport)';
+        if (!a) return st.endpoint;
+        const ins = {};
+        (st.accepts || []).forEach((x) => { ins[x.name] = x.in; });
+        let pth = a.path || '';
+        const q = [];
+        Object.keys(st.params || {}).forEach((k) => {
+          const v = fillV(st.params[k]);
+          if (pth.indexOf('{' + k + '}') !== -1) pth = pth.split('{' + k + '}').join(v);
+          else if (ins[k] !== 'header') q.push(k + '=' + v);
+        });
+        return a.method + ' ' + (a.base || '') + pth + (q.length ? '?' + q.join('&') : '');
+      };
+      const triedOf = (st) => {
+        const t = T[st.id];
+        if (!t) return null;
+        return { state: t.state, icon: t.state === 'ok' ? '✓' : t.state === 'fail' ? '✗' : '–',
+          head: (t.status ? t.status + ' · ' + t.ms + ' ms' + (t.rows != null ? ' · ' + t.rows + ' row(s)' : '') : 'not sent') + ' · run on its own, ' + when(t.at),
+          url: t.request ? t.request.method + ' ' + t.request.url : '', note: t.note || '', checks: t.checks || [],
+          handed: Object.keys(t.extracted || {}).map((k) => k + ' = ' + t.extracted[k]).join(', '),
+          values: t.lov && t.values ? t.lov.total + ' value(s): ' + t.values.slice(0, 8).map((v) => v.text + (v.sub ? ' (' + v.sub + ')' : '')).join(', ') + (t.lov.total > 8 ? ', …' : '') : '',
+          answer: t.answer || '' };
+      };
+      const keep = new Set();
+      const out = steps.map((st, i) => {
         // the lists whose value this step sends ({{customerRefId}}), and its own list
         const uses = [];
-        if (st.lov && lists[st.lov.target]) uses.push(lists[st.lov.target]);
-        Object.keys(st.params || {}).forEach((k) => {
-          Array.from(String(st.params[k] || '').matchAll(/\{\{\s*([\w.-]+)\s*\}\}/g)).forEach((mm) => { const l = lists[mm[1]]; if (l && l.step.id !== st.id && uses.indexOf(l) === -1) uses.push(l); });
-        });
-        return { id: st.id, n: i + 1, name: st.name, call: st.report ? 'report ' + st.report.path : st.endpoint, writes: !!st.writes,
+        if (st.lov && lists[st.lov.target] === st) uses.push(st);
+        Object.keys(st.params || {}).forEach((k) => varsIn(st.params[k]).forEach((n) => { const l = lists[n]; if (l && l !== st && uses.indexOf(l) === -1) uses.push(l); }));
+        const used = uniq([].concat(...Object.keys(st.params || {}).map((k) => varsIn(st.params[k]))).concat(uses.map((u) => u.lov.target)));
+        // shown again only when it (or what it shows) changed: the page keeps its place
+        const sig = JSON.stringify([st, i, used.map((n) => vars[n]), uses.map((u) => [u, resOf(u.id) ? (resOf(u.id).at || run && run.id) : '']), T[st.id] ? T[st.id].at : '', trying === st.id]);
+        keep.add(st.id);
+        const hit = this._rows.get(st.id);
+        if (hit && hit.sig === sig) return hit.row;
+        const ex = st.expect || {};
+        const acc = st.accepts || [];
+        const row = { id: st.id, n: i + 1, name: st.name, call: st.report ? 'report ' + st.report.path : st.endpoint, writes: !!st.writes,
+          api: fullApi(st), trying: trying === st.id, tried: triedOf(st),
           params: linesOf(st.params, '='), extract: (st.extract || []).map((e) => e.var + ' = ' + e.from).join('\n'),
           // what the call accepts, from its service (the values the page sends are filled in already)
           paramHint: st.report ? 'P_NAME = value (the report\'s parameters)' : acc.length ? 'It accepts: ' + acc.map((a) => a.name + (a.required ? ' (needed)' : '')).join(', ') + '\nOne per line: name = value, or {{var}} from an earlier step' : 'This call takes no values',
-          lov: st.lov ? st.lov.field + ' on the page: shows ' + (st.lov.text || 'its name') + ', keeps ' + (st.lov.key || 'id') + ' → hands it on as {{' + st.lov.target + '}}' : '',
+          lov: st.lov ? st.lov.field + ' on the page: shows ' + (st.lov.text || 'its name') + (st.lov.sub ? ' and ' + st.lov.sub : '') + ', keeps ' + (st.lov.key || 'id') + ' → hands it on as {{' + st.lov.target + '}}'
+            + (st.lov.search ? ' · a search as you type (' + st.lov.search + ' = the text typed)' : '') : '',
           pickers: uses.map(picker),
           status: ex.status || '2xx', minRows: ex.minRows == null ? '' : String(ex.minRows), maxMs: ex.maxMs == null ? '' : String(ex.maxMs), sameShape: !!ex.sameShape,
           fields: (ex.fields || []).map((f) => f.path + (f.equals === null || f.equals === undefined ? '' : ' = ' + f.equals)).join('\n'),
           hasBody: !!st.body || !!st.writes, body: st.body || '' };
+        this._rows.set(st.id, { sig, row });
+        return row;
       });
+      Array.from(this._rows.keys()).forEach((k) => { if (!keep.has(k)) this._rows.delete(k); });
+      return out;
     }
     callOptions(facts) {
       const f = facts || {};

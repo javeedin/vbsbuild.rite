@@ -53,10 +53,15 @@
       "type": "any",
       "defaultValue": null
     },
-    "lovQ": {
+    "tries": {
+      "type": "any",
+      "defaultValue": {},
+      "description": "Each step run on its own (▶ Run): its result, by step id."
+    },
+    "trying": {
       "type": "string",
       "defaultValue": "",
-      "description": "Find a value in a list of values."
+      "description": "The step being run on its own."
     }
   },
   "events": {
@@ -157,15 +162,15 @@
         }
       ]
     },
-    "onPick": {
+    "onPickSel": {
       "chains": [
         {
           "chain": "scChain",
           "parameters": {
-            "act": "pick",
+            "act": "{{ $event.detail.updatedFrom === 'internal' ? 'pick' : 'none' }}",
             "key": "{{ $event.currentTarget.dataset.key }}",
-            "value": "{{ $event.currentTarget.dataset.value }}",
-            "step": "{{ $event.currentTarget.dataset.label || '' }}"
+            "value": "{{ $event.detail.value == null ? '' : String($event.detail.value) }}",
+            "step": ""
           }
         }
       ]
@@ -184,6 +189,9 @@
       },
       "oj-text-area": {
         "path": "ojs/ojinputtext"
+      },
+      "oj-select-single": {
+        "path": "ojs/ojselectsingle"
       }
     }
   }
