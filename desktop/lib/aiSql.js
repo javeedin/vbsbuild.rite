@@ -524,7 +524,18 @@ async function open(opts) {
       const t0 = now();
       try {
         const c = full(id);
-        if (!trim(c.model) && id !== 'claudecode') return { ok: false, error: 'Choose a model for ' + p.label + ' (AI settings, Load models).' };
+        // a secret it needs (its API key) missing — never saved, or saved but not readable on this PC (encrypted by
+        // another app or user, as after settings are imported): said before anything is sent, with where to put it
+        const feat = trim(req && req.feature);
+        const saved = read().providers[id] || {};
+        const lacking = p.fields.filter((f) => f.secret && !/if any/i.test(f.label) && !trim(c[f.key]));
+        if (lacking.length) {
+          const unreadable = lacking.some((f) => saved[f.key]);
+          return { ok: false, needsSetup: true, error: (unreadable ? 'The ' + lacking[0].label + ' for ' + p.label + ' is saved but cannot be read on this PC (it was encrypted by another app or user): enter it again'
+            : 'No ' + lacking[0].label + ' for ' + p.label + ' is saved on this PC: enter it') + ' in Tools → AI settings → ' + p.label
+            + ' — or choose Claude Code (your subscription, no key) there' + (feat ? ' for this feature' : '') + '.' };
+        }
+        if (!trim(c.model) && id !== 'claudecode') return { ok: false, needsSetup: true, error: 'Choose a model for ' + p.label + ' (Tools → AI settings, Load models).' };
         const user = String((req && req.user) || '');
         if (!trim(user)) return { ok: false, error: 'There is nothing to send.' };
         const system = trim(req && req.system) || 'You are a helpful assistant.';

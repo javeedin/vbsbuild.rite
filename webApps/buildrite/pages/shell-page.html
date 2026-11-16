@@ -347,6 +347,9 @@
   <oj-bind-if test="[[ !!$variables.toast.message ]]">
     <div :class="[[ 'nx-toast nx-toast--' + $variables.toast.tone ]]" role="status" aria-live="polite">
       <span><oj-bind-text value="[[ $variables.toast.message ]]"></oj-bind-text></span>
+      <oj-bind-if test="[[ !!$variables.toast.act ]]">
+        <button type="button" class="nx-btn nx-btn--sm nx-toast-act" id="nxToastAct" :data-nav="[[ $variables.toast.act.navId ]]" on-click="[[ $listeners.onToastAct ]]"><oj-bind-text value="[[ $variables.toast.act.label ]]"></oj-bind-text></button>
+      </oj-bind-if>
       <button type="button" class="nx-iconbtn nx-iconbtn--sm" on-click="[[ $listeners.onToastClose ]]" aria-label="Dismiss">
         <span class="oj-ux-ico-close" aria-hidden="true"></span>
       </button>

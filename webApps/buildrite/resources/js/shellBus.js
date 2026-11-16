@@ -35,7 +35,12 @@ define([], function () {
     open: function (req) { send(Object.assign({ action: 'open' }, req || {})); },
     rename: function (id, title) { send({ action: 'rename', id: id, title: title }); },
     close: function (id) { send({ action: 'close', id: id }); },
-    toast: function (message, tone) { send({ action: 'toast', message: message, tone: tone || 'info' }); },
+    // action: { label, navId } — a button on the toast that opens that screen; an error that says to set up AI (Tools →
+    // AI settings) gets "Open AI settings" by itself
+    toast: function (message, tone, action) {
+      var act = action || ((tone === 'error' && /AI settings/.test(String(message || ''))) ? { label: 'Open AI settings', navId: 'ai' } : null);
+      send({ action: 'toast', message: message, tone: tone || 'info', act: act });
+    },
     /** While work in a tab must not be cut off (a Fusion sync), what closing it would interrupt; null lifts it. */
     guard: function (tabId, message) {
       if (message) guards[tabId] = String(message);

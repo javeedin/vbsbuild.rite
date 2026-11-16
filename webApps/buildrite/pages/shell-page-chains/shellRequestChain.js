@@ -17,7 +17,7 @@ define([
       } else if (r.action === 'close' && r.id) {
         await Actions.callChain(context, { chain: 'closeTabChain', params: { id: r.id } });
       } else if (r.action === 'toast') {
-        await Actions.callChain(context, { chain: 'toastChain', params: { message: r.message, tone: r.tone } });
+        await Actions.callChain(context, { chain: 'toastChain', params: { message: r.message, tone: r.tone, act: r.act || null } });
       }
     }
   }

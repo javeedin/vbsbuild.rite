@@ -198,7 +198,8 @@
         "id": "string",
         "title": "string",
         "message": "string",
-        "tone": "string"
+        "tone": "string",
+        "act": "object"
       }
     },
     "refreshAlerts": {
@@ -441,6 +442,22 @@
       "chains": [
         {
           "chain": "dismissChain"
+        }
+      ]
+    },
+    "onToastAct": {
+      "chains": [
+        {
+          "chain": "openChain",
+          "parameters": {
+            "navId": "{{ $event.currentTarget.dataset.nav }}"
+          }
+        },
+        {
+          "chain": "toastChain",
+          "parameters": {
+            "message": ""
+          }
         }
       ]
     }

@@ -61,6 +61,18 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'br-ai-'));
     store.forget('claudecode');
     s = store.settings();
     T.check('forgetting an AI: the features that used it go back to the default', s.uses.sql === '' && !s.providers.claudecode.ready && store.providerFor('sql') === 'anthropic');
+
+    T.section('an API key missing: said before anything is sent, with where to put it');
+    const file2 = path.join(tmp, 'ai-nokey.json');
+    fs.writeFileSync(file2, JSON.stringify({ active: 'anthropic', providers: { anthropic: { model: 'claude-test-model' } } }));
+    const sent = [];
+    const noKey = await A.open({ file: file2, encrypt: (t) => Buffer.from('enc:' + t), decrypt: (b) => String(b).replace(/^enc:/, ''), fetch: async (url) => { sent.push(url); return { ok: false, status: 401, text: async () => '{}' }; } });
+    let nk = await noKey.chat({ feature: 'analysis', system: 's', user: 'u' });
+    T.check('never saved: "No API key … is saved on this PC: enter it in Tools → AI settings", nothing sent', !nk.ok && nk.needsSetup && /No API key for Claude \(Anthropic\) is saved on this PC: enter it in Tools → AI settings → Claude \(Anthropic\) — or choose Claude Code/.test(nk.error) && !sent.length, nk.error);
+    fs.writeFileSync(file2, JSON.stringify({ active: 'anthropic', providers: { anthropic: { model: 'claude-test-model', key: Buffer.from('sealed by another app').toString('base64') } } }));
+    const otherPc = await A.open({ file: file2, encrypt: (t) => Buffer.from('enc:' + t), decrypt: () => { throw new Error('cannot decrypt'); }, fetch: async (url) => { sent.push(url); return { ok: false, status: 401, text: async () => '{}' }; } });
+    nk = await otherPc.chat({ feature: 'analysis', system: 's', user: 'u' });
+    T.check('saved but not readable here (imported from another app): said, enter it again; nothing sent', !nk.ok && /is saved but cannot be read on this PC \(it was encrypted by another app or user\): enter it again in Tools → AI settings/.test(nk.error) && !sent.length, nk.error);
   } catch (e) {
     T.check('no exception: ' + (e && e.stack), false);
   } finally {

@@ -81,6 +81,14 @@ const text = (page, sel) => page.$eval(sel, (e) => e.textContent.replace(/\s+/g,
     T.check('no other product named on the page (its text, titles, labels, placeholders)', !/equip\s*rite|Old app|New app|requests|availability|yard/i.test(all), (all.match(/.{0,40}(equip\s*rite|requests|availability|yard).{0,40}/i) || [''])[0]);
     T.check('no business actions in the top bar', !(await page.$('#nxNewRequest')) && !(await page.$('#nxQa')) && !(await page.$('#nxCart')) && !(await page.$('#nxPhone')) && !(await page.$('#nxBell')) && !(await page.$('#nxHelp')));
     await env.shot('shell.png');
+
+    T.section('an AI error says where to fix it');
+    await page.evaluate(() => new Promise((r) => require(['resources/js/shellBus'], (bus) => { bus.toast('No API key for Claude (Anthropic) is saved on this PC: enter it in Tools → AI settings → Claude (Anthropic).', 'error'); r(); })));
+    await page.waitForSelector('#nxToastAct', { timeout: 5000 });
+    T.check('its toast: "Open AI settings"', (await env.text('#nxToastAct')) === 'Open AI settings');
+    await page.click('#nxToastAct');
+    await page.waitForFunction(() => /AI settings/.test((document.querySelector('.nx-tab--on .nx-tab-title') || {}).textContent || ''), null, { timeout: 15000 });
+    T.check('…opens AI settings, the toast gone', !(await page.$('#nxToastAct')));
     T.eq('no browser errors', errs().join(' | ').slice(0, 1500), '');
   } catch (e) {
     T.check('no exception: ' + (e && e.message), false);
