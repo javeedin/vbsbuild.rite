@@ -476,11 +476,81 @@ function open(opts) {
     return { ok: true, file: file, name: doc.originalName || path.basename(file), mime: MIME[doc.kind] || 'application/octet-stream' };
   }
 
+  // ── Design documents ("Create the functional design", under Analyze with AI) ────────────────────────────────────
+  // docs/fdd/designs/<story>-design-v<n>.pdf|.html|.md, listed in resources/fdd/designs.json: a story's designs, one
+  // version each time it is written; saved with the library (the same git paths), so a push shares them
+  const DESIGNS_DIR = DOCS_DIR + '/designs';
+  const designsFile = path.join(resDir, 'designs.json');
+  const DESIGN_KINDS = { pdf: 'application/pdf', html: 'text/html; charset=utf-8', md: 'text/markdown; charset=utf-8' };
+  function readDesigns() {
+    try { const j = JSON.parse(fs.readFileSync(designsFile, 'utf8')); return Array.isArray(j.docs) ? j.docs.filter((d) => d && okId(d.id)) : []; } catch (e) { return []; }
+  }
+  function writeDesigns(docs) {
+    docs.sort((a, b) => str(b.createdAt).localeCompare(str(a.createdAt)));
+    writeRes('designs.json', { docs: docs });
+  }
+  // b: { story: { key, summary, sprint, epic, assignee, due, status, url }, markdown, html, pdf (Buffer, or null when it
+  //      could not be printed), fdd: { id, name }, pages: [id], provider, model, by }
+  function saveDesign(b) {
+    if (!canUpload()) return { ok: false, error: 'Design documents are saved with the FDD library (git), and this app is not running from the project folder.' };
+    const st = (b && b.story) || {};
+    const key = str(st.key).trim();
+    if (!key || !slug(key)) return { ok: false, error: 'Which story is this design for?' };
+    if (!str(b.markdown).trim()) return { ok: false, error: 'The design is empty: nothing to save.' };
+    const docs = readDesigns();
+    let version = 1 + docs.filter((d) => d.key === key).reduce((m, d) => Math.max(m, Number(d.version) || 0), 0);
+    while (docs.some((d) => d.id === slug(key) + '-design-v' + version)) version++;
+    const id = slug(key) + '-design-v' + version;
+    const dir = path.join(root, DESIGNS_DIR);
+    fs.mkdirSync(dir, { recursive: true });
+    const files = {}, sizes = {};
+    const put = (kind, data) => {
+      if (data == null || (!Buffer.isBuffer(data) && !str(data))) return;
+      const buf = Buffer.isBuffer(data) ? data : Buffer.from(str(data), 'utf8');
+      fs.writeFileSync(path.join(dir, id + '.' + kind), buf);
+      files[kind] = DESIGNS_DIR + '/' + id + '.' + kind;
+      sizes[kind] = buf.length;
+    };
+    put('pdf', b.pdf && b.pdf.length ? b.pdf : null);
+    put('html', b.html);
+    put('md', b.markdown);
+    const doc = {
+      id: id, key: key, title: str(st.summary).slice(0, 300), sprint: str(st.sprint), epic: str(st.epic), assignee: str(st.assignee), due: str(st.due), status: str(st.status),
+      url: /^https?:\/\//.test(str(st.url)) ? str(st.url) : '', version: version, createdAt: now().toISOString(), by: str(b.by), provider: str(b.provider), model: str(b.model),
+      fddId: str(b.fdd && b.fdd.id), fddName: str(b.fdd && b.fdd.name), pages: (b.pages || []).map(str).slice(0, 12), files: files, sizes: sizes,
+    };
+    docs.unshift(doc);
+    writeDesigns(docs);
+    return { ok: true, doc: doc, files: Object.keys(files).map((k) => files[k]).concat([RES_DIR + '/designs.json']) };
+  }
+  const designs = (key) => readDesigns().filter((d) => !key || d.key === str(key));
+  function designFile(id, kind) {
+    const k = DESIGN_KINDS[kind] ? kind : 'pdf';
+    const doc = okId(id) ? readDesigns().filter((d) => d.id === id)[0] : null;
+    if (!doc) return { ok: false, error: 'There is no design document "' + str(id) + '".' };
+    const want = (doc.files || {})[k];
+    if (!want) return { ok: false, error: 'This design has no ' + k.toUpperCase() + (k === 'pdf' ? ' (it could not be printed when it was written: download its HTML and print it).' : '.') };
+    const file = inDocs(want);
+    if (!file) return { ok: false, error: 'No such document.' };
+    if (!fs.existsSync(file)) return { ok: false, error: want + ' is not in this copy of the project (git pull?).' };
+    return { ok: true, file: file, doc: doc, name: doc.id + '.' + k, mime: DESIGN_KINDS[k] };
+  }
+  function removeDesign(id) {
+    const docs = readDesigns();
+    const doc = okId(id) ? docs.filter((d) => d.id === id)[0] : null;
+    if (!doc) return { ok: false, error: 'There is no design document "' + str(id) + '".' };
+    const gone = Object.keys(doc.files || {}).map((k) => doc.files[k]);
+    gone.forEach((f) => { const abs = inDocs(f); if (abs) { try { fs.unlinkSync(abs); } catch (e) { /* gone */ } } });
+    writeDesigns(docs.filter((d) => d.id !== id));
+    return { ok: true, files: gone.concat([RES_DIR + '/designs.json']) };
+  }
+
   const gitStatus = () => repo.status();
   const gitSave = (b) => repo.save(b);
 
   return {
-    info: () => { const lib = readLib(); return { ok: true, canUpload: canUpload(), latest: lib.latest, docs: lib.docs, paths: { docs: DOCS_DIR, resources: RES_DIR } }; },
+    info: () => { const lib = readLib(); return { ok: true, canUpload: canUpload(), latest: lib.latest, docs: lib.docs, designs: readDesigns(), paths: { docs: DOCS_DIR, resources: RES_DIR, designs: DESIGNS_DIR } }; },
+    saveDesign: saveDesign, designs: designs, designFile: designFile, removeDesign: removeDesign,
     upload: upload, setLatest: setLatest, remove: remove, outline: outline, original: original,
     gitStatus: gitStatus, gitSave: gitSave, gitPull: () => repo.pull(),
     dataInfo: () => (o.data ? o.data.info() : { separate: false, branch: '', reason: '' }),
@@ -501,4 +571,12 @@ function mergeLibrary(oursText, theirsText) {
   return JSON.stringify({ latest: latest, docs: docs }, null, 2) + '\n';
 }
 
-module.exports = { open, mergeLibrary, parse, parseDocx, parseHtml, parseText, parsePdf, unzip, headingNumber, canFollow, sectionsFrom, DOCS_DIR, RES_DIR, KINDS };
+/** The list of design documents changed on both sides (the data branch): every design of either. */
+function mergeDesigns(oursText, theirsText) {
+  const docs = [];
+  (JSON.parse(oursText).docs || []).concat(JSON.parse(theirsText).docs || []).forEach((d) => { if (d && d.id && !docs.some((x) => x.id === d.id)) docs.push(d); });
+  docs.sort((x, y) => str(y.createdAt).localeCompare(str(x.createdAt)));
+  return JSON.stringify({ docs: docs }) + '\n';
+}
+
+module.exports = { open, mergeLibrary, mergeDesigns, parse, parseDocx, parseHtml, parseText, parsePdf, unzip, headingNumber, canFollow, sectionsFrom, DOCS_DIR, RES_DIR, KINDS };

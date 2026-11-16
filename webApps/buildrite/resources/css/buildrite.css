@@ -259,3 +259,37 @@ html[data-nx-product="buildrite"] .nx-nav-scroll { scrollbar-color: rgba(255, 25
 
 /* a toast's button (an AI error: Open AI settings) */
 .nx-toast-act { margin-left: 10px; background: #fff; color: #1d2b36; border-color: rgba(255, 255, 255, .6); white-space: nowrap; }
+
+/* Analyze with AI → Create the functional design */
+.nx-an-design { margin-top: 12px; border: 1px solid var(--nx-border, #dde3ea); border-radius: 10px; padding: 10px 12px; background: linear-gradient(180deg, rgba(46, 111, 216, .05), transparent 60%); }
+.nx-an-designhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.nx-an-designico { font-size: 22px; line-height: 1; }
+.nx-an-designtxt { display: grid; gap: 2px; flex: 1 1 320px; min-width: 0; }
+.nx-an-designpush { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; white-space: nowrap; }
+.nx-an-designbusy { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; font-size: 12.5px; color: var(--nx-muted, #4a5865); }
+.nx-an-designspin { flex: none; width: 14px; height: 14px; margin-top: 2px; border-radius: 50%; border: 2px solid rgba(46, 111, 216, .25); border-top-color: #2e6fd8; animation: nx-an-spin .9s linear infinite; }
+@keyframes nx-an-spin { to { transform: rotate(360deg); } }
+.nx-an-designerr { margin-top: 8px; padding: 6px 10px; border-radius: 6px; background: #fdecea; color: #8c1d18; font-size: 12.5px; }
+.nx-an-designdone { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; padding: 6px 10px; border-radius: 6px; background: #e7f6ec; color: #1d5b33; font-size: 12.5px; }
+.nx-an-designdone > span:nth-child(2) { flex: 1 1 260px; }
+.nx-an-designlist { display: grid; gap: 4px; margin-top: 8px; }
+.nx-an-designrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--nx-border, #e3e8ee); font-size: 12.5px; background: var(--nx-surface, #fff); }
+.nx-an-designrow--new { border-color: #2e6fd8; box-shadow: 0 0 0 2px rgba(46, 111, 216, .12); }
+.nx-an-designver { font-weight: 700; color: #1d4f91; }
+.nx-an-designmeta { color: var(--nx-muted, #4a5865); min-width: 0; }
+.nx-an-designdlg { width: min(1060px, 100%); max-height: 88vh; display: flex; flex-direction: column; }
+.nx-an-designbody { flex: 1; min-height: 0; padding: 0; background: #e9edf1; }
+.nx-an-designframe { display: block; width: 100%; height: 76vh; border: 0; background: #fff; }
+
+/* FDD library → Design documents */
+.nx-flib-designs { margin-top: 16px; }
+.nx-flib-designnote { margin: 4px 0 8px; }
+.nx-flib-designwrap { overflow-x: auto; }
+.nx-flib-designgrid { display: grid; grid-template-columns: minmax(240px, 2.4fr) minmax(80px, .8fr) minmax(90px, .8fr) minmax(90px, .8fr) minmax(90px, 1fr) minmax(110px, 1.1fr) minmax(56px, .5fr) auto; font-size: 13px; min-width: 980px; }
+.nx-flib-designhead, .nx-flib-designrow { display: contents; }
+.nx-flib-designhead > span { font-weight: 600; font-size: 12px; color: var(--nx-muted, #4a5865); border-bottom: 1px solid var(--nx-border, #dde3ea); padding: 6px 8px; white-space: nowrap; }
+.nx-flib-designrow > span { border-bottom: 1px solid var(--nx-border, #eef1f4); padding: 6px 8px; align-self: stretch; }
+.nx-flib-designstory { display: grid; gap: 2px; align-content: start; }
+.nx-flib-designrow--old > span { opacity: .72; }
+.nx-flib-designacts { white-space: nowrap; text-align: right; }
+.nx-flib-designstory .nx-linkbtn { padding: 0; text-align: left; justify-self: start; }

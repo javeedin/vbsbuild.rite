@@ -39,6 +39,7 @@ define([
       // The story is in: its whole activity (every comment, change and work log entry) and its images, so the analysis
       // reads all of it; then the AI (if it is set up; else the page shows a "set up AI" hint).
       if (!v.story) return;
+      Actions.callChain(context, { chain: 'designChain', params: { act: 'list', id: '', kind: '' } }).catch(() => {}); // its design documents
       const plain = JSON.parse(JSON.stringify(v.story));
       v.activity = { loading: true };
       await Promise.all([

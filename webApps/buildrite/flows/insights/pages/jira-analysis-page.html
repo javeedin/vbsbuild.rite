@@ -256,6 +256,61 @@
             <oj-bind-if test="[[ $variables.analyzing ]]"><div class="nx-empty" id="anBusy"><oj-bind-text value="[[ $variables.fddId ? 'Analysing the story, its sub-tasks and comments against ' + $functions.fddLabel($variables.fddOptions, $variables.fddId) + '…' : 'Analysing the story, its sub-tasks and comments…' ]]"></oj-bind-text></div></oj-bind-if>
             <iframe class="nx-an-frame" id="anAnalysis" title="AI analysis" sandbox="" :srcdoc="[[ $functions.doc($variables.analysisHtml) ]]"></iframe>
           </oj-bind-if>
+
+          <!-- Create the functional design: the FDD, wireframes, TDD, integration touch points and a developer reference,
+               written by the AI from this story, its analysis, the FDD and the app's code; a PDF saved with the FDD library -->
+          <oj-bind-if test="[[ !!$variables.story ]]">
+            <div class="nx-an-design" id="anDesign">
+              <div class="nx-an-designhead">
+                <span class="nx-an-designico" aria-hidden="true">📐</span>
+                <div class="nx-an-designtxt">
+                  <b>Functional design</b>
+                  <span class="nx-note">FDD · wireframes · TDD · integration touch points · developer reference — from this story, its analysis, the FDD and your working folder's pages and integrations. Saved as a PDF in the FDD library.</span>
+                </div>
+                <label class="nx-an-designpush" title="Commit and push it to git, where the FDD library is, as soon as it is saved"><input type="checkbox" id="anDesignPush" :checked="[[ $variables.designPush ]]" data-act="togglePush" on-change="[[ $listeners.onDesign ]]"> Push to git</label>
+                <button type="button" class="nx-btn nx-btn--cta" id="anDesignBtn" data-act="create" on-click="[[ $listeners.onDesign ]]" :disabled="[[ $variables.design.busy || $variables.analyzing || !$variables.aiReady ]]">
+                  <oj-bind-text value="[[ $variables.design.busy ? '…writing (' + $variables.design.secs + ' s)' : ($variables.designs.length ? 'Create the functional design again' : 'Create the functional design') ]]"></oj-bind-text>
+                </button>
+              </div>
+              <oj-bind-if test="[[ $variables.design.busy ]]">
+                <div class="nx-an-designbusy" id="anDesignBusy"><span class="nx-an-designspin" aria-hidden="true"></span><oj-bind-text value="[[ $functions.designBusyText($variables.design.secs, !!$variables.analysisHtml, $variables.fddId) ]]"></oj-bind-text></div>
+              </oj-bind-if>
+              <oj-bind-if test="[[ !$variables.design.busy && !!$variables.design.error ]]">
+                <div class="nx-an-designerr" id="anDesignErr"><oj-bind-text value="[[ $variables.design.error ]]"></oj-bind-text></div>
+              </oj-bind-if>
+              <oj-bind-if test="[[ !$variables.design.busy && !!$variables.design.doc ]]">
+                <div class="nx-an-designdone" id="anDesignDone">
+                  <span class="oj-ux-ico-check" aria-hidden="true"></span>
+                  <span id="anDesignDoneText"><oj-bind-text value="[[ $functions.designDoneText($variables.design) ]]"></oj-bind-text></span>
+                  <oj-bind-if test="[[ !$variables.design.git || !$variables.design.git.pushed ]]">
+                    <button type="button" class="nx-btn nx-btn--sm" id="anDesignPushNow" data-act="push" :data-id="[[ $variables.design.doc.id ]]" on-click="[[ $listeners.onDesign ]]"><span class="oj-ux-ico-upload" aria-hidden="true"></span> Push to git</button>
+                  </oj-bind-if>
+                  <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="anDesignLib" data-act="library" on-click="[[ $listeners.onDesign ]]">Open in FDD library</button>
+                </div>
+              </oj-bind-if>
+              <oj-bind-if test="[[ $variables.designs.length ]]">
+                <div class="nx-an-designlist" id="anDesignList">
+                  <oj-bind-for-each data="[[ $variables.designs ]]">
+                    <template data-oj-as="d">
+                      <div :class="[[ 'nx-an-designrow' + ($variables.design.doc && $variables.design.doc.id === d.data.id ? ' nx-an-designrow--new' : '') ]]" :data-id="[[ d.data.id ]]">
+                        <span class="nx-an-designver"><oj-bind-text value="[[ 'v' + d.data.version ]]"></oj-bind-text></span>
+                        <span class="nx-an-designmeta"><oj-bind-text value="[[ $functions.designMeta(d.data) ]]"></oj-bind-text></span>
+                        <span class="nx-min-flex"></span>
+                        <button type="button" class="nx-btn nx-btn--sm" data-act="preview" :data-id="[[ d.data.id ]]" on-click="[[ $listeners.onDesign ]]"><span class="oj-ux-ico-view" aria-hidden="true"></span> Preview</button>
+                        <oj-bind-if test="[[ !!(d.data.files && d.data.files.pdf) ]]">
+                          <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="download" data-kind="pdf" :data-id="[[ d.data.id ]]" on-click="[[ $listeners.onDesign ]]" title="Download the PDF"><span class="oj-ux-ico-download" aria-hidden="true"></span> PDF</button>
+                        </oj-bind-if>
+                        <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="download" data-kind="md" :data-id="[[ d.data.id ]]" on-click="[[ $listeners.onDesign ]]" title="Download the Markdown (to edit it)"><span class="oj-ux-ico-download" aria-hidden="true"></span> MD</button>
+                        <oj-bind-if test="[[ !!(d.data.files && d.data.files.pdf) ]]">
+                          <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="open" data-kind="pdf" :data-id="[[ d.data.id ]]" on-click="[[ $listeners.onDesign ]]" title="Open the PDF in this PC's PDF reader"><span class="oj-ux-ico-external-link" aria-hidden="true"></span></button>
+                        </oj-bind-if>
+                      </div>
+                    </template>
+                  </oj-bind-for-each>
+                </div>
+              </oj-bind-if>
+            </div>
+          </oj-bind-if>
         </div>
 
         <div class="nx-card nx-an-chat">
@@ -267,6 +322,33 @@
           </div>
         </div>
       </section>
+    </div>
+  </oj-bind-if>
+
+  <!-- A design document, as it prints (its HTML; the PDF is the same pages) -->
+  <oj-bind-if test="[[ !!$variables.designView ]]">
+    <div class="nx-modal" id="anDesignView">
+      <button type="button" class="nx-modal-scrim" aria-label="Close" data-act="close" on-click="[[ $listeners.onDesign ]]"></button>
+      <div class="nx-dialog nx-an-designdlg" role="dialog" aria-modal="true" aria-label="Design document">
+        <div class="nx-dialog-head">
+          <div class="nx-dialog-titles">
+            <div class="nx-kicker">Functional design</div>
+            <h2 class="nx-dialog-title" id="anDesignViewTitle"><oj-bind-text value="[[ $variables.designView.title ]]"></oj-bind-text></h2>
+          </div>
+          <oj-bind-if test="[[ $variables.designView.hasPdf ]]">
+            <button type="button" class="nx-btn nx-btn--sm" data-act="download" data-kind="pdf" :data-id="[[ $variables.designView.id ]]" on-click="[[ $listeners.onDesign ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> Download PDF</button>
+          </oj-bind-if>
+          <button type="button" class="nx-btn nx-btn--sm" data-act="download" data-kind="html" :data-id="[[ $variables.designView.id ]]" on-click="[[ $listeners.onDesign ]]" title="Download the HTML (opens in any browser; print it to PDF)">HTML</button>
+          <button type="button" class="nx-iconbtn" aria-label="Close" data-act="close" on-click="[[ $listeners.onDesign ]]"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+        </div>
+        <div class="nx-dialog-body nx-an-designbody">
+          <oj-bind-if test="[[ $variables.designView.loading ]]"><div class="nx-empty">Opening…</div></oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.designView.error ]]"><div class="nx-an-designerr"><oj-bind-text value="[[ $variables.designView.error ]]"></oj-bind-text></div></oj-bind-if>
+          <oj-bind-if test="[[ !$variables.designView.loading && !!$variables.designView.html ]]">
+            <iframe class="nx-an-designframe" id="anDesignFrame" title="Design document" sandbox="" :srcdoc="[[ $variables.designView.html ]]"></iframe>
+          </oj-bind-if>
+        </div>
+      </div>
     </div>
   </oj-bind-if>
 </div>

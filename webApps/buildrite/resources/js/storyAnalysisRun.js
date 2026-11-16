@@ -26,6 +26,7 @@ define([
   //   restore(v)                               shows the last saved run (its text, FDD, sections read, chat, when and by
   //                                            whom) instead of asking the AI → true, or false when there is none
   //   saveChat(v)                              keeps the conversation with the saved analysis
+  //   design(v, base, push)                    Create the functional design: the PDF, saved with the FDD library
   // Every successful run is saved (analysisStore), so the tab opens on it next time and the Jira lists mark the story.
 
   async function library(v, base) {
@@ -153,6 +154,26 @@ define([
 
   function rerun(v, base) { return Array.isArray(v.stories) ? analyzeSet(v, base) : analyze(v, base); }
 
+  /** Create the functional design (under the AI analysis): the story, its FDD sections and the pages mapped to it go to
+   *  the local server, which adds the saved analysis and the pages' code as it is now, asks the AI, prints the PDF and
+   *  saves it with the FDD library (pushed to git when `push`) → { ok, doc, git, pdfError, error } */
+  async function design(v, base, push) {
+    const st = v.story || {};
+    let f = null;
+    try { f = await fddFor(v, base, '', st, 30000); } catch (e) { f = null; }
+    const key = String(st.key || '').toUpperCase();
+    const mapped = (v.pgCat || []).filter((p) => (p.stories || []).some((k) => String(k).toUpperCase() === key)).map((p) => p.id);
+    const plain = JSON.parse(JSON.stringify(st));
+    const r = await FC.design({
+      story: { key: plain.key, summary: plain.summary, sprint: plain.sprint || '', epic: [plain.epicKey, plain.epicName].filter(Boolean).join(' '), assignee: plain.assignee || '',
+        due: plain.due || '', status: plain.status || '', url: plain.url || '' },
+      storyText: SA.storyText(plain, { maxHistory: 30 }), fdd: f && f.text ? { id: v.fddId, name: f.name, text: f.text } : null, mapped: mapped, commit: !!push, push: !!push,
+    });
+    const b = r.body || {};
+    if (!r.ok) return { ok: false, error: b.error || 'The design could not be written.', needsSetup: !!b.needsSetup };
+    return { ok: true, doc: b.doc, git: b.git || null, pdfError: b.pdfError || '', analysisUsed: !!b.analysisUsed };
+  }
+
   async function chatSet(v, base, question, history) {
     let f = null;
     try { f = await fddFor(v, base, question, merged(v.stories), 20000); } catch (e) { f = null; }
@@ -162,6 +183,6 @@ define([
     return { ok: false, error: (r.body && r.body.error) || 'AI could not answer.' };
   }
 
-  return { mappedText: mappedText, library: library, merged: merged, fddFor: fddFor, analyze: analyze, analyzeSet: analyzeSet, rerun: rerun, chatSet: chatSet,
+  return { design: design, mappedText: mappedText, library: library, merged: merged, fddFor: fddFor, analyze: analyze, analyzeSet: analyzeSet, rerun: rerun, chatSet: chatSet,
     keyOf: keyOf, restore: restore, saveChat: saveChat };
 });

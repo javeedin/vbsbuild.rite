@@ -1,4 +1,4 @@
-define([], () => {
+define(['resources/js/designDocs'], (DD) => {
   'use strict';
 
   // FDD library: binding helpers. The work is the chains; reading and writing rules are resources/js/fddClient.js,
@@ -33,6 +33,25 @@ define([], () => {
       return list.filter((o) => (String(o.n).toLowerCase().indexOf(s) === 0) || String(o.t).toLowerCase().indexOf(s) !== -1);
     }
     ver(v) { return 'v' + String(v || '').replace(/^v/i, ''); }
+    // ── Design documents ──
+    /** The designs a search keeps (a story key, words of its title, a sprint, an epic, who wrote it), each marked the
+     *  latest of its story or not. */
+    designRows(docs, q) {
+      const list = docs || [];
+      const top = {};
+      list.forEach((d) => { if (!top[d.key] || (Number(d.version) || 0) > top[d.key]) top[d.key] = Number(d.version) || 0; });
+      const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+      return list.filter((d) => {
+        const hay = [d.key, d.title, d.sprint, d.epic, d.by, d.fddName, 'v' + d.version].join(' ').toLowerCase();
+        return words.every((w) => hay.indexOf(w) !== -1);
+      }).map((d) => Object.assign({}, d, { latest: (Number(d.version) || 0) === top[d.key], day: DD.day(d.createdAt) }));
+    }
+    designCount(docs) {
+      const list = docs || [];
+      const stories = list.map((d) => d.key).filter((k, i, a) => a.indexOf(k) === i).length;
+      return list.length + (list.length === 1 ? ' document' : ' documents') + (list.length ? ' · ' + stories + (stories === 1 ? ' story' : ' stories') : '');
+    }
+    designSize(d) { const n = (d && d.sizes && d.sizes.pdf) || 0; return n ? (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB') : '—'; }
     nodeClass(node, open) {
       const l = Math.min(4, Math.max(1, Number(node && node.l) || 1));
       return 'nx-flib-node nx-flib-l' + l + (open && node && open.key === node.key ? ' nx-flib-node--on' : '');

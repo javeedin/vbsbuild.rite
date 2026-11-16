@@ -19,7 +19,11 @@
     "viewId": { "type": "string", "defaultValue": "", "description": "The FDD whose outline is open." },
     "outline": { "type": "any[]", "defaultValue": [] },
     "outlineFilter": { "type": "string", "defaultValue": "" },
-    "section": { "type": "any", "defaultValue": null, "description": "The section open in the viewer: { n, t, x, parent }." }
+    "section": { "type": "any", "defaultValue": null, "description": "The section open in the viewer: { n, t, x, parent }." },
+    "designs": { "type": "any[]", "defaultValue": [], "description": "Design documents (Analyze with AI → Create the functional design): { id, key, title, sprint, epic, version, createdAt, by, fddName, files, sizes }, the newest first." },
+    "designsLocal": { "type": "boolean", "defaultValue": false, "description": "The local server lists them (so they can be opened); else only the list shipped with the app." },
+    "designQ": { "type": "string", "defaultValue": "", "description": "Find a design: a story key, words of its title, a sprint." },
+    "designView": { "type": "any", "defaultValue": null, "description": "The design shown in the preview: { id, title, html, loading, error, hasPdf }." }
   },
   "eventListeners": {
     "vbEnter": { "chains": [ { "chain": "loadChain" } ] },
@@ -27,7 +31,8 @@
     "onFile": { "chains": [ { "chain": "fileChain" } ] },
     "onField": { "chains": [ { "chain": "setChain", "parameters": { "field": "{{ $event.currentTarget.dataset.field }}", "value": "{{ $event.currentTarget.type === 'checkbox' ? $event.currentTarget.checked : $event.currentTarget.value }}" } } ] },
     "onUpload": { "chains": [ { "chain": "uploadChain" } ] },
-    "onAct": { "chains": [ { "chain": "actChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "id": "{{ $event.currentTarget.dataset.id || '' }}", "n": "{{ $event.currentTarget.dataset.n || '' }}" } } ] }
+    "onAct": { "chains": [ { "chain": "actChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "id": "{{ $event.currentTarget.dataset.id || '' }}", "n": "{{ $event.currentTarget.dataset.n || '' }}" } } ] },
+    "onDesign": { "chains": [ { "chain": "designChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "id": "{{ $event.currentTarget.dataset.id || '' }}", "kind": "{{ $event.currentTarget.dataset.kind || '' }}" } } ] }
   },
   "imports": {
     "components": {

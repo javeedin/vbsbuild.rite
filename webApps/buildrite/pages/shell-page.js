@@ -47,7 +47,7 @@ define(['resources/js/shellBus', 'resources/js/theme', 'resources/js/look', 'res
       const fire = (name, payload) => { if (helper) helper.fireCustomEvent(name, payload || {}); };
       bus.register((req) => fire('shellRequest', {
         action: req.action || 'open', navId: req.navId || '', record: req.record || '', params: req.params || {},
-        id: req.id || '', title: req.title || '', message: req.message || '', tone: req.tone || '', act: req.act || null,
+        id: req.id || '', title: req.title || '', message: req.message || '', tone: req.tone || '', act: req.act || {}, // an object always: VB refuses null for an object field
       }));
       if (typeof document !== 'undefined' && !PageModule.keysBound) {
         PageModule.keysBound = true;

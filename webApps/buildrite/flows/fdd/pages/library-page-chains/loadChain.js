@@ -1,7 +1,8 @@
 define([
   'vb/action/actionChain',
   'resources/js/fddClient',
-], (ActionChain, FC) => {
+  'resources/js/designDocs',
+], (ActionChain, FC, DD) => {
   'use strict';
 
   // Opening the FDD library (and Refresh): the library shipped with the app (resources/fdd/library.json), whether this
@@ -16,6 +17,7 @@ define([
         v.canUpload = !!info.canUpload;
         v.data = (info.body && info.body.data) || null;
         v.git = info.canUpload ? ((await FC.gitStatus()).body || null) : null;
+        try { const d = await DD.list(context.$application.path, ''); v.designs = d.docs; v.designsLocal = d.local; } catch (e) { v.designs = []; } // the design documents
       } finally {
         v.checked = true;
         v.busy = false;

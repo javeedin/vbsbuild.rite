@@ -310,6 +310,7 @@ async function buildRiteOptions() {
     // The API tester: a page's REST calls and reports, tried against the real backend
     apiStore: apiStore(),
     scenarioStore: scenarioStore(),
+    htmlToPdf: htmlToPdf, // Create the functional design: the document printed to PDF
     appWindow: () => (runWin && !runWin.isDestroyed() ? { url: runWin.webContents.getURL(), title: runWin.getTitle() } : null), // the page your app's window shows (API Scenarios follows it)
     // …sent to your workspace's backends (its services/catalog.json), with who its app runs as (Run as, Sign in for your app)
     apiProject: () => { const c = currentWorkspace(); if (!c) return null; const p = profileOf(c.working); return { catalogFiles: ((p.services && p.services.catalogs) || []).map((x) => x.file), getIdentity: () => workspaceIdentity() }; },
@@ -667,6 +668,22 @@ async function capturePage(webApp, url, base) {
     return { ok: false, error: 'Could not capture the page: ' + String((e && e.message) || e) };
   } finally {
     try { shotWin.destroy(); } catch (e) { /* closed */ }
+  }
+}
+// The functional design (Analyze with AI → Create the functional design): its HTML printed to an A4 PDF by a hidden
+// window (no script runs in it), page numbers in the footer
+async function htmlToPdf(html) {
+  const tmp = path.join(app.getPath('temp'), 'buildrite-design-' + process.pid + '-' + Date.now() + '.html');
+  const w = new BrowserWindow({ width: 900, height: 1200, show: false, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: false } });
+  w.webContents.on('will-navigate', (e) => e.preventDefault());
+  try {
+    fs.writeFileSync(tmp, String(html || ''));
+    await w.loadFile(tmp);
+    return await w.webContents.printToPDF({ printBackground: true, pageSize: 'A4', preferCSSPageSize: true, displayHeaderFooter: true, headerTemplate: '<span></span>',
+      footerTemplate: '<div style="font-size:8px;width:100%;text-align:center;color:#6b7886;font-family:Arial,sans-serif"><span class="pageNumber"></span> / <span class="totalPages"></span></div>' });
+  } finally {
+    try { w.destroy(); } catch (e) { /* closed */ }
+    try { fs.unlinkSync(tmp); } catch (e) { /* gone */ }
   }
 }
 // Saved AI analyses, for Analyze with AI: each run kept in this app's data folder (ai-analyses.json).

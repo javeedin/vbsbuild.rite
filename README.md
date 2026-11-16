@@ -13,7 +13,7 @@ It is an independent app: it works with any VB Studio project and keeps its own 
 | Area | Screens |
 |---|---|
 | **Workspace** | **Organizations & projects**: your VB Studio organizations (the sign-in is kept encrypted on this PC) and their projects and workspaces. **Set up your workspace**: a wizard that clones a workspace into `main` and `working` (a worktree on its own branch). **▶ Run** and the **Run console**: your workspace's app built from its working folder and run in a window of its own, with the build, its requests and its console shown live, and commands typed as in an editor's terminal. **Run as**: the user and roles the app runs as; the roles offered are the ones found in the app's own code. |
-| **Work** | **Issues**: an issue is logged against a page, then written up and analysed by the AI against the page's code and the FDD. Once approved, the agent applies it on a branch with a pull request, and Jira is kept up to date. **Jira stories**, sprints, daily progress and AI analyses of one story or several. **Standup minutes** and **Follow-ups**. |
+| **Work** | **Issues**: an issue is logged against a page, then written up and analysed by the AI against the page's code and the FDD. Once approved, the agent applies it on a branch with a pull request, and Jira is kept up to date. **Jira stories**, sprints, daily progress and AI analyses of one story or several; under a story's analysis, **Create the functional design** writes its design document as a PDF (see below). **Standup minutes** and **Follow-ups**. |
 | **Application** | **Application pages**: every VB page of your workspace's app, with its technical sheet, screenshots, navigation maps, page code (lines changed since VB Studio are highlighted) and **Code fix**. Code fix writes a change into your working folder only after you approve it, and marks each change in the code with who asked for it, when, and its issue or Jira story. **API Scenarios**: a page's web services put in order and tested through the APIs alone, with no need to open the page (see below). **FDD library**: the FDDs that Analyze with AI reads. **Flows explained**: how Build.Rite's own flows work. |
 | **Tools** | **SQL**: a worksheet against an Oracle database, with Ask AI. **AI settings**: which AI Build.Rite asks, either **Claude Code** on your Claude subscription (no API key, no per-call cost) or an **API key** paid per use (Anthropic, OpenAI, Gemini, OCI Generative AI, or any OpenAI-compatible service). You pick one default for everything, and can give a feature its own: Code fix, Issues, Analyze with AI, Application pages, Standup minutes or SQL. **Try it** checks each one; Code fix also has a quick switch on its own tab. |
 
@@ -140,6 +140,32 @@ the report's parameters taken from the code.
   and offers to test that one; the page list marks it, and marks pages that share a title.
 
 Calls go out the same way as from the API tester: through the app's own backends, with the app's login.
+
+## Create the functional design: a story's design document, from your app's real code
+
+Under a story's AI analysis (Analyze with AI), **Create the functional design** writes the story's design document
+and saves it as a PDF in the FDD library:
+
+- **What it reads.** The story (its sub-tasks, comments and history), its saved AI analysis, the FDD sections the
+  analysis matched, and your working folder: the pages the story is mapped to, then the pages its words name, with
+  their fields, lists of values, actions, chains (with their files), modules, REST calls and BI Publisher reports.
+  The list of every page of the app comes too.
+- **What it writes.** 1 Overview · 2 Functional design (FDD): requirement, scope, roles, user flow, business rules,
+  acceptance criteria · 3 Wireframes: each screen drawn (fields, tables, buttons) · 4 Technical design (TDD): pages and
+  components, data model, **integration touch points** (a table of endpoints and reports), chains and modules, security,
+  errors, performance · 5 Developer reference: the files to change (real paths), the patterns to reuse, build steps, a
+  test plan with the API scenario · 6 Assumptions and open questions. The AI may name only what is in your code and
+  marks anything new as NEW; it cites the FDD as [FDD n].
+- **The document.** An A4 PDF with a cover and a control table (story, sprint, epic, assignee, status, version, date,
+  who prepared it, the FDD it read, the pages considered), a table of contents and page numbers. The desktop app prints
+  it; its HTML and Markdown are kept too (the Markdown, to edit it).
+- **Where it goes.** `docs/fdd/designs/<story>-design-v<n>.pdf|.html|.md`, listed in
+  `webApps/buildrite/resources/fdd/designs.json`. That is on the FDD library's branch, and with **Push to git** ticked
+  it is committed and pushed there as soon as it is saved (or later, with **Push to git** on the result). Each run is a
+  new version.
+- **Where you see it.** Under the analysis (each version with Preview, PDF, MD and Open in this PC's PDF reader), and in
+  **FDD library → Design documents**: every story's designs with story, sprint, version (the newest marked Latest),
+  date, author, the FDD read and size; search, Preview, Download, Delete; the story's key opens its analysis.
 
 ## Run any VB app from its own folder
 

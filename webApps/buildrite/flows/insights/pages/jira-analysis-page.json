@@ -28,6 +28,10 @@
     "fddOptions": { "type": "any[]", "defaultValue": [], "description": "The FDDs to choose from, the latest first: [{ id, label, latest }]." },
     "fddId": { "type": "string", "defaultValue": "", "description": "The FDD the analysis reads: the latest, unless another (or none, '') was picked." },
     "fddChosen": { "type": "boolean", "defaultValue": false, "description": "An FDD was picked on this tab (so a refresh keeps it)." },
+    "design": { "type": "object", "defaultValue": { "busy": false, "secs": 0, "doc": null, "git": null, "error": "", "pdfError": "" }, "description": "Create the functional design: running (and for how long), the document just written, its git save." },
+    "designs": { "type": "any[]", "defaultValue": [], "description": "This story's design documents (the FDD library's resources/fdd/designs.json), the newest first." },
+    "designView": { "type": "any", "defaultValue": null, "description": "The design shown in the preview: { id, title, html, loading, error, hasPdf }." },
+    "designPush": { "type": "boolean", "defaultValue": true, "description": "Push the design to git (where the FDD library is) as soon as it is saved." },
     "fddMenu": { "type": "boolean", "defaultValue": false },
     "fddPicked": { "type": "any[]", "defaultValue": [], "description": "The FDD sections the AI read for this story: [{ n, t, why, chars, cut }]." },
     "fddNote": { "type": "string", "defaultValue": "" },
@@ -47,7 +51,8 @@
     "onChatSend": { "chains": [ { "chain": "chatChain", "parameters": { "key": "{{ 'Enter' }}" } } ] },
     "onActTab": { "chains": [ { "chain": "actTabChain", "parameters": { "tab": "{{ $event.currentTarget.dataset.tab }}" } } ] },
     "onFile": { "chains": [ { "chain": "fileChain", "parameters": { "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
-    "onFdd": { "chains": [ { "chain": "fddChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "id": "{{ $event.currentTarget.dataset.id || '' }}", "i": "{{ $event.currentTarget.dataset.i || '' }}" } } ] }
+    "onFdd": { "chains": [ { "chain": "fddChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "id": "{{ $event.currentTarget.dataset.id || '' }}", "i": "{{ $event.currentTarget.dataset.i || '' }}" } } ] },
+    "onDesign": { "chains": [ { "chain": "designChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "id": "{{ $event.currentTarget.dataset.id || '' }}", "kind": "{{ $event.currentTarget.dataset.kind || '' }}" } } ] }
   },
   "imports": {
     "components": {

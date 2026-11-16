@@ -1241,6 +1241,49 @@ function createDevServer(o) {
         });
         const post = req.method === 'POST';
         const who = () => { try { const id = o.getIdentity && o.getIdentity(); return (id && (id.displayName || id.username)) || ''; } catch (e) { return ''; } };
+        // b: { story: { key, summary, sprint, epic, assignee, due, status, url }, storyText, fdd: { id, name, text }, mapped: [page id] }
+        const designFor = async (b) => {
+          const D = require('./designDoc');
+          const st = b.story || {};
+          const key = String(st.key || '').trim();
+          if (!key) return { ok: false, error: 'Which story?' };
+          if (!o.aiStore) return { ok: false, error: 'Set up AI first (Tools → AI settings).' };
+          if (!fd.saveDesign) return { ok: false, error: 'Design documents are not set up in this app.' };
+          // its analysis, as saved (Analyze with AI): the design builds on it
+          let analysis = '';
+          try { const a = o.analysisStore && o.analysisStore.get(key); analysis = (a && a.ok && a.item && a.item.text) || ''; } catch (e) { analysis = ''; }
+          // the pages it touches: those mapped to it, then those whose words it shares — read from the code as it is now
+          const ps = o.pagesStore;
+          let all = [], pages = [], backends = [];
+          if (ps) {
+            try { all = (ps.catalog().pages || []).filter((p) => !p.deleted && !p.missing); } catch (e) { all = []; }
+            const mapped = (b.mapped || []).concat(all.filter((p) => (p.stories || []).some((k) => String(k).toUpperCase() === key.toUpperCase())).map((p) => p.id));
+            const story = { summary: st.summary, description: b.storyText };
+            const near = D.relevantPages(all.map((p) => ({ id: p.id, label: p.label, appName: p.appName })), story, [], 12, 1);
+            const factsOf = (id) => { try { return ps.facts(id); } catch (e) { return null; } };
+            const cand = near.map((id) => ({ id, f: factsOf(id) })).filter((x) => x.f);
+            const scored = D.relevantPages(cand.map((x) => ({ id: x.id, label: x.f.label, description: x.f.description, fields: (x.f.features || {}).fields,
+              sections: (x.f.features || {}).sections, actions: ((x.f.features || {}).actions || []).map((a) => a.label) })), story, mapped.filter((id, i) => mapped.indexOf(id) === i), 4, 1);
+            pages = scored.map((id) => (cand.filter((x) => x.id === id)[0] || {}).f || factsOf(id)).filter(Boolean);
+            pages.forEach((f) => ((f.integrations || {}).backends || []).forEach((x) => { const n = (x && (x.label || x.id)) || String(x || ''); if (n && backends.indexOf(n) === -1) backends.push(n); }));
+          }
+          const appName = (pages[0] && pages[0].appName) || (all[0] && all[0].appName) || '';
+          const p = D.prompt({ story: st, storyText: b.storyText, analysis, fdd: b.fdd && b.fdd.text ? b.fdd : null, pages, backends,
+            allPages: all.map((x) => ({ id: x.id, label: x.label })), appName });
+          const ai = await o.aiStore.chat({ feature: 'analysis', system: p.system, user: p.user, maxTokens: 16000 });
+          if (!ai || !ai.ok || !ai.text) return { ok: false, error: (ai && ai.error) || 'AI did not write the design.', needsSetup: !!(ai && ai.needsSetup) };
+          const date = new Date().toISOString().slice(0, 10);
+          const version = 1 + fd.designs(key).reduce((m, d) => Math.max(m, Number(d.version) || 0), 0);
+          const meta = { key, title: st.summary, sprint: st.sprint, epic: st.epic, assignee: st.assignee, due: st.due, status: st.status, version, date, author: who(),
+            fdd: b.fdd && b.fdd.text ? b.fdd.name : '', app: appName, pages: pages.map((f) => f.id), provider: ai.provider || '' };
+          const html = D.renderDocument({ meta, markdown: ai.text });
+          let pdf = null, pdfError = '';
+          if (o.htmlToPdf) { try { pdf = await o.htmlToPdf(html); } catch (e) { pdfError = String((e && e.message) || e); } } else pdfError = 'PDF printing is only in the desktop app: the HTML is saved; print it to PDF from a browser.';
+          const r = fd.saveDesign({ story: st, markdown: ai.text, html, pdf, fdd: b.fdd ? { id: b.fdd.id, name: b.fdd.name } : null, pages: meta.pages, provider: ai.provider || '', model: ai.model || '', by: who() });
+          if (r.ok && pdfError) r.pdfError = pdfError;
+          if (r.ok) r.analysisUsed = !!analysis;
+          return r;
+        };
         (async () => {
           const b = post ? JSON.parse((await bodyOf()) || '{}') : {};
           if (pathname === '/__fdd/info' && req.method === 'GET') return jsonD(200, Object.assign(fd.info(), { data: fd.dataInfo ? fd.dataInfo() : null }));
@@ -1269,6 +1312,38 @@ function createDevServer(o) {
           if (pathname === '/__fdd/remove' && post) {
             const r = fd.remove(b.id);
             if (r.ok && b.commit) r.git = await fd.gitSave({ message: `FDD library: remove ${b.id}`, push: b.push !== false });
+            return jsonD(200, r);
+          }
+          // ── The functional design of a story (Analyze with AI → Create the functional design): its saved analysis, the
+          // FDD sections the page picked, the pages it touches as their code is now (the working folder), the AI, the PDF
+          if (pathname === '/__fdd/designs' && req.method === 'GET') return jsonD(200, { ok: true, docs: fd.designs ? fd.designs(u.searchParams.get('story') || '') : [] });
+          if (pathname === '/__fdd/design-file' && req.method === 'GET') {
+            const f = fd.designFile(u.searchParams.get('id') || '', u.searchParams.get('kind') || 'pdf');
+            if (!f.ok) return jsonD(404, f);
+            const disp = u.searchParams.get('download') ? 'attachment' : 'inline';
+            return send(res, 200, f.mime, fs.readFileSync(f.file), { 'Cache-Control': 'no-store', 'Content-Disposition': `${disp}; filename="${encodeURIComponent(f.name)}"`,
+              // a design's HTML is shown in a frame: nothing in it runs
+              'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'self'", 'X-Content-Type-Options': 'nosniff' });
+          }
+          if (pathname === '/__fdd/design-open' && post) {
+            const f = fd.designFile(b.id, b.kind || 'pdf');
+            if (!f.ok) return jsonD(200, f);
+            if (typeof o.vbsOpenPath !== 'function') return jsonD(200, { ok: false, error: 'Opening a file needs the desktop app: download it instead.' });
+            const err = await o.vbsOpenPath(b.folder ? path.dirname(f.file) : f.file);
+            return jsonD(200, err ? { ok: false, error: String(err) } : { ok: true, path: f.file });
+          }
+          if (pathname === '/__fdd/design-remove' && post) {
+            const r = fd.removeDesign(b.id);
+            if (r.ok && b.commit) r.git = await fd.gitSave({ message: `Design: remove ${b.id}`, push: b.push !== false });
+            return jsonD(200, r);
+          }
+          if (pathname === '/__fdd/design' && post) {
+            const r = await designFor(b);
+            log(`Design ${(b.story && b.story.key) || ''} -> ${r.ok ? r.doc.id + (r.doc.files.pdf ? ' (PDF)' : ' (no PDF)') : r.error}`);
+            if (r.ok && b.commit) {
+              r.git = await fd.gitSave({ message: `Design: ${r.doc.key} v${r.doc.version}${r.doc.title ? ' — ' + r.doc.title.slice(0, 60) : ''}`, push: b.push !== false });
+              log(`Design git -> ${r.git.ok ? (r.git.committed || 'nothing to commit') + (r.git.pushed ? ', pushed to ' + r.git.upstream : '') : r.git.error}`);
+            }
             return jsonD(200, r);
           }
           if (pathname === '/__fdd/git/save' && post) {

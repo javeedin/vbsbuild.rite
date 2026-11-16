@@ -1,4 +1,4 @@
-define(['resources/js/jiraStoryPanel'], (Panel) => {
+define(['resources/js/jiraStoryPanel', 'resources/js/designDocs'], (Panel, DD) => {
   'use strict';
 
   // Analyze with AI (jira-analysis page): binding helpers. The prompt/render rules are resources/js/storyAnalysis.js; the
@@ -24,6 +24,24 @@ define(['resources/js/jiraStoryPanel'], (Panel) => {
       return 'Last run ' + d.getDate() + ' ' + mon + ' ' + d.getFullYear() + ', ' + p2(d.getHours()) + ':' + p2(d.getMinutes()) + ' (' + ago + ')' + (by ? ' by ' + by : '')
         + ' · saved, so it opens without running the AI again';
     }
+    // ── Create the functional design ──
+    designMeta(d) { return DD.meta(d); }
+    /** What is happening while the design is written (one call: the server reads, the AI writes, the PDF is printed). */
+    designBusyText(secs, hasAnalysis, fddId) {
+      const read = ['the story', hasAnalysis ? 'its AI analysis' : '', fddId ? 'the FDD' : '', 'the pages and integrations in your working folder'].filter(Boolean);
+      return 'Reading ' + read.slice(0, -1).join(', ') + ' and ' + read[read.length - 1] + '; the AI writes the FDD, wireframes, TDD, touch points and developer reference, then Build.Rite prints the PDF. '
+        + 'This can take a few minutes — ' + (secs || 0) + ' s so far.';
+    }
+    /** "EQP-145 v2 saved in the FDD library (docs/fdd/designs) — pushed to git (origin/main)." */
+    designDoneText(d) {
+      const x = d || {};
+      const doc = x.doc || {};
+      const g = x.git;
+      const where = g ? (g.ok ? (g.pushed ? ' — pushed to git' + (g.upstream ? ' (' + g.upstream + ')' : '') : g.nothing ? ' — already in git' : ' — committed, not pushed' + (g.error ? ': ' + g.error : '')) : ' — git: ' + (g.error || 'not saved')) : ' — on this PC, not in git yet';
+      return doc.key + ' v' + doc.version + ' saved in the FDD library' + where + '.' + (x.pdfError ? ' No PDF: ' + x.pdfError : '') + (x.analysisUsed === false ? ' (No saved AI analysis was found, so it read the story without one.)' : '')
+        + (x.secs ? ' Took ' + x.secs + ' s.' : '');
+    }
+
     /** The chosen FDD's label ("Project FDD · v1.7 (latest)"), or "No FDD" when none is chosen. */
     fddLabel(options, id) {
       if (!id) return 'No FDD — the story only';

@@ -90,7 +90,48 @@ define([], function () {
     }, function () { return false; });
   }
 
+  // ── Design documents (Analyze with AI → Create the functional design; FDD library → Design documents) ──────────────
+  // A design's file, read with the header the local server wants (a link or a frame's src cannot carry it): its text (the
+  // HTML, for the preview), or saved by the browser under its own name (the PDF, the Markdown).
+  function designFetch(id, kind, download) {
+    if (typeof window === 'undefined' || typeof window.fetch !== 'function') return Promise.resolve(null);
+    return window.fetch('/__fdd/design-file?id=' + encodeURIComponent(id) + '&kind=' + encodeURIComponent(kind || 'pdf') + (download ? '&download=1' : ''),
+      { headers: { 'X-Build-Rite-FDD': '1' }, credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r; }, function () { return null; });
+  }
+  function designText(id, kind) {
+    return designFetch(id, kind || 'html').then(function (r) {
+      if (!r) return { ok: false, error: 'The local server did not answer.' };
+      return r.text().then(function (t) {
+        if (r.ok) return { ok: true, text: t };
+        var b = null;
+        try { b = JSON.parse(t); } catch (e) { b = null; }
+        return { ok: false, error: (b && b.error) || 'HTTP ' + r.status };
+      });
+    });
+  }
+  function designDownload(id, kind) {
+    return designFetch(id, kind || 'pdf', true).then(function (r) {
+      if (!r) return { ok: false, error: 'The local server did not answer.' };
+      if (!r.ok) return r.text().then(function (t) { var b = null; try { b = JSON.parse(t); } catch (e) { b = null; } return { ok: false, error: (b && b.error) || 'HTTP ' + r.status }; });
+      var cd = r.headers.get('Content-Disposition') || '';
+      var name = decodeURIComponent((/filename="([^"]+)"/.exec(cd) || [])[1] || (id + '.' + (kind || 'pdf')));
+      return r.blob().then(function (blob) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click();
+        setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
+        return { ok: true, name: name, size: blob.size };
+      });
+    });
+  }
+
   return {
+    // b: { story: { key, summary, sprint, epic, assignee, due, status, url }, storyText, fdd: { id, name, text }, mapped, commit, push }
+    design: function (b) { return call('design', 'POST', b || {}); },
+    designs: function (story) { return call('designs' + (story ? '?story=' + encodeURIComponent(story) : '')); },
+    designText: designText,
+    designDownload: designDownload,
+    designOpen: function (id, kind, folder) { return call('design-open', 'POST', { id: id, kind: kind || 'pdf', folder: !!folder }); },
+    designRemove: function (id, commit) { return call('design-remove', 'POST', { id: id, commit: !!commit, push: true }); },
     library: library,
     doc: doc,
     info: info,

@@ -89,6 +89,17 @@ const text = (page, sel) => page.$eval(sel, (e) => e.textContent.replace(/\s+/g,
     await page.click('#nxToastAct');
     await page.waitForFunction(() => /AI settings/.test((document.querySelector('.nx-tab--on .nx-tab-title') || {}).textContent || ''), null, { timeout: 15000 });
     T.check('…opens AI settings, the toast gone', !(await page.$('#nxToastAct')));
+
+    T.section('a screen opens another (shellBus), with no button on it');
+    await page.evaluate(() => new Promise((r) => require(['resources/js/shellBus'], (bus) => { bus.open({ navId: 'minutes' }); r(); })));
+    await page.waitForSelector('.nx-tab--on[data-tab-id="minutes"]', { timeout: 15000 }).catch(() => {});
+    T.check('a screen (bus.open navId): its tab shown', !!(await page.$('.nx-tab--on[data-tab-id="minutes"]')));
+    await page.evaluate(() => new Promise((r) => require(['resources/js/shellBus'], (bus) => { bus.open({ record: 'jira-analysis', params: { key: 'ABC-7' } }); r(); })));
+    await page.waitForSelector('.nx-tab[data-tab-id="jira-analysis:ABC-7"]', { timeout: 15000 }).catch(() => {});
+    T.check('…a record (bus.open record + params): its tab opened', !!(await page.$('.nx-tab[data-tab-id="jira-analysis:ABC-7"]')));
+    await page.evaluate(() => new Promise((r) => require(['resources/js/shellBus'], (bus) => { bus.toast('Saved.', 'success'); r(); })));
+    await page.waitForSelector('.nx-toast', { timeout: 5000 }).catch(() => {});
+    T.check('…a plain toast: shown, no button', /Saved\./.test(await text(page, '.nx-toast')) && !(await page.$('#nxToastAct')));
     T.eq('no browser errors', errs().join(' | ').slice(0, 1500), '');
   } catch (e) {
     T.check('no exception: ' + (e && e.message), false);

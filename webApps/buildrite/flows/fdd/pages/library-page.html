@@ -109,6 +109,59 @@
     </section>
   </div>
 
+  <!-- Design documents: each story's functional design (Analyze with AI → Create the functional design) -->
+  <section class="nx-card nx-flib-designs" id="flibDesigns" aria-label="Design documents">
+    <div class="nx-card-head">
+      <h2>Design documents</h2>
+      <span class="nx-note" id="flibDesignCount"><oj-bind-text value="[[ $functions.designCount($variables.designs) ]]"></oj-bind-text></span>
+      <span class="nx-min-flex"></span>
+      <input type="search" class="nx-flib-filter" id="flibDesignQ" data-field="designQ" :value="[[ $variables.designQ ]]" on-input="[[ $listeners.onField ]]" placeholder="Find: story, title, sprint…">
+    </div>
+    <oj-bind-if test="[[ $variables.designs.length === 0 ]]">
+      <div class="nx-empty" id="flibDesignEmpty">None yet. Open a story in <b>Analyze with AI</b> and press <b>Create the functional design</b>: its FDD, wireframes, TDD, integration touch points and developer reference are saved here as a PDF, and pushed to git with the library.</div>
+    </oj-bind-if>
+    <oj-bind-if test="[[ $variables.designs.length > 0 && !$variables.designsLocal ]]">
+      <div class="nx-note nx-flib-designnote">Listed from the app. Their files are in git (docs/fdd/designs): open them in the desktop app.</div>
+    </oj-bind-if>
+    <oj-bind-if test="[[ $variables.designs.length > 0 ]]">
+      <div class="nx-flib-designwrap">
+        <!-- a grid, not a <table>: the HTML parser moves a loop element out of a table body -->
+        <div class="nx-flib-designgrid" id="flibDesignTable" role="table" aria-label="Design documents">
+          <div class="nx-flib-designhead" role="row"><span role="columnheader">Story</span><span role="columnheader">Sprint</span><span role="columnheader">Version</span><span role="columnheader">Date</span><span role="columnheader">By</span><span role="columnheader">Read against</span><span role="columnheader">PDF</span><span role="columnheader"></span></div>
+          <oj-bind-for-each data="[[ $functions.designRows($variables.designs, $variables.designQ) ]]">
+            <template data-oj-as="d">
+              <div :class="[[ 'nx-flib-designrow' + (d.data.latest ? '' : ' nx-flib-designrow--old') ]]" role="row" :data-id="[[ d.data.id ]]">
+                <span class="nx-flib-designstory" role="cell">
+                  <button type="button" class="nx-linkbtn" data-act="story" :data-id="[[ d.data.id ]]" on-click="[[ $listeners.onDesign ]]" title="Open the story in Analyze with AI"><b><oj-bind-text value="[[ d.data.key ]]"></oj-bind-text></b></button>
+                  <span><oj-bind-text value="[[ d.data.title ]]"></oj-bind-text></span>
+                  <oj-bind-if test="[[ !!d.data.epic ]]"><span class="nx-note"><oj-bind-text value="[[ 'Epic ' + d.data.epic ]]"></oj-bind-text></span></oj-bind-if>
+                </span>
+                <span role="cell" data-col="Sprint"><oj-bind-text value="[[ d.data.sprint || '—' ]]"></oj-bind-text></span>
+                <span role="cell" data-col="Version"><span class="nx-flib-ver"><oj-bind-text value="[[ 'v' + d.data.version ]]"></oj-bind-text></span><oj-bind-if test="[[ d.data.latest ]]"> <span class="nx-badge nx-flib-latest">Latest</span></oj-bind-if></span>
+                <span role="cell" data-col="Date"><oj-bind-text value="[[ d.data.day ]]"></oj-bind-text></span>
+                <span role="cell" data-col="By"><oj-bind-text value="[[ d.data.by || '—' ]]"></oj-bind-text></span>
+                <span role="cell" data-col="Read against"><oj-bind-text value="[[ d.data.fddName || 'the story only' ]]"></oj-bind-text></span>
+                <span role="cell" data-col="PDF"><oj-bind-text value="[[ $functions.designSize(d.data) ]]"></oj-bind-text></span>
+                <span class="nx-flib-designacts" role="cell">
+                  <oj-bind-if test="[[ $variables.designsLocal ]]">
+                    <button type="button" class="nx-btn nx-btn--sm" data-act="preview" :data-id="[[ d.data.id ]]" on-click="[[ $listeners.onDesign ]]"><span class="oj-ux-ico-view" aria-hidden="true"></span>Preview</button>
+                    <oj-bind-if test="[[ !!(d.data.files && d.data.files.pdf) ]]">
+                      <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="download" data-kind="pdf" :data-id="[[ d.data.id ]]" on-click="[[ $listeners.onDesign ]]" title="Download the PDF"><span class="oj-ux-ico-download" aria-hidden="true"></span>PDF</button>
+                    </oj-bind-if>
+                    <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="download" data-kind="md" :data-id="[[ d.data.id ]]" on-click="[[ $listeners.onDesign ]]" title="Download the Markdown (to edit it)">MD</button>
+                    <oj-bind-if test="[[ $variables.canUpload ]]">
+                      <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-flib-del" data-act="remove" :data-id="[[ d.data.id ]]" on-click="[[ $listeners.onDesign ]]" title="Delete this design"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+                    </oj-bind-if>
+                  </oj-bind-if>
+                </span>
+              </div>
+            </template>
+          </oj-bind-for-each>
+        </div>
+      </div>
+    </oj-bind-if>
+  </section>
+
   <!-- The outline of one FDD, and the text of a section -->
   <oj-bind-if test="[[ $variables.viewId ]]">
     <section class="nx-card nx-flib-outline" id="flibOutline" aria-label="Outline">
@@ -140,5 +193,32 @@
         </div>
       </div>
     </section>
+  </oj-bind-if>
+
+  <!-- A design document, as it prints (its HTML; the PDF is the same pages) -->
+  <oj-bind-if test="[[ !!$variables.designView ]]">
+    <div class="nx-modal" id="flibDesignView">
+      <button type="button" class="nx-modal-scrim" aria-label="Close" data-act="close" on-click="[[ $listeners.onDesign ]]"></button>
+      <div class="nx-dialog nx-an-designdlg" role="dialog" aria-modal="true" aria-label="Design document">
+        <div class="nx-dialog-head">
+          <div class="nx-dialog-titles">
+            <div class="nx-kicker">Functional design</div>
+            <h2 class="nx-dialog-title" id="flibDesignViewTitle"><oj-bind-text value="[[ $variables.designView.title ]]"></oj-bind-text></h2>
+          </div>
+          <oj-bind-if test="[[ $variables.designView.hasPdf ]]">
+            <button type="button" class="nx-btn nx-btn--sm" data-act="download" data-kind="pdf" :data-id="[[ $variables.designView.id ]]" on-click="[[ $listeners.onDesign ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> Download PDF</button>
+            <button type="button" class="nx-btn nx-btn--sm" data-act="open" data-kind="pdf" :data-id="[[ $variables.designView.id ]]" on-click="[[ $listeners.onDesign ]]" title="Open the PDF in this PC's PDF reader"><span class="oj-ux-ico-external-link" aria-hidden="true"></span> Open PDF</button>
+          </oj-bind-if>
+          <button type="button" class="nx-iconbtn" aria-label="Close" data-act="close" on-click="[[ $listeners.onDesign ]]"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+        </div>
+        <div class="nx-dialog-body nx-an-designbody">
+          <oj-bind-if test="[[ $variables.designView.loading ]]"><div class="nx-empty">Opening…</div></oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.designView.error ]]"><div class="nx-an-designerr"><oj-bind-text value="[[ $variables.designView.error ]]"></oj-bind-text></div></oj-bind-if>
+          <oj-bind-if test="[[ !$variables.designView.loading && !!$variables.designView.html ]]">
+            <iframe class="nx-an-designframe" id="flibDesignFrame" title="Design document" sandbox="" :srcdoc="[[ $variables.designView.html ]]"></iframe>
+          </oj-bind-if>
+        </div>
+      </div>
+    </div>
   </oj-bind-if>
 </div>
