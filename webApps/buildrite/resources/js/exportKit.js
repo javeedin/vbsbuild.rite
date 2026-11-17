@@ -126,26 +126,57 @@ define([], function () {
 
   /** An .xlsx workbook (bytes): one sheet, bold frozen header with a filter, columns sized to their content. */
   function xlsx(rows, columns, name) {
+    return xlsxBook([{ name: name, rows: rows, columns: columns }]);
+  }
+
+  /** One worksheet's XML: the header bold and frozen, a filter on it, columns sized to their content (capped). */
+  function sheetXml(rows, columns) {
     var t = table(rows, columns);
-    var sheet = sheetName(name);
     var widths = t.head.map(function (h, i) {
-      return Math.min(60, Math.max(8, String(h).length + 2, t.body.reduce(function (m, r) { return Math.max(m, String(r[i]).length + 2); }, 0)));
+      return Math.min(60, Math.max(8, String(h).length + 2, t.body.reduce(function (m, r) { return Math.max(m, Math.min(80, String(r[i]).length) + 2); }, 0)));
     });
     var rowXml = function (cells, r, head) {
       return '<row r="' + r + '">' + cells.map(function (v, i) {
         var ref = colName(i) + r;
         if (!head && isNumber(v, columns[i])) return '<c r="' + ref + '"><v>' + v + '</v></c>';
-        return '<c r="' + ref + '" t="inlineStr"' + (head ? ' s="1"' : '') + '><is><t xml:space="preserve">' + xml(head ? v : safeText(v)) + '</t></is></c>';
+        return '<c r="' + ref + '" t="inlineStr"' + (head ? ' s="1"' : '') + '><is><t xml:space="preserve">' + xml(head ? v : safeText(String(v).slice(0, 32000))) + '</t></is></c>';
       }).join('') + '</row>';
     };
     var last = colName(Math.max(0, t.head.length - 1)) + (t.body.length + 1);
+    return {
+      last: last,
+      xml: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        + '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+        + '<cols>' + widths.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols>'
+        + '<sheetData>' + rowXml(t.head, 1, true) + t.body.map(function (r, i) { return rowXml(r, i + 2, false); }).join('') + '</sheetData>'
+        + '<autoFilter ref="A1:' + last + '"/></worksheet>'
+    };
+  }
+
+  /**
+   * A workbook of several sheets (bytes): sheets = [{ name, rows, columns }], each like xlsx's one sheet. Sheet names are
+   * made safe for Excel (31 characters, no [ ] : * ? / \) and kept apart (Steps, Steps 2).
+   */
+  function xlsxBook(sheets) {
+    var list = (sheets || []).filter(function (x) { return x && (x.columns || []).length; });
+    if (!list.length) list = [{ name: 'Sheet1', rows: [], columns: [{ key: 'empty', label: '' }] }];
+    var seen = {};
+    var names = list.map(function (x) {
+      var base = sheetName(x.name);
+      var n = base;
+      for (var i = 2; seen[n.toLowerCase()]; i++) n = base.slice(0, 31 - String(i).length - 1) + ' ' + i;
+      seen[n.toLowerCase()] = true;
+      return n;
+    });
+    var built = list.map(function (x) { return sheetXml(x.rows || [], x.columns); });
     var files = {
       '[Content_Types].xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
         + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
         + '<Default Extension="xml" ContentType="application/xml"/>'
         + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-        + '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+        + built.map(function (b, i) { return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'; }).join('')
         + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
         + '</Types>',
       '_rels/.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -154,13 +185,14 @@ define([], function () {
         + '</Relationships>',
       'xl/workbook.xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-        + '<sheets><sheet name="' + xml(sheet) + '" sheetId="1" r:id="rId1"/></sheets>'
-        + '<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">\'' + xml(sheet.replace(/'/g, "''")) + '\'!$A$1:$'
-        + last.replace(/(\d+)$/, '$$$1') + '</definedName></definedNames></workbook>',
+        + '<sheets>' + names.map(function (n, i) { return '<sheet name="' + xml(n) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>'; }).join('') + '</sheets>'
+        + '<definedNames>' + names.map(function (n, i) {
+          return '<definedName name="_xlnm._FilterDatabase" localSheetId="' + i + '" hidden="1">\'' + xml(n.replace(/'/g, "''")) + '\'!$A$1:$' + built[i].last.replace(/(\d+)$/, '$$$1') + '</definedName>';
+        }).join('') + '</definedNames></workbook>',
       'xl/_rels/workbook.xml.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
-        + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+        + built.map(function (b, i) { return '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>'; }).join('')
+        + '<Relationship Id="rId' + (built.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
         + '</Relationships>',
       'xl/styles.xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
@@ -170,14 +202,9 @@ define([], function () {
         + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
         + '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>'
         + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
-        + '</styleSheet>',
-      'xl/worksheets/sheet1.xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-        + '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
-        + '<cols>' + widths.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols>'
-        + '<sheetData>' + rowXml(t.head, 1, true) + t.body.map(function (r, i) { return rowXml(r, i + 2, false); }).join('') + '</sheetData>'
-        + '<autoFilter ref="A1:' + last + '"/></worksheet>'
+        + '</styleSheet>'
     };
+    built.forEach(function (b, i) { files['xl/worksheets/sheet' + (i + 1) + '.xml'] = b.xml; });
     return zip(files);
   }
 
@@ -394,12 +421,14 @@ define([], function () {
     csv: csv,
     tsv: tsv,
     xlsx: xlsx,
+    xlsxBook: xlsxBook,
     zip: zip,
     crc32: crc32,
     printHtml: printHtml,
     followupHtml: followupHtml,
     copyRich: copyRich,
     download: download,
+    printDocument: printDocument,
     fileName: fileName,
     run: run
   };

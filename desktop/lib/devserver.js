@@ -1174,6 +1174,18 @@ function createDevServer(o) {
               log(`API scenario step tried: ${b.step} -> ${r.ok ? r.result.state + (r.result.status ? ' (' + r.result.status + ', ' + r.result.ms + ' ms)' : '') : r.error}`);
               return jsonA(200, r);
             }
+            // a run's test results report (resources/js/scenarioReport.js html) printed to an A4 PDF by the desktop app's
+            // hidden window (no script runs in it); the page saves the bytes
+            if (pathname === '/__api/scenarios/pdf' && post) {
+              if (typeof o.htmlToPdf !== 'function') return jsonA(200, { ok: false, noPdf: true, error: 'Saving a PDF needs the desktop app: use Print and choose Save as PDF.' });
+              const html = String(b.html || '');
+              if (!/^<!doctype html>/i.test(html) || html.length > 20 * 1024 * 1024) return jsonA(200, { ok: false, error: 'No report to print.' });
+              try {
+                const pdf = await o.htmlToPdf(html);
+                log(`API scenario report printed to PDF: ${String(b.name || '').slice(0, 80)} (${Math.round(pdf.length / 1024)} KB)`);
+                return jsonA(200, { ok: true, base64: Buffer.from(pdf).toString('base64'), size: pdf.length });
+              } catch (e) { return jsonA(200, { ok: false, error: 'The PDF could not be made: ' + String((e && e.message) || e) }); }
+            }
             if (pathname === '/__api/scenarios/run' && post) {
               const r = await sc.run(String(b.id || ''), env, { allowWrites: !!b.allowWrites, by: who(), scope: b.scope === 'main' ? 'main' : 'all' });
               log(`API scenario ${b.id} -> ${r.ok ? (r.run.ok ? 'passed' : 'failed') + ' (' + r.run.passed + ' ok, ' + r.run.failed + ' failed, ' + r.run.skipped + ' skipped, ' + r.run.ms + ' ms)' : r.error}`);

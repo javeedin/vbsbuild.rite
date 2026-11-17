@@ -1,4 +1,4 @@
-define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
+define(['resources/js/shellBus', 'resources/js/scenarioClient', 'resources/js/scenarioReport'], (bus, SC, Report) => {
   'use strict';
 
   // API Scenarios: binding helpers (the chains do the work through resources/js/scenarioClient.js).
@@ -338,6 +338,24 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
       });
       return out;
     }
+    /** The APIs dialog's headline: how many APIs the page makes, of which kind, and how many are steps here. */
+    jaSummary(ja, sc) {
+      const list = this.jaApis(ja, sc);
+      if (!list.length) return '';
+      const n = (f) => list.filter(f).length;
+      const rest = n((a) => a.method !== 'REPORT' && !a.transport);
+      const parts = [rest + (rest === 1 ? ' REST call' : ' REST calls')];
+      const rep = n((a) => a.method === 'REPORT');
+      if (rep) parts.push(rep + ' BI Publisher report' + (rep === 1 ? '' : 's'));
+      if (n((a) => a.transport)) parts.push('BI Publisher\'s own service');
+      const tail = [];
+      const lov = n((a) => a.roleKey === 'list');
+      if (lov) tail.push(lov + (lov === 1 ? ' list of values' : ' lists of values'));
+      const w = n((a) => a.writes);
+      if (w) tail.push(w + ' change' + (w === 1 ? 's' : '') + ' data');
+      tail.push(n((a) => a.inScenario) + ' in this scenario');
+      return list.length + (list.length === 1 ? ' API: ' : ' APIs: ') + parts.join(', ') + ' · ' + tail.join(' · ');
+    }
     /** The flow card: the pages by how far they are from this one (a column each), each page with its state. */
     flowCols(flow) {
       if (!flow || !flow.nodes || !flow.nodes.length) return [];
@@ -428,6 +446,21 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
           values: s.lov && s.values ? s.lov.field + ': ' + s.lov.total + ' value(s) — ' + s.values.slice(0, 6).map((v) => v.text || v.key).join(', ') + (s.lov.total > 6 ? ', …' : '') : '',
           handed: Object.keys(s.extracted || {}).map((k) => k + ' = ' + s.extracted[k]).join(', '), answer: s.answer || '', url: s.request ? s.request.method + ' ' + s.request.url : 'Its answer' })) }));
     }
+    // ── the test results report of the run shown (resources/js/scenarioReport.js): as the PDF prints, as the Excel sheets ──
+    reportModel(sc, run, pages, answers) { return sc && run ? Report.model(sc, run, { pages: pages || [], answers: answers !== false }) : null; }
+    reportHead(sc, run, pages) {
+      const m = this.reportModel(sc, run, pages, false);
+      return m ? { title: m.title, ok: m.ok, verdict: m.verdict,
+        sub: m.scope + ' · run ' + m.runAt + (m.runBy ? ' by ' + m.runBy : '') + ' · ' + m.counts.passed + ' passed, ' + m.counts.failed + ' failed, ' + m.counts.skipped + ' not run' } : { title: '', ok: false, verdict: '', sub: '' };
+    }
+    reportHtml(sc, run, pages, answers) { const m = this.reportModel(sc, run, pages, answers); return m ? Report.html(m) : ''; }
+    reportSheets(sc, run, pages, answers) {
+      const m = this.reportModel(sc, run, pages, answers);
+      return m ? Report.preview(m).map((s, i) => Object.assign(s, { idx: String(i), style: { gridTemplateColumns: '44px ' + s.head.map(() => 'auto').join(' ') } })) : [];
+    }
+    /** The sheet shown in the Excel preview, as a list of one (a for-each over it gives the grid its own scope). */
+    reportSheetOne(sheets, idx) { const s = (sheets || [])[Number(idx) || 0] || (sheets || [])[0]; return s ? [s] : []; }
+    reportTabClass(key, cur) { return 'nx-sc-tab' + (key === (cur || 'pdf') ? ' nx-sc-tab--on' : ''); }
     // ── the list of every scenario; one scenario's header, its tabs, the gate to its flow ──
     /** A scenario's status from its last run: passed · failed · not run · draft (no step yet). */
     statusOf(s, last) {

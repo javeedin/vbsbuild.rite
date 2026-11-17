@@ -66,10 +66,12 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
   const scenarioStore = S.open({ api: apiStore, dir: path.join(dir, 'scenarios') });
   const apiProject = () => ({ catalogFile: path.join(pg.root, 'services', 'catalog.json'), getIdentity: () => ({ username: 'priya.raman', roles: ['SHOP_CLERK'], fusion: null }) });
   const reportBodies = [];
+  const pdfHtml = []; // the report HTML the desktop app was asked to print to PDF
   const searches = []; // the text each search-as-you-type report was run with
   let appUrl = 'http://localhost:18950/vp/shell/orders/order-create'; // the app's window (▶ Run): the page it shows
   const appWindow = () => (appUrl ? { url: appUrl, title: 'Working copy — Shop' } : null);
   const env = await E.start({ port: 19872, pagesStore: pg.store, apiStore, apiProject, scenarioStore, appWindow,
+    htmlToPdf: async (h) => { pdfHtml.push(h); return Buffer.from('%PDF-1.4\n% the e2e stand-in for the desktop app\'s printToPDF\n'); },
     handle: (r, res) => {
       if (r.path === '/shop/v1/orders' && r.method === 'GET') return res.json(EXAMPLE);
       if (/^\/shop\/v1\/orders\/41$/.test(r.path)) return res.json(EXAMPLE.data[0]);
@@ -223,8 +225,8 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     await page.click('#scJourney .nx-sc-jpage[data-page="' + LIST + '"] .nx-sc-japis');
     await page.waitForSelector('#scJApis #scJaList .nx-sc-jaapi', { timeout: 15000 });
     const listApis = await page.$$eval('#scJaList .nx-sc-jaapi', (a) => a.map((x) => ({ key: x.getAttribute('data-key'), t: x.textContent.replace(/\s+/g, ' ').trim() })));
-    T.check('the main page\'s APIs: "The page the scenario starts on", getOrders as step 1, no Open in a tab',
-      /The page the scenario starts on/.test(await text(page, '#scJApis .nx-kicker')) && listApis.some((x) => x.key === 'shopApi/getOrders' && /Step 1$/.test(x.t)) && !(await page.$('#scJaTab')), JSON.stringify(listApis));
+    T.check('the main page\'s APIs: "The page this scenario tests", getOrders as step 1, no Open in a tab',
+      /The page this scenario tests/.test(await text(page, '#scJApis .nx-kicker')) && listApis.some((x) => x.key === 'shopApi/getOrders' && /Step 1$/.test(x.t)) && !(await page.$('#scJaTab')), JSON.stringify(listApis));
     await page.click('#scJaSeq .nx-sc-jaq button[data-act="jGo"]');
     await page.waitForSelector('#scTabMain.nx-sc-tab--on', { timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(300);
@@ -378,6 +380,74 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     T.check('…the report sent with the value given (P_CUSTOMER_ID = 42)', reportBodies.some((b) => /reportAbsolutePath>\/Custom\/Shop\/CUSTOMERS_RP\.xdo</.test(b) && /P_CUSTOMER_ID[\s\S]{0,200}>42</.test(b)), (reportBodies[reportBodies.length - 1] || '').slice(0, 300));
     await tab('Flow');
     T.check('…a change of data held back counts as done: the main page is done, its flow open', /The main page is done: all 3 of its APIs ran \(1 change data, held back\)/.test(await text(page, '#scGateText')), await text(page, '#scGateText'));
+    await tab('Main');
+
+    T.section('the page\'s APIs from the header; the test results report as a PDF and an Excel workbook');
+    await page.click('#scPageApis');
+    await page.waitForSelector('#scJApis #scJaList .nx-sc-jaapi', { timeout: 15000 });
+    T.check('the icon beside "Page it tests": the APIs this page uses — how many of each kind, which are steps here, every one in the order the page makes them',
+      /The page this scenario tests/.test(await text(page, '#scJApis .nx-kicker')) && (await text(page, '#scJaTitle')) === 'New Order'
+      && /^4 APIs: 2 REST calls, 1 BI Publisher report, BI Publisher's own service · 1 list of values · 1 changes data · 3 in this scenario$/.test(await text(page, '#scJaSum'))
+      && (await page.$$('#scJaList .nx-sc-jaapi')).length === 4 && (await page.$$('#scJaSeq .nx-sc-jaq')).length === 3, await text(page, '#scJaSum'));
+    await env.shot('api-scenarios-page-apis.png');
+    await page.click('#scJApis .nx-dialog-head .nx-iconbtn[data-act="jClose"]');
+    await page.waitForTimeout(250);
+    // the PDF: previewed as it prints
+    await page.click('#scRepPdfBtn');
+    await page.waitForSelector('#scReport #scRepFrame', { timeout: 10000 });
+    await page.waitForTimeout(500);
+    const rep = page.frameLocator('#scRepFrame');
+    const repSteps = await rep.locator('table.steps tbody tr').evaluateAll((a) => a.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    T.check('Test report › PDF: a dialog — the scenario, PASSED, what ran, when, by whom, the counts', /^SC-0004 · Happy path — New Order PASSED$/.test(await text(page, '#scRepTitle'))
+      && /^Main page · run .* by priya\.raman · 2 passed, 0 failed, 1 not run$/.test(await text(page, '#scRepSub')) && /nx-sc-tab--on/.test(await page.$eval('#scRepTabPdf', (b) => b.className)),
+      await text(page, '#scRepTitle') + ' / ' + await text(page, '#scRepSub'));
+    T.check('…the preview as the PDF prints: the verdict, the page tested, each step with its result (the create not run, writes held), the checks, the evidence',
+      (await rep.locator('.verdict').textContent()) === 'PASSED' && /Page tested\s*New Order — shop\/orders\/order-create/.test(await rep.locator('table.facts').textContent())
+      && repSteps.length === 3 && /Passed/.test(repSteps[0]) && /CUSTOMERS_RP/.test(repSteps[1]) && /Not run/.test(repSteps[2]) && /changes data/.test(repSteps[2])
+      && (await rep.locator('table.checks tbody tr').count()) > 2 && (await rep.locator('.ev').count()) === 2, repSteps.join(' | '));
+    await env.shot('api-scenarios-report-pdf.png');
+    await page.click('#scRepAnswers');
+    await page.waitForTimeout(400);
+    T.check('"Include each request and its answer" off: no evidence in the document', (await rep.locator('.ev').count()) === 0 && !/Evidence/.test(await rep.locator('body').textContent()));
+    const [pdfDl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('#scRepPdf')]);
+    const pdfFile = await pdfDl.path();
+    T.check('Save PDF: printed to PDF by the desktop app and saved — SC-0004-test-results-<day>.pdf, the document as previewed (no evidence)',
+      /^SC-0004-test-results-\d{4}-\d{2}-\d{2}\.pdf$/.test(pdfDl.suggestedFilename()) && fs.readFileSync(pdfFile, 'latin1').startsWith('%PDF') && pdfHtml.length === 1
+      && /SC-0004/.test(pdfHtml[0]) && /@page \{ size: A4 landscape/.test(pdfHtml[0]) && !/Evidence: each request/.test(pdfHtml[0]) && /Saved SC-0004-test-results-.*\.pdf/.test(await result()),
+      pdfDl.suggestedFilename() + ' / ' + await result());
+    // Excel: the workbook's sheets, previewed as a spreadsheet
+    await page.click('#scRepTabExcel');
+    await page.waitForSelector('#scRepGrid', { timeout: 10000 });
+    let sheets = await page.$$eval('#scRepSheets .nx-sc-xlsheet', (a) => a.map((x) => x.textContent.trim()));
+    const gridHead = await page.$$eval('#scRepGrid .nx-sc-xlh', (a) => a.map((x) => x.textContent.trim()));
+    T.check('Excel: the workbook\'s sheets as tabs — Summary, Steps, Checks (no Evidence while the answers are left out); Summary shown as a sheet (A, B · Field, Value)',
+      sheets.length === 3 && /^Summary \(16\)$/.test(sheets[0]) && /^Steps \(3\)$/.test(sheets[1]) && /^Checks \(\d+\)$/.test(sheets[2])
+      && (await page.$$eval('#scRepGrid .nx-sc-xlletter', (a) => a.map((x) => x.textContent.trim()))).join() === 'A,B' && gridHead.join() === 'Field,Value', sheets.join(' | ') + ' / ' + gridHead.join());
+    await page.click('#scRepAnswers');
+    await page.waitForTimeout(400);
+    sheets = await page.$$eval('#scRepSheets .nx-sc-xlsheet', (a) => a.map((x) => x.textContent.trim()));
+    await page.click('#scRepSheets .nx-sc-xlsheet[data-key="1"]');
+    await page.waitForTimeout(400);
+    const stepHead = await page.$$eval('#scRepGrid .nx-sc-xlh', (a) => a.map((x) => x.textContent.trim()));
+    const resCells = await page.$$eval('#scRepGrid .nx-sc-xlc.ok, #scRepGrid .nx-sc-xlc.skip, #scRepGrid .nx-sc-xlc.bad', (a) => a.map((x) => x.className.replace('nx-sc-xlc', '').trim() + ':' + x.textContent.trim()));
+    T.check('…the answers back in: an Evidence sheet; the Steps sheet — its columns, each result marked (Passed, Passed, Not run)', /^Evidence \(2\)$/.test(sheets[3] || '')
+      && stepHead.slice(0, 6).join() === 'Step,Page,Step name,Method,API,Result' && resCells.join() === 'ok:Passed,ok:Passed,skip:Not run', sheets.join(' | ') + ' / ' + resCells.join());
+    await env.shot('api-scenarios-report-excel.png');
+    const [xlDl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('#scRepXlsx')]);
+    const xl = fs.readFileSync(await xlDl.path()).toString('latin1');
+    T.check('Download Excel: SC-0004-test-results-<day>.xlsx — a workbook of four sheets (Summary, Steps, Checks, Evidence)',
+      /^SC-0004-test-results-\d{4}-\d{2}-\d{2}\.xlsx$/.test(xlDl.suggestedFilename()) && xl.startsWith('PK') && /xl\/worksheets\/sheet4\.xml/.test(xl)
+      && /<sheet name="Summary" sheetId="1"/.test(xl) && /<sheet name="Evidence" sheetId="4"/.test(xl) && /Saved SC-0004-test-results-.*\.xlsx: 3 step\(s\)/.test(await result()), xlDl.suggestedFilename() + ' / ' + await result());
+    await page.click('#scReport .nx-dialog-head .nx-iconbtn');
+    await page.waitForTimeout(300);
+    T.check('✕ closes the report', !(await page.$('#scReport')));
+    // a run of the Runs tab: its own report
+    await tab('Runs');
+    await page.click('#scRuns .nx-sc-runrep');
+    await page.waitForSelector('#scReport #scRepFrame', { timeout: 10000 });
+    T.check('Runs › Report on a run: that run\'s report (PDF first)', /^SC-0004 · Happy path — New Order PASSED$/.test(await text(page, '#scRepTitle')) && /nx-sc-tab--on/.test(await page.$eval('#scRepTabPdf', (b) => b.className)));
+    await page.click('#scReport .nx-modal-scrim', { position: { x: 6, y: 6 } });
+    await page.waitForTimeout(300);
     await tab('Main');
 
     T.section('a list of values: searched and picked as on the page, here and in the steps that send it');

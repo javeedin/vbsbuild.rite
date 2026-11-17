@@ -1,4 +1,4 @@
-define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pagesClient', 'resources/js/shellBus'], (ActionChain, SC, PC, bus) => {
+define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pagesClient', 'resources/js/shellBus', 'resources/js/scenarioReport', 'resources/js/exportKit'], (ActionChain, SC, PC, bus, Report, exportKit) => {
   'use strict';
 
   // API Scenarios. The screen opens on the list of every scenario; + New scenario (or a row) opens one scenario in a tab of
@@ -187,6 +187,52 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         const r = await SC.remove(v.sc.id);
         say(r, 'Deleted.');
         if (r.ok) { changed(); try { bus.close(tabId()); } catch (e) { /* no shell */ } }
+        return;
+      }
+      // ── the test results report of the run shown: a PDF (previewed as it prints) and an Excel workbook ──
+      if (act === 'report') {
+        if (!v.run) { say({ ok: false, body: { error: 'Run the scenario first: the report is of a run.' } }); return; }
+        v.report = { tab: key === 'excel' ? 'excel' : 'pdf', sheet: '0', answers: !(v.report && v.report.answers === false), busy: false };
+        return;
+      }
+      if (act === 'runReport') {
+        const r = await SC.runOf(v.sc ? v.sc.page : v.page, key);
+        if (!r.ok) { say(r); return; }
+        v.run = r.body.run;
+        v.report = { tab: 'pdf', sheet: '0', answers: true, busy: false };
+        return;
+      }
+      if (act === 'reportClose') { v.report = null; return; }
+      if (act === 'reportTab') { if (v.report) v.report = Object.assign({}, v.report, { tab: key === 'excel' ? 'excel' : 'pdf' }); return; }
+      if (act === 'reportSheet') { if (v.report) v.report = Object.assign({}, v.report, { sheet: String(key || '0') }); return; }
+      if (act === 'reportAnswers') { if (v.report) v.report = Object.assign({}, v.report, { answers: !v.report.answers, sheet: '0' }); return; }
+      if (act === 'reportPrint' || act === 'reportPdf' || act === 'reportXlsx') {
+        if (!v.report || !v.run || !v.sc) return;
+        const m = Report.model(copy(v.sc), copy(v.run), { pages: v.pages || [], answers: !!v.report.answers });
+        if (act === 'reportXlsx') {
+          const name = Report.fileName(m, 'xlsx');
+          exportKit.download(name, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', exportKit.xlsxBook(Report.sheets(m)));
+          say({ ok: true }, 'Saved ' + name + ': ' + m.steps.length + ' step(s), ' + m.checks.length + ' check(s)' + (m.answers ? ', ' + m.evidence.length + ' answer(s)' : '') + '.');
+          return;
+        }
+        const html = Report.html(m);
+        if (act === 'reportPrint') { exportKit.printDocument(html); return; }
+        if (v.report.busy) return;
+        v.report = Object.assign({}, v.report, { busy: true });
+        try {
+          const r = await SC.pdf(html, m.file);
+          if (r.ok && r.body.base64) {
+            const bin = atob(r.body.base64);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            const name = Report.fileName(m, 'pdf');
+            exportKit.download(name, 'application/pdf', bytes);
+            say({ ok: true }, 'Saved ' + name + ' (' + Math.max(1, Math.round(bytes.length / 1024)) + ' KB).');
+          } else if (r.body && r.body.noPdf) {
+            exportKit.printDocument(html);
+            bus.toast('Choose "Save as PDF" in the print dialog.', 'info');
+          } else say(r);
+        } finally { if (v.report) v.report = Object.assign({}, v.report, { busy: false }); }
         return;
       }
       if (act === 'showRun') { const r = await SC.runOf(v.sc ? v.sc.page : v.page, key); if (r.ok) v.run = r.body.run; else say(r); return; }

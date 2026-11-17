@@ -89,10 +89,13 @@
           <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="scDelete" data-act="delete" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy || !$variables.sc.id ]]">Delete</button>
         </div>
         <div class="nx-sc-hfields">
-          <label class="nx-sc-hf nx-sc-hf--wide"><span>Page it tests</span>
-            <select class="nx-cm-input" id="scPageSel" data-act="setPage" on-change="[[ $listeners.onSel ]]" aria-label="The page it tests">
-              <oj-bind-for-each data="[[ $functions.pageOptions($variables.pages, $variables.sc.page) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
-            </select></label>
+          <div class="nx-sc-hf nx-sc-hf--wide"><span>Page it tests</span>
+            <div class="nx-sc-pagepick">
+              <select class="nx-cm-input" id="scPageSel" data-act="setPage" on-change="[[ $listeners.onSel ]]" aria-label="The page it tests">
+                <oj-bind-for-each data="[[ $functions.pageOptions($variables.pages, $variables.sc.page) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+              </select>
+              <button type="button" class="nx-iconbtn nx-sc-pageapis" id="scPageApis" data-act="jApis" :data-key="[[ $variables.sc.page ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ !$variables.sc.page ]]" title="The APIs this page uses" aria-label="The APIs this page uses"><span class="oj-ux-ico-list" aria-hidden="true"></span></button>
+            </div></div>
           <label class="nx-sc-hf"><span>Type</span>
             <select class="nx-cm-input" id="scKind" data-field="kind" on-change="[[ $listeners.onField ]]" aria-label="Type">
               <oj-bind-for-each data="[[ $functions.kinds($variables.sc) ]]"><template data-oj-as="k"><option :value="[[ k.data.id ]]" :selected="[[ k.data.on ]]"><oj-bind-text value="[[ k.data.label ]]"></oj-bind-text></option></template></oj-bind-for-each>
@@ -492,7 +495,8 @@
                   <div :class="[[ 'nx-sc-runrow' + (h.data.ok ? '' : ' nx-sc-runrow--fail') ]]">
                     <span><oj-bind-text value="[[ h.data.icon ]]"></oj-bind-text></span><span><oj-bind-text value="[[ h.data.scope ]]"></oj-bind-text></span>
                     <span><oj-bind-text value="[[ h.data.counts ]]"></oj-bind-text></span><span><oj-bind-text value="[[ h.data.when ]]"></oj-bind-text></span><span><oj-bind-text value="[[ h.data.by ]]"></oj-bind-text></span>
-                    <span><button type="button" class="nx-linkbtn" data-act="showRun" :data-key="[[ h.data.id ]]" on-click="[[ $listeners.onAct ]]">Open</button></span>
+                    <span class="nx-sc-runacts"><button type="button" class="nx-linkbtn" data-act="showRun" :data-key="[[ h.data.id ]]" on-click="[[ $listeners.onAct ]]">Open</button>
+                      <button type="button" class="nx-linkbtn nx-sc-runrep" data-act="runReport" :data-key="[[ h.data.id ]]" on-click="[[ $listeners.onAct ]]" title="This run's test results: PDF and Excel">Report</button></span>
                   </div>
                 </template>
               </oj-bind-for-each>
@@ -506,6 +510,10 @@
           <div class="nx-card nx-sc-sec" id="scRun">
             <div class="nx-sc-head">
               <h2 :class="[[ 'nx-sc-runh nx-sc-runh--' + ($variables.run.ok ? 'ok' : 'fail') ]]"><oj-bind-text value="[[ $functions.runHead($variables.run) ]]"></oj-bind-text></h2>
+              <span class="nx-min-flex"></span>
+              <span class="nx-sc-repbtns" id="scRepBtns"><span class="nx-note">Test report</span>
+                <button type="button" class="nx-btn nx-btn--sm" id="scRepPdfBtn" data-act="report" data-key="pdf" on-click="[[ $listeners.onAct ]]" title="Preview this run's test results as a PDF"><span class="oj-ux-ico-file-pdf" aria-hidden="true"></span> PDF</button>
+                <button type="button" class="nx-btn nx-btn--sm" id="scRepXlsBtn" data-act="report" data-key="excel" on-click="[[ $listeners.onAct ]]" title="Preview this run's test results as an Excel workbook"><span class="oj-ux-ico-file-excel" aria-hidden="true"></span> Excel</button></span>
             </div>
             <oj-bind-for-each data="[[ $functions.runPart($variables.run, $variables.sc, $variables.scTab === 'runs' ? 'all' : $variables.scTab) ]]">
               <template data-oj-as="row">
@@ -543,7 +551,7 @@
       <div class="nx-dialog nx-sc-jadlg" role="dialog" aria-modal="true" aria-label="The page's APIs">
         <div class="nx-dialog-head">
           <div class="nx-dialog-titles">
-            <div class="nx-kicker"><oj-bind-text value="[[ $variables.journeyApis.idx > 0 ? 'Page ' + ($variables.journeyApis.idx + 1) + ' of the journey' : 'The page the scenario starts on' ]]"></oj-bind-text></div>
+            <div class="nx-kicker"><oj-bind-text value="[[ $variables.journeyApis.idx > 0 ? 'Page ' + ($variables.journeyApis.idx + 1) + ' of the journey' : 'The page this scenario tests' ]]"></oj-bind-text></div>
             <h2 class="nx-dialog-title" id="scJaTitle"><oj-bind-text value="[[ $variables.journeyApis.label ]]"></oj-bind-text></h2>
             <div class="nx-sub"><code><oj-bind-text value="[[ $variables.journeyApis.page ]]"></oj-bind-text></code></div>
           </div>
@@ -553,6 +561,7 @@
           <button type="button" class="nx-iconbtn" aria-label="Close" data-act="jClose" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
         </div>
         <div class="nx-dialog-body nx-sc-jabody">
+          <oj-bind-if test="[[ !!$functions.jaSummary($variables.journeyApis, $variables.sc) ]]"><p class="nx-sc-jasum" id="scJaSum"><oj-bind-text value="[[ $functions.jaSummary($variables.journeyApis, $variables.sc) ]]"></oj-bind-text></p></oj-bind-if>
           <h3 class="nx-sc-jah">In this scenario, in the order they run</h3>
           <oj-bind-if test="[[ $functions.jaSequence($variables.journeyApis, $variables.sc, $variables.run).length === 0 ]]"><p class="nx-note" id="scJaNoSeq">None of this page's APIs is a step of this scenario yet.</p></oj-bind-if>
           <ol class="nx-sc-jaseq" id="scJaSeq">
@@ -586,6 +595,68 @@
               </div>
             </template></oj-bind-for-each>
           </div>
+        </div>
+      </div>
+    </div>
+  </oj-bind-if>
+  <!-- ── the test results report of the run shown: previewed as the PDF prints and as the Excel workbook ── -->
+  <oj-bind-if test="[[ !!$variables.report && !!$variables.run && !!$variables.sc ]]">
+    <div class="nx-modal" id="scReport">
+      <button type="button" class="nx-modal-scrim" aria-label="Close" data-act="reportClose" on-click="[[ $listeners.onAct ]]"></button>
+      <div class="nx-dialog nx-sc-repdlg" role="dialog" aria-modal="true" aria-label="Test results report">
+        <div class="nx-dialog-head">
+          <div class="nx-dialog-titles">
+            <div class="nx-kicker">Test results report</div>
+            <h2 class="nx-dialog-title" id="scRepTitle"><oj-bind-text value="[[ $functions.reportHead($variables.sc, $variables.run, $variables.pages).title ]]"></oj-bind-text>
+              <span :class="[[ 'nx-sc-repverdict nx-sc-repverdict--' + ($functions.reportHead($variables.sc, $variables.run, $variables.pages).ok ? 'ok' : 'bad') ]]" id="scRepVerdict"><oj-bind-text value="[[ $functions.reportHead($variables.sc, $variables.run, $variables.pages).verdict ]]"></oj-bind-text></span></h2>
+            <div class="nx-sub" id="scRepSub"><oj-bind-text value="[[ $functions.reportHead($variables.sc, $variables.run, $variables.pages).sub ]]"></oj-bind-text></div>
+          </div>
+          <button type="button" class="nx-iconbtn" aria-label="Close" data-act="reportClose" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+        </div>
+        <div class="nx-sc-reptools">
+          <div class="nx-sc-tabs nx-sc-reptabs" role="tablist" aria-label="Report format">
+            <button type="button" role="tab" id="scRepTabPdf" :aria-selected="[[ $variables.report.tab !== 'excel' ? 'true' : 'false' ]]" :class="[[ $functions.reportTabClass('pdf', $variables.report.tab) ]]" data-act="reportTab" data-key="pdf" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-file-pdf" aria-hidden="true"></span> PDF</button>
+            <button type="button" role="tab" id="scRepTabExcel" :aria-selected="[[ $variables.report.tab === 'excel' ? 'true' : 'false' ]]" :class="[[ $functions.reportTabClass('excel', $variables.report.tab) ]]" data-act="reportTab" data-key="excel" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-file-excel" aria-hidden="true"></span> Excel</button>
+          </div>
+          <label class="nx-cc-check nx-sc-repans"><input type="checkbox" id="scRepAnswers" data-act="reportAnswers" on-click="[[ $listeners.onAct ]]" :checked="[[ !!$variables.report.answers ]]"> Include each request and its answer (evidence)</label>
+          <span class="nx-min-flex"></span>
+          <oj-bind-if test="[[ $variables.report.tab !== 'excel' ]]">
+            <button type="button" class="nx-btn nx-btn--sm" id="scRepPrint" data-act="reportPrint" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-print" aria-hidden="true"></span> Print</button>
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="scRepPdf" data-act="reportPdf" on-click="[[ $listeners.onAct ]]" :disabled="[[ !!$variables.report.busy ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> <oj-bind-text value="[[ $variables.report.busy ? 'Making the PDF…' : 'Save PDF' ]]"></oj-bind-text></button>
+          </oj-bind-if>
+          <oj-bind-if test="[[ $variables.report.tab === 'excel' ]]">
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="scRepXlsx" data-act="reportXlsx" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> Download Excel (.xlsx)</button>
+          </oj-bind-if>
+        </div>
+        <div class="nx-dialog-body nx-sc-repbody">
+          <oj-bind-if test="[[ $variables.report.tab !== 'excel' ]]">
+            <iframe class="nx-sc-repframe" id="scRepFrame" title="The test results as the PDF prints them" sandbox="" :srcdoc="[[ $functions.reportHtml($variables.sc, $variables.run, $variables.pages, $variables.report.answers) ]]"></iframe>
+          </oj-bind-if>
+          <oj-bind-if test="[[ $variables.report.tab === 'excel' ]]">
+            <div class="nx-sc-xlwrap">
+              <div class="nx-sc-xlsheets" id="scRepSheets" role="tablist" aria-label="Sheets">
+                <oj-bind-for-each data="[[ $functions.reportSheets($variables.sc, $variables.run, $variables.pages, $variables.report.answers) ]]"><template data-oj-as="sh">
+                  <button type="button" role="tab" :class="[[ 'nx-sc-xlsheet' + (sh.data.idx === ($variables.report.sheet || '0') ? ' nx-sc-xlsheet--on' : '') ]]" :data-key="[[ sh.data.idx ]]" data-act="reportSheet" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ sh.data.name + ' (' + sh.data.count + ')' ]]"></oj-bind-text></button>
+                </template></oj-bind-for-each>
+              </div>
+              <oj-bind-for-each data="[[ $functions.reportSheetOne($functions.reportSheets($variables.sc, $variables.run, $variables.pages, $variables.report.answers), $variables.report.sheet) ]]"><template data-oj-as="g">
+                <div class="nx-sc-xlscroll">
+                  <div class="nx-sc-xl" id="scRepGrid" role="table" :aria-label="[[ g.data.name ]]" :style="[[ g.data.style ]]">
+                    <div class="nx-sc-xlrow" role="row"><span class="nx-sc-xlc nx-sc-xlcorner"></span>
+                      <oj-bind-for-each data="[[ g.data.letters ]]"><template data-oj-as="l"><span class="nx-sc-xlc nx-sc-xlletter"><oj-bind-text value="[[ l.data ]]"></oj-bind-text></span></template></oj-bind-for-each></div>
+                    <div class="nx-sc-xlrow" role="row"><span class="nx-sc-xlc nx-sc-xln">1</span>
+                      <oj-bind-for-each data="[[ g.data.head ]]"><template data-oj-as="hh"><span class="nx-sc-xlc nx-sc-xlh"><oj-bind-text value="[[ hh.data ]]"></oj-bind-text></span></template></oj-bind-for-each></div>
+                    <oj-bind-for-each data="[[ g.data.body ]]"><template data-oj-as="xr">
+                      <div class="nx-sc-xlrow" role="row"><span class="nx-sc-xlc nx-sc-xln"><oj-bind-text value="[[ xr.data.n ]]"></oj-bind-text></span>
+                        <oj-bind-for-each data="[[ xr.data.cells ]]"><template data-oj-as="xc"><span :class="[[ 'nx-sc-xlc ' + xc.data.cls ]]" :title="[[ xc.data.full ]]"><oj-bind-text value="[[ xc.data.v ]]"></oj-bind-text></span></template></oj-bind-for-each>
+                      </div>
+                    </template></oj-bind-for-each>
+                  </div>
+                </div>
+                <p class="nx-note nx-sc-xlnote"><oj-bind-text value="[[ g.data.count + ' row(s) on ' + g.data.name + (g.data.more ? ' — the first ' + (g.data.count - g.data.more) + ' shown here; every row is in the workbook' : '') + '. A long cell is cut here and whole in the workbook (hover to read it).' ]]"></oj-bind-text></p>
+              </template></oj-bind-for-each>
+            </div>
+          </oj-bind-if>
         </div>
       </div>
     </div>

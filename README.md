@@ -121,6 +121,17 @@ shows them all again). When you come back from your app's window, the list says 
     the ones not in the scenario. On a linked page: **Open in a tab** (that page's own scenarios), **Remove link** (its
     steps go, and any page after it; asked first) and **Reconnect** (linked again, its steps read fresh from its code).
 - **Runs** tab: every run of this scenario, newest first (the main page or the whole flow, who ran it, how it went).
+- **The page's APIs.** The list icon beside *Page it tests* opens the APIs the page uses: how many REST calls, BI
+  Publisher reports, lists of values and calls that change data it has, which of them are steps of this scenario (in the
+  order they run, with how each went), and every API in the order the page makes them, with **+ Add** for the others.
+- **Test report: PDF and Excel.** **Test report › PDF / Excel** on a run's results (or **Report** on a run in Runs)
+  opens a preview of that run's report:
+  - **PDF**: the report as it prints (A4 landscape): the verdict, what ran, when and by whom, the counts, the
+    scenario's facts, each step with its page, API, result, HTTP status, time and rows, every check with what came
+    back, and each request with its answer as evidence (leave *Include each request and its answer* off for a short
+    report). **Save PDF** prints it to a PDF in the desktop app; **Print** opens the print dialog.
+  - **Excel**: the workbook as sheets (Summary, Steps, Checks, Evidence), previewed like a spreadsheet; **Download
+    Excel (.xlsx)** saves it. Long answers are whole in the workbook.
 
 - **Build it yourself from the page's APIs.** **Add from the page's APIs** (Main scenario) lists every REST call and
   BI Publisher report the page's code makes, with where the page uses it (a list of values and its field, as it opens,

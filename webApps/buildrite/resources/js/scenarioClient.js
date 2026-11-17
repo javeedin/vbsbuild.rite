@@ -22,6 +22,8 @@ define([], function () {
     save: function (scenario) { return call('/save', 'POST', { scenario: scenario }); },
     remove: function (id) { return call('/remove', 'POST', { id: id }); },
     // draft from the page; into = the scenario open (its id, name and notes kept, its main page's steps read again)
+    // a run's report (its printable HTML) printed to PDF by the desktop app: { base64, size }
+    pdf: function (html, name) { return call('/pdf', 'POST', { html: html, name: name || '' }); },
     draft: function (page, into) { return call('/draft', 'POST', { page: page, into: into || null }); },
     // the journey continued on a page the last one goes to; where a page goes next
     extend: function (scenario, page) { return call('/extend', 'POST', { scenario: scenario, page: page }); },
