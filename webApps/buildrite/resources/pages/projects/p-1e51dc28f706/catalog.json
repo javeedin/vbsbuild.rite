@@ -1,5 +1,5 @@
 {
- "scannedAt": "2026-11-17T10:53:21.518Z",
+ "scannedAt": "2026-11-17T16:33:50.424Z",
  "pages": [
   {
    "id": "vbredwoodapp//shell",
@@ -343,7 +343,15 @@
    ],
    "menu": "Equipment Master",
    "stories": [],
-   "sheet": null
+   "sheet": {
+    "at": "2026-11-17T16:33:50.349Z",
+    "by": "rite.user",
+    "codeHash": "645a9232eedf493a",
+    "screenshots": 0,
+    "ai": false,
+    "rest": 16,
+    "chains": 22
+   }
   },
   {
    "id": "vbredwoodapp/equipment-foundation/equipment-record-cost",

@@ -1,0 +1,1136 @@
+{
+ "id": "vbredwoodapp/equipment-foundation/equipment-master",
+ "facts": {
+  "id": "vbredwoodapp/equipment-foundation/equipment-master",
+  "app": "vbredwoodapp",
+  "appName": "vbredwoodapp",
+  "flow": "equipment-foundation",
+  "page": "equipment-master",
+  "label": "Equipment Master",
+  "description": "",
+  "route": {
+   "url": "/vp/shell/equipment-foundation/equipment-master",
+   "menu": "",
+   "needs": ""
+  },
+  "files": [
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.json",
+    "lines": 1921
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+    "lines": 764
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.js",
+    "lines": 910
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/BeforeExitChain.js",
+    "lines": 28
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/CancelImportDialogChain.js",
+    "lines": 89
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ClearImportWarningChain.js",
+    "lines": 75
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ClearStagingChain.js",
+    "lines": 123
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/EquipmentInitChain.js",
+    "lines": 113
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/GoToCreateChain.js",
+    "lines": 28
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ImportFromFusionChain.js",
+    "lines": 424
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ImportUnitsFromFusionChain.js",
+    "lines": 297
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/LoadStagingChain.js",
+    "lines": 216
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/LoadUnitStagingChain.js",
+    "lines": 88
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/LoadUnmatchedValuesChain.js",
+    "lines": 90
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/OpenImportDialogChain.js",
+    "lines": 221
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/RefreshEquipmentListChain.js",
+    "lines": 31
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/RefreshStagingChain.js",
+    "lines": 28
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ReleaseSyncLockChain.js",
+    "lines": 32
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/RowClickChain.js",
+    "lines": 72
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/RunInProgressChain.js",
+    "lines": 41
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/SaveStagingClassesChain.js",
+    "lines": 222
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/SecondaryActionChain.js",
+    "lines": 63
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/StagingPageChangeChain.js",
+    "lines": 49
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/SyncFromFusionChain.js",
+    "lines": 188
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/enforcePageAccessChain.js",
+    "lines": 72
+   }
+  ],
+  "codeHash": "645a9232eedf493a",
+  "features": {
+   "sections": [
+    "Equipment Master",
+    "Import From Fusion"
+   ],
+   "actions": [
+    {
+     "label": "Fetch",
+     "listener": "onRunImport",
+     "chains": [
+      "ImportFromFusionChain"
+     ]
+    },
+    {
+     "label": "Refresh",
+     "listener": "onRefreshStaging",
+     "chains": [
+      "RefreshStagingChain"
+     ]
+    },
+    {
+     "label": "Refresh",
+     "listener": "onUnitRefresh",
+     "chains": [
+      "LoadUnitStagingChain"
+     ]
+    },
+    {
+     "label": "Previous",
+     "listener": "onUnitPrevPage",
+     "chains": [
+      "LoadUnitStagingChain"
+     ]
+    },
+    {
+     "label": "Previous",
+     "listener": "onStagingPrevPage",
+     "chains": [
+      "StagingPageChangeChain"
+     ]
+    },
+    {
+     "label": "Clear Fetch",
+     "listener": "onClearStaging",
+     "chains": [
+      "ClearStagingChain"
+     ]
+    },
+    {
+     "label": "review -> Import is the whole flow, and the labels now say so. -->",
+     "listener": "onSaveStagingClasses",
+     "chains": [
+      "SaveStagingClassesChain"
+     ]
+    },
+    {
+     "label": "Close",
+     "listener": "onCancelImport",
+     "chains": [
+      "CancelImportDialogChain"
+     ]
+    },
+    {
+     "label": "Equipment Master: sp primary action",
+     "listener": "spPrimaryAction",
+     "chains": [
+      "GoToCreateChain"
+     ]
+    },
+    {
+     "label": "Equipment Master: sp secondary action",
+     "listener": "spSecondaryAction",
+     "chains": [
+      "SecondaryActionChain"
+     ]
+    },
+    {
+     "label": "oj-table: first selected row changed",
+     "listener": "onRowAction",
+     "chains": [
+      "RowClickChain"
+     ]
+    },
+    {
+     "label": "Import From Fusion: oj close",
+     "listener": "onImportDialogClosed",
+     "chains": [
+      "CancelImportDialogChain"
+     ]
+    },
+    {
+     "label": "oj-select-single: value changed",
+     "listener": "onImportFilterChanged",
+     "chains": [
+      "ClearImportWarningChain"
+     ]
+    },
+    {
+     "label": "oj-tab-bar: selection changed",
+     "listener": "onImportTabChanged",
+     "chains": [
+      "LoadUnitStagingChain"
+     ]
+    },
+    {
+     "label": "oj-select-single: value changed",
+     "listener": "onUnitFilterChanged",
+     "chains": [
+      "LoadUnitStagingChain"
+     ]
+    }
+   ],
+   "fields": [
+    "Filter by Item Class (optional)",
+    "Filter by Item Type (optional)",
+    "Filter by Status (optional)",
+    "Search fetched items",
+    "Stage status",
+    "Search staged rows",
+    "Number, name, serial, type, manufacturer...",
+    "All statuses"
+   ],
+   "columns": [
+    "Import Status",
+    "Item Number",
+    "Item Description",
+    "Item Type",
+    "Item Class Code",
+    "Fusion Inventory Item Id",
+    "Organization Code",
+    "Reject Reason",
+    "Maintenance Asset Number",
+    "Eqr Equipment Master Id",
+    "Equipment Number",
+    "Equipment Name",
+    "Equipment Description",
+    "Equipment Type",
+    "Eqr Equipment Class Id",
+    "Eqr Equipment Subclass Id",
+    "Org Id",
+    "Inventory Item Ref Id",
+    "Fa Asset Ref Id",
+    "Is Serial Controlled",
+    "Is Lot Controlled",
+    "Is Fixed Asset Tracked",
+    "Is Inventory Tracked",
+    "Is Maintenance Tracked",
+    "Surplus Flag",
+    "Ownership Status",
+    "Status",
+    "Manufacturer",
+    "Mfg Year",
+    "Fuel Type",
+    "Engine Sn",
+    "Capacity",
+    "Weight",
+    "Current Location Id",
+    "Equipment Image",
+    "Attribute1",
+    "Attribute2",
+    "Attribute3",
+    "Attribute4",
+    "Attribute5",
+    "Attribute6",
+    "Attribute7",
+    "Attribute8",
+    "Attribute9",
+    "Attribute10",
+    "Attribute11",
+    "Attribute12",
+    "Attribute13",
+    "Attribute14",
+    "Attribute15",
+    "Number1",
+    "Number2",
+    "Number3",
+    "Number4",
+    "Number5",
+    "Date1",
+    "Date2",
+    "Date3",
+    "Date4",
+    "Date5"
+   ],
+   "components": [
+    "oj-button",
+    "oj-c-button",
+    "oj-c-input-text",
+    "oj-data-grid",
+    "oj-dialog",
+    "oj-form-layout",
+    "oj-popup",
+    "oj-progress-bar",
+    "oj-select-single",
+    "oj-sp-collection-container",
+    "oj-sp-messages-banner",
+    "oj-sp-smart-search",
+    "oj-sp-smart-search-page",
+    "oj-tab-bar",
+    "oj-table"
+   ],
+   "inputs": [],
+   "lifecycle": [
+    {
+     "when": "before the page opens",
+     "chains": [
+      "enforcePageAccessChain"
+     ]
+    },
+    {
+     "when": "when the page opens",
+     "chains": [
+      "EquipmentInitChain"
+     ]
+    }
+   ]
+  },
+  "logic": {
+   "chains": [
+    {
+     "name": "BeforeExitChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/BeforeExitChain.js",
+     "about": "vbBeforeExit: leaving the page while Sync, Fetch or Import runs stops it part-way. A Sync left mid-run stages the stock but never applies it, and its run log stays RUNNING until the next Sync. Ask first; returning { cancelled: true } keeps the user on the page. Covers in-app navigation. Closing or reloading the tab is covered by the browser's own prompt (setLeaveGuard in the page module).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "vbBeforeExit"
+     ],
+     "lines": 28
+    },
+    {
+     "name": "CancelImportDialogChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/CancelImportDialogChain.js",
+     "about": "Close the Import From Fusion dialog -- the Close button, the X, and Esc. Bound to oj-dialog's oj-close as well as the Close button, so it runs AFTER the X / Esc has already closed the dialog. It therefore re-opens the dialog whenever closing should not have happened: * while Fetch, Import or Clear is running (isBusy). Closing then threw away the run's result message, and reopening started a second load racing the run's own. (The Close button is disabled then; the X and Esc were not.) * when there are ticked rows or class edits and the user cancels the discard prompt. These were dropped…",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onCancelImport",
+      "onImportDialogClosed"
+     ],
+     "lines": 89
+    },
+    {
+     "name": "ClearImportWarningChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ClearImportWarningChain.js",
+     "about": "Runs when Item Class, Item Type, Status or the search changes in the import dialog. Those dropdowns FILTER THE REVIEW GRID — they do not filter the Fusion extract, which always pulls every item (OIC has no channel to pass a filter to BIP; see LoadStagingChain). So a change reloads the rows from page 0 with the new filter. Page 0 because the old page number means nothing against a differently sized result. A reload replaces the rows on screen, so pending ticks and class edits would be lost. With any pending, the user is asked first; Cancel puts the dropdowns back to the filters the grid is…",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onImportFilterChanged"
+     ],
+     "lines": 75
+    },
+    {
+     "name": "ClearStagingChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ClearStagingChain.js",
+     "about": "\"Clear Fetch\" (was \"Clear Staging\") — discard what Fetch brought in that nobody has acted on. Since 2026-10-03 that includes AUTO_MAPPED rows: their class is only a Class Mapping suggestion until someone ticks and imports. For: \"the last import brought in junk, let me start over.\" NOT for re-importing with a different filter — a FULL sync already clears staging on batch 1 (EQR_ITEM_IMPORT_MERGE_PKG.merge_data, body line 111). ── WHAT IS PROTECTED, AND WHY ─────────────────────────────────────── The endpoint deletes ONLY rows with RESOLVED_CLASS_ID IS NULL: unclassified -> DELETED. Costs…",
+     "calls": [
+      "eqp-v1/clearEquipmentImportStaging"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onClearStaging"
+     ],
+     "lines": 123
+    },
+    {
+     "name": "EquipmentInitChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/EquipmentInitChain.js",
+     "about": "SDP+DPV init: loads ONLY the LOVs needed by the facet dropdowns, by the row-level enrichment (class/subclass name lookups), and by the staging review grid's cascading class -> subclass editors. Equipment rows are fetched by the SDP+DPV themselves once the table binds to equipmentDPV.instance — no explicit row fetch here.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/fetchAllPages",
+      "resources/js/orgFilterOptions"
+     ],
+     "on": [
+      "vbEnter"
+     ],
+     "lines": 113
+    },
+    {
+     "name": "GoToCreateChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/GoToCreateChain.js",
+     "about": "Create needs FULL access to EQR_EQUIPMENT_MASTER. The button is hidden below FULL; this check covers a click that lands before the binding re-renders. The Create page has its own guard for direct URLs.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [
+      "page equipment-create"
+     ],
+     "modules": [],
+     "on": [
+      "spPrimaryAction"
+     ],
+     "lines": 28
+    },
+    {
+     "name": "ImportFromFusionChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ImportFromFusionChain.js",
+     "about": "\"Fetch\" in Import From Fusion — pulls Fusion item DEFINITIONS and their STOCK, classifies the items, and promotes both. 1. items EQUIP_ITEM_DEF_SYNC -> EQR_EQUIPMENT_MASTER_T (definition grain) 2. stock serials / lots / on-hand -> EQR_SERIAL_REF_T / EQR_LOT_REF_T / EQR_INVENTORY_ITEM_REF_T (ImportUnitsFromFusionChain) 3. promote resolve_and_promote: each item is classified from the Class Mapping config by CLASS_MAPPING_PRECEDENCE (AUTO_MAPPED / ERRORED / UNMAPPED). A match is a SUGGESTION: it merges only when a person ticks the row and clicks Import (SaveStagingClassesChain). Stock of items…",
+     "calls": [
+      "ics/runFusionTableSync",
+      "eqp-v1/promoteEquipmentImport",
+      "eqp-v1/getJobRunLogs"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onRunImport"
+     ],
+     "lines": 424
+    },
+    {
+     "name": "ImportUnitsFromFusionChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ImportUnitsFromFusionChain.js",
+     "about": "Stock stage of Fetch — pulls PHYSICAL UNITS (serials, lots, on-hand stock) into the stock STAGING tables EQR_SERIAL_REF_T / EQR_LOT_REF_T / EQR_INVENTORY_ITEM_REF_T. Called only by ImportFromFusionChain, between the item sync and promote. Progress goes to Fetch's status line, no toast is raised, and the result ({ ok, total, results, message }) is RETURNED for Fetch to report. There is no separate Import Units button any more, so the chain has no status line or notifications of its own (removed 2026-10-05). ── WHY STOCK IS STAGED NOW ────────────────────────────────────────── Every unit is…",
+     "calls": [
+      "ics/runFusionTableSync"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 297
+    },
+    {
+     "name": "LoadStagingChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/LoadStagingChain.js",
+     "about": "Loads EQR_EQUIPMENT_MASTER_T into the import screen's review grid. Called when the screen opens, after every import, and after every save, so the user sees what actually landed rather than a count they must trust. GET /equiprite/v1/equipment-import/staging was implemented 2026-09-24. Verified live: all 5,266 rows reachable by paging, unclassified rows ordered first, and totalElements is honest even when a requested size is capped — so a short page never has to be guessed at. EVERY row is shown. No status filter is applied by default: a row's status (AUTO_MAPPED, ERRORED, UNMAPPED...)…",
+     "calls": [
+      "eqp-v1/getEquipmentImportStaging"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 216
+    },
+    {
+     "name": "LoadUnitStagingChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/LoadUnitStagingChain.js",
+     "about": "Loads one of the stock / asset-group STAGING tables into the Import dialog's read-only tab (Serials, Lots, On-hand, Asset Groups), so the user sees what Fetch brought in next to the Items tab. Read-only on purpose: these rows need no decision. Serials, lots and on-hand move when their item is imported; asset-group members link when their serial reaches EQR_SERIAL_REF. STAGE_STATUS / SKIP_REASON say which rows are still waiting. One shared set of unit* variables serves all four tabs -- only one is visible at a time -- and a tab switch reloads page 0.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onImportTabChanged",
+      "onUnitFilterChanged",
+      "onUnitRefresh",
+      "onUnitPrevPage",
+      "onUnitNextPage"
+     ],
+     "lines": 88
+    },
+    {
+     "name": "LoadUnmatchedValuesChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/LoadUnmatchedValuesChain.js",
+     "about": "Loads the \"What to map next\" popup (info icon) of the Import dialog: the largest groups of staged items that no Class Mapping matched. WHY THIS EXISTS: thousands of staged rows sit at IMPORT_STATUS='ERRORED' because no mapping matches them, and fixing them one row at a time in the review grid does not scale. One Class Mapping on the right value classifies every item in its group (Pharmaceuticals alone is 441 items on paasdev), so the admin needs the GROUPS, largest first, not the rows. GET /equiprite/v1/equipment-import/unmatched-values, ordered by itemCount DESC server-side. ── QUIET BY…",
+     "calls": [
+      "eqp-v1/getEquipmentImportUnmatchedValues"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 90
+    },
+    {
+     "name": "OpenImportDialogChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/OpenImportDialogChain.js",
+     "about": "Opens the \"Import From Fusion\" screen: loads the two filter LOVs and the staging grid. The screen is a WORKING VIEW of EQR_EQUIPMENT_MASTER_T, not a wizard. The import stages rows rather than promoting them — class and subclass are assigned by hand afterwards — so the grid stays on screen throughout and refreshes after each run. ── WHY THERE IS A FILTER AT ALL ────────────────────────────────────── The Fusion item master holds everything the customer has ever defined — on Dev 20 that is 5,266 inventory items, including groceries and laptops. Importing all of it and letting the user sift…",
+     "calls": [
+      "ProjectLOV/getFscmRestApiResources11_13_18_05ItemClasses",
+      "ProjectLOV/getFscmRestApiResources11_13_18_05StandardLookupsLOV"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 221
+    },
+    {
+     "name": "RefreshEquipmentListChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/RefreshEquipmentListChain.js",
+     "about": "Re-read the Equipment Master list from the server. Runs from the Refresh icon in the page header and whenever the Import From Fusion dialog closes. Until 2026-10-05 nothing refreshed the list: rows merged by Import did not appear behind the dialog until a full page reload, which read as \"Import did nothing\". Refreshing the SDP keeps the current search and sort.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 31
+    },
+    {
+     "name": "RefreshStagingChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/RefreshStagingChain.js",
+     "about": "Refresh icon in the Import From Fusion dialog: re-read the review grid and the \"What to map next\" panel. Picks up a Class Mapping change re-classified on the server (async reclassify) without closing the dialog. preserve: ticks and class edits on rows still on screen are kept, so a refresh never throws away work and needs no prompt.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onRefreshStaging"
+     ],
+     "lines": 28
+    },
+    {
+     "name": "ReleaseSyncLockChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ReleaseSyncLockChain.js",
+     "about": "Drop OUR run's group lock when a Fetch or Sync gives up before its final step (promote / refresh-units release it themselves). Without this a run that failed at the item step blocks every Fetch and Sync for the full 20-minute stale window. Called only by a run that HOLDS the lock (at least one batch was accepted), and always with that run's startTime, so it can never drop another run's lock. Quiet: a failed release only means the server reaps the lock after 20 minutes.",
+     "calls": [
+      "eqp-v1/releaseFusionSyncLock"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 32
+    },
+    {
+     "name": "RowClickChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/RowClickChain.js",
+     "about": "Row click on the master grid → navigate to equipment-units page. controlType resolution (read from master record fetched by id, not from the grid row — the SDP can return a stripped projection that omits flags): isSerialControlled === 'Y' → 'SERIAL' (renders the serial-refs table) isLotControlled === 'Y' → 'LOT' (renders the lot-refs table) neither → 'INVENTORY' (renders the inventory-item-refs table)",
+     "calls": [
+      "eqp-v1/getEquipriteV1EquipmentMasterById"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [
+      "page equipment-units"
+     ],
+     "modules": [],
+     "on": [
+      "onRowAction"
+     ],
+     "lines": 72
+    },
+    {
+     "name": "RunInProgressChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/RunInProgressChain.js",
+     "about": "Is a Fetch or a Sync already running somewhere -- another tab, another user? Returns { running, label, startedAt }. Reads the server lock (GET /fusion-sync/lock, EQR_INT_SYNC_LOCK, V387). The lock itself is enforced by the engine -- a refused call comes back statusCode 'E' / 'BUSY: …' -- so this is only the friendly early answer, before anything is started. A lock idle past its stale limit is reaped by the server on the next acquire, so it is not reported as running. Fails OPEN: if the lock cannot be read, the run starts and the engine decides.",
+     "calls": [
+      "eqp-v1/getFusionSyncLock"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 41
+    },
+    {
+     "name": "SaveStagingClassesChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/SaveStagingClassesChain.js",
+     "about": "Import the TICKED rows of the review grid: confirm their class/subclass and merge them into EQR_EQUIPMENT_MASTER. Since 2026-10-03 nothing merges without this step. Fetch classifies items from the Class Mapping config as AUTO_MAPPED (a suggestion with the class filled in) and promote merges only MAPPED rows, which only this PATCH writes. Each ticked row is sent with the user's pending class edit if it has one, otherwise with the class already on the row. An edited row that is not ticked is NOT imported. ONE bulk PATCH, not one call per row. The per-row pattern used elsewhere…",
+     "calls": [
+      "eqp-v1/patchEquipmentImportStagingAssignments",
+      "eqp-v1/promoteEquipmentImport"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onSaveStagingClasses"
+     ],
+     "lines": 222
+    },
+    {
+     "name": "SecondaryActionChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/SecondaryActionChain.js",
+     "about": "Dispatches the Equipment Master page's secondary action menu. The menu items are declared in $page.variables.secondaryActions (importFusion / refresh / syncFusion; mapView is off). Until this chain existed the menu rendered but nothing was wired to it, so every item was inert. NOTE: oj-sp-*-page emits the clicked id on $event.detail.secondaryItem, NOT $event.detail.id. Reading .id yields undefined and the dispatch silently does nothing. (request-detail-page.json uses .id and only appears to work because it has a single action with a harmless fallback.)",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "spSecondaryAction"
+     ],
+     "lines": 63
+    },
+    {
+     "name": "StagingPageChangeChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/StagingPageChangeChain.js",
+     "about": "Move the review grid to another page of fetched rows. NEVER IMPORTS. This used to \"save pending edits first\" -- and since 2026-10-03 saving IS importing (PATCH + promote of the ticked rows), so one class edit plus 30 ticks merged 30 rows into the equipment master on a click of Next, with no Import pressed. Found in review, 2026-10-05. Ticks and edits belong to the rows on screen. Leaving the page with any pending asks first (pendingWorkCount) and, on OK, discards them; Cancel stays put with everything intact. Nothing pending = no prompt, so a pass through 50 pages of untouched rows is still…",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onStagingNextPage",
+      "onStagingPrevPage"
+     ],
+     "lines": 49
+    },
+    {
+     "name": "SyncFromFusionChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/SyncFromFusionChain.js",
+     "about": "Sync from Fusion — refresh what EquipRite already holds from Fusion. Unlike Import From Fusion it never brings in new items (those need a class first). It updates: 1. items already in the master: Fusion-owned fields only, never class / subclass. DELTA on the EQUIP_ITEM_REFRESH_SYNC row's own watermark, so only items Fusion changed since the last Sync are read. 2. their units: the three yard-stock syncs, then POST /fusion-sync/refresh-units moves them onto EQR_SERIAL_REF / EQR_LOT_REF / EQR_INVENTORY_ITEM_REF. Rules (product owner, 2026-10-05), enforced in EQR_ITEM_REFRESH_PKG: - units no…",
+     "calls": [
+      "eqp-v1/refreshFusionSyncUnits",
+      "ics/runFusionTableSync",
+      "eqp-v1/getFusionSyncExceptions"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 188
+    },
+    {
+     "name": "enforcePageAccessChain",
+     "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/enforcePageAccessChain.js",
+     "about": "Page-level RBAC deep-link guard. GENERATED - every copy is byte-identical; change the template and regenerate rather than editing one copy. Copies exist because a page's eventListeners resolve a bare chain id against that page's OWN <page>-chains folder, so an app-level chain referenced by name 404s. This file holds NO policy: the decision (canEnterPage), the page code (getPageCodeForPage), the redirect target (getRoleHomeTarget) and the same-flow test (isSameFlow) all live in $application.functions. Deriving the page code at runtime is what lets every copy be identical.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "vbBeforeEnter"
+     ],
+     "lines": 72
+    }
+   ],
+   "modules": [
+    {
+     "name": "arrayDataGridProvider",
+     "file": "webApps/vbredwoodapp/resources/js/arrayDataGridProvider.js",
+     "about": "=========================================================================== ArrayDataGridProvider — from the Oracle JET cookbook =========================================================================== Extracted verbatim from timesheet-detail-page.js (2026-09-24), where it had been inlined. It is entirely generic: it takes {data, columnHeader} arrays and knows nothing about timesheets, so a second consumer must SHARE it rather than paste a second copy. oj-data-grid is the ONLY component in…",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 217
+    },
+    {
+     "name": "fetchAllPages",
+     "file": "webApps/vbredwoodapp/resources/js/fetchAllPages.js",
+     "about": "Read a whole paged list, not just its first page. ASKING FOR A BIG size IS NOT ENOUGH. These endpoints cap the page and return their own maximum without saying so. Verified on the equipment master: 306 rows exist, `size=10000` came back with recordCount=306, pageSize=200, totalPages=2, hasMore=true — a valid HTTP 200 carrying two thirds of the data. Nothing throws, nothing warns; the caller just silently works from a partial set. That truncation has already caused two separate visible bugs: -…",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 84
+    },
+    {
+     "name": "orgFilterOptions",
+     "file": "webApps/vbredwoodapp/resources/js/orgFilterOptions.js",
+     "about": "Org smart-search filter — one definition of the chip, shared by every page that offers it (Equipment Schedule, Equipment Master, Equipment Workbench). WHAT \"ORG\" IS. The inventory org a unit sits in, taken from BU & Org Mapping rows with ORG_ROLE = 'EQUIPMENT_YARD' (EQR_BU_ORG_MAPPING). That is the whole vocabulary: a BU has ONE list of orgs where its equipment lives, and there is no separate maintenance-org concept in EquipRite — Fusion models an inv-org-to-maint-org link but leaves it NULL…",
+     "local": [],
+     "calls": [
+      "eqp-v1/getBuOrgMappings"
+     ],
+     "reports": [],
+     "lines": 257
+    }
+   ],
+   "variables": 66
+  },
+  "integrations": {
+   "rest": [
+    {
+     "endpoint": "eqp-v1/clearEquipmentImportStaging",
+     "service": "eqp-v1",
+     "operation": "clearEquipmentImportStaging",
+     "method": "DELETE",
+     "path": "/equiprite/v1/equipment-import/staging",
+     "summary": "Delete UNCLASSIFIED rows from EQR_EQUIPMENT_MASTER_T",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "ClearStagingChain"
+     ]
+    },
+    {
+     "endpoint": "ics/runFusionTableSync",
+     "service": "ics",
+     "operation": "runFusionTableSync",
+     "method": "POST",
+     "path": "/ic/api/integration/v2/flows/rest/project/EQUIPRITE_DEV/EQP_CMN_FUSION_TABLE_SYNC_SUB/1.0/fusion-table-sync",
+     "summary": "Run one batch of a configured Fusion sync",
+     "backend": "ics",
+     "backendLabel": "Oracle Integration Cloud (OIC)",
+     "usedBy": [
+      "ImportFromFusionChain",
+      "ImportUnitsFromFusionChain",
+      "SyncFromFusionChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/promoteEquipmentImport",
+     "service": "eqp-v1",
+     "operation": "promoteEquipmentImport",
+     "method": "POST",
+     "path": "/equiprite/v1/equipment-import/promote",
+     "summary": "Classify staged Fusion items and promote them to EQR_EQUIPMENT_MASTER",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "ImportFromFusionChain",
+      "SaveStagingClassesChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/getJobRunLogs",
+     "service": "eqp-v1",
+     "operation": "getJobRunLogs",
+     "method": "GET",
+     "path": "/equiprite/v1/job-run-logs",
+     "summary": "List job run logs",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "ImportFromFusionChain"
+     ],
+     "params": {
+      "jobName": "{{JOB_NAME}}",
+      "size": "1",
+      "orderBy": "startedAt:desc"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/getEquipmentImportStaging",
+     "service": "eqp-v1",
+     "operation": "getEquipmentImportStaging",
+     "method": "GET",
+     "path": "/equiprite/v1/equipment-import/staging",
+     "summary": "Rows currently in EQR_EQUIPMENT_MASTER_T",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "LoadStagingChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/getEquipmentImportUnmatchedValues",
+     "service": "eqp-v1",
+     "operation": "getEquipmentImportUnmatchedValues",
+     "method": "GET",
+     "path": "/equiprite/v1/equipment-import/unmatched-values",
+     "summary": "Largest groups of staged items no Class Mapping matched",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "LoadUnmatchedValuesChain"
+     ],
+     "params": {
+      "limit": "{{LIMIT}}"
+     }
+    },
+    {
+     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05ItemClasses",
+     "service": "ProjectLOV",
+     "operation": "getFscmRestApiResources11_13_18_05ItemClasses",
+     "method": "GET",
+     "path": "/fscmRestApi/resources/11.13.18.05/itemClasses",
+     "summary": "",
+     "backend": "fusion",
+     "backendLabel": "Oracle Fusion REST",
+     "usedBy": [
+      "OpenImportDialogChain"
+     ],
+     "params": {
+      "q": "EnabledFlag=true;ItemCreationAllowedFlag=true",
+      "fields": "ItemClassId,ItemClass,ItemClassCode",
+      "onlyData": "true",
+      "limit": "500",
+      "orderBy": "ItemClass:asc"
+     }
+    },
+    {
+     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05StandardLookupsLOV",
+     "service": "ProjectLOV",
+     "operation": "getFscmRestApiResources11_13_18_05StandardLookupsLOV",
+     "method": "GET",
+     "path": "/fscmRestApi/resources/11.13.18.05/standardLookupsLOV",
+     "summary": "",
+     "backend": "fusion",
+     "backendLabel": "Oracle Fusion REST",
+     "usedBy": [
+      "OpenImportDialogChain"
+     ],
+     "params": {
+      "fields": "LookupCode,Meaning",
+      "onlyData": "true",
+      "limit": "200"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/releaseFusionSyncLock",
+     "service": "eqp-v1",
+     "operation": "releaseFusionSyncLock",
+     "method": "DELETE",
+     "path": "/equiprite/v1/fusion-sync/lock",
+     "summary": "Release the group lock held by the caller's own run (it gave up before its final step)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "ReleaseSyncLockChain"
+     ],
+     "params": {
+      "startTime": "{{startTime}}",
+      "reason": "ABANDONED_BY_CLIENT"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/getEquipriteV1EquipmentMasterById",
+     "service": "eqp-v1",
+     "operation": "getEquipriteV1EquipmentMasterById",
+     "method": "GET",
+     "path": "/equiprite/v1/equipment-master/{id}",
+     "summary": "Get equipment by ID",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "RowClickChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/getFusionSyncLock",
+     "service": "eqp-v1",
+     "operation": "getFusionSyncLock",
+     "method": "GET",
+     "path": "/equiprite/v1/fusion-sync/lock",
+     "summary": "Current holder of the EQUIP_* Fusion sync group lock (EQR_INT_SYNC_LOCK, V387)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "RunInProgressChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/patchEquipmentImportStagingAssignments",
+     "service": "eqp-v1",
+     "operation": "patchEquipmentImportStagingAssignments",
+     "method": "PATCH",
+     "path": "/equiprite/v1/equipment-import/staging/assignments",
+     "summary": "Bulk-assign class/subclass to staged Fusion items",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "SaveStagingClassesChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/refreshFusionSyncUnits",
+     "service": "eqp-v1",
+     "operation": "refreshFusionSyncUnits",
+     "method": "POST",
+     "path": "/equiprite/v1/fusion-sync/refresh-units",
+     "summary": "Sync from Fusion: refresh unit tables after the stock syncs, and return the run's counts",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "SyncFromFusionChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/getFusionSyncExceptions",
+     "service": "eqp-v1",
+     "operation": "getFusionSyncExceptions",
+     "method": "GET",
+     "path": "/equiprite/v1/fusion-sync/exceptions",
+     "summary": "Items Sync from Fusion could not fully apply (EQR_FUSION_SYNC_EXCEPTION)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "SyncFromFusionChain"
+     ],
+     "params": {
+      "status": "OPEN"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/getBuOrgMappings",
+     "service": "eqp-v1",
+     "operation": "getBuOrgMappings",
+     "method": "GET",
+     "path": "/equiprite/v1/bu-org-mappings",
+     "summary": "Get Business Unit to Inventory Org mappings",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "orgFilterOptions"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/getEquipriteV1EquipmentMaster",
+     "service": "eqp-v1",
+     "operation": "getEquipriteV1EquipmentMaster",
+     "method": "GET",
+     "path": "/equiprite/v1/equipment-master",
+     "summary": "Search / list equipment (paginated, filterable, sortable)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "the page's data (ServiceDataProvider)"
+     ]
+    }
+   ],
+   "reports": [],
+   "local": [],
+   "backends": [
+    "eqpt",
+    "Oracle Integration Cloud (OIC)",
+    "Oracle Fusion REST"
+   ],
+   "lovs": [
+    {
+     "field": "Filter by Item Class (optional)",
+     "component": "oj-select-single",
+     "target": "selectedItemClass",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Filter by Item Type (optional)",
+     "component": "oj-select-single",
+     "target": "selectedItemType",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Filter by Status (optional)",
+     "component": "oj-select-single",
+     "target": "selectedImportStatus",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "AUTO_MAPPED",
+       "text": "Auto-mapped (tick and Import to merge)"
+      },
+      {
+       "key": "ERRORED",
+       "text": "Errored (class mapping did not resolve)"
+      },
+      {
+       "key": "UNMAPPED",
+       "text": "Unmapped (no mapping source)"
+      },
+      {
+       "key": "NEW",
+       "text": "New (not yet classified)"
+      },
+      {
+       "key": "MAPPED",
+       "text": "Mapped (classified, not yet imported)"
+      },
+      {
+       "key": "NO_UNIT_PATHWAY",
+       "text": "No unit pathway"
+      }
+     ],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "",
+     "component": "oj-select-single",
+     "target": "",
+     "text": "label",
+     "key": "",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": "(importTab === 'itemsTab') && (stagingViewMode === 'REVIEW') && ($functions.getColumnType(cell.item.columnIndex) === 'editable') && (cell.mode === 'edit')"
+    },
+    {
+     "field": "Stage status",
+     "component": "oj-select-single",
+     "target": "unitStatus",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "NEW",
+       "text": "New (not promoted yet)"
+      },
+      {
+       "key": "PROMOTED",
+       "text": "Promoted"
+      },
+      {
+       "key": "SKIPPED",
+       "text": "Skipped (waiting)"
+      }
+     ],
+     "via": "",
+     "when": "importTab !== 'itemsTab'",
+     "start": ""
+    }
+   ]
+  },
+  "links": [
+   "page equipment-create",
+   "page equipment-units"
+  ],
+  "next": [
+   {
+    "id": "vbredwoodapp/equipment-foundation/equipment-create",
+    "label": "Equipment Master",
+    "via": [
+     "GoToCreateChain"
+    ]
+   },
+   {
+    "id": "vbredwoodapp/equipment-foundation/equipment-units",
+    "label": "Equipment Units",
+    "via": [
+     "RowClickChain"
+    ]
+   }
+  ],
+  "unresolvedLinks": []
+ },
+ "ai": null,
+ "screenshots": [],
+ "stories": [],
+ "at": "2026-11-17T16:33:50.349Z",
+ "by": "rite.user",
+ "codeHash": "645a9232eedf493a"
+}
