@@ -15,7 +15,7 @@ It is an independent app: it works with any VB Studio project and keeps its own 
 | **Workspace** | **Organizations & projects**: your VB Studio organizations (the sign-in is kept encrypted on this PC) and their projects and workspaces. **Set up your workspace**: a wizard that clones a workspace into `main` and `working` (a worktree on its own branch). **▶ Run** and the **Run console**: your workspace's app built from its working folder and run in a window of its own, with the build, its requests and its console shown live, and commands typed as in an editor's terminal. **Run as**: the user and roles the app runs as; the roles offered are the ones found in the app's own code. |
 | **Work** | **Issues**: an issue is logged against a page, then written up and analysed by the AI against the page's code and the FDD. Once approved, the agent applies it on a branch with a pull request, and Jira is kept up to date. **Jira stories**, sprints, daily progress and AI analyses of one story or several; under a story's analysis, **Create the functional design** writes its design document as a PDF (see below). **Standup minutes** and **Follow-ups**. |
 | **Application** | **Application pages**: every VB page of your workspace's app, with its technical sheet, screenshots, navigation maps, page code (lines changed since VB Studio are highlighted) and **Code fix**. Code fix writes a change into your working folder only after you approve it, and marks each change in the code with who asked for it, when, and its issue or Jira story. **API Scenarios**: a page's web services put in order and tested through the APIs alone, with no need to open the page (see below). **FDD library**: the FDDs that Analyze with AI reads. **Flows explained**: how Build.Rite's own flows work. |
-| **Tools** | **SQL**: a worksheet against an Oracle database, with Ask AI. **AI settings**: which AI Build.Rite asks, either **Claude Code** on your Claude subscription (no API key, no per-call cost) or an **API key** paid per use (Anthropic, OpenAI, Gemini, OCI Generative AI, or any OpenAI-compatible service). You pick one default for everything, and can give a feature its own: Code fix, Issues, Analyze with AI, Application pages, Standup minutes or SQL. **Try it** checks each one; Code fix also has a quick switch on its own tab. |
+| **Tools** | **SQL**: a worksheet against an Oracle database, with Ask AI. **Fusion SQL**: read-only SQL on your Oracle Fusion Cloud pod through one BI Publisher report, with a schema browser, saved queries and Ask AI (see below). **AI settings**: which AI Build.Rite asks, either **Claude Code** on your Claude subscription (no API key, no per-call cost) or an **API key** paid per use (Anthropic, OpenAI, Gemini, OCI Generative AI, or any OpenAI-compatible service). You pick one default for everything, and can give a feature its own: Code fix, Issues, Analyze with AI, Application pages, Standup minutes or SQL. **Try it** checks each one; Code fix also has a quick switch on its own tab. |
 
 ## Start
 
@@ -166,6 +166,39 @@ and saves it as a PDF in the FDD library:
 - **Where you see it.** Under the analysis (each version with Preview, PDF, MD and Open in this PC's PDF reader), and in
   **FDD library → Design documents**: every story's designs with story, sprint, version (the newest marked Latest),
   date, author, the FDD read and size; search, Preview, Download, Delete; the story's key opens its analysis.
+
+## Fusion SQL: read-only SQL on your Fusion pod
+
+Fusion Cloud gives no database connection, so **Tools → Fusion SQL** runs your SELECT inside the pod through one BI
+Publisher report, the **query runner**. Build.Rite sends the statement base64-encoded in the report's `P_QRY_STMT`
+parameter through BI Publisher's `runReport` web service (SOAP, ReportService v2). The runner's data model runs it with
+`DBMS_XMLGEN`, which returns any query as XML rows, and Build.Rite reads them into the grid. It was ported from the WMS
+app's Fusion SQL module.
+
+- **Read-only.** Only `SELECT` and `WITH` run, one statement at a time, with no inline PL/SQL. Each statement is
+  capped by the row limit (`SELECT * FROM (…) WHERE ROWNUM <= n`). Anything else is refused before it is sent. It runs
+  as the Fusion user you sign in with, who needs BI Consumer and the data roles for what you read.
+- **Pods.** Add one or more (PROD, TEST…) under **Connection**. For each, choose how to sign in: **your app's login**
+  (File → Sign in for your app…), or **a Fusion user of its own**. The password is kept in the PC's keychain and is
+  never sent back to the screen. The address of the pod your workspace's app calls is offered for you.
+- **Deploy the runner.** If the pod has no runner yet, one click puts the folder, data model and report in the BI
+  catalog (`/Custom/BuildRite/…`, through BI Publisher's CatalogService; needs BI Author once) and tests it. A pod that
+  already has a DBMS_XMLGEN runner just needs its **Report path** set.
+- **The SQL tab.** The schema browser lists owners, then tables, views, packages and more, then columns, indexes,
+  foreign keys or arguments. It is read once and cached on this PC until Refresh; **Search Fusion** looks beyond the list.
+  The editor runs the selection, or the statement under the cursor (Ctrl+Enter). `{{NAME}}` and `:NAME` placeholders
+  ask for a value first and remember it: blank means NULL, dates may be typed in any common format. The grid has
+  search, sort and pages of 100; ids show as text and amounts with separators. You can export to Excel, CSV, print or
+  copy. Logs and the history of the last 30 statements are kept too.
+- **Ask AI** (the AI chosen for SQL in AI settings). Ask in words. The AI looks things up in the pod's data dictionary
+  (objects, columns, descriptions, PL/SQL source, dependencies, sample rows) before it writes the SQL. Build.Rite then
+  **checks the SQL on the pod** (`… WHERE 1 = 0`): if Fusion refuses it, the error goes back to the AI to fix. Its SQL
+  reaches the editor, or runs, only when you choose.
+- **Saved queries** are kept on this PC. Export them to a JSON file to share, and Import someone else's.
+- **API calls** shows the last 30 SOAP calls as sent and answered, with passwords as `***`.
+
+Not ported yet from the WMS module: Flows, Setups checklist, Watchdogs, Knowledge, Format Results, Datasets and
+Pipelines (they need the WMS app's APEX tables and services).
 
 ## Run any VB app from its own folder
 

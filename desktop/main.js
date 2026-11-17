@@ -281,6 +281,41 @@ function me() {
   meCache = { username: email || user || 'me', fullName: name || user || 'me', displayName: name || user || 'me', email: email };
   return meCache;
 }
+// Fusion SQL (lib/fusionSql.js): read-only SQL on a Fusion pod through its BI Publisher query runner. Pods and saved
+// queries in this app's data folder, passwords in the OS keychain; a pod may use your app's login (Sign in for your app)
+let fusionSqlInst = null;
+function fusionSqlStore() {
+  if (!fusionSqlInst) {
+    fusionSqlInst = require('./lib/fusionSql').open({
+      file: path.join(app.getPath('userData'), 'fusion-sql.json'),
+      cacheDir: path.join(app.getPath('userData'), 'fusion-sql-cache'),
+      encrypt: canEncrypt() ? (t) => safeStorage.encryptString(t) : null,
+      decrypt: canEncrypt() ? (b) => safeStorage.decryptString(b) : null,
+      fetch: (url, init) => require('electron').net.fetch(url, init),
+      appLogin: () => { const id = workspaceIdentity() || identity; return id && id.fusion ? id.fusion : null; },
+      appPod: () => fusionPodOfWorkspace(),
+    });
+  }
+  return fusionSqlInst;
+}
+// The Oracle Cloud pod your workspace's app calls (a backend of its services catalog on *.oraclecloud.com), suggested
+// as the address of a new Fusion SQL pod
+function fusionPodOfWorkspace() {
+  try {
+    const c = currentWorkspace();
+    if (!c) return '';
+    const p = profileOf(c.working);
+    for (const cf of ((p.services && p.services.catalogs) || [])) {
+      const j = JSON.parse(fs.readFileSync(cf.file, 'utf8'));
+      const urls = [];
+      const walk = (x) => { if (!x || typeof x !== 'object') return; Object.keys(x).forEach((k) => { const v = x[k]; if (typeof v === 'string' && /^https:\/\/[^/]+\.oraclecloud\.com/i.test(v)) urls.push(v); else walk(v); }); };
+      walk(j);
+      const fa = urls.filter((x) => /\.fa\.[^/]*oraclecloud\.com/i.test(x))[0] || urls[0];
+      if (fa) return new URL(fa).origin;
+    }
+  } catch (e) { /* no catalog */ }
+  return '';
+}
 /** What Build.Rite's own local server is given: who you are and every store its screens use. */
 async function buildRiteOptions() {
   return {
@@ -311,6 +346,7 @@ async function buildRiteOptions() {
     apiStore: apiStore(),
     scenarioStore: scenarioStore(),
     htmlToPdf: htmlToPdf, // Create the functional design: the document printed to PDF
+    fusionSqlStore: fusionSqlStore(), // Fusion SQL: read-only SQL on a Fusion pod through its BI Publisher runner
     appWindow: () => (runWin && !runWin.isDestroyed() ? { url: runWin.webContents.getURL(), title: runWin.getTitle() } : null), // the page your app's window shows (API Scenarios follows it)
     // …sent to your workspace's backends (its services/catalog.json), with who its app runs as (Run as, Sign in for your app)
     apiProject: () => { const c = currentWorkspace(); if (!c) return null; const p = profileOf(c.working); return { catalogFiles: ((p.services && p.services.catalogs) || []).map((x) => x.file), getIdentity: () => workspaceIdentity() }; },

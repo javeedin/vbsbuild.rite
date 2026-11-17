@@ -1216,6 +1216,77 @@ function createDevServer(o) {
         })().catch((e) => jsonI(200, { ok: false, error: e.message }));
         return undefined;
       }
+      if (pathname.startsWith('/__fsql/')) {
+        // Fusion SQL (lib/fusionSql.js), for Build.Rite's Fusion SQL screen: read-only SQL on a Fusion pod through its
+        // BI Publisher query runner, the schema browser, saved queries, Ask AI. This PC only, by its own name, and only
+        // the app's own page (it sends X-Build-Rite-FSQL, which another site's page cannot send without a preflight).
+        // Passwords never come back: the page sees { username, hasPassword }.
+        const host = String(req.headers.host || '').replace(/:\d+$/, '');
+        if (!isLoopback(req.socket.remoteAddress) || !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(host)) {
+          return send(res, 404, 'text/plain; charset=utf-8', 'Not found');
+        }
+        const jsonQ = (status, body) => send(res, status, 'application/json', JSON.stringify(body), { 'Cache-Control': 'no-store' });
+        if (!o.fusionSqlStore) return jsonQ(200, { ok: false, unavailable: true, error: 'Fusion SQL runs in the Build.Rite desktop app.' });
+        const origin = req.headers.origin;
+        if (req.headers['x-build-rite-fsql'] !== '1' || (origin && origin !== `http://${req.headers.host}`)) {
+          return send(res, 403, 'application/json', JSON.stringify({ error: 'Refused: not from Build.Rite on this PC.' }));
+        }
+        const fq = o.fusionSqlStore;
+        const post = req.method === 'POST';
+        const get = (k) => u.searchParams.get(k) || '';
+        const who = () => { try { const id = o.getIdentity && o.getIdentity(); return (id && (id.displayName || id.username)) || ''; } catch (e) { return ''; } };
+        const bodyOf = () => new Promise((resolve, reject) => {
+          const chunks = [];
+          let size = 0;
+          req.on('data', (c) => { size += c.length; if (size <= 8 * 1024 * 1024) chunks.push(c); });
+          req.on('end', () => (size > 8 * 1024 * 1024 ? reject(new Error('Too large.')) : resolve(Buffer.concat(chunks).toString('utf8'))));
+          req.on('error', reject);
+        });
+        (async () => {
+          const b = post ? JSON.parse((await bodyOf()) || '{}') : {};
+          const r = (() => {
+            if (pathname === '/__fsql/settings' && !post) return fq.settings();
+            if (pathname === '/__fsql/pod/save' && post) return fq.savePod(b);
+            if (pathname === '/__fsql/pod/remove' && post) return fq.removePod(b.id);
+            if (pathname === '/__fsql/pod/active' && post) return fq.setActive(b.id);
+            if (pathname === '/__fsql/calls' && !post) return fq.calls(false);
+            if (pathname === '/__fsql/calls/clear' && post) return fq.calls(true);
+            if (pathname === '/__fsql/schema/clear' && post) return fq.clearCache(b.pod);
+            if (pathname === '/__fsql/queries' && !post) return fq.queries();
+            if (pathname === '/__fsql/queries/save' && post) return fq.saveQuery(Object.assign({}, b, { by: who() }));
+            if (pathname === '/__fsql/queries/remove' && post) return fq.removeQuery(b.id);
+            if (pathname === '/__fsql/queries/import' && post) return fq.importQueries(b.queries);
+            if (pathname === '/__fsql/queries/ran' && post) return fq.ranQuery(b.id);
+            if (pathname === '/__fsql/ask/progress' && !post) return fq.progress(get('id'));
+            return null;
+          })();
+          if (r) return jsonQ(200, r);
+          if (pathname === '/__fsql/run' && post) {
+            const out = await fq.execute({ sql: b.sql, rowLimit: b.rowLimit, pod: b.pod });
+            log(`Fusion SQL ${out.pod || ''} -> ${out.ok ? out.rowCount + ' rows' : String(out.error || '').split('\n')[0].slice(0, 120)} (${out.ms || 0} ms)`);
+            return jsonQ(200, out);
+          }
+          if (pathname === '/__fsql/test' && post) return jsonQ(200, await fq.test(b.pod));
+          if (pathname === '/__fsql/deploy' && post) {
+            const out = await fq.deploy(b.pod);
+            log(`Fusion SQL deploy -> ${out.ok ? 'done' : out.error}`);
+            return jsonQ(200, out);
+          }
+          if (pathname === '/__fsql/schema/owners' && !post) return jsonQ(200, await fq.owners(get('pod'), get('refresh') === '1'));
+          if (pathname === '/__fsql/schema/objects' && !post) return jsonQ(200, await fq.objects(get('pod'), get('owner'), get('kind'), get('refresh') === '1'));
+          if (pathname === '/__fsql/schema/search' && !post) return jsonQ(200, await fq.search(get('pod'), get('owner'), get('kind'), get('q')));
+          if (pathname === '/__fsql/schema/detail' && !post) return jsonQ(200, await fq.detail(get('pod'), get('owner'), get('kind'), get('name'), get('refresh') === '1'));
+          if (pathname === '/__fsql/ask' && post) {
+            const ai = o.aiStore;
+            const chat = ai ? (system, user) => ai.chat({ feature: 'sql', system, user, maxTokens: 6000 }) : null;
+            const out = await fq.ask(b, chat);
+            log(`Fusion SQL Ask AI -> ${out.ok ? (out.sql ? (out.checked ? 'SQL, checked on the pod' : 'SQL, not accepted by the pod') : 'an answer') : out.error}`);
+            return jsonQ(200, out);
+          }
+          return jsonQ(404, { error: 'Not found' });
+        })().catch((e) => jsonQ(200, { ok: false, error: e.message }));
+        return undefined;
+      }
       if (pathname.startsWith('/__fdd/')) {
         // The FDD library (lib/fdd.js), for Build.Rite's FDD library page: upload an FDD into the project, make one the
         // latest, remove one, and commit + push those files to git. This PC only, by its own name, and only the app's own

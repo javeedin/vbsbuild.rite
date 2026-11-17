@@ -1,0 +1,451 @@
+<!-- Fusion SQL: read-only SQL on an Oracle Fusion Cloud pod, through its BI Publisher query runner. The desktop app makes
+     the calls (desktop/lib/fusionSql.js at /__fsql/*); the rules the page and the engine share: resources/js/fusionSqlKit.js. -->
+<div class="nx-page nx-fsql" id="page-fusion-sql">
+  <div class="nx-pagehead">
+    <div>
+      <div class="nx-kicker">Tools</div>
+      <h1 id="fsqlTitle">Fusion SQL</h1>
+      <div class="nx-sub">Read-only SQL on your Fusion pod, through one BI Publisher report: browse the schema, ask the AI, save queries. It runs as the Fusion user you sign in with.</div>
+    </div>
+    <oj-bind-if test="[[ $variables.st.pods.length > 0 ]]">
+      <div class="nx-fsql-podbar" id="fsqlPodBar">
+        <label class="nx-fsql-podlbl" for="fsqlPod">Pod</label>
+        <select id="fsqlPod" class="nx-fsql-select" data-op="active" on-change="[[ $listeners.onConn ]]" :disabled="[[ $variables.running ]]">
+          <oj-bind-for-each data="[[ $variables.st.pods ]]"><template data-oj-as="p">
+            <option :value="[[ p.data.id ]]" :selected="[[ p.data.active ]]"><oj-bind-text value="[[ p.data.name ]]"></oj-bind-text></option>
+          </template></oj-bind-for-each>
+        </select>
+        <span class="nx-fsql-who" id="fsqlWho"><oj-bind-text value="[[ $functions.whoText($variables.st) ]]"></oj-bind-text></span>
+      </div>
+    </oj-bind-if>
+  </div>
+
+  <oj-bind-if test="[[ $variables.checked && !$variables.available ]]">
+    <div class="nx-empty" id="fsqlUnavailable">Fusion SQL runs in the Build.Rite desktop app: it signs in to your Fusion pod from this PC.</div>
+  </oj-bind-if>
+
+  <oj-bind-if test="[[ $variables.available ]]">
+    <div class="nx-seg nx-fsql-tabs" role="tablist" aria-label="Fusion SQL">
+      <button type="button" role="tab" id="fsqlTab-sql" :class="[[ 'nx-seg-btn' + ($variables.tab === 'sql' ? ' nx-seg-btn--on' : '') ]]" data-field="tab" data-value="sql" on-click="[[ $listeners.onField ]]">SQL</button>
+      <button type="button" role="tab" id="fsqlTab-queries" :class="[[ 'nx-seg-btn' + ($variables.tab === 'queries' ? ' nx-seg-btn--on' : '') ]]" data-field="tab" data-value="queries" on-click="[[ $listeners.onField ]]">
+        <oj-bind-text value="[[ 'Saved queries' + ($variables.queries.length ? ' (' + $variables.queries.length + ')' : '') ]]"></oj-bind-text></button>
+      <button type="button" role="tab" id="fsqlTab-connection" :class="[[ 'nx-seg-btn' + ($variables.tab === 'connection' ? ' nx-seg-btn--on' : '') ]]" data-field="tab" data-value="connection" on-click="[[ $listeners.onField ]]">Connection</button>
+      <button type="button" role="tab" id="fsqlTab-calls" :class="[[ 'nx-seg-btn' + ($variables.tab === 'calls' ? ' nx-seg-btn--on' : '') ]]" data-field="tab" data-value="calls" on-click="[[ $listeners.onCalls ]]" data-op="load">API calls</button>
+    </div>
+
+    <oj-bind-if test="[[ $variables.checked && $variables.st.pods.length === 0 && $variables.tab === 'sql' ]]">
+      <div class="nx-card nx-fsql-start" id="fsqlStart">
+        <b>Connect a Fusion pod first.</b>
+        <span>Give its address and how to sign in (your app's login, or a Fusion user of its own). If the pod has no query runner yet, <b>Deploy the runner</b> puts it there in one click (it needs BI Author once).</span>
+        <button type="button" class="nx-btn nx-btn--cta" id="fsqlStartBtn" data-op="new" on-click="[[ $listeners.onConn ]]">Add a pod</button>
+      </div>
+    </oj-bind-if>
+
+    <!-- ── SQL ── -->
+    <oj-bind-if test="[[ $variables.tab === 'sql' && $variables.st.pods.length > 0 ]]">
+      <div class="nx-fsql-work">
+        <!-- the schema browser -->
+        <aside class="nx-card nx-fsql-schema" id="fsqlSchema" aria-label="Schema">
+          <div class="nx-fsql-schemahead">
+            <b>Schema</b><span class="nx-min-flex"></span>
+            <button type="button" class="nx-iconbtn nx-iconbtn--sm" id="fsqlSchemaRefresh" data-op="refresh" on-click="[[ $listeners.onSchema ]]" title="Read the list again from Fusion" :disabled="[[ $variables.schema.loading ]]"><span class="oj-ux-ico-refresh" aria-hidden="true"></span></button>
+          </div>
+          <div class="nx-fsql-schemapick">
+            <select id="fsqlOwner" class="nx-fsql-select" data-op="owner" on-change="[[ $listeners.onSchema ]]" aria-label="Owner">
+              <oj-bind-for-each data="[[ $functions.ownerList($variables.schema) ]]"><template data-oj-as="o">
+                <option :value="[[ o.data ]]" :selected="[[ o.data === $variables.schema.owner ]]"><oj-bind-text value="[[ o.data ]]"></oj-bind-text></option>
+              </template></oj-bind-for-each>
+            </select>
+            <select id="fsqlKind" class="nx-fsql-select" data-op="kind" on-change="[[ $listeners.onSchema ]]" aria-label="Kind">
+              <oj-bind-for-each data="[[ $functions.kindList() ]]"><template data-oj-as="k">
+                <option :value="[[ k.data.id ]]" :selected="[[ k.data.id === $variables.schema.kind ]]"><oj-bind-text value="[[ k.data.label ]]"></oj-bind-text></option>
+              </template></oj-bind-for-each>
+            </select>
+          </div>
+          <input type="search" id="fsqlFilter" class="nx-fsql-filter" placeholder="Filter: AP_INV, RA_CUST…" autocomplete="off" :value="[[ $variables.schema.filter ]]" data-op="filter" on-input="[[ $listeners.onSchema ]]">
+          <div class="nx-fsql-schemanote" id="fsqlSchemaNote"><oj-bind-text value="[[ $functions.schemaNote($variables.schema) ]]"></oj-bind-text></div>
+          <oj-bind-if test="[[ $variables.schema.filter.length >= 2 ]]">
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-fsql-searchbtn" id="fsqlSearch" data-op="search" on-click="[[ $listeners.onSchema ]]" :disabled="[[ $variables.schema.loading ]]">
+              <span class="oj-ux-ico-search" aria-hidden="true"></span><oj-bind-text value="[[ 'Search Fusion for “' + $variables.schema.filter + '”' ]]"></oj-bind-text></button>
+          </oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.schema.error ]]"><div class="nx-fsql-err" id="fsqlSchemaErr"><oj-bind-text value="[[ $variables.schema.error ]]"></oj-bind-text></div></oj-bind-if>
+          <div class="nx-fsql-objects" id="fsqlObjects">
+            <oj-bind-for-each data="[[ $functions.objectRows($variables.schema) ]]"><template data-oj-as="n">
+              <div :class="[[ 'nx-fsql-obj' + (n.data.name === $variables.schema.open ? ' nx-fsql-obj--open' : '') ]]" :data-name="[[ n.data.name ]]">
+                <button type="button" class="nx-fsql-objbtn" data-op="open" :data-value="[[ n.data.name ]]" on-click="[[ $listeners.onSchema ]]" :title="[[ n.data.name ]]">
+                  <span :class="[[ n.data.name === $variables.schema.open ? 'oj-ux-ico-caret-down' : 'oj-ux-ico-caret-right' ]]" aria-hidden="true"></span><oj-bind-text value="[[ n.data.name ]]"></oj-bind-text></button>
+                <oj-bind-if test="[[ n.data.name === $variables.schema.open ]]">
+                  <div class="nx-fsql-detail" id="fsqlDetail">
+                    <div class="nx-fsql-detailacts">
+                      <button type="button" class="nx-btn nx-btn--sm" id="fsqlSelectStar" data-op="star" on-click="[[ $listeners.onSchema ]]" title="Write SELECT * FROM it in the editor">SELECT *</button>
+                      <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-op="insert" :data-value="[[ $functions.qualified($variables.schema, n.data.name) ]]" on-click="[[ $listeners.onSchema ]]" title="Insert its name at the cursor">Insert name</button>
+                      <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-op="detailRefresh" on-click="[[ $listeners.onSchema ]]" title="Read it again"><span class="oj-ux-ico-refresh" aria-hidden="true"></span></button>
+                    </div>
+                    <oj-bind-if test="[[ $variables.schema.detailBusy ]]"><div class="nx-note">Reading…</div></oj-bind-if>
+                    <oj-bind-if test="[[ !!$variables.schema.detail ]]">
+                      <oj-bind-if test="[[ !!$variables.schema.detail.comments ]]"><div class="nx-fsql-comment"><oj-bind-text value="[[ $variables.schema.detail.comments ]]"></oj-bind-text></div></oj-bind-if>
+                      <oj-bind-if test="[[ !!$variables.schema.detail.target ]]"><div class="nx-note"><oj-bind-text value="[[ 'Synonym for ' + $variables.schema.detail.target ]]"></oj-bind-text></div></oj-bind-if>
+                      <div class="nx-fsql-cols" id="fsqlCols">
+                        <oj-bind-for-each data="[[ $variables.schema.detail.columns ]]"><template data-oj-as="c">
+                          <button type="button" class="nx-fsql-col" data-op="insert" :data-value="[[ c.data.name ]]" on-click="[[ $listeners.onSchema ]]" :title="[[ c.data.comments || (c.data.name + ' ' + c.data.type) ]]">
+                            <span class="nx-fsql-colname"><oj-bind-text value="[[ c.data.name ]]"></oj-bind-text></span><span class="nx-fsql-coltype"><oj-bind-text value="[[ c.data.type + (c.data.nullable ? '' : ' ·NN') ]]"></oj-bind-text></span></button>
+                        </template></oj-bind-for-each>
+                        <oj-bind-for-each data="[[ $variables.schema.detail.arguments ]]"><template data-oj-as="a">
+                          <div class="nx-fsql-col"><span class="nx-fsql-colname"><oj-bind-text value="[[ (a.data.subprogram !== '-' ? a.data.subprogram + '.' : '') + a.data.name ]]"></oj-bind-text></span><span class="nx-fsql-coltype"><oj-bind-text value="[[ a.data.inOut + ' ' + a.data.type ]]"></oj-bind-text></span></div>
+                        </template></oj-bind-for-each>
+                      </div>
+                      <oj-bind-if test="[[ $variables.schema.detail.indexes.length > 0 ]]">
+                        <div class="nx-fsql-sub">Indexes</div>
+                        <oj-bind-for-each data="[[ $variables.schema.detail.indexes ]]"><template data-oj-as="i">
+                          <div class="nx-fsql-idx"><b><oj-bind-text value="[[ i.data.name ]]"></oj-bind-text></b><oj-bind-if test="[[ i.data.unique ]]"> <span class="nx-fsql-uniq">unique</span></oj-bind-if> <span class="nx-note"><oj-bind-text value="[[ i.data.columns ]]"></oj-bind-text></span></div>
+                        </template></oj-bind-for-each>
+                      </oj-bind-if>
+                      <oj-bind-if test="[[ $variables.schema.detail.fks.length > 0 ]]">
+                        <div class="nx-fsql-sub">Foreign keys</div>
+                        <oj-bind-for-each data="[[ $variables.schema.detail.fks ]]"><template data-oj-as="f">
+                          <div class="nx-fsql-idx"><span class="nx-note"><oj-bind-text value="[[ f.data.columns ]]"></oj-bind-text></span> → <b><oj-bind-text value="[[ f.data.ref ]]"></oj-bind-text></b></div>
+                        </template></oj-bind-for-each>
+                      </oj-bind-if>
+                    </oj-bind-if>
+                  </div>
+                </oj-bind-if>
+              </div>
+            </template></oj-bind-for-each>
+          </div>
+        </aside>
+
+        <section class="nx-card nx-fsql-main" aria-label="SQL">
+          <div class="nx-fsql-toolbar">
+            <button type="button" class="nx-btn nx-btn--cta" id="fsqlRun" data-op="run" on-click="[[ $listeners.onRun ]]" :disabled="[[ $variables.running ]]" title="Run the statement under the cursor, or the selection (Ctrl+Enter)">
+              <span class="oj-ux-ico-play" aria-hidden="true"></span><oj-bind-text value="[[ $variables.running ? 'Running…' : 'Run' ]]"></oj-bind-text></button>
+            <button type="button" :class="[[ 'nx-btn' + ($variables.ai.open ? ' nx-btn--on' : '') ]]" id="fsqlAskBtn" data-op="toggle" on-click="[[ $listeners.onAi ]]"><span aria-hidden="true">✨</span> Ask AI</button>
+            <button type="button" class="nx-btn" id="fsqlSave" data-op="saveOpen" on-click="[[ $listeners.onQuery ]]" title="Save this SQL as a query on this PC"><span class="oj-ux-ico-save" aria-hidden="true"></span>Save</button>
+            <label class="nx-fsql-limit" for="fsqlLimit">Rows <input type="number" id="fsqlLimit" min="1" max="100000" :value="[[ $variables.rowLimit ]]" data-field="rowLimit" on-change="[[ $listeners.onField ]]"></label>
+            <span class="nx-min-flex"></span>
+            <span class="nx-note nx-fsql-keys">Ctrl+Enter runs · {{NAME}} or :NAME asks for a value</span>
+          </div>
+
+          <!-- Ask AI -->
+          <oj-bind-if test="[[ $variables.ai.open ]]">
+            <div class="nx-fsql-ai" id="fsqlAi">
+              <div class="nx-fsql-aimsgs" id="fsqlAiMsgs">
+                <oj-bind-if test="[[ $variables.ai.msgs.length === 0 && !$variables.ai.busy ]]">
+                  <div class="nx-note nx-fsql-aihint">Ask in words — “open supplier invoices over 10,000 by business unit”, “what does AR_RECEIPT_API_PUB do?”. The AI looks things up in this pod's data dictionary, and Build.Rite checks its SQL on the pod before you see it. It uses the AI chosen for SQL in AI settings.</div>
+                </oj-bind-if>
+                <oj-bind-for-each data="[[ $functions.aiRows($variables.ai.msgs) ]]"><template data-oj-as="m">
+                  <div :class="[[ 'nx-fsql-msg nx-fsql-msg--' + m.data.role ]]" :data-i="[[ m.data.i ]]">
+                    <oj-bind-if test="[[ m.data.role === 'user' ]]"><div class="nx-fsql-msgtext"><oj-bind-text value="[[ m.data.text ]]"></oj-bind-text></div></oj-bind-if>
+                    <oj-bind-if test="[[ m.data.role === 'assistant' ]]">
+                      <div class="nx-fsql-msgtext" :inner-h-t-m-l="[[ m.data.html ]]"></div>
+                      <oj-bind-if test="[[ !!m.data.sql ]]">
+                        <div :class="[[ 'nx-fsql-aisql' + (m.data.checked ? ' nx-fsql-aisql--ok' : ' nx-fsql-aisql--bad') ]]">
+                          <div class="nx-fsql-aisqlhead">
+                            <span class="nx-fsql-check"><oj-bind-text value="[[ m.data.checked ? '✓ Checked on the pod: it compiles' : '✗ The pod refused it: ' + (m.data.checkError || 'not checked') ]]"></oj-bind-text></span>
+                            <span class="nx-min-flex"></span>
+                            <button type="button" class="nx-btn nx-btn--sm" data-op="use" :data-value="[[ m.data.i ]]" on-click="[[ $listeners.onAi ]]">Use in the editor</button>
+                            <button type="button" class="nx-btn nx-btn--sm nx-btn--cta" data-op="useRun" :data-value="[[ m.data.i ]]" on-click="[[ $listeners.onAi ]]">Use and run</button>
+                          </div>
+                          <pre class="nx-fsql-aisqltext"><oj-bind-text value="[[ m.data.sql ]]"></oj-bind-text></pre>
+                        </div>
+                      </oj-bind-if>
+                      <oj-bind-if test="[[ m.data.lookups > 0 ]]"><div class="nx-note nx-fsql-msgmeta"><oj-bind-text value="[[ m.data.meta ]]"></oj-bind-text></div></oj-bind-if>
+                    </oj-bind-if>
+                    <oj-bind-if test="[[ m.data.role === 'error' ]]"><div class="nx-fsql-err"><oj-bind-text value="[[ m.data.text ]]"></oj-bind-text></div></oj-bind-if>
+                  </div>
+                </template></oj-bind-for-each>
+                <oj-bind-if test="[[ $variables.ai.busy ]]">
+                  <div class="nx-fsql-aisteps" id="fsqlAiSteps">
+                    <oj-bind-for-each data="[[ $variables.ai.steps ]]"><template data-oj-as="s">
+                      <div :class="[[ 'nx-fsql-step nx-fsql-step--' + s.data.kind ]]"><oj-bind-text value="[[ $functions.stepText(s.data) ]]"></oj-bind-text></div>
+                    </template></oj-bind-for-each>
+                    <div class="nx-note"><span class="nx-fsql-spin" aria-hidden="true"></span><oj-bind-text value="[[ 'Working… ' + $variables.ai.secs + ' s' ]]"></oj-bind-text></div>
+                  </div>
+                </oj-bind-if>
+              </div>
+              <div class="nx-fsql-aibar">
+                <input type="text" id="fsqlAiQ" class="nx-fsql-aiq" autocomplete="off" placeholder="Ask about this pod's data…" :value="[[ $variables.ai.q ]]" data-op="q" on-input="[[ $listeners.onAi ]]" :disabled="[[ $variables.ai.busy ]]">
+                <button type="button" class="nx-btn nx-btn--cta" id="fsqlAiGo" data-op="ask" on-click="[[ $listeners.onAi ]]" :disabled="[[ $variables.ai.busy ]]">Ask</button>
+                <oj-bind-if test="[[ $variables.ai.msgs.length > 0 ]]"><button type="button" class="nx-btn nx-btn--plain" id="fsqlAiClear" data-op="clear" on-click="[[ $listeners.onAi ]]" :disabled="[[ $variables.ai.busy ]]">New chat</button></oj-bind-if>
+              </div>
+            </div>
+          </oj-bind-if>
+
+          <textarea id="fsqlEditor" class="nx-sql-editor nx-fsql-editor" spellcheck="false" autocomplete="off" aria-label="SQL" :value="[[ $variables.sql ]]" on-input="[[ $listeners.onEditor ]]"
+            placeholder="SELECT invoice_id, invoice_num, invoice_amount&#10;FROM ap_invoices_all&#10;WHERE vendor_id = {{VENDOR_ID}}&#10;&#10;Ctrl+Enter runs the statement under the cursor (or the selection). Only SELECT / WITH: Fusion SQL is read-only."></textarea>
+
+          <div class="nx-seg nx-sql-tabs" role="tablist" aria-label="Results">
+            <button type="button" role="tab" id="fsqlRtab-result" :class="[[ 'nx-seg-btn' + ($variables.rtab === 'result' ? ' nx-seg-btn--on' : '') ]]" data-field="rtab" data-value="result" on-click="[[ $listeners.onField ]]">
+              <oj-bind-text value="[[ 'Results' + ($variables.res && $variables.res.ok ? ' (' + $variables.res.rowCount + ')' : '') ]]"></oj-bind-text></button>
+            <button type="button" role="tab" id="fsqlRtab-logs" :class="[[ 'nx-seg-btn' + ($variables.rtab === 'logs' ? ' nx-seg-btn--on' : '') ]]" data-field="rtab" data-value="logs" on-click="[[ $listeners.onField ]]">
+              <oj-bind-text value="[[ 'Logs' + ($variables.logs.length ? ' (' + $variables.logs.length + ')' : '') ]]"></oj-bind-text></button>
+            <button type="button" role="tab" id="fsqlRtab-history" :class="[[ 'nx-seg-btn' + ($variables.rtab === 'history' ? ' nx-seg-btn--on' : '') ]]" data-field="rtab" data-value="history" on-click="[[ $listeners.onField ]]">
+              <oj-bind-text value="[[ 'History' + ($variables.history.length ? ' (' + $variables.history.length + ')' : '') ]]"></oj-bind-text></button>
+          </div>
+
+          <oj-bind-if test="[[ $variables.rtab === 'result' ]]">
+            <div class="nx-fsql-result" id="fsqlResult">
+              <oj-bind-if test="[[ $variables.running ]]"><div class="nx-empty" id="fsqlRunning"><span class="nx-fsql-spin" aria-hidden="true"></span> Running on the pod…</div></oj-bind-if>
+              <oj-bind-if test="[[ !$variables.running && !$variables.res ]]"><div class="nx-empty">Run a statement to see its rows here.</div></oj-bind-if>
+              <oj-bind-if test="[[ !$variables.running && !!$variables.res && !$variables.res.ok ]]">
+                <div class="nx-fsql-error" id="fsqlError">
+                  <pre><oj-bind-text value="[[ $variables.res.error ]]"></oj-bind-text></pre>
+                  <oj-bind-if test="[[ !!($variables.res.raw || $variables.res.decoded) ]]">
+                    <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="fsqlShowRaw" data-field="showRaw" data-value="toggle" on-click="[[ $listeners.onField ]]"><oj-bind-text value="[[ $variables.showRaw ? 'Hide what came back' : 'Show what came back' ]]"></oj-bind-text></button>
+                    <oj-bind-if test="[[ $variables.showRaw ]]"><pre class="nx-fsql-raw" id="fsqlRaw"><oj-bind-text value="[[ ($variables.res.decoded ? 'Decoded output:\n' + $variables.res.decoded + '\n\n' : '') + ($variables.res.raw ? 'SOAP answer:\n' + $variables.res.raw : '') ]]"></oj-bind-text></pre></oj-bind-if>
+                  </oj-bind-if>
+                </div>
+              </oj-bind-if>
+              <oj-bind-if test="[[ !$variables.running && !!$variables.res && $variables.res.ok ]]">
+                <div class="nx-fsql-resbar">
+                  <span class="nx-chip" id="fsqlCount"><oj-bind-text value="[[ $functions.countText($variables.res, $variables.grid) ]]"></oj-bind-text></span>
+                  <oj-bind-if test="[[ $variables.res.capped ]]"><span class="nx-chip nx-chip--warn" id="fsqlCapped" title="More rows may exist: raise Rows to see them"><oj-bind-text value="[[ 'Capped at ' + $variables.res.cap ]]"></oj-bind-text></span></oj-bind-if>
+                  <oj-bind-if test="[[ !!$variables.res.warning ]]"><span class="nx-chip nx-chip--warn"><oj-bind-text value="[[ $variables.res.warning ]]"></oj-bind-text></span></oj-bind-if>
+                  <span class="nx-min-flex"></span>
+                  <input type="search" id="fsqlGridQ" class="nx-fsql-filter nx-fsql-gridq" placeholder="Search the rows" autocomplete="off" :value="[[ $variables.view.q ]]" data-op="search" on-input="[[ $listeners.onRun ]]">
+                  <div class="nx-sql-exportwrap">
+                    <button type="button" class="nx-btn nx-btn--sm" id="fsqlExport" data-field="exportOpen" data-value="toggle" on-click="[[ $listeners.onField ]]" aria-haspopup="menu" :aria-expanded="[[ $variables.exportOpen ? 'true' : 'false' ]]">
+                      <span class="oj-ux-ico-download" aria-hidden="true"></span>Export<span class="oj-ux-ico-chevron-down" aria-hidden="true"></span></button>
+                    <oj-bind-if test="[[ $variables.exportOpen ]]">
+                      <div class="nx-menu" role="menu" aria-label="Export the rows">
+                        <oj-bind-for-each data="[[ $functions.formats() ]]"><template data-oj-as="f">
+                          <button type="button" role="menuitem" class="nx-menu-item" :data-format="[[ f.data.key ]]" on-click="[[ $listeners.onExport ]]"><span :class="[[ f.data.icon ]]" aria-hidden="true"></span><oj-bind-text value="[[ f.data.label ]]"></oj-bind-text></button>
+                        </template></oj-bind-for-each>
+                      </div>
+                    </oj-bind-if>
+                  </div>
+                </div>
+                <oj-bind-if test="[[ $variables.res.rowCount === 0 ]]"><div class="nx-empty" id="fsqlNoRows">No rows.</div></oj-bind-if>
+                <oj-bind-if test="[[ $variables.res.rowCount > 0 ]]">
+                  <div class="nx-sql-gridwrap">
+                    <div class="nx-sql-grid" role="grid" :style="[[ $variables.grid.style ]]" id="fsqlGrid">
+                      <div class="nx-sql-row nx-sql-row--head" role="row">
+                        <span class="nx-sql-c nx-sql-rn" role="columnheader">#</span>
+                        <oj-bind-for-each data="[[ $variables.grid.cols ]]"><template data-oj-as="col">
+                          <button type="button" :class="[[ 'nx-sql-c nx-fsql-sort ' + col.data.cls ]]" role="columnheader" data-op="sort" :data-value="[[ col.data.name ]]" on-click="[[ $listeners.onRun ]]" :title="[[ 'Sort by ' + col.data.name ]]">
+                            <oj-bind-text value="[[ col.data.name + (col.data.sort ? ' ' + col.data.sort : '') ]]"></oj-bind-text></button>
+                        </template></oj-bind-for-each>
+                      </div>
+                      <oj-bind-for-each data="[[ $variables.grid.rows ]]"><template data-oj-as="r">
+                        <div class="nx-sql-row" role="row">
+                          <span class="nx-sql-c nx-sql-rn" role="rowheader"><oj-bind-text value="[[ r.data.n ]]"></oj-bind-text></span>
+                          <oj-bind-for-each data="[[ r.data.cells ]]"><template data-oj-as="x">
+                            <span :class="[[ 'nx-sql-c ' + x.data.cls ]]" role="gridcell" :title="[[ x.data.full ]]"><oj-bind-text value="[[ x.data.t ]]"></oj-bind-text></span>
+                          </template></oj-bind-for-each>
+                        </div>
+                      </template></oj-bind-for-each>
+                    </div>
+                  </div>
+                  <oj-bind-if test="[[ $variables.grid.pages > 1 ]]">
+                    <div class="nx-fsql-pager" id="fsqlPager">
+                      <button type="button" class="nx-btn nx-btn--sm" id="fsqlPrev" data-op="page" data-value="-1" on-click="[[ $listeners.onRun ]]" :disabled="[[ $variables.grid.page === 0 ]]">‹ Previous</button>
+                      <span class="nx-note" id="fsqlPageText"><oj-bind-text value="[[ 'Page ' + ($variables.grid.page + 1) + ' of ' + $variables.grid.pages ]]"></oj-bind-text></span>
+                      <button type="button" class="nx-btn nx-btn--sm" id="fsqlNext" data-op="page" data-value="1" on-click="[[ $listeners.onRun ]]" :disabled="[[ $variables.grid.page >= $variables.grid.pages - 1 ]]">Next ›</button>
+                    </div>
+                  </oj-bind-if>
+                </oj-bind-if>
+              </oj-bind-if>
+            </div>
+          </oj-bind-if>
+
+          <oj-bind-if test="[[ $variables.rtab === 'logs' ]]">
+            <div class="nx-fsql-logs" id="fsqlLogs">
+              <oj-bind-if test="[[ $variables.logs.length === 0 ]]"><div class="nx-empty">Nothing run yet.</div></oj-bind-if>
+              <oj-bind-for-each data="[[ $variables.logs ]]"><template data-oj-as="l">
+                <div :class="[[ 'nx-fsql-log' + (l.data.ok ? '' : ' nx-fsql-log--bad') ]]"><span class="nx-note"><oj-bind-text value="[[ l.data.at ]]"></oj-bind-text></span> <oj-bind-text value="[[ l.data.text ]]"></oj-bind-text></div>
+              </template></oj-bind-for-each>
+            </div>
+          </oj-bind-if>
+
+          <oj-bind-if test="[[ $variables.rtab === 'history' ]]">
+            <div class="nx-fsql-history" id="fsqlHistory">
+              <oj-bind-if test="[[ $variables.history.length === 0 ]]"><div class="nx-empty">The statements you run are kept here (the last 30, on this PC).</div></oj-bind-if>
+              <oj-bind-for-each data="[[ $functions.historyRows($variables.history) ]]"><template data-oj-as="h">
+                <button type="button" class="nx-fsql-hist" data-op="history" :data-value="[[ h.data.i ]]" on-click="[[ $listeners.onRun ]]" :title="[[ h.data.sql ]]">
+                  <span class="nx-note"><oj-bind-text value="[[ h.data.when ]]"></oj-bind-text></span><code><oj-bind-text value="[[ h.data.short ]]"></oj-bind-text></code></button>
+              </template></oj-bind-for-each>
+              <oj-bind-if test="[[ $variables.history.length > 0 ]]"><button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="fsqlClearHistory" data-op="clearHistory" on-click="[[ $listeners.onRun ]]">Clear the history</button></oj-bind-if>
+            </div>
+          </oj-bind-if>
+        </section>
+      </div>
+    </oj-bind-if>
+
+    <!-- ── Saved queries ── -->
+    <oj-bind-if test="[[ $variables.tab === 'queries' ]]">
+      <section class="nx-card nx-fsql-queries" id="fsqlQueries">
+        <div class="nx-card-head">
+          <h2 class="nx-h2">Saved queries</h2>
+          <span class="nx-note">On this PC. Export them to share with your team, Import theirs.</span>
+          <span class="nx-min-flex"></span>
+          <input type="search" id="fsqlQFilter" class="nx-fsql-filter" placeholder="Find a query" :value="[[ $variables.qFilter ]]" data-field="qFilter" on-input="[[ $listeners.onField ]]">
+          <button type="button" class="nx-btn nx-btn--sm" id="fsqlQExport" data-op="export" on-click="[[ $listeners.onQuery ]]" :disabled="[[ $variables.queries.length === 0 ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span>Export</button>
+          <label class="nx-btn nx-btn--sm" id="fsqlQImportLbl"><span class="oj-ux-ico-upload" aria-hidden="true"></span>Import<input type="file" id="fsqlQImport" accept=".json,application/json" hidden on-change="[[ $listeners.onQueryFile ]]"></label>
+        </div>
+        <oj-bind-if test="[[ $variables.queries.length === 0 ]]"><div class="nx-empty" id="fsqlNoQueries">No saved queries yet: write one on the SQL tab and press Save.</div></oj-bind-if>
+        <div class="nx-fsql-qlist" id="fsqlQList">
+          <oj-bind-for-each data="[[ $functions.queryRows($variables.queries, $variables.qFilter) ]]"><template data-oj-as="q">
+            <div class="nx-fsql-q" :data-id="[[ q.data.id ]]">
+              <div class="nx-fsql-qmain">
+                <b><oj-bind-text value="[[ q.data.name ]]"></oj-bind-text></b>
+                <oj-bind-if test="[[ !!q.data.description ]]"><span class="nx-note"><oj-bind-text value="[[ q.data.description ]]"></oj-bind-text></span></oj-bind-if>
+                <code class="nx-fsql-qsql"><oj-bind-text value="[[ q.data.short ]]"></oj-bind-text></code>
+                <span class="nx-note"><oj-bind-text value="[[ q.data.meta ]]"></oj-bind-text></span>
+              </div>
+              <div class="nx-fsql-qacts">
+                <button type="button" class="nx-btn nx-btn--sm nx-btn--cta" data-op="run" :data-id="[[ q.data.id ]]" on-click="[[ $listeners.onQuery ]]"><span class="oj-ux-ico-play" aria-hidden="true"></span>Run</button>
+                <button type="button" class="nx-btn nx-btn--sm" data-op="open" :data-id="[[ q.data.id ]]" on-click="[[ $listeners.onQuery ]]">Open</button>
+                <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-flib-del" data-op="remove" :data-id="[[ q.data.id ]]" on-click="[[ $listeners.onQuery ]]" title="Delete"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+              </div>
+            </div>
+          </template></oj-bind-for-each>
+        </div>
+      </section>
+    </oj-bind-if>
+
+    <!-- ── Connection ── -->
+    <oj-bind-if test="[[ $variables.tab === 'connection' ]]">
+      <div class="nx-fsql-conn">
+        <section class="nx-card" id="fsqlPods">
+          <div class="nx-card-head"><h2 class="nx-h2">Pods</h2><span class="nx-min-flex"></span>
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--cta" id="fsqlNewPod" data-op="new" on-click="[[ $listeners.onConn ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span>Add a pod</button></div>
+          <oj-bind-if test="[[ $variables.st.pods.length === 0 ]]"><div class="nx-empty">No pod yet.</div></oj-bind-if>
+          <oj-bind-for-each data="[[ $variables.st.pods ]]"><template data-oj-as="p">
+            <div :class="[[ 'nx-fsql-pod' + (p.data.active ? ' nx-fsql-pod--on' : '') ]]" :data-id="[[ p.data.id ]]">
+              <div class="nx-fsql-podmain">
+                <b><oj-bind-text value="[[ p.data.name ]]"></oj-bind-text></b><oj-bind-if test="[[ p.data.active ]]"> <span class="nx-badge">In use</span></oj-bind-if>
+                <span class="nx-note"><oj-bind-text value="[[ p.data.url ]]"></oj-bind-text></span>
+                <span class="nx-note"><oj-bind-text value="[[ $functions.podLine(p.data) ]]"></oj-bind-text></span>
+              </div>
+              <div class="nx-fsql-qacts">
+                <oj-bind-if test="[[ !p.data.active ]]"><button type="button" class="nx-btn nx-btn--sm" data-op="active" :data-value="[[ p.data.id ]]" on-click="[[ $listeners.onConn ]]">Use</button></oj-bind-if>
+                <button type="button" class="nx-btn nx-btn--sm" data-op="edit" :data-id="[[ p.data.id ]]" on-click="[[ $listeners.onConn ]]">Edit</button>
+                <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-flib-del" data-op="remove" :data-id="[[ p.data.id ]]" on-click="[[ $listeners.onConn ]]" title="Remove"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+              </div>
+            </div>
+          </template></oj-bind-for-each>
+        </section>
+
+        <oj-bind-if test="[[ !!$variables.form ]]">
+          <section class="nx-card nx-fsql-form" id="fsqlPodForm">
+            <div class="nx-card-head"><h2 class="nx-h2"><oj-bind-text value="[[ $variables.form.id ? 'Pod · ' + $variables.form.name : 'A new pod' ]]"></oj-bind-text></h2></div>
+            <div class="nx-fsql-fields">
+              <label>Name<input type="text" id="fsqlFName" :value="[[ $variables.form.name ]]" data-op="field" data-value="name" on-input="[[ $listeners.onConn ]]" placeholder="PROD, TEST…"></label>
+              <label>Address<input type="url" id="fsqlFUrl" :value="[[ $variables.form.url ]]" data-op="field" data-value="url" on-input="[[ $listeners.onConn ]]" placeholder="https://xxxx.fa.em2.oraclecloud.com"></label>
+              <oj-bind-if test="[[ !!$variables.st.suggest.url && $variables.form.url !== $variables.st.suggest.url ]]">
+                <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-fsql-suggest" id="fsqlUseAppPod" data-op="suggest" on-click="[[ $listeners.onConn ]]"><oj-bind-text value="[[ 'Use your app\'s pod: ' + $variables.st.suggest.url ]]"></oj-bind-text></button>
+              </oj-bind-if>
+            </div>
+            <div class="nx-fsql-login" role="radiogroup" aria-label="Sign in with">
+              <label><input type="radio" name="fsqlLogin" id="fsqlLoginApp" value="app" :checked="[[ $variables.form.login !== 'own' ]]" data-op="field" data-value="login:app" on-change="[[ $listeners.onConn ]]">
+                <oj-bind-text value="[[ 'Your app\'s login' + ($variables.st.suggest.appUser ? ' (' + $variables.st.suggest.appUser + ')' : ' — none on this PC yet: File → Sign in for your app…') ]]"></oj-bind-text></label>
+              <label><input type="radio" name="fsqlLogin" id="fsqlLoginOwn" value="own" :checked="[[ $variables.form.login === 'own' ]]" data-op="field" data-value="login:own" on-change="[[ $listeners.onConn ]]"> A Fusion user of its own</label>
+            </div>
+            <oj-bind-if test="[[ $variables.form.login === 'own' ]]">
+              <div class="nx-fsql-fields">
+                <label>Fusion user<input type="text" id="fsqlFUser" autocomplete="off" :value="[[ $variables.form.username ]]" data-op="field" data-value="username" on-input="[[ $listeners.onConn ]]"></label>
+                <label>Password<input type="password" id="fsqlFPassword" autocomplete="new-password" :value="[[ $variables.form.password ]]" data-op="field" data-value="password" on-input="[[ $listeners.onConn ]]" :placeholder="[[ $variables.form.hasPassword ? '(saved — leave empty to keep it)' : '' ]]"></label>
+              </div>
+              <div class="nx-note"><oj-bind-text value="[[ $variables.st.keychain ? 'The password is encrypted by this PC\'s keychain and never shown again.' : 'No keychain on this PC: the password is kept for this run only.' ]]"></oj-bind-text></div>
+            </oj-bind-if>
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="fsqlAdvanced" data-op="field" data-value="advanced:toggle" on-click="[[ $listeners.onConn ]]"><oj-bind-text value="[[ $variables.form.advanced ? 'Hide the runner settings' : 'Runner settings (report path, data source, rows, time limit)' ]]"></oj-bind-text></button>
+            <oj-bind-if test="[[ $variables.form.advanced ]]">
+              <div class="nx-fsql-fields nx-fsql-fields--adv">
+                <label>Report path<input type="text" id="fsqlFReport" :value="[[ $variables.form.reportPath ]]" data-op="field" data-value="reportPath" on-input="[[ $listeners.onConn ]]"></label>
+                <label>Data model path<input type="text" id="fsqlFModel" :value="[[ $variables.form.dataModelPath ]]" data-op="field" data-value="dataModelPath" on-input="[[ $listeners.onConn ]]"></label>
+                <label>Folder<input type="text" id="fsqlFFolder" :value="[[ $variables.form.folderPath ]]" data-op="field" data-value="folderPath" on-input="[[ $listeners.onConn ]]"></label>
+                <label>Data source<input type="text" id="fsqlFDs" :value="[[ $variables.form.dataSource ]]" data-op="field" data-value="dataSource" on-input="[[ $listeners.onConn ]]"></label>
+                <label>Rows by default<input type="number" id="fsqlFRows" min="1" max="100000" :value="[[ $variables.form.rowLimit ]]" data-op="field" data-value="rowLimit" on-input="[[ $listeners.onConn ]]"></label>
+                <label>Time limit (s)<input type="number" id="fsqlFTimeout" min="5" max="600" :value="[[ $variables.form.timeoutS ]]" data-op="field" data-value="timeoutS" on-input="[[ $listeners.onConn ]]"></label>
+              </div>
+              <div class="nx-note">A pod that already has a DBMS_XMLGEN query runner (another team's): point Report path at it, no deploy needed.</div>
+            </oj-bind-if>
+            <div class="nx-fsql-formacts">
+              <button type="button" class="nx-btn nx-btn--cta" id="fsqlFSave" data-op="save" on-click="[[ $listeners.onConn ]]" :disabled="[[ !!$variables.connBusy ]]"><oj-bind-text value="[[ $variables.connBusy === 'save' ? 'Saving…' : 'Save' ]]"></oj-bind-text></button>
+              <button type="button" class="nx-btn" id="fsqlTest" data-op="test" on-click="[[ $listeners.onConn ]]" :disabled="[[ !!$variables.connBusy ]]" title="Save, then run SELECT 1 FROM dual through the runner"><oj-bind-text value="[[ $variables.connBusy === 'test' ? 'Testing…' : 'Save and test' ]]"></oj-bind-text></button>
+              <button type="button" class="nx-btn" id="fsqlDeploy" data-op="deploy" on-click="[[ $listeners.onConn ]]" :disabled="[[ !!$variables.connBusy ]]" title="Put the query runner (folder, data model, report) on the pod through BI Publisher's catalog service, then test it — needs BI Author once">
+                <oj-bind-text value="[[ $variables.connBusy === 'deploy' ? 'Deploying…' : 'Deploy the runner' ]]"></oj-bind-text></button>
+              <button type="button" class="nx-btn nx-btn--plain" id="fsqlFCancel" data-op="cancel" on-click="[[ $listeners.onConn ]]">Close</button>
+            </div>
+          </section>
+        </oj-bind-if>
+
+        <oj-bind-if test="[[ !!$variables.connResult ]]">
+          <section :class="[[ 'nx-card nx-fsql-connres ' + ($variables.connResult.ok ? 'nx-fsql-connres--ok' : 'nx-fsql-connres--bad') ]]" id="fsqlConnResult">
+            <b><oj-bind-text value="[[ $variables.connResult.title ]]"></oj-bind-text></b>
+            <oj-bind-for-each data="[[ $variables.connResult.lines || [] ]]"><template data-oj-as="l"><div class="nx-fsql-connline"><oj-bind-text value="[[ l.data ]]"></oj-bind-text></div></template></oj-bind-for-each>
+            <oj-bind-if test="[[ !!$variables.connResult.error ]]"><pre class="nx-fsql-raw"><oj-bind-text value="[[ $variables.connResult.error ]]"></oj-bind-text></pre></oj-bind-if>
+          </section>
+        </oj-bind-if>
+
+        <section class="nx-card nx-fsql-how">
+          <h2 class="nx-h2">How it works</h2>
+          <p>Fusion gives no database connection. Build.Rite sends your SELECT, base64-encoded, to one BI Publisher report on the pod (the <b>query runner</b>): its data model runs it with <code>DBMS_XMLGEN</code>, which returns any query as XML rows, through BI Publisher's <code>runReport</code> web service. Only SELECT and WITH run, each statement capped by the row limit, as the Fusion user you sign in with — that user needs BI Consumer and the data roles for what you read (BI Author once, to deploy).</p>
+        </section>
+      </div>
+    </oj-bind-if>
+
+    <!-- ── API calls ── -->
+    <oj-bind-if test="[[ $variables.tab === 'calls' ]]">
+      <section class="nx-card nx-fsql-calls" id="fsqlCalls">
+        <div class="nx-card-head"><h2 class="nx-h2">API calls</h2><span class="nx-note">The last 30 SOAP calls to the pod, as sent and answered (passwords as ***), this run only.</span><span class="nx-min-flex"></span>
+          <button type="button" class="nx-btn nx-btn--sm" id="fsqlCallsRefresh" data-op="load" on-click="[[ $listeners.onCalls ]]"><span class="oj-ux-ico-refresh" aria-hidden="true"></span>Refresh</button>
+          <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="fsqlCallsClear" data-op="clear" on-click="[[ $listeners.onCalls ]]" :disabled="[[ $variables.calls.length === 0 ]]">Clear</button></div>
+        <oj-bind-if test="[[ $variables.calls.length === 0 ]]"><div class="nx-empty">No calls yet.</div></oj-bind-if>
+        <oj-bind-for-each data="[[ $functions.callRows($variables.calls) ]]"><template data-oj-as="c">
+          <div class="nx-fsql-call">
+            <button type="button" :class="[[ 'nx-fsql-callhead' + (c.data.bad ? ' nx-fsql-callhead--bad' : '') ]]" data-op="open" :data-index="[[ c.data.i ]]" on-click="[[ $listeners.onCalls ]]">
+              <span class="nx-note"><oj-bind-text value="[[ c.data.when ]]"></oj-bind-text></span><b><oj-bind-text value="[[ c.data.kind ]]"></oj-bind-text></b><span><oj-bind-text value="[[ c.data.status ]]"></oj-bind-text></span><span class="nx-note"><oj-bind-text value="[[ c.data.ms ]]"></oj-bind-text></span></button>
+            <oj-bind-if test="[[ c.data.i === $variables.callOpen ]]">
+              <div class="nx-fsql-callbody">
+                <div class="nx-fsql-url"><oj-bind-text value="[[ 'POST ' + c.data.url ]]"></oj-bind-text></div>
+                <pre class="nx-fsql-raw"><oj-bind-text value="[[ c.data.headers ]]"></oj-bind-text></pre>
+                <div class="nx-fsql-sub">Request</div><pre class="nx-fsql-raw"><oj-bind-text value="[[ c.data.request ]]"></oj-bind-text></pre>
+                <div class="nx-fsql-sub">Response</div><pre class="nx-fsql-raw"><oj-bind-text value="[[ c.data.response ]]"></oj-bind-text></pre>
+                <oj-bind-if test="[[ !!c.data.decoded ]]"><div class="nx-fsql-sub">reportBytes, decoded</div><pre class="nx-fsql-raw"><oj-bind-text value="[[ c.data.decoded ]]"></oj-bind-text></pre></oj-bind-if>
+              </div>
+            </oj-bind-if>
+          </div>
+        </template></oj-bind-for-each>
+      </section>
+    </oj-bind-if>
+  </oj-bind-if>
+
+  <!-- the placeholders' values -->
+  <oj-bind-if test="[[ !!$variables.params ]]">
+    <div class="nx-modal" id="fsqlParams">
+      <button type="button" class="nx-modal-scrim" aria-label="Close" data-op="paramsCancel" on-click="[[ $listeners.onRun ]]"></button>
+      <div class="nx-dialog nx-fsql-dlg" role="dialog" aria-modal="true" aria-label="Values">
+        <div class="nx-dialog-head"><div class="nx-dialog-titles"><div class="nx-kicker">Run</div><h2 class="nx-dialog-title">Values for the placeholders</h2>
+          <div class="nx-sub">Blank = NULL (so NVL({{X}}, col) means all). Dates in any common format; numbers as they are; anything else as text.</div></div></div>
+        <div class="nx-dialog-body nx-fsql-fields">
+          <oj-bind-for-each data="[[ $variables.params.list ]]"><template data-oj-as="p">
+            <label><oj-bind-text value="[[ p.data.name ]]"></oj-bind-text><input type="text" class="nx-fsql-param" :id="[[ 'fsqlParam-' + p.data.name ]]" :data-name="[[ p.data.name ]]" :value="[[ p.data.value ]]" autocomplete="off"></label>
+          </template></oj-bind-for-each>
+        </div>
+        <div class="nx-fsql-formacts nx-fsql-dlgacts">
+          <button type="button" class="nx-btn nx-btn--cta" id="fsqlParamsRun" data-op="paramsRun" on-click="[[ $listeners.onRun ]]">Run</button>
+          <button type="button" class="nx-btn nx-btn--plain" data-op="paramsCancel" on-click="[[ $listeners.onRun ]]">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </oj-bind-if>
+
+  <!-- save a query -->
+  <oj-bind-if test="[[ !!$variables.saveDlg ]]">
+    <div class="nx-modal" id="fsqlSaveDlg">
+      <button type="button" class="nx-modal-scrim" aria-label="Close" data-op="saveCancel" on-click="[[ $listeners.onQuery ]]"></button>
+      <div class="nx-dialog nx-fsql-dlg" role="dialog" aria-modal="true" aria-label="Save the query">
+        <div class="nx-dialog-head"><div class="nx-dialog-titles"><div class="nx-kicker">Saved queries</div><h2 class="nx-dialog-title">Save the query</h2>
+          <div class="nx-sub">A name already saved is replaced.</div></div></div>
+        <div class="nx-dialog-body nx-fsql-fields">
+          <label>Name<input type="text" id="fsqlSaveName" :value="[[ $variables.saveDlg.name ]]" data-op="saveField" data-id="name" on-input="[[ $listeners.onQuery ]]"></label>
+          <label>What it shows<input type="text" id="fsqlSaveDesc" :value="[[ $variables.saveDlg.description ]]" data-op="saveField" data-id="description" on-input="[[ $listeners.onQuery ]]"></label>
+        </div>
+        <div class="nx-fsql-formacts nx-fsql-dlgacts">
+          <button type="button" class="nx-btn nx-btn--cta" id="fsqlSaveGo" data-op="save" on-click="[[ $listeners.onQuery ]]">Save</button>
+          <button type="button" class="nx-btn nx-btn--plain" data-op="saveCancel" on-click="[[ $listeners.onQuery ]]">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </oj-bind-if>
+</div>

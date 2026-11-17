@@ -1,0 +1,52 @@
+{
+  "description": "Fusion SQL: read-only SQL against an Oracle Fusion Cloud pod from this PC, through one BI Publisher query-runner report (DBMS_XMLGEN) — the SQL editor with {{PARAM}} / :BIND placeholders, the result grid (search, sort, pages, Excel/CSV/print/copy), the schema browser (owners → tables, views, packages… → columns, indexes, foreign keys; cached per pod), saved queries, Ask AI (it looks things up in the data dictionary, then Build.Rite checks its SQL on the pod), pods with their login (your app's, or a Fusion user of its own, the password in the OS keychain), Deploy the runner, and the last SOAP calls. Ported from the WMS app's Fusion SQL module. The desktop app does the calls (desktop/lib/fusionSql.js at /__fsql/*); rules shared with it: resources/js/fusionSqlKit.js.",
+  "navigation": { "embeddable": "enabled" },
+  "variables": {
+    "checked": { "type": "boolean", "defaultValue": false },
+    "available": { "type": "boolean", "defaultValue": true, "description": "The local server has Fusion SQL (the desktop app)." },
+    "tab": { "type": "string", "defaultValue": "sql", "description": "sql | queries | connection | calls" },
+    "st": { "type": "any", "defaultValue": { "pods": [], "active": "", "suggest": {}, "defaults": {} }, "description": "The pods (never a password), the active one, the app's pod and login suggested." },
+    "sql": { "type": "string", "defaultValue": "" },
+    "rowLimit": { "type": "number", "defaultValue": 100 },
+    "running": { "type": "boolean", "defaultValue": false },
+    "rtab": { "type": "string", "defaultValue": "result", "description": "result | logs | history" },
+    "res": { "type": "any", "defaultValue": null, "description": "The last run: { ok, columns, rows, kinds, rowCount, capped, cap, ms, error, warning, raw, decoded, statement, pod, user }." },
+    "view": { "type": "any", "defaultValue": { "q": "", "sortCol": "", "sortDir": 1, "page": 0 } },
+    "grid": { "type": "any", "defaultValue": { "cols": [], "rows": [], "shown": 0, "total": 0, "page": 0, "pages": 1, "style": {} }, "description": "The page of the grid shown (fusionSqlKit.view)." },
+    "exportOpen": { "type": "boolean", "defaultValue": false },
+    "showRaw": { "type": "boolean", "defaultValue": false },
+    "logs": { "type": "any[]", "defaultValue": [] },
+    "history": { "type": "any[]", "defaultValue": [], "description": "The last 30 statements run, on this PC." },
+    "params": { "type": "any", "defaultValue": null, "description": "The placeholders dialog: { sql, list: [{ name, value }] }." },
+    "schema": { "type": "any", "defaultValue": { "owner": "FUSION", "kind": "TABLE", "owners": [], "names": [], "filter": "", "loading": false, "error": "", "at": "", "capped": false, "found": null, "open": "", "detail": null, "detailBusy": false } },
+    "ai": { "type": "any", "defaultValue": { "open": false, "q": "", "busy": false, "steps": [], "msgs": [], "secs": 0 } },
+    "queries": { "type": "any[]", "defaultValue": [] },
+    "qFilter": { "type": "string", "defaultValue": "" },
+    "saveDlg": { "type": "any", "defaultValue": null, "description": "Save the editor's SQL: { id, name, description }." },
+    "form": { "type": "any", "defaultValue": null, "description": "The pod being added or changed: { id, name, url, login, username, password, reportPath, dataModelPath, folderPath, dataSource, rowLimit, timeoutMs, advanced }." },
+    "connBusy": { "type": "string", "defaultValue": "", "description": "save | test | deploy, while it runs." },
+    "connResult": { "type": "any", "defaultValue": null, "description": "{ ok, title, lines, error, raw }" },
+    "calls": { "type": "any[]", "defaultValue": [] },
+    "callOpen": { "type": "number", "defaultValue": -1 }
+  },
+  "eventListeners": {
+    "vbEnter": { "chains": [ { "chain": "loadChain" } ] },
+    "onField": { "chains": [ { "chain": "setChain", "parameters": { "field": "{{ $event.currentTarget.dataset.field }}", "value": "{{ $event.currentTarget.type === 'checkbox' ? $event.currentTarget.checked : ($event.currentTarget.dataset.value !== undefined ? $event.currentTarget.dataset.value : $event.currentTarget.value) }}" } } ] },
+    "onEditor": { "chains": [ { "chain": "setChain", "parameters": { "field": "sql", "value": "{{ $event.target.value }}" } } ] },
+    "onRun": { "chains": [ { "chain": "runChain", "parameters": { "op": "{{ $event.currentTarget.dataset.op }}", "value": "{{ $event.currentTarget.dataset.value || '' }}" } } ] },
+    "onSchema": { "chains": [ { "chain": "schemaChain", "parameters": { "op": "{{ $event.currentTarget.dataset.op }}", "value": "{{ $event.currentTarget.dataset.value !== undefined ? $event.currentTarget.dataset.value : ($event.currentTarget.value || '') }}" } } ] },
+    "onAi": { "chains": [ { "chain": "aiChain", "parameters": { "op": "{{ $event.currentTarget.dataset.op }}", "value": "{{ $event.currentTarget.dataset.value !== undefined ? $event.currentTarget.dataset.value : ($event.currentTarget.value || '') }}" } } ] },
+    "onQuery": { "chains": [ { "chain": "queryChain", "parameters": { "op": "{{ $event.currentTarget.dataset.op }}", "id": "{{ $event.currentTarget.dataset.id || '' }}", "value": "{{ $event.currentTarget.value || '' }}" } } ] },
+    "onQueryFile": { "chains": [ { "chain": "queryChain", "parameters": { "op": "import", "id": "", "value": "" } } ] },
+    "onConn": { "chains": [ { "chain": "connChain", "parameters": { "op": "{{ $event.currentTarget.dataset.op }}", "id": "{{ $event.currentTarget.dataset.id || '' }}", "value": "{{ $event.currentTarget.dataset.value !== undefined ? $event.currentTarget.dataset.value : ($event.currentTarget.value || '') }}", "input": "{{ $event.currentTarget.value || '' }}" } } ] },
+    "onCalls": { "chains": [ { "chain": "callsChain", "parameters": { "op": "{{ $event.currentTarget.dataset.op }}", "index": "{{ $event.currentTarget.dataset.index || '' }}" } } ] },
+    "onExport": { "chains": [ { "chain": "exportChain", "parameters": { "format": "{{ $event.currentTarget.dataset.format }}" } } ] }
+  },
+  "imports": {
+    "components": {
+      "oj-bind-for-each": { "path": "ojs/ojknockout" },
+      "oj-bind-if": { "path": "ojs/ojknockout" },
+      "oj-bind-text": { "path": "ojs/ojknockout" }
+    }
+  }
+}

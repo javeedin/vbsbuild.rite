@@ -293,3 +293,109 @@ html[data-nx-product="buildrite"] .nx-nav-scroll { scrollbar-color: rgba(255, 25
 .nx-flib-designrow--old > span { opacity: .72; }
 .nx-flib-designacts { white-space: nowrap; text-align: right; }
 .nx-flib-designstory .nx-linkbtn { padding: 0; text-align: left; justify-self: start; }
+
+/* Tools → Fusion SQL */
+.nx-fsql-podbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nx-fsql-podlbl { font-size: 12px; font-weight: 600; color: inherit; opacity: .85; }
+.nx-fsql-podbar .nx-fsql-select { color: #1d2b36; background: #fff; border-color: rgba(255, 255, 255, .6); min-width: 120px; }
+.nx-fsql-who { font-size: 12.5px; color: inherit; opacity: .85; }
+.nx-fsql-url { font: 12px Consolas, "Courier New", monospace; margin: 4px 0; overflow-wrap: anywhere; }
+.nx-fsql-select { border: 1px solid var(--nx-line, #d3dce6); border-radius: 6px; padding: 4px 8px; background: var(--nx-surface, #fff); color: inherit; font: inherit; font-size: 13px; min-width: 0; }
+.nx-fsql-tabs { margin: 4px 0 12px; }
+.nx-fsql-start { display: grid; gap: 8px; justify-items: start; padding: 16px; max-width: 760px; }
+.nx-fsql-work { display: grid; grid-template-columns: minmax(230px, 300px) minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 900px) { .nx-fsql-work { grid-template-columns: 1fr; } }
+.nx-fsql-schema { display: flex; flex-direction: column; gap: 6px; padding: 10px; max-height: calc(100vh - 210px); position: sticky; top: 8px; min-height: 0; }
+.nx-fsql-schemahead { display: flex; align-items: center; gap: 6px; }
+.nx-fsql-schemapick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.nx-fsql-filter { border: 1px solid var(--nx-line, #d3dce6); border-radius: 6px; padding: 5px 8px; font: inherit; font-size: 13px; background: var(--nx-surface, #fff); color: inherit; min-width: 0; }
+.nx-fsql-schemanote { font-size: 11.5px; color: var(--nx-muted, #4a5865); }
+.nx-fsql-searchbtn { justify-self: start; }
+.nx-fsql-objects { overflow: auto; min-height: 80px; flex: 1; border-top: 1px solid var(--nx-line, #e3e8ee); padding-top: 4px; }
+.nx-fsql-obj--open { background: rgba(46, 111, 216, .05); border-radius: 6px; }
+.nx-fsql-objbtn { display: flex; align-items: center; gap: 4px; width: 100%; border: 0; background: none; padding: 3px 4px; font: 12px/1.35 Consolas, "Courier New", monospace; color: inherit; text-align: left; cursor: pointer; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-fsql-objbtn:hover { background: rgba(46, 111, 216, .08); }
+.nx-fsql-detail { padding: 4px 6px 8px 18px; display: grid; gap: 4px; }
+.nx-fsql-detailacts { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.nx-fsql-comment { font-size: 11.5px; color: var(--nx-muted, #4a5865); }
+.nx-fsql-cols { display: grid; gap: 1px; }
+.nx-fsql-col { display: flex; justify-content: space-between; gap: 6px; border: 0; background: none; padding: 1px 4px; font: 11.5px Consolas, "Courier New", monospace; color: inherit; text-align: left; cursor: pointer; border-radius: 3px; }
+button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
+.nx-fsql-colname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-fsql-coltype { color: var(--nx-muted, #6b7886); white-space: nowrap; }
+.nx-fsql-sub { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--nx-muted, #4a5865); margin-top: 6px; }
+.nx-fsql-idx { font-size: 11.5px; overflow-wrap: anywhere; }
+.nx-fsql-uniq { font-size: 10.5px; color: #1d5b33; background: #e7f6ec; border-radius: 4px; padding: 0 4px; }
+.nx-fsql-main { padding: 0; overflow: hidden; min-width: 0; }
+.nx-fsql-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; border-bottom: 1px solid var(--nx-line, #e3e8ee); }
+.nx-btn--on { box-shadow: inset 0 0 0 2px var(--nx-accent, #227e9e); }
+.nx-fsql-limit { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.nx-fsql-limit input { width: 86px; border: 1px solid var(--nx-line, #d3dce6); border-radius: 6px; padding: 4px 6px; font: inherit; }
+.nx-fsql-keys { font-size: 11.5px; }
+.nx-fsql-editor { height: 30vh; }
+.nx-fsql-result, .nx-fsql-logs, .nx-fsql-history { padding: 10px 12px 14px; }
+.nx-fsql-resbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.nx-chip--warn { background: #fff1db; color: #8a5300; }
+.nx-fsql-gridq { width: 200px; }
+.nx-fsql-sort { border: 0; text-align: left; cursor: pointer; }
+.nx-fsql-sort:hover { background: var(--nx-accent-soft, #e6f0fc); }
+.nx-fsql-num { text-align: right; font-variant-numeric: tabular-nums; }
+.nx-fsql-null::after { content: '—'; color: var(--nx-muted, #9aa9b8); }
+.nx-fsql-pager { display: flex; align-items: center; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+.nx-fsql-error { border: 1px solid #f3c2bd; background: #fdecea; color: #8c1d18; border-radius: 8px; padding: 10px 12px; }
+.nx-fsql-error pre { margin: 0 0 6px; white-space: pre-wrap; font: 12.5px/1.45 Consolas, "Courier New", monospace; }
+.nx-fsql-raw { white-space: pre-wrap; overflow-wrap: anywhere; font: 11.5px/1.4 Consolas, "Courier New", monospace; background: var(--nx-head, #f6f8fa); color: var(--nx-ink, #1d2b36); border: 1px solid var(--nx-line, #e0e6ec); border-radius: 6px; padding: 8px; max-height: 320px; overflow: auto; margin: 4px 0; }
+.nx-fsql-err { font-size: 12.5px; color: #8c1d18; background: #fdecea; border-radius: 6px; padding: 6px 8px; white-space: pre-wrap; }
+.nx-fsql-log { font: 12px/1.5 Consolas, "Courier New", monospace; padding: 2px 0; border-bottom: 1px dashed var(--nx-line, #eef1f4); overflow-wrap: anywhere; }
+.nx-fsql-log--bad { color: #8c1d18; }
+.nx-fsql-hist { display: flex; gap: 10px; width: 100%; border: 0; background: none; padding: 5px 4px; text-align: left; cursor: pointer; border-bottom: 1px solid var(--nx-line, #eef1f4); color: inherit; font: inherit; }
+.nx-fsql-hist:hover { background: rgba(46, 111, 216, .06); }
+.nx-fsql-hist code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.nx-fsql-ai { border-bottom: 1px solid var(--nx-line, #e3e8ee); background: linear-gradient(180deg, rgba(46, 111, 216, .05), transparent 70%); }
+.nx-fsql-aimsgs { max-height: 42vh; overflow: auto; padding: 10px 12px; display: grid; gap: 10px; }
+.nx-fsql-aihint { font-size: 12.5px; }
+.nx-fsql-msg--user .nx-fsql-msgtext { justify-self: end; background: var(--nx-accent, #227e9e); color: #fff; border-radius: 12px 12px 2px 12px; padding: 6px 10px; max-width: 80%; margin-left: auto; width: fit-content; }
+.nx-fsql-msg--assistant .nx-fsql-msgtext { font-size: 13px; }
+.nx-fsql-msgtext p { margin: 2px 0 6px; }
+.nx-fsql-msgtext ul { margin: 2px 0 6px; padding-left: 18px; }
+.nx-fsql-msgmeta { font-size: 11.5px; margin-top: 4px; }
+.nx-fsql-aisql { border: 1px solid var(--nx-line, #d3dce6); border-radius: 8px; overflow: hidden; margin-top: 6px; background: var(--nx-surface, #fff); }
+.nx-fsql-aisql--ok { border-color: #9fd3ae; }
+.nx-fsql-aisql--bad { border-color: #f3c2bd; }
+.nx-fsql-aisqlhead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px 8px; background: var(--nx-head, #f6f8fa); border-bottom: 1px solid var(--nx-line, #e3e8ee); }
+.nx-fsql-aisql--ok .nx-fsql-check { color: #1d5b33; font-weight: 600; font-size: 12.5px; }
+.nx-fsql-aisql--bad .nx-fsql-check { color: #8c1d18; font-weight: 600; font-size: 12.5px; }
+.nx-fsql-aisqltext { margin: 0; padding: 8px 10px; white-space: pre-wrap; font: 12px/1.45 Consolas, "Courier New", monospace; max-height: 260px; overflow: auto; }
+.nx-fsql-aisteps { display: grid; gap: 2px; font-size: 12.5px; }
+.nx-fsql-step--checked { font-weight: 600; }
+.nx-fsql-aibar { display: flex; gap: 8px; padding: 8px 12px 10px; }
+.nx-fsql-aiq { flex: 1; border: 1px solid var(--nx-line, #d3dce6); border-radius: 18px; padding: 6px 12px; font: inherit; min-width: 0; }
+.nx-fsql-spin { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(46, 111, 216, .25); border-top-color: #2e6fd8; animation: nx-an-spin .9s linear infinite; vertical-align: -2px; margin-right: 6px; }
+.nx-fsql-queries { padding-bottom: 8px; }
+.nx-fsql-q, .nx-fsql-pod { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-top: 1px solid var(--nx-line, #eef1f4); }
+.nx-fsql-qmain, .nx-fsql-podmain { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.nx-fsql-qsql { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--nx-muted, #4a5865); }
+.nx-fsql-qacts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.nx-fsql-pod--on { background: rgba(46, 111, 216, .05); }
+.nx-fsql-conn { display: grid; gap: 12px; max-width: 980px; }
+.nx-fsql-form { padding: 12px 14px; display: grid; gap: 10px; }
+.nx-fsql-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px 12px; }
+.nx-fsql-fields label { display: grid; gap: 3px; font-size: 12.5px; font-weight: 600; color: var(--nx-muted, #4a5865); }
+.nx-fsql-fields input { border: 1px solid var(--nx-line, #d3dce6); border-radius: 6px; padding: 6px 8px; font: inherit; font-weight: 400; color: var(--nx-ink, #1d2b36); background: var(--nx-surface, #fff); }
+.nx-fsql-suggest { justify-self: start; align-self: end; }
+.nx-fsql-login { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; }
+.nx-fsql-login label { display: inline-flex; gap: 6px; align-items: center; }
+.nx-fsql-formacts { display: flex; gap: 8px; flex-wrap: wrap; }
+.nx-fsql-connres { padding: 12px 14px; display: grid; gap: 3px; }
+.nx-fsql-connres--ok { border-color: #9fd3ae; background: #f3fbf5; }
+.nx-fsql-connres--bad { border-color: #f3c2bd; background: #fef6f5; }
+.nx-fsql-connline { font: 12.5px/1.5 Consolas, "Courier New", monospace; }
+.nx-fsql-how { padding: 12px 14px; font-size: 13px; }
+.nx-fsql-calls { padding-bottom: 8px; }
+.nx-fsql-call { border-top: 1px solid var(--nx-line, #eef1f4); }
+.nx-fsql-callhead { display: grid; grid-template-columns: 80px minmax(160px, 1fr) 100px 80px; gap: 10px; width: 100%; border: 0; background: none; padding: 7px 12px; text-align: left; cursor: pointer; color: inherit; font: inherit; font-size: 13px; }
+.nx-fsql-callhead:hover { background: rgba(46, 111, 216, .05); }
+.nx-fsql-callhead--bad b { color: #8c1d18; }
+.nx-fsql-callbody { padding: 0 12px 10px; }
+.nx-fsql-dlg { width: min(620px, 100%); }
+.nx-fsql-dlgacts { padding: 0 16px 16px; }
