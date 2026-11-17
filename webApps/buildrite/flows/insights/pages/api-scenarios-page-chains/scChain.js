@@ -473,8 +473,17 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         return;
       }
       if (act === 'toggleWrites') { if (v.sc) v.sc = Object.assign({}, v.sc, { allowWrites: !v.sc.allowWrites }); return; }
+      // a step's editor (values sent, hands on, checks) opened or closed: key = id|1 (open now) or id|0
+      if (act === 'stepOpen') {
+        const at = String(key || '').lastIndexOf('|');
+        if (at < 1) return;
+        v.stepOpen = Object.assign({}, v.stepOpen || {}, { [key.slice(0, at)]: key.slice(at + 1) !== '1' });
+        return;
+      }
       if (act === 'stepField' || act === 'toggleShape') {
         const id = act === 'toggleShape' ? key : step;
+        // a step being edited stays open (it may have opened only because a value was missing)
+        if (act === 'toggleShape' || key !== 'name') v.stepOpen = Object.assign({}, v.stepOpen || {}, { [id]: true });
         setSteps(steps().map((s) => {
           if (s.id !== id) return s;
           const n = copy(s);

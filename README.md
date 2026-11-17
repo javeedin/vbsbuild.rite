@@ -121,6 +121,12 @@ shows them all again). When you come back from your app's window, the list says 
     the ones not in the scenario. On a linked page: **Open in a tab** (that page's own scenarios), **Remove link** (its
     steps go, and any page after it; asked first) and **Reconnect** (linked again, its steps read fresh from its code).
 - **Runs** tab: every run of this scenario, newest first (the main page or the whole flow, who ran it, how it went).
+- **Each step is a simple card.** Its number (green, red or amber after a run), its name (click to rename), ▶ Run, and
+  one line with the API: method, name and the request in full. Chips say what kind of step it is (*List of values ·
+  Customer → {{customer}}*, *Shown only in some cases*, *changes data*), and the **ⓘ** beside each explains it (the
+  list's fields, the condition the page shows it on, the request, how to pick a value). A list of values has its picker
+  on one row. One line says what the step **sends**, **hands on** and **checks**; **Edit** opens those fields (each
+  with its own ⓘ). A step missing a value says so (⚠ Give P_CUSTOMER_ID a value) and opens by itself.
 - **The page's APIs.** The list icon beside *Page it tests* opens the APIs the page uses: how many REST calls, BI
   Publisher reports, lists of values and calls that change data it has, which of them are steps of this scenario (in the
   order they run, with how each went), and every API in the order the page makes them, with **+ Add** for the others.

@@ -216,7 +216,7 @@
                     </span>
                   </template>
                 </oj-bind-for-each>
-                <span class="nx-note"><oj-bind-text value="[[ $functions.choiceNote($variables.sc.choices) ]]"></oj-bind-text></span>
+                <details class="nx-sc-info"><summary aria-label="About the page as" title="About the page as">i</summary><div class="nx-sc-infopop"><b>The page as on your screen</b><span><oj-bind-text value="[[ $functions.choiceNote($variables.sc.choices) ]]"></oj-bind-text></span></div></details>
               </div>
             </oj-bind-if>
             <oj-bind-if test="[[ !!$variables.suggestion ]]">
@@ -363,24 +363,39 @@
                         </oj-bind-if>
                       </span></div></oj-bind-if>
                     <div class="nx-sc-stephead">
-                      <span class="nx-sc-stepn"><oj-bind-text value="[[ st.data.n ]]"></oj-bind-text></span>
-                      <input class="nx-cm-input nx-sc-stepname" data-field="name" :data-step="[[ st.data.id ]]" :value="[[ st.data.name ]]" on-change="[[ $listeners.onStep ]]" aria-label="Step name">
-                      <code class="nx-sc-call"><oj-bind-text value="[[ st.data.call ]]"></oj-bind-text></code>
-                      <oj-bind-if test="[[ st.data.writes ]]"><span class="nx-sc-wchip" title="Changes data">changes data</span></oj-bind-if>
-                      <span class="nx-min-flex"></span>
+                      <span :class="[[ 'nx-sc-stepn nx-sc-stepn--' + (st.data.state || 'none') ]]" :title="[[ st.data.stateText ]]"><oj-bind-text value="[[ st.data.n ]]"></oj-bind-text></span>
+                      <input class="nx-cm-input nx-sc-stepname" data-field="name" :data-step="[[ st.data.id ]]" :value="[[ st.data.name ]]" on-change="[[ $listeners.onStep ]]" aria-label="Step name" title="The step's name: click to rename">
                       <button type="button" class="nx-btn nx-btn--sm nx-sc-trybtn" data-act="tryStep" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ st.data.trying ]]"
                         title="Run this API on its own, with the values handed on so far"><oj-bind-text value="[[ st.data.trying ? 'Running…' : '▶ Run' ]]"></oj-bind-text></button>
-                      <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="up" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Move up" title="Move up">↑</button>
-                      <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="down" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Move down" title="Move down">↓</button>
-                      <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="removeStep" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Remove the step" title="Remove">✕</button>
+                      <span class="nx-sc-stepmove">
+                        <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="up" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Move up" title="Move up">↑</button>
+                        <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="down" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Move down" title="Move down">↓</button>
+                        <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="removeStep" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" aria-label="Remove the step" title="Remove">✕</button>
+                      </span>
                     </div>
-                    <!-- the API in full: method, the backend's address, its path and values (the ones known so far filled in) -->
-                    <p class="nx-sc-api"><code><oj-bind-text value="[[ st.data.api ]]"></oj-bind-text></code></p>
-                    <oj-bind-if test="[[ !!st.data.when ]]"><p :class="[[ 'nx-sc-when' + (st.data.off ? ' nx-sc-when--off' : '') ]]"><oj-bind-text value="[[ st.data.off ? st.data.offNote : st.data.when ]]"></oj-bind-text></p></oj-bind-if>
-                    <!-- a list of values on the page (a dropdown this call fills): what it shows, keeps and hands on -->
-                    <oj-bind-if test="[[ !!st.data.lov ]]">
-                      <p class="nx-sc-lovinfo"><span class="nx-sc-lovchip">List of values</span>
-                        <oj-bind-text value="[[ st.data.lov ]]"></oj-bind-text></p>
+                    <!-- the API: its method and name, the request in full (the values known so far filled in) -->
+                    <div class="nx-sc-apiline">
+                      <span :class="[[ 'nx-pg-method nx-sc-apim nx-pg-method--' + st.data.mclass ]]"><oj-bind-text value="[[ st.data.method ]]"></oj-bind-text></span>
+                      <code class="nx-sc-call"><oj-bind-text value="[[ st.data.call ]]"></oj-bind-text></code>
+                      <span class="nx-sc-api" :title="[[ st.data.api ]]"><oj-bind-text value="[[ st.data.api ]]"></oj-bind-text></span>
+                      <details class="nx-sc-info"><summary aria-label="The request in full" title="The request in full">i</summary><div class="nx-sc-infopop"><b>The request as it will go</b><code><oj-bind-text value="[[ st.data.api ]]"></oj-bind-text></code><p>Method, the backend this PC reaches, the path and the values, with the values known so far filled in. <b class="nx-sc-inl">▶ Run</b> sends it now, on its own; Save &amp; run sends every step in order.</p></div></details>
+                    </div>
+                    <!-- what kind of step: a list of values on the page, shown only in some cases, changes data -->
+                    <oj-bind-if test="[[ !!st.data.lov || !!st.data.when || st.data.writes ]]">
+                      <div class="nx-sc-chips">
+                        <oj-bind-if test="[[ !!st.data.lov ]]">
+                          <span class="nx-sc-chipx nx-sc-chipx--lov"><oj-bind-text value="[[ 'List of values · ' + st.data.lovShort ]]"></oj-bind-text></span>
+                          <details class="nx-sc-info"><summary aria-label="About this list of values" title="About this list of values">i</summary><div class="nx-sc-infopop"><b>A list of values on the page</b><span class="nx-sc-lovinfo"><oj-bind-text value="[[ st.data.lov ]]"></oj-bind-text></span><p>Pick a value below as a user would: it is handed on to the steps that send it. Until you pick one, the first value is used.</p></div></details>
+                        </oj-bind-if>
+                        <oj-bind-if test="[[ !!st.data.when ]]">
+                          <span :class="[[ 'nx-sc-chipx nx-sc-when' + (st.data.off ? ' nx-sc-when--off' : '') ]]"><oj-bind-text value="[[ st.data.whenShort ]]"></oj-bind-text></span>
+                          <details class="nx-sc-info"><summary aria-label="When the page shows it" title="When the page shows it">i</summary><div class="nx-sc-infopop"><b>When the page shows it</b><code><oj-bind-text value="[[ st.data.when ]]"></oj-bind-text></code><p>A field the page shows only in some cases. The choices under <b class="nx-sc-inl">The page as</b> decide whether this step runs; a step not on the page as chosen is skipped (▶ Run still sends it).</p></div></details>
+                        </oj-bind-if>
+                        <oj-bind-if test="[[ st.data.writes ]]">
+                          <span class="nx-sc-wchip">changes data</span>
+                          <details class="nx-sc-info"><summary aria-label="About calls that change data" title="About calls that change data">i</summary><div class="nx-sc-infopop"><b>A call that changes data</b><p>It runs only when the scenario allows writes (in its header) and you run with writes — and never against a backend that looks like production. Otherwise it is held back and counted as done.</p></div></details>
+                        </oj-bind-if>
+                      </div>
                     </oj-bind-if>
                     <!-- the values to pick from, as on the page: on the list's own step and on every step that sends its value -->
                     <oj-bind-for-each data="[[ st.data.pickers ]]">
@@ -389,7 +404,6 @@
                           <div class="nx-sc-pickhead">
                             <b><oj-bind-text value="[[ pk.data.field ]]"></oj-bind-text></b>
                             <code><oj-bind-text value="[[ '{{' + pk.data.target + '}}' ]]"></oj-bind-text></code>
-                            <span class="nx-sc-picked"><oj-bind-text value="[[ pk.data.pickedLabel ]]"></oj-bind-text></span>
                           </div>
                           <!-- searched as on the page: the same component, its values from the API -->
                           <oj-select-single class="nx-sc-select" :aria-label="[[ pk.data.field ]]" :placeholder="[[ pk.data.placeholder ]]"
@@ -400,21 +414,37 @@
                                 <span class="nx-sc-optsub"><oj-bind-text value="[[ ($current.data.sub ? $current.data.sub + ' · ' : '') + $current.data.key ]]"></oj-bind-text></span></div>
                             </template>
                           </oj-select-single>
-                          <p class="nx-note nx-sc-valnote"><oj-bind-text value="[[ pk.data.note ]]"></oj-bind-text></p>
+                          <span :class="[[ 'nx-sc-picked' + (pk.data.picked ? '' : ' nx-sc-picked--none') ]]" :title="[[ pk.data.pickedLabel ]]"><oj-bind-text value="[[ pk.data.pickedLabel ]]"></oj-bind-text></span>
+                          <details class="nx-sc-info"><summary aria-label="How to pick" title="How to pick">i</summary><div class="nx-sc-infopop"><b>Picking a value</b><span class="nx-sc-valnote"><oj-bind-text value="[[ pk.data.note ]]"></oj-bind-text></span></div></details>
                         </div>
                       </template>
                     </oj-bind-for-each>
-                    <div class="nx-sc-stepbody">
-                      <label class="nx-sc-f"><span>Values sent (name = value, {{var}} from an earlier step)</span>
-                        <oj-text-area class="nx-sc-ta" rows="3" data-field="params" :data-step="[[ st.data.id ]]" on-value-changed="[[ $listeners.onTaStep ]]" placeholder="[[ st.data.paramHint ]]" value="[[ st.data.params ]]"></oj-text-area></label>
-                      <label class="nx-sc-f"><span>Hands on (var = where in the answer)</span>
-                        <oj-text-area class="nx-sc-ta" rows="3" data-field="extract" :data-step="[[ st.data.id ]]" on-value-changed="[[ $listeners.onTaStep ]]" placeholder="ProjectId = auto:ProjectId&#10;OrderId = items[0].id" value="[[ st.data.extract ]]"></oj-text-area></label>
-                      <div class="nx-sc-f nx-sc-checks"><span>Checks</span>
-                        <label>Status <input class="nx-cm-input nx-cm-input--sm" data-field="status" :data-step="[[ st.data.id ]]" :value="[[ st.data.status ]]" on-change="[[ $listeners.onStep ]]" placeholder="2xx"></label>
-                        <label>Rows ≥ <input class="nx-cm-input nx-cm-input--sm" data-field="minRows" :data-step="[[ st.data.id ]]" :value="[[ st.data.minRows ]]" on-change="[[ $listeners.onStep ]]" placeholder="—"></label>
-                        <label>Within ms <input class="nx-cm-input nx-cm-input--sm" data-field="maxMs" :data-step="[[ st.data.id ]]" :value="[[ st.data.maxMs ]]" on-change="[[ $listeners.onStep ]]" placeholder="—"></label>
+                    <!-- what it sends, hands on and checks, in one line: click to edit -->
+                    <div class="nx-sc-sumrow">
+                      <button type="button" :class="[[ 'nx-sc-sumbtn' + ($functions.stepIsOpen($variables.stepOpen, st.data) ? ' nx-sc-sumbtn--open' : '') ]]" data-act="stepOpen"
+                        :data-key="[[ st.data.id + '|' + ($functions.stepIsOpen($variables.stepOpen, st.data) ? '1' : '0') ]]" on-click="[[ $listeners.onAct ]]"
+                        :aria-expanded="[[ $functions.stepIsOpen($variables.stepOpen, st.data) ? 'true' : 'false' ]]">
+                        <span class="nx-sc-caret" aria-hidden="true"><oj-bind-text value="[[ $functions.stepIsOpen($variables.stepOpen, st.data) ? '▾' : '▸' ]]"></oj-bind-text></span>
+                        <span class="nx-sc-sumpart"><b>Sends</b> <oj-bind-text value="[[ st.data.sumSends ]]"></oj-bind-text></span>
+                        <oj-bind-if test="[[ !!st.data.sumHands ]]"><span class="nx-sc-sumpart"><b>Hands on</b> <oj-bind-text value="[[ st.data.sumHands ]]"></oj-bind-text></span></oj-bind-if>
+                        <span class="nx-sc-sumpart"><b>Checks</b> <oj-bind-text value="[[ st.data.sumChecks ]]"></oj-bind-text></span>
+                        <span class="nx-sc-sumedit"><oj-bind-text value="[[ $functions.stepIsOpen($variables.stepOpen, st.data) ? 'Close' : 'Edit' ]]"></oj-bind-text></span>
+                      </button>
+                      <oj-bind-if test="[[ !!st.data.need ]]"><span class="nx-sc-need"><oj-bind-text value="[[ '⚠ ' + st.data.need ]]"></oj-bind-text></span></oj-bind-if>
+                    </div>
+                    <div :class="[[ 'nx-sc-stepbody' + ($functions.stepIsOpen($variables.stepOpen, st.data) ? '' : ' nx-sc-stepbody--closed') ]]">
+                      <div class="nx-sc-f"><span class="nx-sc-flabel">Values sent <details class="nx-sc-info"><summary aria-label="About values sent" title="About values sent">i</summary><div class="nx-sc-infopop"><b>Values sent</b><p>One per line: <code class="nx-sc-inlcode">name = value</code>. <code class="nx-sc-inlcode">{{name}}</code> uses a value an earlier step handed on, a value picked from a list, or a column of Data.</p><p><oj-bind-text value="[[ st.data.paramHint ]]"></oj-bind-text></p></div></details></span>
+                        <oj-text-area class="nx-sc-ta" rows="3" data-field="params" :data-step="[[ st.data.id ]]" on-value-changed="[[ $listeners.onTaStep ]]" placeholder="[[ st.data.paramHint ]]" value="[[ st.data.params ]]" aria-label="Values sent"></oj-text-area></div>
+                      <div class="nx-sc-f"><span class="nx-sc-flabel">Hands on <details class="nx-sc-info"><summary aria-label="About hands on" title="About hands on">i</summary><div class="nx-sc-infopop"><b>Hands on</b><p>A value from the answer, for the steps after it: <code class="nx-sc-inlcode">var = where in the answer</code>. <code class="nx-sc-inlcode">items[0].id</code> = the first row’s id, <code class="nx-sc-inlcode">auto:id</code> finds it, <code class="nx-sc-inlcode">rows[0].CUSTOMER_ID</code> for a report. Later steps send it as <code class="nx-sc-inlcode">{{var}}</code>.</p></div></details></span>
+                        <oj-text-area class="nx-sc-ta" rows="3" data-field="extract" :data-step="[[ st.data.id ]]" on-value-changed="[[ $listeners.onTaStep ]]" placeholder="ProjectId = auto:ProjectId&#10;OrderId = items[0].id" value="[[ st.data.extract ]]" aria-label="Hands on"></oj-text-area></div>
+                      <div class="nx-sc-f nx-sc-checks"><span class="nx-sc-flabel">Checks <details class="nx-sc-info"><summary aria-label="About checks" title="About checks">i</summary><div class="nx-sc-infopop"><b>Checks on the answer</b><p><b class="nx-sc-inl">Status</b>: 2xx, or 200,404 when a 404 is expected. <b class="nx-sc-inl">Rows ≥</b>: at least this many rows. <b class="nx-sc-inl">Within ms</b>: answered in time. <b class="nx-sc-inl">Same shape</b>: the answer still has the fields of the example the page was built with. Below: one field check per line, <code class="nx-sc-inlcode">path</code> (it is there) or <code class="nx-sc-inlcode">path = value</code>.</p></div></details></span>
+                        <div class="nx-sc-checkrow">
+                          <label>Status <input class="nx-cm-input nx-cm-input--sm" data-field="status" :data-step="[[ st.data.id ]]" :value="[[ st.data.status ]]" on-change="[[ $listeners.onStep ]]" placeholder="2xx"></label>
+                          <label>Rows ≥ <input class="nx-cm-input nx-cm-input--sm" data-field="minRows" :data-step="[[ st.data.id ]]" :value="[[ st.data.minRows ]]" on-change="[[ $listeners.onStep ]]" placeholder="—"></label>
+                          <label>Within ms <input class="nx-cm-input nx-cm-input--sm" data-field="maxMs" :data-step="[[ st.data.id ]]" :value="[[ st.data.maxMs ]]" on-change="[[ $listeners.onStep ]]" placeholder="—"></label>
+                        </div>
                         <label class="nx-cc-check"><input type="checkbox" data-act="toggleShape" :data-key="[[ st.data.id ]]" on-click="[[ $listeners.onAct ]]" :checked="[[ st.data.sameShape ]]"> Same shape as its example</label>
-                        <oj-text-area class="nx-sc-ta" rows="2" data-field="fields" :data-step="[[ st.data.id ]]" on-value-changed="[[ $listeners.onTaStep ]]" placeholder="items[0].status = DRAFT&#10;items[0].id" value="[[ st.data.fields ]]"></oj-text-area>
+                        <oj-text-area class="nx-sc-ta" rows="2" data-field="fields" :data-step="[[ st.data.id ]]" on-value-changed="[[ $listeners.onTaStep ]]" placeholder="items[0].status = DRAFT&#10;items[0].id" value="[[ st.data.fields ]]" aria-label="Field checks"></oj-text-area>
                       </div>
                       <oj-bind-if test="[[ st.data.hasBody ]]"><label class="nx-sc-f nx-sc-body"><span>Body (JSON, {{var}} allowed)</span>
                         <oj-text-area class="nx-sc-ta" rows="4" data-field="body" :data-step="[[ st.data.id ]]" on-value-changed="[[ $listeners.onTaStep ]]" value="[[ st.data.body ]]"></oj-text-area></label></oj-bind-if>
@@ -431,7 +461,7 @@
                         </ul>
                         <oj-bind-if test="[[ !!st.data.tried.values ]]"><p class="nx-sc-resvalues"><oj-bind-text value="[[ st.data.tried.values ]]"></oj-bind-text></p></oj-bind-if>
                         <oj-bind-if test="[[ !!st.data.tried.handed ]]"><p class="nx-sc-handed"><oj-bind-text value="[[ 'Hands on: ' + st.data.tried.handed ]]"></oj-bind-text></p></oj-bind-if>
-                        <oj-bind-if test="[[ !!st.data.tried.answer ]]"><details class="nx-sc-answer" open><summary>Its answer</summary><pre><oj-bind-text value="[[ st.data.tried.answer ]]"></oj-bind-text></pre></details></oj-bind-if>
+                        <oj-bind-if test="[[ !!st.data.tried.answer ]]"><details class="nx-sc-answer"><summary>Its answer</summary><pre><oj-bind-text value="[[ st.data.tried.answer ]]"></oj-bind-text></pre></details></oj-bind-if>
                       </div>
                     </oj-bind-if>
                   </li>

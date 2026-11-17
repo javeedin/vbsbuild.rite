@@ -206,7 +206,7 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient', 'resources/js/sc
         const m = ex ? /\[[\w.-]+=([^\]]*)\]/.exec(ex.from) : null;
         const first = res && res.values && res.values[0];
         const p = ls.lov.picked;
-        return { lovStep: ls.id, field: ls.lov.field, target: ls.lov.target, provider: prov, pick: m ? m[1] : null,
+        return { lovStep: ls.id, field: ls.lov.field, target: ls.lov.target, provider: prov, pick: m ? m[1] : null, picked: !!m,
           placeholder: ls.lov.search ? 'Search ' + ls.lov.field + ' (type 2 letters or more)…' : 'Search ' + ls.lov.field + '…',
           pickedLabel: m ? 'picked: ' + (p && String(p.key) === m[1] ? p.text + (p.sub ? ' · ' + p.sub : '') : m[1]) : (first ? 'none picked: the first value is used (' + first.text + ')' : 'none picked: the first value is used'),
           note: ls.lov.search ? 'Type to search, as on the page: it runs ' + (ls.report ? 'the report' : 'the call') + ' with what you type and shows what it finds. Pick one, then Save & run.'
@@ -259,13 +259,31 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient', 'resources/js/sc
         const chosen = ((sc && sc.choices) || []).reduce((a, c) => { a[c.target] = c.value; return a; }, {});
         const off = !!st.when && evalWhen(st.when, chosen) === false;
         const offNote = off ? 'Not on the page as chosen (' + ((sc && sc.choices) || []).filter((c) => new RegExp('\\b' + c.target + '\\b').test(st.when)).map((c) => c.field + ' is ' + ((c.values.filter((x) => x.key === c.value)[0] || {}).text || c.value)).join(', ') + '): skipped when run' : '';
-        const sig = JSON.stringify([st, i, pageHead, jIdx, off, used.map((n) => vars[n]), uses.map((u) => [u, resOf(u.id) ? (resOf(u.id).at || run && run.id) : '']), T[st.id] ? T[st.id].at : '', trying === st.id]);
+        const sig = JSON.stringify([st, i, pageHead, jIdx, off, (resOf(st.id) || {}).state || '', used.map((n) => vars[n]), uses.map((u) => [u, resOf(u.id) ? (resOf(u.id).at || run && run.id) : '']), T[st.id] ? T[st.id].at : '', trying === st.id]);
         keep.add(st.id);
         const hit = this._rows.get(st.id);
         if (hit && hit.sig === sig) return hit.row;
         const ex = st.expect || {};
         const acc = st.accepts || [];
-        const row = { id: st.id, n: i + 1, name: st.name, call: st.report ? 'report ' + st.report.path : st.endpoint, writes: !!st.writes, pageHead,
+        // the short forms the card shows; the long ones sit behind its ⓘ
+        const method = st.report ? 'REPORT' : ((st.api && st.api.method) || (st.writes ? 'POST' : 'GET'));
+        const last = resOf(st.id);
+        const state = last ? last.state : '';
+        const pk = Object.keys(st.params || {});
+        const blanks = pk.filter((k) => String(st.params[k] == null ? '' : st.params[k]).trim() === '');
+        const sends = pk.map((k) => k + ' = ' + (blanks.indexOf(k) !== -1 ? '?' : st.params[k]));
+        const checks = ['status ' + String(ex.status || '2xx').toUpperCase()]
+          .concat(ex.minRows != null ? ['rows ≥ ' + ex.minRows] : [], ex.maxMs != null ? ['within ' + ex.maxMs + ' ms'] : [], ex.sameShape ? ['same shape'] : [],
+            (ex.fields || []).length ? [ex.fields.length + (ex.fields.length === 1 ? ' field check' : ' field checks')] : []);
+        const short = {
+          method, mclass: method.toLowerCase(), state,
+          stateText: state === 'ok' ? 'Passed in the last run' : state === 'fail' ? 'Failed in the last run' : state === 'skip' ? 'Not run in the last run' : 'Not run yet',
+          sumSends: sends.length ? sends.slice(0, 2).join(', ') + (sends.length > 2 ? ' +' + (sends.length - 2) + ' more' : '') : 'nothing',
+          sumHands: (st.extract || []).map((e) => e.var).join(', '), sumChecks: checks.join(' · '),
+          need: blanks.length ? 'Give ' + blanks.join(', ') + ' a value' : '', autoOpen: !!blanks.length || state === 'fail',
+          lovShort: st.lov ? st.lov.field + ' → {{' + st.lov.target + '}}' + (st.lov.search ? ' · search as you type' : '') : '',
+          whenShort: off ? offNote : st.when ? 'Shown only in some cases' : '' };
+        const row = Object.assign(short, { id: st.id, n: i + 1, name: st.name, call: st.report ? 'report ' + st.report.path : st.endpoint, writes: !!st.writes, pageHead,
           pageId: pageHead ? pg : '', pageLinked: !!pageHead && jIdx > 0,
           when: st.when ? 'On the page only when ' + st.when : '', off, offNote,
           api: fullApi(st), trying: trying === st.id, tried: triedOf(st),
@@ -277,7 +295,7 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient', 'resources/js/sc
           pickers: uses.map(picker),
           status: ex.status || '2xx', minRows: ex.minRows == null ? '' : String(ex.minRows), maxMs: ex.maxMs == null ? '' : String(ex.maxMs), sameShape: !!ex.sameShape,
           fields: (ex.fields || []).map((f) => f.path + (f.equals === null || f.equals === undefined ? '' : ' = ' + f.equals)).join('\n'),
-          hasBody: !!st.body || !!st.writes, body: st.body || '' };
+          hasBody: !!st.body || !!st.writes, body: st.body || '' });
         this._rows.set(st.id, { sig, row });
         return row;
       });
@@ -460,6 +478,8 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient', 'resources/js/sc
     }
     /** The sheet shown in the Excel preview, as a list of one (a for-each over it gives the grid its own scope). */
     reportSheetOne(sheets, idx) { const s = (sheets || [])[Number(idx) || 0] || (sheets || [])[0]; return s ? [s] : []; }
+    /** Is a step's editor (values, hands on, checks) open? As you left it, else open when a value is missing or it failed. */
+    stepIsOpen(map, row) { const o = map && row ? map[row.id] : undefined; return o === undefined ? !!(row && row.autoOpen) : !!o; }
     reportTabClass(key, cur) { return 'nx-sc-tab' + (key === (cur || 'pdf') ? ' nx-sc-tab--on' : ''); }
     // ── the list of every scenario; one scenario's header, its tabs, the gate to its flow ──
     /** A scenario's status from its last run: passed · failed · not run · draft (no step yet). */

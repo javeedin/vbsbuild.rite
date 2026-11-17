@@ -569,3 +569,62 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-sc-xlc.bad { color: #b42318; font-weight: 700; background: #fff5f5; }
 .nx-sc-xlc.skip { color: #8a5a00; font-weight: 600; }
 .nx-sc-xlnote { margin: 0; padding: 6px 14px; border-top: 1px solid var(--nx-line, #dde3ea); }
+
+/* API Scenarios: a step as a simple card — a short header, the API in one line, chips with ⓘ, a picker per list, one
+   line for what it sends / hands on / checks (Edit opens the editor) */
+.nx-sc-step .nx-sc-stephead { flex-wrap: nowrap; }
+.nx-sc-step .nx-sc-stepname { border-color: transparent; background: transparent; font-weight: 650; font-size: 14px; padding-left: 6px; min-width: 120px; }
+.nx-sc-step .nx-sc-stepname:hover { border-color: #d5dce5; background: #fff; }
+.nx-sc-step .nx-sc-stepname:focus { border-color: #2f6fd6; background: #fff; }
+.nx-sc-stepn { flex: none; width: 24px; height: 24px; }
+.nx-sc-stepn--ok { background: #dff3e6; color: #136c3a; box-shadow: inset 0 0 0 1.5px #2f9e5b; }
+.nx-sc-stepn--fail { background: #fde8e8; color: #9b1c1c; box-shadow: inset 0 0 0 1.5px #d64545; }
+.nx-sc-stepn--skip { background: #f6eedb; color: #8a5a00; box-shadow: inset 0 0 0 1.5px #d9b45a; }
+.nx-sc-stepmove { display: inline-flex; gap: 2px; opacity: .55; }
+.nx-sc-step:hover .nx-sc-stepmove, .nx-sc-stepmove:focus-within { opacity: 1; }
+.nx-sc-apiline, .nx-sc-chips, .nx-sc-sumrow, .nx-sc-step .nx-sc-picker, .nx-sc-step .nx-sc-stepbody, .nx-sc-step .nx-sc-tried { margin-left: 32px; }
+.nx-sc-apiline { display: flex; align-items: center; gap: 8px; margin-top: 4px; min-width: 0; }
+.nx-sc-apiline .nx-sc-apim { flex: none; }
+.nx-sc-apiline .nx-sc-call { flex: none; font-size: 12px; font-weight: 600; color: #24405e; }
+.nx-sc-apiline .nx-sc-api { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 11.5px ui-monospace, Menlo, Consolas, monospace; color: #7a8796; }
+.nx-sc-chips { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin-top: 7px; }
+.nx-sc-chipx { font-size: 11.5px; font-weight: 600; border-radius: 10px; padding: 2px 9px; background: #eef2f6; color: #334155; margin: 0; }
+.nx-sc-chipx--lov { background: #e6f0fc; color: #1d4f91; }
+.nx-sc-chipx.nx-sc-when { background: #fdf3dc; color: #8a5300; font-style: normal; }
+.nx-sc-chipx.nx-sc-when--off { background: #f1f3f6; color: #5b6876; }
+.nx-sc-chips .nx-sc-wchip { margin: 0; }
+.nx-sc-info { position: relative; display: inline-block; vertical-align: middle; }
+.nx-sc-info > summary { list-style: none; cursor: pointer; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font: italic 700 11px/1 Georgia, serif;
+  color: #2f6fd6; border: 1px solid #b9cdea; background: #fff; user-select: none; }
+.nx-sc-info > summary::-webkit-details-marker { display: none; }
+.nx-sc-info > summary:hover { border-color: #2f6fd6; }
+.nx-sc-info[open] > summary { background: #2f6fd6; color: #fff; border-color: #2f6fd6; }
+.nx-sc-infopop { position: absolute; z-index: 40; top: 24px; left: -10px; width: min(440px, 72vw); background: #fff; border: 1px solid #cfd8e3; border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, .18); padding: 10px 12px; font-size: 12.5px; line-height: 1.45; color: #26384d; white-space: normal; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.nx-sc-infopop > b { display: block; margin-bottom: 4px; font-size: 13px; color: #13263b; }
+.nx-sc-infopop > code { display: block; font-size: 11.5px; background: #f4f7fb; border: 1px solid #e3e9f0; padding: 5px 7px; border-radius: 5px; word-break: break-all; margin: 4px 0; }
+.nx-sc-infopop p { margin: 5px 0 0; }
+.nx-sc-infopop .nx-sc-lovinfo, .nx-sc-infopop .nx-sc-valnote { display: block; margin: 0; font-size: 12.5px; color: #26384d; }
+.nx-sc-inl { font-weight: 700; } .nx-sc-inlcode { font-size: 11.5px; background: #f1f5f9; border-radius: 4px; padding: 0 4px; }
+.nx-sc-apiline .nx-sc-infopop { left: auto; right: -6px; }
+.nx-sc-step .nx-sc-picker { display: grid; grid-template-columns: minmax(130px, 200px) minmax(220px, 440px) minmax(0, 1fr) auto; gap: 10px; align-items: center; margin-top: 8px; padding: 7px 10px; }
+.nx-sc-step .nx-sc-pickhead { display: grid; gap: 0; }
+.nx-sc-step .nx-sc-pickhead code { font-size: 11px; }
+.nx-sc-step .nx-sc-picker .nx-sc-picked { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.nx-sc-picked--none { color: #6b7886; font-weight: 500; }
+.nx-sc-step .nx-sc-picker .nx-sc-infopop { left: auto; right: -6px; }
+.nx-sc-sumrow { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.nx-sc-sumbtn { flex: 1; min-width: 0; display: flex; gap: 16px; align-items: center; text-align: left; border: 1px dashed #cfd8e3; background: #fafbfd; border-radius: 8px;
+  padding: 6px 10px; font: inherit; font-size: 12.5px; color: #334155; cursor: pointer; }
+.nx-sc-sumbtn:hover { border-color: #2f6fd6; background: #f4f8ff; }
+.nx-sc-sumbtn--open { border-style: solid; background: #f4f8ff; }
+.nx-sc-caret { flex: none; color: #5b6876; width: 10px; }
+.nx-sc-sumpart { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 12px ui-monospace, Menlo, Consolas, monospace; color: #26384d; }
+.nx-sc-sumpart b { font: 700 10.5px "Oracle Sans", "Segoe UI", Arial, sans-serif; text-transform: uppercase; letter-spacing: .05em; color: #6b7886; margin-right: 2px; }
+.nx-sc-sumedit { margin-left: auto; flex: none; color: #2f6fd6; font-weight: 600; }
+.nx-sc-need { color: #8a5300; background: #fdf3dc; border-radius: 6px; padding: 3px 9px; font-size: 12px; font-weight: 600; }
+.nx-sc-stepbody--closed { display: none !important; }
+.nx-sc-flabel { display: flex; align-items: center; gap: 6px; font-weight: 600; color: #3b4a58; }
+.nx-sc-checkrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.nx-sc-checkrow label { display: inline-flex; align-items: center; gap: 4px; }
+@media (max-width: 900px) { .nx-sc-step .nx-sc-picker { grid-template-columns: 1fr; } .nx-sc-apiline .nx-sc-api { display: none; } }

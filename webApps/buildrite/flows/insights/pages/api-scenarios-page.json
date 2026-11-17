@@ -156,6 +156,11 @@
       "defaultValue": false,
       "description": "Continue to the flow before every API of the main page has run (Continue anyway)."
     },
+    "stepOpen": {
+      "type": "any",
+      "defaultValue": {},
+      "description": "Steps whose editor (values sent, hands on, checks) was opened or closed: { stepId: true | false }."
+    },
     "report": {
       "type": "any",
       "defaultValue": null,

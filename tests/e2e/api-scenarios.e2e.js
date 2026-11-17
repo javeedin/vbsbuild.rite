@@ -258,6 +258,9 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     await page.click('#scNext button[data-key="' + DETAIL + '"]');
     await page.waitForSelector('#scJourney .nx-sc-jpage[data-page="' + DETAIL + '"]', { timeout: 10000 });
     await page.waitForTimeout(300);
+    // its editor folded (nothing missing): Edit opens it
+    await page.click('#scSteps .nx-sc-sumbtn');
+    await page.waitForSelector('#scSteps .nx-sc-stepbody:not(.nx-sc-stepbody--closed)', { timeout: 5000 });
     const relBox = await page.$('#scSteps oj-text-area[data-field="params"] textarea');
     await relBox.fill('id = 999'); await relBox.press('Tab'); await page.waitForTimeout(300);
     asked = '';
@@ -372,6 +375,26 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
       && /^report \/Custom\/Shop\/CUSTOMERS_RP\.xdo$/.test(cc[1]) && cc[2] === 'shopApi/createOrder' && (await page.$$('#scSteps .nx-sc-step--writes')).length === 1, cc.join(' | '));
     const repParams = await page.$$eval('#scSteps oj-text-area[data-field="params"] textarea', (a) => a[1].value);
     T.check('…its parameter from the code, ready for a value', /^P_CUSTOMER_ID =\s*$/.test(repParams.trim()), JSON.stringify(repParams));
+    // the step card: short, the long text behind ⓘ, what it sends / hands on / checks in one line (Edit opens it)
+    const c1 = '#scSteps .nx-sc-step:nth-child(1)', c2 = '#scSteps .nx-sc-step:nth-child(2)';
+    T.check('a step as a card: its method and API in one line, a chip for a list of values, one line for what it sends / hands on / checks — folded when nothing is missing',
+      (await text(page, c1 + ' .nx-sc-apim')) === 'GET' && (await text(page, c1 + ' .nx-sc-call')) === 'shopApi/getCustomers' && /^List of values · Customer → \{\{customer\}\}$/.test(await text(page, c1 + ' .nx-sc-chipx--lov'))
+      && /^▸ Sends nothing Hands on customer Checks status 2XX/.test(await text(page, c1 + ' .nx-sc-sumbtn')) && !!(await page.$(c1 + ' .nx-sc-stepbody--closed')), await text(page, c1 + ' .nx-sc-sumbtn'));
+    T.check('…a value missing: said on the card (⚠ Give P_CUSTOMER_ID a value), its editor open; a call that changes data marked', /⚠ Give P_CUSTOMER_ID a value/.test(await text(page, c2 + ' .nx-sc-need'))
+      && !(await page.$(c2 + ' .nx-sc-stepbody--closed')) && /Sends P_CUSTOMER_ID = \?/.test(await text(page, c2 + ' .nx-sc-sumbtn')) && /changes data/.test(await text(page, '#scSteps .nx-sc-step:nth-child(3) .nx-sc-chips')),
+      await text(page, c2 + ' .nx-sc-sumrow'));
+    await page.click(c1 + ' .nx-sc-chips .nx-sc-info > summary');
+    await page.waitForTimeout(200);
+    T.check('ⓘ beside the chip: what the list of values is, in a popover (and again to close)', await page.$eval(c1 + ' .nx-sc-chips .nx-sc-info', (d) => d.open)
+      && await page.$eval(c1 + ' .nx-sc-chips .nx-sc-infopop', (e) => e.offsetParent !== null && /Customer on the page: .*keeps id → hands it on as \{\{customer\}\}/.test(e.textContent)));
+    await env.shot('api-scenarios-card-info.png');
+    await page.click(c1 + ' .nx-sc-chips .nx-sc-info > summary');
+    await page.click(c1 + ' .nx-sc-sumbtn');
+    await page.waitForTimeout(250);
+    const edOpen = !(await page.$(c1 + ' .nx-sc-stepbody--closed')) && /Close$/.test(await text(page, c1 + ' .nx-sc-sumbtn'));
+    await page.click(c1 + ' .nx-sc-sumbtn');
+    await page.waitForTimeout(250);
+    T.check('Edit opens the values, hands on and checks of a step; Close folds them again', edOpen && !!(await page.$(c1 + ' .nx-sc-stepbody--closed')) && !(await page.$eval(c1 + ' .nx-sc-chips .nx-sc-info', (d) => d.open)));
     const pBox = (await page.$$('#scSteps oj-text-area[data-field="params"] textarea'))[1];
     await pBox.fill('P_CUSTOMER_ID = 42'); await pBox.press('Tab'); await page.waitForTimeout(300);
     await saveRun();
