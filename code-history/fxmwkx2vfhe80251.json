@@ -497,7 +497,7 @@
    ]
   }
  ],
- "status": "applied",
+ "status": "committed",
  "events": [
   {
    "at": "2026-11-17T16:38:49.757Z",
@@ -522,9 +522,15 @@
    "what": "tested",
    "by": "rite.user",
    "detail": "nothing broke (checks only)"
+  },
+  {
+   "at": "2026-11-17T16:39:41.636Z",
+   "what": "committed",
+   "by": "rite.user",
+   "detail": "9cdd5c10 on buildrite-working in your workspace's working folder (not pushed)"
   }
  ],
- "updatedAt": "2026-11-17T16:39:34.539Z",
+ "updatedAt": "2026-11-17T16:39:41.636Z",
  "applied": {
   "at": "2026-11-17T16:39:34.528Z",
   "by": "rite.user",
@@ -604,5 +610,14 @@
   "unit": [],
   "e2eFiles": [],
   "none": true
+ },
+ "commit": {
+  "sha": "9cdd5c10",
+  "at": "2026-11-17T16:39:41.291Z",
+  "pushed": false,
+  "branch": "buildrite-working",
+  "by": "rite.user",
+  "folder": "C:\\javeed\\equiprite-rebuild-v1-javeed_dev\\working",
+  "next": "To send it to VB Studio: Apply to main, then Push, in its project's tab."
  }
 }
