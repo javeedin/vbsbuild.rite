@@ -121,6 +121,13 @@ function open(opts) {
       status: st.key, statusText: st.text, fixStatus: fix ? fix.status : '', fixedOnShown: fixedOn, fixedByShown: fixedBy,
       kindText: KINDS[cr.kind] || KINDS.change, priorityText: PRIORITIES[cr.priority] || PRIORITIES.medium, stateText: STATES[cr.state] || STATES.open,
       attempts: (cr.fixes || []).length,
+      // its Code Fix in short (Change requests → Analytics): the files and lines it changes, when it was applied and saved
+      fixSum: fix ? {
+        status: str(fix.status), files: (fix.diff || []).map((d) => ({ file: str(d.file), added: Number(d.added) || 0, removed: Number(d.removed) || 0, created: !!d.created })),
+        added: (fix.diff || []).reduce((n, d) => n + (Number(d.added) || 0), 0), removed: (fix.diff || []).reduce((n, d) => n + (Number(d.removed) || 0), 0),
+        proposedAt: str(fix.at), appliedAt: str(fix.applied && fix.applied.at), savedAt: str(fix.commit && fix.commit.at), sha: str(fix.commit && fix.commit.sha), pushed: !!(fix.commit && fix.commit.pushed),
+        approvedBy: str(fix.applied && fix.applied.by), testsOk: fix.tests ? !!fix.tests.ok : null, provider: str(fix.provider), aiMs: Number(fix.ms) || 0, retried: !!fix.retried
+      } : null,
       overdue: !!(cr.dueOn && st.key !== 'fixed' && st.key !== 'closed' && st.key !== 'rejected' && cr.dueOn < now().toISOString().slice(0, 10))
     });
   }

@@ -182,13 +182,13 @@ function looseFind(content, search) {
   }
   return hits.length === 1 ? [hits[0], hits[0] + s.length] : (hits.length ? 'many' : null);
 }
-function tryEdits(folder, edits, app) {
+function tryEdits(folder, edits, app, readFn) {
   const files = {}, errors = [];
   (edits || []).forEach((e, n) => {
     const rel = safeRel(folder, e.file, app);
     if (!rel) { errors.push({ n: n + 1, file: str(e.file), why: 'not a file of this app (it must be under webApps/' + (app || '<app>') + '/ in the project)' }); return; }
     if (!files[rel]) {
-      const raw = readText(path.join(folder, rel));
+      const raw = typeof readFn === 'function' ? readFn(rel) : readText(path.join(folder, rel));
       files[rel] = { exists: raw != null, raw: raw, old: raw == null ? null : lf(raw), neu: raw == null ? null : lf(raw), crlf: raw != null && /\r\n/.test(raw) };
     }
     const f = files[rel];
@@ -238,6 +238,28 @@ function lineOps(a, b) {
   }
   for (let i = a.length - suf; i < a.length; i++) ops.push([' ', a[i]]);
   return ops;
+}
+/**
+ * One file in full, before and after, with what changed (Change requests → How it was fixed): the regions on the file
+ * after (added / changed lines, and where lines were taken away) and on the file before (the lines taken away or
+ * replaced, and where lines were put in) — the marks the code view draws (resources/js/codeView.js).
+ */
+function regionsOf(oldText, newText) {
+  const a = oldText == null ? [] : lf(oldText).replace(/\n$/, '').split('\n');
+  const b = newText == null ? [] : lf(newText).replace(/\n$/, '').split('\n');
+  const ops = lineOps(a, b);
+  const after = [], before = [];
+  let o = 0, n = 0, i = 0, added = 0, removed = 0;
+  while (i < ops.length) {
+    if (ops[i][0] === ' ') { o++; n++; i++; continue; }
+    let was = 0, put = 0;
+    const o0 = o, n0 = n;
+    while (i < ops.length && ops[i][0] !== ' ') { if (ops[i][0] === '-') { was++; o++; } else { put++; n++; } i++; }
+    added += put; removed += was;
+    after.push(put > 0 ? { from: n0 + 1, to: n0 + put, kind: was > 0 ? 'changed' : 'added', was: was } : { from: n0, to: n0, kind: 'removed', was: was });
+    before.push(was > 0 ? { from: o0 + 1, to: o0 + was, kind: put > 0 ? 'replaced' : 'deleted', put: put } : { from: o0, to: o0, kind: 'inserted', put: put });
+  }
+  return { after: after, before: before, added: added, removed: removed };
 }
 function diffOf(rel, oldText, newText) {
   const a = oldText == null ? [] : oldText.replace(/\n$/, '').split('\n');
@@ -1318,8 +1340,53 @@ function open(opts) {
     return ok(slim(fix));
   }
 
+  /**
+   * One file of a fix in full — before and after the change, and what changed on each (Change requests → How it was
+   * fixed). Taken from where it is: its commit (saved: git show of the commit and its parent), the folder (applied, not
+   * saved: the backup and the file as written), else worked out from its edits (proposed, undone without a commit).
+   */
+  async function code(b) {
+    b = b || {};
+    const fix = local(b.fix);
+    if (!fix) return no(sharedOne(b.fix) ? 'This change was made on another PC: its code is there.' : 'No such fix.');
+    const files = (fix.diff || []).map((d) => d.file).concat(fix.files || []).filter((x, i, a) => x && a.indexOf(x) === i);
+    if (!files.length) return no('This attempt changes no file.');
+    const rel = files.indexOf(str(b.file)) !== -1 ? str(b.file) : files[0];
+    const f = fix.folder || folder();
+    let before = null, after = null, source = '', from = '';
+    const c = fix.commit;
+    if (c && c.sha) {
+      const at = c.folder || f;
+      const shown = await git(at, ['show', c.sha + ':' + rel]);
+      if (shown.code === 0) {
+        after = shown.stdout;
+        const was = await git(at, ['show', c.sha + '^:' + rel]);
+        before = was.code === 0 ? was.stdout : null;
+        source = 'commit'; from = 'its commit ' + c.sha + ' on ' + (c.branch || 'the branch') + (c.pushed ? ' (pushed to ' + c.upstream + ')' : '') + (fix.status === 'undone' ? ' — undone since (reverted)' : '');
+      }
+    }
+    if (!source && fix.status === 'applied') {
+      const bk = backupOf(fix.id) || {};
+      before = bk[rel] == null ? null : bk[rel];
+      after = readText(path.join(f, rel));
+      source = 'folder'; from = 'the file as written in ' + (inWs(fix) ? 'your workspace\'s working folder' : f) + ' (applied, not saved yet)';
+    }
+    if (!source) {
+      const bk = backupOf(fix.id);
+      const base = bk && Object.prototype.hasOwnProperty.call(bk, rel) ? bk[rel] : readText(path.join(f, rel));
+      const t = tryEdits(f, fix.edits, fix.app, (r) => (r === rel ? base : readText(path.join(f, r))));
+      before = base;
+      after = t.files[rel] ? t.files[rel].neu : base;
+      source = 'proposal'; from = fix.status === 'undone' ? 'as it was applied (undone since: the files are back as before)' : 'as proposed — not written to the code';
+    }
+    if (after == null && before == null) return no('The file could not be read: ' + rel);
+    const r = regionsOf(before, after == null ? '' : after);
+    return Object.assign({ ok: true }, { fix: fix.id, status: fix.status, file: rel, files: (fix.diff || []).map((d) => ({ file: d.file, added: d.added, removed: d.removed, created: !!d.created })), source: source, from: from,
+      before: before == null ? '' : lf(before), after: lf(after == null ? '' : after), created: before == null, regions: r.after, beforeRegions: r.before, added: r.added, removed: r.removed });
+  }
+
   return {
-    info: info, setFolder: setFolder, pick: pick,
+    info: info, setFolder: setFolder, pick: pick, code: code,
     list: (pageId) => ({ ok: true, fixes: data().fixes.filter((x) => !pageId || x.page === str(pageId)).map((x) => ({ id: x.id, request: x.request, status: x.status, at: x.at, by: x.by, files: x.files, provider: x.provider })) }),
     get: (id) => { const x = local(id) || sharedOne(id); return x ? ok(x.shared ? x : slim(x)) : no('No such fix.'); },
     history: history, flush: () => pubChain,
@@ -1330,4 +1397,4 @@ function open(opts) {
   };
 }
 
-module.exports = { open, failuresOf, parseAnswer, tryEdits, diffOf, checksFor, htmlRules, unslotted, relatedTests, safeRel, SYSTEM, issueRules, verdictOf };
+module.exports = { open, failuresOf, parseAnswer, tryEdits, diffOf, regionsOf, checksFor, htmlRules, unslotted, relatedTests, safeRel, SYSTEM, issueRules, verdictOf };

@@ -936,6 +936,8 @@ function createDevServer(o) {
           if (pathname === '/__fix/list' && !post) return jsonF(200, fx.list(q('page')));
           if (pathname === '/__fix/history' && !post) return jsonF(200, fx.history ? await fx.history(q('q')) : { ok: true, changes: [] });
           if (pathname === '/__fix/get' && !post) return jsonF(200, fx.get(q('id')));
+          // one file of a fix in full, before and after, what changed marked (Change requests → How it was fixed)
+          if (pathname === '/__fix/code' && !post) return jsonF(200, fx.code ? await fx.code({ fix: q('id'), file: q('file') }) : { ok: false, error: 'Not available.' });
           if (pathname === '/__fix/shot' && !post) {
             const s = fx.shot(q('id'), q('which'));
             if (!s.ok) return send(res, 404, 'text/plain; charset=utf-8', 'Not found');

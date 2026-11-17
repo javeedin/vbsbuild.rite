@@ -58,14 +58,20 @@ define([], function () {
     return out;
   }
   function changeLine(marks, k) { var r = marks && marks.regions && marks.regions[k]; return r ? Math.max(1, r.from) : 0; }
-  /** Each line's marks: ' ca' added, ' cm' changed, ' cd' lines taken away after it (' ct': at the top), ' bn' a note, ' cur'. */
+  /**
+   * Each line's marks: ' ca' added, ' cm' changed, ' cd' lines taken away after it (' ct': at the top), ' bn' a note, ' cur'.
+   * On the file as it was (a change's "before"): ' cx' a line taken away or replaced, ' ci' lines put in after it (' cit':
+   * at the top) — region kinds deleted / replaced / inserted (desktop/lib/codeFix.js regionsOf).
+   */
   function lineMarks(t, marks, at) {
     var m = {};
     var add = function (n, c) { m[n] = (m[n] || '') + c; };
     ((marks && marks.regions) || []).forEach(function (r, k) {
+      var spot = r.kind === 'removed' || r.kind === 'inserted';
       if (r.kind === 'removed') add(Math.max(1, r.from), r.from === 0 ? ' ct' : ' cd');
-      else for (var i = r.from; i <= r.to; i++) add(i, r.kind === 'added' ? ' ca' : ' cm');
-      if (k === at) { if (r.kind === 'removed') add(Math.max(1, r.from), ' cur'); else for (var j = r.from; j <= r.to; j++) add(j, ' cur'); }
+      else if (r.kind === 'inserted') add(Math.max(1, r.from), r.from === 0 ? ' cit' : ' ci');
+      else for (var i = r.from; i <= r.to; i++) add(i, r.kind === 'added' ? ' ca' : (r.kind === 'deleted' || r.kind === 'replaced' ? ' cx' : ' cm'));
+      if (k === at) { if (spot) add(Math.max(1, r.from), ' cur'); else for (var j = r.from; j <= r.to; j++) add(j, ' cur'); }
     });
     var notes = noteLines(t);
     Object.keys(notes).forEach(function (n) { add(n, ' bn'); });
@@ -94,7 +100,7 @@ define([], function () {
         return s.c ? '<span class="' + s.c + '">' + inner + '</span>' : inner;
       }).join('');
       var c = mk[n + 1] || '';
-      var sign = /ca/.test(c) ? '+' : (/cm/.test(c) ? '~' : '');
+      var sign = /ca/.test(c) ? '+' : (/cm/.test(c) ? '~' : (/cx/.test(c) ? '−' : ''));
       return '<div class="l' + c + '" id="L' + (n + 1) + '"><span class="n">' + (sign ? '<i class="sg">' + sign + '</i>' : '') + (n + 1) + '</span><span class="t">' + (html || ' ') + '</span></div>';
     }).join('');
     return '<!doctype html><meta charset="utf-8"><style>'
@@ -107,6 +113,8 @@ define([], function () {
       + '.ca .n{box-shadow:inset 4px 0 #1f9d55;color:#13693a}.ca .t{background:#e7f6ec}.ca .sg{color:#1f9d55}'
       + '.cm .n{box-shadow:inset 4px 0 #d99400;color:#8a5a00}.cm .t{background:#fff4d9}.cm .sg{color:#c27f00}'
       + '.cd{box-shadow:inset 0 -2px #d93838}.ct{box-shadow:inset 0 2px #d93838}'
+      + '.cx .n{box-shadow:inset 4px 0 #d93838;color:#a3271b}.cx .t{background:#fdecea;text-decoration:line-through;text-decoration-color:rgba(163,39,27,.45)}.cx .sg{color:#d93838}'
+      + '.ci{box-shadow:inset 0 -2px #1f9d55}.cit{box-shadow:inset 0 2px #1f9d55}'
       + '.bn .t{background:#f2edff}.bn .c{color:#5b3fb8;font-style:normal}.bn .n{color:#6d4fd1}'
       + '.cur .t{outline:2px solid #0b6b8f;outline-offset:-2px}'
       + '</style><body>' + body + '</body>';

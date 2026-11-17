@@ -1,4 +1,4 @@
-define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pagesClient', 'resources/js/shellBus'], (ActionChain, FX, PC, bus) => {
+define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pagesClient', 'resources/js/shellBus', 'resources/js/codeView', 'resources/js/crAnalytics'], (ActionChain, FX, PC, bus, CV, CRA) => {
   'use strict';
 
   // Change requests. The screen opens on the list; + New change request (or a row) opens one in a tab of its own: its
@@ -18,10 +18,10 @@ define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pag
       const changed = () => { try { bus.emit('change-requests-changed', { at: Date.now() }); } catch (e) { /* no listeners */ } };
       const tabId = () => 'change-request:' + v.crId;
       const labelOf = (pid) => ((v.pages || []).filter((p) => p.id === pid)[0] || {}).label || String(pid || '').split('/').pop();
-      const retitle = () => { if (v.crId && v.cr && v.cr.id) { try { bus.rename(tabId(), (v.cr.code ? v.cr.code + ' · ' : '') + (v.cr.title || 'Change request')); } catch (e) { /* no shell */ } } };
+      const retitle = () => { if (v.crId && v.cr && v.cr.id) { try { bus.rename(tabId(), (v.cr.code ? v.cr.code + ' · ' : '') + (v.cr.title || String(v.cr.request || '').split('\n')[0].slice(0, 50) || 'Change request')); } catch (e) { /* no shell */ } } };
 
       // ── the list ──
-      const loadList = async () => { const l = await FX.crList(''); if (l.ok) v.all = l.body.requests || []; else say(l); };
+      const loadList = async () => { const l = await FX.crList(''); if (l.ok) { v.all = l.body.requests || []; v.an = CRA.model(v.all, { weeks: 12 }); } else say(l); };
       // ── one change request: its Code Fix attempts (Code Fix's own list for its page, the ones it made) ──
       const loadAttempts = async () => {
         const ids = (v.cr && v.cr.fixes) || [];
@@ -35,6 +35,20 @@ define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pag
         if (!id) { v.fix = null; return; }
         const g = await FX.get(id);
         v.fix = g.ok ? g.body.fix : null;
+      };
+      // the change gone to: scrolled into view in the code frame
+      const goChange = () => {
+        const rs = (v.codeView === 'before' ? v.code && v.code.beforeRegions : v.code && v.code.regions) || [];
+        const r = rs[v.codeAt];
+        if (r) CV.scrollTo('crCodeFrame', Math.max(1, r.from));
+      };
+      const loadCode = async (file) => {
+        if (!v.fix) { v.code = null; return; }
+        v.codeBusy = true;
+        try {
+          const r = await FX.code(v.fix.id, file);
+          if (r.ok) { v.code = r.body; v.codeAt = 0; if (v.code.created && v.codeView === 'before') v.codeView = 'after'; goChange(); } else { v.code = null; say(r); }
+        } finally { v.codeBusy = false; }
       };
       const reload = async () => {
         if (!v.cr || !v.cr.id) return;
@@ -73,6 +87,10 @@ define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pag
       if (act === 'list') { if (!v.crId) await loadList(); return; }
       if (act === 'listField') { if (key === 'q') v.listQ = String(value || ''); return; }
       if (act === 'listStatus') { v.listStatus = String(key || 'all'); return; }
+      // Analytics: the view; a status or a page clicked shows those requests in the list
+      if (act === 'listView') { v.listView = key === 'analytics' ? 'analytics' : 'list'; await loadList(); return; }
+      if (act === 'anStatus') { v.listStatus = String(key || 'all'); v.listQ = ''; v.listView = 'list'; return; }
+      if (act === 'anPage') { v.listQ = String(key || ''); v.listStatus = 'all'; v.listView = 'list'; return; }
       if (act === 'newCr') { bus.open({ record: 'change-request', params: { crId: 'new-' + Date.now().toString(36), page: String(key || ''), title: 'New change request' } }); return; }
       if (act === 'openCr') {
         const r0 = (v.all || []).filter((x) => x.id === key)[0];
@@ -98,7 +116,21 @@ define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pag
         v.cr = Object.assign({}, v.cr, patch);
         return;
       }
-      if (act === 'tab') { v.crTab = String(key || 'request'); if (v.crTab === 'fix' && v.cr.fixId && !v.fix) await loadFix(); return; }
+      if (act === 'tab') {
+        v.crTab = String(key || 'request');
+        if ((v.crTab === 'fix' || v.crTab === 'how') && v.cr.fixId && !v.fix) await loadFix();
+        if (v.crTab === 'how' && v.fix && (!v.code || v.code.fix !== v.fix.id || v.code.status !== v.fix.status)) await loadCode('');
+        return;
+      }
+      // How it was fixed: one changed file in full (with the change / as it was / only the change); its changes one by one
+      if (act === 'codeFile') { await loadCode(String(key || '')); return; }
+      if (act === 'codeView') { v.codeView = String(key || 'after'); v.codeAt = 0; goChange(); return; }
+      if (act === 'codePrev' || act === 'codeNext') {
+        const n = ((v.codeView === 'before' ? v.code && v.code.beforeRegions : v.code && v.code.regions) || []).length;
+        v.codeAt = Math.max(0, Math.min(n - 1, v.codeAt + (act === 'codeNext' ? 1 : -1)));
+        goChange();
+        return;
+      }
       if (act === 'save') { const r = await save(); say(r, r.ok ? (r.body.request.code + ' saved.') : ''); return; }
       if (act === 'delete') {
         if (!v.cr.id) { try { bus.close(tabId()); } catch (e) { /* no shell */ } return; }
@@ -115,7 +147,7 @@ define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pag
         if (w && w.key) bus.open({ record: 'vbs-project', params: { key: w.key, name: w.name, ws: w.ws } });
         return;
       }
-      if (act === 'openFix') { const g = await FX.get(key); if (g.ok) { v.fix = g.body.fix; v.fixResult = null; } else say(g); return; }
+      if (act === 'openFix') { const g = await FX.get(key); if (g.ok) { v.fix = g.body.fix; v.fixResult = null; v.code = null; } else say(g); return; }
       if (act === 'newAttempt') { v.fix = null; v.fixResult = null; v.refine = ''; return; }
 
       // ── Code fix: one at a time ──

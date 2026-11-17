@@ -16,6 +16,11 @@
   <!-- ── the list ── -->
   <oj-bind-if test="[[ !$variables.crId ]]">
     <section class="nx-sc-main">
+      <div class="nx-sc-tabs nx-cr-viewtabs" role="tablist" id="crViewTabs">
+        <button type="button" role="tab" id="crViewList" :aria-selected="[[ $variables.listView !== 'analytics' ? 'true' : 'false' ]]" :class="[[ $functions.tabClass('list', $variables.listView === 'analytics' ? 'analytics' : 'list') ]]" data-act="listView" data-key="list" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-list" aria-hidden="true"></span> Requests</button>
+        <button type="button" role="tab" id="crViewAn" :aria-selected="[[ $variables.listView === 'analytics' ? 'true' : 'false' ]]" :class="[[ $functions.tabClass('analytics', $variables.listView) ]]" data-act="listView" data-key="analytics" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-chart-bar" aria-hidden="true"></span> Analytics</button>
+      </div>
+      <oj-bind-if test="[[ $variables.listView !== 'analytics' ]]">
       <div class="nx-card nx-sc-sec" id="crList">
         <div class="nx-sc-head">
           <div><h2>Change requests</h2><span class="nx-note" id="crListCount"><oj-bind-text value="[[ $functions.listRows($variables.all, $variables.listQ, $variables.listStatus).length + ' shown · ' + $variables.all.length + ' in all' ]]"></oj-bind-text></span></div>
@@ -54,6 +59,140 @@
           </div>
         </oj-bind-if>
       </div>
+      </oj-bind-if>
+      <!-- Analytics: the figures across every change request (resources/js/crAnalytics.js, worked out when the list loads) -->
+      <oj-bind-if test="[[ $variables.listView === 'analytics' && !!$variables.an ]]">
+        <div class="nx-cra" id="crAnalytics">
+          <oj-bind-if test="[[ !$variables.an.total ]]"><div class="nx-card nx-card-pad nx-empty">No change request yet: the figures start with the first one.</div></oj-bind-if>
+          <oj-bind-if test="[[ $variables.an.total > 0 ]]">
+            <div class="nx-cra-kpis" id="craKpis">
+              <oj-bind-for-each data="[[ $variables.an.kpis ]]"><template data-oj-as="k">
+                <div :class="[[ 'nx-cra-kpi' + (k.data.tone ? ' nx-cra-kpi--' + k.data.tone : '') ]]" :data-key="[[ k.data.key ]]"><b><oj-bind-text value="[[ k.data.n ]]"></oj-bind-text></b><span><oj-bind-text value="[[ k.data.label ]]"></oj-bind-text></span><small><oj-bind-text value="[[ k.data.sub ]]"></oj-bind-text></small></div>
+              </template></oj-bind-for-each>
+            </div>
+
+            <div class="nx-cra-row">
+              <div class="nx-card nx-sc-sec" id="craStatus">
+                <h2>Where they are</h2>
+                <div class="nx-cra-stack" role="img" aria-label="Change requests by status">
+                  <oj-bind-for-each data="[[ $variables.an.status ]]"><template data-oj-as="s"><oj-bind-if test="[[ s.data.n > 0 ]]">
+                    <span :class="[[ 'nx-cra-seg nx-cra-st--' + s.data.key ]]" :style.width="[[ s.data.w ]]" :title="[[ s.data.label + ': ' + s.data.n + ' (' + s.data.pct + '%)' ]]"><oj-bind-text value="[[ s.data.n ]]"></oj-bind-text></span>
+                  </oj-bind-if></template></oj-bind-for-each>
+                </div>
+                <div class="nx-cra-legend">
+                  <oj-bind-for-each data="[[ $variables.an.status ]]"><template data-oj-as="s">
+                    <button type="button" class="nx-cra-lgbtn" data-act="anStatus" :data-key="[[ s.data.key ]]" on-click="[[ $listeners.onAct ]]" title="Show them in the list"><span :class="[[ 'nx-cra-dot nx-cra-st--' + s.data.key ]]"></span><oj-bind-text value="[[ s.data.label ]]"></oj-bind-text> <b><oj-bind-text value="[[ s.data.n ]]"></oj-bind-text></b> <span class="nx-note"><oj-bind-text value="[[ s.data.pct + '%' ]]"></oj-bind-text></span></button>
+                  </template></oj-bind-for-each>
+                </div>
+              </div>
+              <div class="nx-card nx-sc-sec" id="craKinds">
+                <h2>What kind of change</h2>
+                <div class="nx-cra-stack" role="img" aria-label="Change requests by kind">
+                  <oj-bind-for-each data="[[ $variables.an.kinds ]]"><template data-oj-as="s"><oj-bind-if test="[[ s.data.n > 0 ]]">
+                    <span :class="[[ 'nx-cra-seg nx-cra-k--' + s.data.key ]]" :style.width="[[ s.data.w ]]" :title="[[ s.data.label + ': ' + s.data.n + ' (' + s.data.pct + '%), ' + s.data.fixed + ' fixed' ]]"><oj-bind-text value="[[ s.data.n ]]"></oj-bind-text></span>
+                  </oj-bind-if></template></oj-bind-for-each>
+                </div>
+                <div class="nx-cra-legend">
+                  <oj-bind-for-each data="[[ $variables.an.kinds ]]"><template data-oj-as="s">
+                    <span class="nx-cra-lg"><span :class="[[ 'nx-cra-dot nx-cra-k--' + s.data.key ]]"></span><oj-bind-text value="[[ s.data.label ]]"></oj-bind-text> <b><oj-bind-text value="[[ s.data.n ]]"></oj-bind-text></b> <span class="nx-note"><oj-bind-text value="[[ s.data.pctFixed + '% fixed' ]]"></oj-bind-text></span></span>
+                  </template></oj-bind-for-each>
+                </div>
+              </div>
+            </div>
+
+            <div class="nx-card nx-sc-sec" id="craPages">
+              <div class="nx-sc-head"><div><h2>Page by page</h2><span class="nx-note">What was asked of each page, of which kind, what is fixed, and how much code it took. A row shows its requests in the list.</span></div></div>
+              <div class="nx-cra-ptable" role="table" aria-label="Change requests page by page">
+                <div class="nx-cra-prow nx-cra-prow--head" role="row"><span>Page</span><span>Requests (fixed)</span><span>Kinds</span><span>Open</span><span>Lines</span><span>Files</span><span>Time to fix</span><span>Overdue</span><span>Last</span></div>
+                <oj-bind-for-each data="[[ $variables.an.pages ]]"><template data-oj-as="p">
+                  <button type="button" class="nx-cra-prow" role="row" data-act="anPage" :data-key="[[ p.data.key ]]" on-click="[[ $listeners.onAct ]]" :title="[[ 'Show the requests of ' + p.data.label ]]">
+                    <span class="nx-cra-pname"><b><oj-bind-text value="[[ p.data.label ]]"></oj-bind-text></b><code><oj-bind-text value="[[ p.data.key ]]"></oj-bind-text></code></span>
+                    <span class="nx-cra-barcell"><span class="nx-cra-bar"><span class="nx-cra-barall" :style.width="[[ p.data.w ]]"></span><span class="nx-cra-barfix" :style.width="[[ p.data.wFixed ]]"></span></span><b><oj-bind-text value="[[ p.data.n + ' (' + p.data.fixed + ')' ]]"></oj-bind-text></b></span>
+                    <span class="nx-cra-kcell"><span class="nx-cra-mini"><oj-bind-for-each data="[[ p.data.kindBar ]]"><template data-oj-as="x"><span :class="[[ 'nx-cra-k--' + x.data.key ]]" :style.width="[[ x.data.w ]]"></span></template></oj-bind-for-each></span><small><oj-bind-text value="[[ p.data.kindText ]]"></oj-bind-text></small></span>
+                    <span><oj-bind-text value="[[ p.data.open ]]"></oj-bind-text></span>
+                    <span class="nx-cra-lines"><span class="nx-fx-add"><oj-bind-text value="[[ '+' + p.data.added ]]"></oj-bind-text></span> <span class="nx-fx-del"><oj-bind-text value="[[ '−' + p.data.removed ]]"></oj-bind-text></span></span>
+                    <span><oj-bind-text value="[[ p.data.files ]]"></oj-bind-text></span>
+                    <span><oj-bind-text value="[[ p.data.avgDays ]]"></oj-bind-text></span>
+                    <span :class="[[ p.data.overdue ? 'nx-cra-late' : 'nx-note' ]]"><oj-bind-text value="[[ p.data.overdue ]]"></oj-bind-text></span>
+                    <span class="nx-note"><oj-bind-text value="[[ p.data.last ]]"></oj-bind-text></span>
+                  </button>
+                </template></oj-bind-for-each>
+              </div>
+            </div>
+
+            <div class="nx-card nx-sc-sec" id="craWeeks">
+              <div class="nx-sc-head"><div><h2>Asked and fixed, week by week</h2><span class="nx-note">The last 12 weeks (Monday to Sunday)</span></div><span class="nx-min-flex"></span>
+                <span class="nx-cra-lg"><span class="nx-cra-dot nx-cra-st--new"></span>Asked</span><span class="nx-cra-lg"><span class="nx-cra-dot nx-cra-st--fixed"></span>Fixed</span></div>
+              <div class="nx-cra-cols" role="img" aria-label="Change requests asked and fixed per week">
+                <oj-bind-for-each data="[[ $variables.an.weeks ]]"><template data-oj-as="w">
+                  <div :class="[[ 'nx-cra-col' + (w.data.current ? ' nx-cra-col--now' : '') ]]" :title="[[ w.data.tip ]]">
+                    <div class="nx-cra-colbars">
+                      <span class="nx-cra-cbar nx-cra-st--new" :style.height="[[ w.data.hAsked ]]"><oj-bind-if test="[[ w.data.asked > 0 ]]"><i><oj-bind-text value="[[ w.data.asked ]]"></oj-bind-text></i></oj-bind-if></span>
+                      <span class="nx-cra-cbar nx-cra-st--fixed" :style.height="[[ w.data.hFixed ]]"><oj-bind-if test="[[ w.data.fixed > 0 ]]"><i><oj-bind-text value="[[ w.data.fixed ]]"></oj-bind-text></i></oj-bind-if></span>
+                    </div>
+                    <small><oj-bind-text value="[[ w.data.label ]]"></oj-bind-text></small>
+                  </div>
+                </template></oj-bind-for-each>
+              </div>
+            </div>
+
+            <div class="nx-cra-row nx-cra-row--3">
+              <div class="nx-card nx-sc-sec" id="craPriority"><h2>Priority</h2>
+                <oj-bind-for-each data="[[ $variables.an.priorities ]]"><template data-oj-as="x">
+                  <div class="nx-cra-hb"><span class="nx-cra-hbl"><oj-bind-text value="[[ x.data.label ]]"></oj-bind-text></span><span class="nx-cra-hbt"><span class="nx-cra-hbf nx-cra-seq" :style.width="[[ x.data.w ]]"></span></span><b><oj-bind-text value="[[ x.data.n ]]"></oj-bind-text></b><small class="nx-note"><oj-bind-text value="[[ x.data.open + ' open' ]]"></oj-bind-text></small></div>
+                </template></oj-bind-for-each>
+              </div>
+              <div class="nx-card nx-sc-sec" id="craAgeing"><h2>How old the open ones are</h2>
+                <oj-bind-for-each data="[[ $variables.an.ageing ]]"><template data-oj-as="x">
+                  <div class="nx-cra-hb"><span class="nx-cra-hbl"><oj-bind-text value="[[ x.data.label ]]"></oj-bind-text></span><span class="nx-cra-hbt"><span class="nx-cra-hbf nx-cra-seq" :style.width="[[ x.data.w ]]"></span></span><b><oj-bind-text value="[[ x.data.n ]]"></oj-bind-text></b></div>
+                </template></oj-bind-for-each>
+              </div>
+              <div class="nx-card nx-sc-sec" id="craFixers"><h2>Who fixed them</h2>
+                <oj-bind-if test="[[ !$variables.an.fixers.length ]]"><p class="nx-note">Nothing fixed yet.</p></oj-bind-if>
+                <oj-bind-for-each data="[[ $variables.an.fixers ]]"><template data-oj-as="x">
+                  <div class="nx-cra-hb"><span class="nx-cra-hbl"><oj-bind-text value="[[ x.data.label ]]"></oj-bind-text></span><span class="nx-cra-hbt"><span class="nx-cra-hbf nx-cra-st--fixed" :style.width="[[ x.data.w ]]"></span></span><b><oj-bind-text value="[[ x.data.n ]]"></oj-bind-text></b><small class="nx-note"><oj-bind-text value="[[ x.data.lines + ' lines · ' + x.data.avgDays ]]"></oj-bind-text></small></div>
+                </template></oj-bind-for-each>
+              </div>
+            </div>
+
+            <div class="nx-cra-row nx-cra-row--3">
+              <div class="nx-card nx-sc-sec" id="craCustomers"><h2>For which customers</h2>
+                <oj-bind-for-each data="[[ $variables.an.customers ]]"><template data-oj-as="x">
+                  <div class="nx-cra-hb"><span class="nx-cra-hbl"><oj-bind-text value="[[ x.data.label ]]"></oj-bind-text></span><span class="nx-cra-hbt"><span class="nx-cra-hbf nx-cra-seq" :style.width="[[ x.data.w ]]"></span></span><b><oj-bind-text value="[[ x.data.n ]]"></oj-bind-text></b><small class="nx-note"><oj-bind-text value="[[ x.data.fixed + ' fixed' ]]"></oj-bind-text></small></div>
+                </template></oj-bind-for-each>
+              </div>
+              <div class="nx-card nx-sc-sec" id="craRequesters"><h2>Who asks</h2>
+                <oj-bind-for-each data="[[ $variables.an.requesters ]]"><template data-oj-as="x">
+                  <div class="nx-cra-hb"><span class="nx-cra-hbl"><oj-bind-text value="[[ x.data.label ]]"></oj-bind-text></span><span class="nx-cra-hbt"><span class="nx-cra-hbf nx-cra-seq" :style.width="[[ x.data.w ]]"></span></span><b><oj-bind-text value="[[ x.data.n ]]"></oj-bind-text></b><small class="nx-note"><oj-bind-text value="[[ x.data.open + ' open' ]]"></oj-bind-text></small></div>
+                </template></oj-bind-for-each>
+              </div>
+              <div class="nx-card nx-sc-sec" id="craAreas"><h2>By area (flow)</h2>
+                <oj-bind-for-each data="[[ $variables.an.areas ]]"><template data-oj-as="x">
+                  <div class="nx-cra-hb"><span class="nx-cra-hbl"><code><oj-bind-text value="[[ x.data.label ]]"></oj-bind-text></code></span><span class="nx-cra-hbt"><span class="nx-cra-hbf nx-cra-seq" :style.width="[[ x.data.w ]]"></span></span><b><oj-bind-text value="[[ x.data.n ]]"></oj-bind-text></b><small class="nx-note"><oj-bind-text value="[[ x.data.pctFixed + '% fixed' ]]"></oj-bind-text></small></div>
+                </template></oj-bind-for-each>
+              </div>
+            </div>
+
+            <div class="nx-cra-row">
+              <div class="nx-card nx-sc-sec" id="craFiles"><h2>The files changed most</h2>
+                <oj-bind-if test="[[ !$variables.an.files.length ]]"><p class="nx-note">No change applied yet.</p></oj-bind-if>
+                <oj-bind-for-each data="[[ $variables.an.files ]]"><template data-oj-as="f">
+                  <div class="nx-cra-file"><code :title="[[ f.data.file ]]"><oj-bind-text value="[[ f.data.file ]]"></oj-bind-text></code><span class="nx-note"><oj-bind-text value="[[ f.data.n + ' change' + (f.data.n === 1 ? '' : 's') ]]"></oj-bind-text></span><span class="nx-fx-add"><oj-bind-text value="[[ '+' + f.data.added ]]"></oj-bind-text></span><span class="nx-fx-del"><oj-bind-text value="[[ '−' + f.data.removed ]]"></oj-bind-text></span></div>
+                </template></oj-bind-for-each>
+              </div>
+              <div class="nx-card nx-sc-sec" id="craLate"><h2>Overdue, and the latest fixed</h2>
+                <oj-bind-if test="[[ !$variables.an.overdue.length ]]"><p class="nx-note">Nothing overdue.</p></oj-bind-if>
+                <oj-bind-for-each data="[[ $variables.an.overdue ]]"><template data-oj-as="r">
+                  <button type="button" class="nx-cra-item nx-cra-item--late" data-act="openCr" :data-key="[[ r.data.id ]]" on-click="[[ $listeners.onAct ]]"><b><oj-bind-text value="[[ r.data.code ]]"></oj-bind-text></b><span><oj-bind-text value="[[ r.data.title ]]"></oj-bind-text></span><small><oj-bind-text value="[[ r.data.page + ' · due ' + r.data.due + ' · ' + r.data.days + ' days late' ]]"></oj-bind-text></small></button>
+                </template></oj-bind-for-each>
+                <oj-bind-for-each data="[[ $variables.an.recent ]]"><template data-oj-as="r">
+                  <button type="button" class="nx-cra-item" data-act="openCr" :data-key="[[ r.data.id ]]" on-click="[[ $listeners.onAct ]]"><b><oj-bind-text value="[[ r.data.code ]]"></oj-bind-text></b><span><oj-bind-text value="[[ r.data.title ]]"></oj-bind-text></span><small><oj-bind-text value="[[ r.data.page + ' · fixed ' + r.data.when + ' · took ' + r.data.took + ' · ' + r.data.lines ]]"></oj-bind-text></small></button>
+                </template></oj-bind-for-each>
+              </div>
+            </div>
+          </oj-bind-if>
+        </div>
+      </oj-bind-if>
     </section>
   </oj-bind-if>
 
@@ -105,6 +244,7 @@
         <button type="button" role="tab" id="crTabReq" :aria-selected="[[ $variables.crTab === 'request' ? 'true' : 'false' ]]" :class="[[ $functions.tabClass('request', $variables.crTab) ]]" data-act="tab" data-key="request" on-click="[[ $listeners.onAct ]]">Request</button>
         <button type="button" role="tab" id="crTabFix" :aria-selected="[[ $variables.crTab === 'fix' ? 'true' : 'false' ]]" :class="[[ $functions.tabClass('fix', $variables.crTab) ]]" data-act="tab" data-key="fix" on-click="[[ $listeners.onAct ]]">
           <oj-bind-text value="[[ 'Code fix' + ($variables.cr.attempts ? ' (' + $variables.cr.attempts + ')' : '') ]]"></oj-bind-text></button>
+        <button type="button" role="tab" id="crTabHow" :aria-selected="[[ $variables.crTab === 'how' ? 'true' : 'false' ]]" :class="[[ $functions.tabClass('how', $variables.crTab) ]]" data-act="tab" data-key="how" on-click="[[ $listeners.onAct ]]">How it was fixed</button>
         <button type="button" role="tab" id="crTabHist" :aria-selected="[[ $variables.crTab === 'history' ? 'true' : 'false' ]]" :class="[[ $functions.tabClass('history', $variables.crTab) ]]" data-act="tab" data-key="history" on-click="[[ $listeners.onAct ]]">
           <oj-bind-text value="[[ 'History (' + (($variables.cr.events || []).length) + ')' ]]"></oj-bind-text></button>
       </div>
@@ -282,6 +422,91 @@
             </div>
           </oj-bind-if>
         </div>
+      </oj-bind-if>
+
+      <!-- How it was fixed: the story (asked → before → changed → after → tested → where it is), the steps, the proof, and
+           each changed file in full with the change marked (after / before / only the change) -->
+      <oj-bind-if test="[[ $variables.crTab === 'how' ]]">
+        <oj-bind-if test="[[ !$variables.fix ]]"><div class="nx-card nx-card-pad nx-empty" id="crHowNone">Nothing changed yet: <b>Code fix</b> asks the AI for the change. Once it is proposed, its code shows here in full.</div></oj-bind-if>
+        <oj-bind-if test="[[ !!$variables.fix ]]">
+          <div class="nx-cr-how" id="crHow">
+            <div class="nx-card nx-sc-sec" id="crStory">
+              <div class="nx-sc-head"><h2>How it was fixed</h2><span :class="[[ $functions.fixStatusClass($variables.fix.status) ]]"><oj-bind-text value="[[ $functions.fixStatus($variables.fix.status) ]]"></oj-bind-text></span></div>
+              <div class="nx-cr-tiles" id="crProof">
+                <oj-bind-for-each data="[[ $functions.proofTiles($variables.fix) ]]"><template data-oj-as="t">
+                  <div :class="[[ $functions.tileClass(t.data) ]]"><b><oj-bind-text value="[[ t.data.n ]]"></oj-bind-text></b><span><oj-bind-text value="[[ t.data.what ]]"></oj-bind-text></span></div>
+                </template></oj-bind-for-each>
+              </div>
+              <ol class="nx-cr-storylist">
+                <oj-bind-for-each data="[[ $functions.story($variables.fix, $variables.cr) ]]"><template data-oj-as="s">
+                  <li :class="[[ $functions.storyClass(s.data) ]]" :data-key="[[ s.data.key ]]">
+                    <span class="nx-cr-storyn"><oj-bind-text value="[[ s.data.n ]]"></oj-bind-text></span>
+                    <div class="nx-cr-storybody"><h3><oj-bind-text value="[[ s.data.title ]]"></oj-bind-text></h3><p><oj-bind-text value="[[ s.data.text ]]"></oj-bind-text></p></div>
+                  </li>
+                </template></oj-bind-for-each>
+              </ol>
+              <details class="nx-cr-steps" id="crSteps">
+                <summary><oj-bind-text value="[[ 'Every step, with who and when (' + $functions.steps($variables.fix).length + ')' ]]"></oj-bind-text></summary>
+                <ol>
+                  <oj-bind-for-each data="[[ $functions.steps($variables.fix) ]]"><template data-oj-as="e">
+                    <li><span class="nx-cr-histwhen"><oj-bind-text value="[[ e.data.when ]]"></oj-bind-text></span><b><oj-bind-text value="[[ e.data.what ]]"></oj-bind-text></b><span class="nx-note"><oj-bind-text value="[[ (e.data.by ? 'by ' + e.data.by : '') + (e.data.detail ? ' · ' + e.data.detail : '') ]]"></oj-bind-text></span></li>
+                  </template></oj-bind-for-each>
+                </ol>
+              </details>
+            </div>
+
+            <div class="nx-card nx-sc-sec" id="crCode">
+              <div class="nx-sc-head">
+                <div><h2>The code</h2><span class="nx-note">Each changed file in full, the change marked</span></div>
+                <span class="nx-min-flex"></span>
+                <div class="nx-sc-listbar nx-cr-views" id="crCodeViews">
+                  <button type="button" :class="[[ $functions.viewClass('after', $variables.codeView) ]]" data-act="codeView" data-key="after" on-click="[[ $listeners.onAct ]]">With the change</button>
+                  <button type="button" :class="[[ $functions.viewClass('before', $variables.codeView) ]]" data-act="codeView" data-key="before" on-click="[[ $listeners.onAct ]]">As it was</button>
+                  <button type="button" :class="[[ $functions.viewClass('diff', $variables.codeView) ]]" data-act="codeView" data-key="diff" on-click="[[ $listeners.onAct ]]">Only the change</button>
+                </div>
+              </div>
+              <div class="nx-cr-files" id="crCodeFiles">
+                <oj-bind-for-each data="[[ $functions.codeFiles($variables.code) ]]"><template data-oj-as="f">
+                  <button type="button" :class="[[ $functions.fileClass($variables.code, f.data.file) ]]" data-act="codeFile" :data-key="[[ f.data.file ]]" on-click="[[ $listeners.onAct ]]">
+                    <code><oj-bind-text value="[[ f.data.file ]]"></oj-bind-text></code><span class="nx-fx-add"><oj-bind-text value="[[ '+' + f.data.added ]]"></oj-bind-text></span><span class="nx-fx-del"><oj-bind-text value="[[ '−' + f.data.removed ]]"></oj-bind-text></span>
+                    <oj-bind-if test="[[ f.data.created ]]"><span class="nx-fx-new">new file</span></oj-bind-if></button>
+                </template></oj-bind-for-each>
+              </div>
+              <oj-bind-if test="[[ $variables.codeBusy ]]"><div class="nx-note nx-pg-progress"><span class="nx-fx-spin" aria-hidden="true"></span>Reading the file…</div></oj-bind-if>
+              <oj-bind-if test="[[ !!$variables.code && $variables.codeView !== 'diff' ]]">
+                <div class="nx-cr-codebar">
+                  <span class="nx-note" id="crCodeHead"><oj-bind-text value="[[ $functions.codeHead($variables.code, $variables.codeView) ]]"></oj-bind-text></span>
+                  <span class="nx-min-flex"></span>
+                  <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="crCodePrev" data-act="codePrev" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.codeAt <= 0 ]]">‹ Previous change</button>
+                  <b class="nx-cr-codeat" id="crCodeAt"><oj-bind-text value="[[ $functions.codeAtText($variables.code, $variables.codeView, $variables.codeAt) ]]"></oj-bind-text></b>
+                  <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="crCodeNext" data-act="codeNext" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.codeAt >= $functions.codeRegions($variables.code, $variables.codeView).length - 1 ]]">Next change ›</button>
+                </div>
+                <iframe class="nx-cr-codeframe" id="crCodeFrame" title="The file in full, the change marked" sandbox="allow-same-origin" :srcdoc="[[ $functions.codeDoc($variables.code, $variables.codeView, $variables.codeAt) ]]"></iframe>
+                <div class="nx-cr-legend"><span class="nx-cr-lg nx-cr-lg--add">added</span><span class="nx-cr-lg nx-cr-lg--chg">changed</span><span class="nx-cr-lg nx-cr-lg--del">taken away</span><span class="nx-cr-lg nx-cr-lg--note">Build.Rite change note</span></div>
+              </oj-bind-if>
+              <oj-bind-if test="[[ !!$variables.code && $variables.codeView === 'diff' ]]">
+                <div class="nx-fx-diff" id="crCodeDiff">
+                  <oj-bind-for-each data="[[ $functions.fileDiff($variables.fix, $variables.code.file) ]]">
+                    <template data-oj-as="d">
+                      <div class="nx-fx-file">
+                        <oj-bind-for-each data="[[ d.data.hunks ]]">
+                          <template data-oj-as="h">
+                            <div class="nx-fx-hunk">
+                              <div class="nx-fx-hunkhead"><oj-bind-text value="[[ h.data.head ]]"></oj-bind-text></div>
+                              <oj-bind-for-each data="[[ h.data.rows ]]"><template data-oj-as="r">
+                                <div :class="[[ $functions.fixLine(r.data.t) ]]"><span class="nx-fx-ln"><oj-bind-text value="[[ r.data.o ]]"></oj-bind-text></span><span class="nx-fx-ln"><oj-bind-text value="[[ r.data.n ]]"></oj-bind-text></span><span class="nx-fx-sign"><oj-bind-text value="[[ $functions.fixSign(r.data.t) ]]"></oj-bind-text></span><span class="nx-fx-code"><oj-bind-text value="[[ r.data.s ]]"></oj-bind-text></span></div>
+                              </template></oj-bind-for-each>
+                            </div>
+                          </template>
+                        </oj-bind-for-each>
+                      </div>
+                    </template>
+                  </oj-bind-for-each>
+                </div>
+              </oj-bind-if>
+            </div>
+          </div>
+        </oj-bind-if>
       </oj-bind-if>
 
       <!-- History: what happened to it -->

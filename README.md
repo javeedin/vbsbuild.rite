@@ -209,11 +209,27 @@ or is due. The chips filter it (New, In progress, Fixed, On hold, Closed) and Fi
   saves it there. Then **What now?**: 1 **Try it** opens the page from your working copy, 2 **Send it on** (Apply to
   main, then Push, in its project's tab), or **Undo**, which reverts the saved commit. If a check fails, the change is
   written but not saved, so you can look first (**Save anyway** or **Undo**). Every attempt is kept with the request.
+- **How it was fixed**: the change told as a story — what was asked, how it worked before, what was changed and why,
+  after the change, the risks, how it was tested (the steps to try, the checks and tests that ran) and where the change
+  is now — with its proof (files, lines added and taken away, checks passed, the commit) and every step with who and
+  when. Under it **the code**: each changed file **in full**, the change marked line by line — *With the change* (added
+  lines green, changed amber, a red line where lines were taken away, the change note tinted), *As it was* (what was
+  taken away struck through in red, a green line where lines were put in) or *Only the change* — with Previous / Next
+  change. It comes from the change's commit once it is saved (so it still shows after an undo), from the folder while
+  it is applied, or from the AI's proposal before it is written.
 - **History**: every step (created, asked the AI, saved in working, undone, state changed), when and by whom.
 
 Its status follows its Code fix — New, Proposed, Applied, **Fixed** once its change is saved (fixed on and by fill in
 by themselves), Undone — unless you set it On hold, Closed or Rejected. A request kept past its due date and not fixed
 says *overdue*. Change requests are kept on this PC per VB Studio project.
+
+**Analytics** (the tab beside Requests) works the figures out across every change request: how many, open and fixed,
+the average and median time to fix (from the day it was asked to the day its change was saved), how many were fixed at
+the first try, the lines and files changed, what is overdue; where they are (status) and what kind of change they are;
+**page by page** — requests and how many are fixed, their kinds, open, lines, files, time to fix, overdue, the last one
+(a row shows that page's requests in the list); asked and fixed week by week; priority; how old the open ones are; who
+fixed them, for which customers, who asks, by area (the app's flows); the files changed most; and the overdue and latest
+fixed requests (each opens it).
 
 ## Follow-ups: chase stories by email, with your own messages
 
@@ -350,7 +366,7 @@ Options:
 | Path | What |
 |---|---|
 | `webApps/buildrite/` | Build.Rite's screens: a Visual Builder app (`app-flow.*`, `pages/shell-page*`, `flows/insights`, `flows/fdd`, `resources/js`, `resources/css`) |
-| `desktop/` | the Electron desktop app: `main.js` (the window, the stores, ▶ Run, the Run console), `lib/` (the engines: `vbs.js` VB Studio and your workspace, `workPreview.js` building it, `codeFix.js` and `changeNote.js`, `changeRequests.js`, `issues.js`, `pages.js`, `pageScan.js`, `devserver.js` the local server, `appRoles.js` the roles in your app's code, …) |
+| `desktop/` | the Electron desktop app: `main.js` (the window, the stores, ▶ Run, the Run console), `lib/` (the engines: `vbs.js` VB Studio and your workspace, `workPreview.js` building it, `codeFix.js` and `changeNote.js`, `changeRequests.js` (+ `resources/js/crAnalytics.js`), `issues.js`, `pages.js`, `pageScan.js`, `devserver.js` the local server, `appRoles.js` the roles in your app's code, …) |
 | `services/jira/` | the Jira service connection the Jira screens read through (read only) |
 | `tools/` | `run-vb-app.js` (run a VB app from its folder), `check-tools.js` (build preflight), `get-electron.js`, `fdd.js` (the FDD library from a terminal) |
 | `tests/` | dependency-free `node` test suites (`npm test`), and browser tests in `tests/e2e` (Playwright) |

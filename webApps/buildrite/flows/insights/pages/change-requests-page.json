@@ -30,6 +30,16 @@
       "type": "string",
       "defaultValue": ""
     },
+    "listView": {
+      "type": "string",
+      "defaultValue": "list",
+      "description": "list | analytics"
+    },
+    "an": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The analytics of every change request (resources/js/crAnalytics.js model), worked out when the list loads."
+    },
     "listStatus": {
       "type": "string",
       "defaultValue": "all",
@@ -84,6 +94,25 @@
     "fixResult": {
       "type": "any",
       "defaultValue": null
+    },
+    "code": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "One file of its Code Fix in full: { fix, file, files, before, after, regions, beforeRegions, from } (/__fix/code)."
+    },
+    "codeView": {
+      "type": "string",
+      "defaultValue": "after",
+      "description": "after (the code with the change) | before (as it was) | diff (only the change)"
+    },
+    "codeAt": {
+      "type": "number",
+      "defaultValue": 0,
+      "description": "The change outlined in the code (its index)."
+    },
+    "codeBusy": {
+      "type": "boolean",
+      "defaultValue": false
     }
   },
   "events": {

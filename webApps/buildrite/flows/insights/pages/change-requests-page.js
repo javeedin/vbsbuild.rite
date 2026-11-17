@@ -1,4 +1,4 @@
-define(['resources/js/shellBus', 'resources/js/codeFixView'], (bus, CFV) => {
+define(['resources/js/shellBus', 'resources/js/codeFixView', 'resources/js/codeView'], (bus, CFV, CV) => {
   'use strict';
 
   // Change requests: binding helpers (crChain does the work through resources/js/codeFixClient.js). The list's groups:
@@ -66,7 +66,7 @@ define(['resources/js/shellBus', 'resources/js/codeFixView'], (bus, CFV) => {
     priorities(sel) { return opts(PRIORITIES, sel || 'medium'); }
     states(sel) { return opts(STATES, sel || 'open'); }
     tabClass(t, cur) { return 'nx-sc-tab' + (t === cur ? ' nx-sc-tab--on' : ''); }
-    headTitle(cr) { return !cr ? 'Change request' : (cr.code ? cr.code + ' · ' : '') + (cr.title || 'New change request'); }
+    headTitle(cr) { return !cr ? 'Change request' : (cr.code ? cr.code + ' · ' : '') + (cr.title || (cr.request ? String(cr.request).split('\n')[0].slice(0, 70) : (cr.code ? 'Change request' : 'New change request'))); }
     madeText(cr) { return !cr || !cr.createdAt ? 'not saved yet' : CFV.when(cr.createdAt) + (cr.createdBy ? ' · ' + cr.createdBy : ''); }
     updatedText(cr) { return !cr || !cr.updatedAt ? '—' : CFV.when(cr.updatedAt) + (cr.updatedBy ? ' · ' + cr.updatedBy : ''); }
     fixedText(cr) { return cr && cr.fixedOnShown && !cr.fixedOn ? 'From its saved change: ' + dayText(cr.fixedOnShown) + (cr.fixedByShown ? ' by ' + cr.fixedByShown : '') : ''; }
@@ -110,6 +110,49 @@ define(['resources/js/shellBus', 'resources/js/codeFixView'], (bus, CFV) => {
     fixCanApply(f) { return CFV.canApply(f); }
     fixListText(x) { return CFV.listText(x); }
     attemptClass(id, cur) { return 'nx-cr-attempt' + (cur && cur.id === id ? ' nx-cr-attempt--on' : ''); }
+
+    // ── How it was fixed: the story, the steps, and the code in full with the change marked ──
+    story(f, cr) { return CFV.story(f, cr); }
+    steps(f) { return CFV.steps(f); }
+    storyClass(s) { return 'nx-cr-story' + (s.tone ? ' nx-cr-story--' + s.tone : ''); }
+    proofTiles(f) {
+      if (!f) return [];
+      const d = f.diff || [];
+      const t = f.tests;
+      const cs = (t && t.checks) || f.checks || [];
+      const ok = cs.filter((c) => c.ok || c.already).length;
+      const tiles = [
+        { k: 'files', n: String(d.length), what: d.length === 1 ? 'file changed' : 'files changed' },
+        { k: 'add', n: '+' + d.reduce((n, x) => n + x.added, 0), what: 'lines added' },
+        { k: 'del', n: '−' + d.reduce((n, x) => n + x.removed, 0), what: 'lines taken away' },
+        { k: 'checks', n: ok + '/' + cs.length, what: t ? (t.ok ? 'checks passed — nothing broke' : 'checks — something broke') : 'checks on the proposal' }
+      ];
+      if (t && (t.unit || []).length) tiles.push({ k: 'unit', n: String(t.unit.filter((u) => u.ok || !u.newFailures.length).length) + '/' + t.unit.length, what: 'related test files' });
+      if (f.commit) tiles.push({ k: 'commit', n: f.commit.sha, what: f.commit.pushed ? 'commit, pushed' : 'commit, on this PC' });
+      return tiles;
+    }
+    tileClass(t) { return 'nx-cr-tile nx-cr-tile--' + t.k; }
+    codeFiles(code) { return (code && code.files) || []; }
+    fileClass(code, file) { return 'nx-cr-file' + (code && code.file === file ? ' nx-cr-file--on' : ''); }
+    viewClass(v, cur) { return 'nx-sc-chip' + (v === cur ? ' nx-sc-chip--on' : ''); }
+    codeRegions(code, view) { return !code ? [] : (view === 'before' ? code.beforeRegions : code.regions) || []; }
+    /** The file in full (after the change, or as it was), its changes marked and the one gone to outlined. */
+    codeDoc(code, view, at) {
+      if (!code) return '';
+      const before = view === 'before';
+      return CV.doc(before ? code.before : code.after, code.file, '', { regions: before ? code.beforeRegions : code.regions }, at);
+    }
+    codeAtText(code, view, at) {
+      const n = !code ? 0 : ((view === 'before' ? code.beforeRegions : code.regions) || []).length;
+      return n ? 'Change ' + (Math.min(at, n - 1) + 1) + ' of ' + n : 'No change in this file';
+    }
+    codeHead(code, view) {
+      if (!code) return '';
+      const lines = (view === 'before' ? code.before : code.after).split('\n').length;
+      return (view === 'before' ? (code.created ? 'A new file: there was nothing before.' : 'As it was before the change — ' + lines + ' lines; what was taken away or replaced is struck through in red, a green line marks where lines were put in.')
+        : 'With the change — ' + lines + ' lines (+' + code.added + ' −' + code.removed + '); added lines green, changed amber, a red line where lines were taken away.') + ' From ' + code.from + '.';
+    }
+    fileDiff(f, file) { return ((f && f.diff) || []).filter((d) => d.file === file); }
   }
   PageModule.seq = 0;
   return PageModule;

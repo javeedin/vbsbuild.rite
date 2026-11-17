@@ -13,6 +13,19 @@ define(['resources/js/codeFixClient', 'resources/js/storyAnalysis'], function (F
     return d.getDate() + ' ' + MON[d.getMonth()] + ' ' + d.getFullYear() + ', ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
   }
   var inWs = function (f) { return !!(f && f.workspace); };
+  /** The AI's analysis split by its ## headings → { 'lower-case heading': plain text } (Markdown made plain). */
+  function sectionsOf(md) {
+    var out = {}, cur = null;
+    String(md || '').replace(/\r\n/g, '\n').split('\n').forEach(function (l) {
+      var h = /^#{1,3}\s+(.+?)\s*#*$/.exec(l);
+      if (h) { cur = h[1].toLowerCase().replace(/[*_`:]/g, '').trim(); out[cur] = ''; return; }
+      if (cur === null) return;
+      var t = l.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`([^`]+)`/g, '$1').replace(/^\s*[-*]\s+/, '• ');
+      out[cur] += (out[cur] ? '\n' : '') + t;
+    });
+    Object.keys(out).forEach(function (k) { out[k] = out[k].replace(/\n{3,}/g, '\n\n').trim(); if (/^(none|n\/a|-)\.?$/i.test(out[k])) out[k] = ''; });
+    return out;
+  }
 
   var V = {
     when: when,
@@ -96,6 +109,44 @@ define(['resources/js/codeFixClient', 'resources/js/storyAnalysis'], function (F
     imgSize: function (x) { return (x.w ? x.w + '×' + x.h + ' · ' : '') + Math.max(1, Math.round((x.size || 0) / 1024)) + ' KB'; },
     canApply: function (f) { return !!f && !f.shared && (f.status === 'proposed' || f.status === 'undone'); },
     listText: function (x) { return (x.status ? ({ proposed: 'proposed', applied: 'applied', committed: 'saved', undone: 'undone', discarded: 'discarded', 'needs-redo': 'not usable', questions: 'questions', stale: 'out of date' }[x.status] || x.status) : '') + ' · ' + when(x.at) + (x.by ? ' · ' + x.by : ''); },
+    /**
+     * How it was fixed, as a story a person reads top to bottom: what was asked, how it worked before, what was changed
+     * and why, after the change, the risks, how it was tested (the steps to try, the checks and tests that ran) and
+     * where the change is now. From the AI's analysis (its ## sections), the fix's checks and tests, and its state.
+     * → [{ key, n, title, text, tone }]  (text: plain, line breaks kept; tone: ok | bad | '')
+     */
+    story: function (f, cr) {
+      if (!f) return [];
+      var secs = sectionsOf(f.markdown);
+      var pick = function () { for (var i = 0; i < arguments.length; i++) { var k = secs[arguments[i]]; if (k) return k; } return ''; };
+      var out = [];
+      var add = function (key, title, text, tone) { if (String(text || '').trim()) out.push({ key: key, n: out.length + 1, title: title, text: String(text).trim(), tone: tone || '' }); };
+      var kind = { fix: 'Fix a bug', enhance: 'Enhance', change: 'Change' }[(cr && cr.kind) || f.kind] || 'Change';
+      add('asked', 'What was asked', (cr && cr.request ? cr.request : f.request) + (f.refine ? '\nThen: ' + f.refine : '') + '\n(' + kind + (cr && cr.requestedBy ? ', asked by ' + cr.requestedBy : (f.by ? ', asked by ' + f.by : '')) + (cr && cr.customer ? ' for ' + cr.customer : '') + ')');
+      add('before', 'How it worked before', pick('how it works today', 'today', 'current behaviour', 'current behavior', 'the problem', 'cause'));
+      add('change', 'What was changed, and why', [pick('summary'), pick('what changes', 'the fix', 'solution')].filter(Boolean).join('\n\n'));
+      add('after', 'After the change', pick('after the change', 'result'));
+      add('risks', 'Risks', pick('risks', 'risk'));
+      var t = f.tests;
+      var tested = [pick('how to test', 'testing', 'test steps')];
+      if (t) {
+        var cs = t.checks || [], u = t.unit || [];
+        tested.push((t.ok ? '✓ Nothing broke' : '✗ Something broke') + ' — ' + cs.filter(function (c) { return c.ok || c.already; }).length + ' of ' + cs.length + ' checks passed'
+          + (u.length ? '; related tests: ' + u.map(function (x) { return x.file + (x.ok ? ' ✓' : (x.newFailures.length ? ' ✗' : ' (failing as before)')); }).join(', ') : '; no unit test names this page') + ' (' + when(t.at) + ').');
+      } else if ((f.checks || []).length) tested.push('Checks on the proposed code: ' + f.checks.filter(function (c) { return c.ok || c.already; }).length + ' of ' + f.checks.length + ' passed (not applied yet).');
+      add('tested', 'How it was tested', tested.filter(Boolean).join('\n\n'), t ? (t.ok ? 'ok' : 'bad') : '');
+      var where = '';
+      var c = f.commit;
+      if (f.status === 'committed' && c) where = 'Saved: commit ' + c.sha + ' on ' + c.branch + (c.pushed ? ', pushed to ' + c.upstream + '.' : (inWs(f) ? ', in your workspace\'s working folder (on this PC). Apply to main, then Push, sends it to VB Studio.' : ', not pushed yet.'));
+      else if (f.status === 'applied') where = 'Applied ' + when(f.applied && f.applied.at) + ', not saved yet' + (f.saveHeld ? ': something broke, so it was held for a look.' : '.');
+      else if (f.status === 'undone') where = 'Undone ' + (f.undone ? when(f.undone.at) + (f.undone.revert ? ' — its commit reverted (' + f.undone.revert + ')' : '') : '') + ': the files are as they were.';
+      else if (f.status === 'proposed') where = 'Proposed — not written to the code yet (waiting for approval).';
+      else where = V.status(f.status);
+      add('where', 'Where the change is now', where, f.status === 'committed' ? 'ok' : (f.status === 'undone' ? 'bad' : ''));
+      return out;
+    },
+    /** The fix's steps (asked, proposed, approved and applied, tested, saved, pushed, undone…) with when and who. */
+    steps: function (f) { return ((f && f.events) || []).map(function (e) { return { what: e.what, when: when(e.at), by: e.by || '', detail: e.detail || '' }; }); },
     /** The AI's analysis in a small styled document for its sandboxed iframe. */
     doc: function (text) {
       return '<!doctype html><meta charset="utf-8"><style>'

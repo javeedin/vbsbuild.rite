@@ -65,6 +65,8 @@ define([], function () {
     list: function (page) { return call('list?page=' + encodeURIComponent(page || '')); },
     history: function (q) { return call('history?q=' + encodeURIComponent(q || '')); },
     get: function (id) { return call('get?id=' + encodeURIComponent(id || '')); },
+    // one file of a fix in full: { before, after, regions, beforeRegions, files, from } (Change requests → How it was fixed)
+    code: function (id, file) { return call('code?id=' + encodeURIComponent(id || '') + '&file=' + encodeURIComponent(file || '')); },
     prepImage: prepImage, queueImages: queueImages, takeImages: takeImages,
     imgUrl: function (fix, n) { return fix ? '/__fix/img?id=' + encodeURIComponent(fix.id) + '&n=' + n : ''; },
     shotUrl: function (fix, which) { return fix && fix.preview ? '/__fix/shot?id=' + encodeURIComponent(fix.id) + '&which=' + which + '&t=' + encodeURIComponent(fix.preview.at || '') : ''; },

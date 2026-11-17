@@ -112,6 +112,30 @@ const opened = [];
     await waitText('#crFixResult', /Opened in a window/);
     T.check('Try it: the page opened from your working copy', opened.some((x) => x === 'run shop /vp/shell/customers/customer-billing') && /Opened in a window: .*your workspace's working folder/.test(await text(page, '#crFixResult')), opened.join(' | ') + ' / ' + await text(page, '#crFixResult'));
 
+    T.section('How it was fixed: the story, the proof, the code in full with the change marked');
+    await page.click('#crTabHow');
+    await page.waitForSelector('#crCodeFrame', { state: 'visible', timeout: 15000 });
+    await page.waitForTimeout(500);
+    const storyText = await text(page, '#crStory');
+    T.check('the story in order: what was asked, how it worked before, what was changed and why, after, how it was tested, where it is now', /1\s*What was asked\s*Show overdue invoices first on My Billing\.[\s\S]*Enhance, asked by sam\.lee for Northwind Traders/.test(storyText)
+      && /How it worked before\s*Newest first\.[\s\S]*What was changed, and why\s*Overdue invoices first\.[\s\S]*One comment line\.[\s\S]*After the change[\s\S]*How it was tested[\s\S]*✓ Nothing broke — \d+ of \d+ checks passed[\s\S]*Where the change is now\s*Saved: commit [0-9a-f]+ on buildrite-working/.test(storyText), storyText.slice(0, 700));
+    T.check('…the proof: 1 file, +9 lines (the change + its note), checks passed, the commit', /1\s*file changed\s*\+9\s*lines added\s*−0\s*lines taken away\s*\d+\/\d+\s*checks passed — nothing broke[\s\S]*[0-9a-f]{7}\s*commit, on this PC/.test(await text(page, '#crProof')), await text(page, '#crProof'));
+    T.check('…every step folded: asked, proposed, approved and applied, tested, saved on approval', /asked[\s\S]*proposed[\s\S]*approved and applied[\s\S]*tested[\s\S]*saved on approval/.test(await page.$eval('#crSteps', (d) => d.textContent)));
+    const frame = await page.evaluate(() => { const d = document.getElementById('crCodeFrame').contentDocument; const q = (sel) => Array.from(d.querySelectorAll(sel)).map((e) => e.textContent); return { lines: q('.l').length, add: q('.l.ca'), note: q('.l.bn').length, cur: q('.l.cur').length }; });
+    T.check('the file in full (every line), the added lines green — the fix\'s line among them — its change note tinted, the first change outlined', frame.lines > 20 && frame.add.some((t) => /Overdue invoices first \(change request\)/.test(t)) && frame.note >= 6 && frame.cur > 0
+      && /customer-billing-page\.html/.test(await text(page, '#crCodeFiles')) && /^Change 1 of \d+$/.test(await text(page, '#crCodeAt')) && /From its commit [0-9a-f]+ on buildrite-working/.test(await text(page, '#crCodeHead')), JSON.stringify(frame).slice(0, 300) + ' / ' + await text(page, '#crCodeAt'));
+    await page.click('#crCodeViews button:has-text("As it was")');
+    await page.waitForTimeout(400);
+    const was = await page.evaluate(() => { const d = document.getElementById('crCodeFrame').contentDocument; return { text: d.body.textContent, ins: d.querySelectorAll('.l.ci, .l.cit').length }; });
+    T.check('As it was: the file before the change (no fix line), green marks where lines were put in', !/change request\)/.test(was.text) && was.ins >= 1 && /As it was before the change/.test(await text(page, '#crCodeHead')), JSON.stringify(was).slice(0, 200));
+    await page.click('#crCodeViews button:has-text("Only the change")');
+    await page.waitForTimeout(300);
+    T.check('Only the change: the diff of that file (its note and the fix line, added)', /Build\.Rite change fx[\s\S]*Overdue invoices first \(change request\)/.test(await text(page, '#crCodeDiff')) && (await page.$$('#crCodeDiff .nx-fx-l--add')).length === 9);
+    await page.click('#crCodeViews button:has-text("With the change")');
+    await env.shot('change-request-how.png');
+    await page.click('#crTabFix');
+    await page.waitForSelector('#crUndo', { state: 'visible', timeout: 10000 });
+
     T.section('Undo: its saved commit reverted');
     page.once('dialog', (d) => { q = d.message(); d.accept(); });
     await page.click('#crUndo');
@@ -147,6 +171,32 @@ const opened = [];
     await page.waitForTimeout(200);
     T.check('Fixed: none matches; Find "northwind": its row', /No change request matches/.test(noFixed) && /1 shown · 1 in all/.test(await text(page, '#crListCount')), noFixed + ' / ' + await text(page, '#crListCount'));
     await env.shot('change-requests-list.png');
+
+    T.section('Analytics: page by page, kinds, status, the weeks, what is late');
+    const today = new Date();
+    const iso = (back) => { const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - back); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+    const x1 = crStore.save({ page: 'shop/orders/order-create', pageLabel: 'New Order', title: 'Wrong total on save', kind: 'fix', priority: 'urgent', customer: 'Contoso', requestedBy: 'kim.ng', requestedOn: iso(20), dueOn: iso(3), request: 'The total is wrong.' }, 'kim.ng').request;
+    const x2 = crStore.save({ page: ID, pageLabel: 'My Billing', title: 'Rename a column', kind: 'change', priority: 'low', customer: 'Northwind Traders', requestedBy: 'sam.lee', request: 'Rename Amount to Total.' }, 'sam.lee').request;
+    await page.click('#crViewAn');
+    await page.waitForSelector('#craKpis', { state: 'visible', timeout: 15000 });
+    await page.waitForTimeout(300);
+    const kpis = await text(page, '#craKpis');
+    T.check('the headline figures: 3 requests on 2 pages, 3 open, 0 fixed, 1 overdue', /^3 ?change requests ?2 pages 3 ?open ?0 in progress · 2 new 0 ?fixed/.test(kpis) && /1 ?overdue ?past their due date/.test(kpis), kpis);
+    T.check('…where they are (New 2, On hold 1) and what kind (1 each), each with its count beside its colour', /New 2 67%[\s\S]*On hold 1 33%/.test(await text(page, '#craStatus')) && /Fix a bug 1 0% fixed Enhance 1 0% fixed Change 1 0% fixed/.test(await text(page, '#craKinds')),
+      await text(page, '#craStatus') + ' / ' + await text(page, '#craKinds'));
+    const rows = await page.$$eval('#craPages .nx-cra-prow:not(.nx-cra-prow--head)', (a) => a.map((r) => r.textContent.replace(/\s+/g, ' ').trim()));
+    T.check('page by page: My Billing 2 (1 enhance · 1 change), New Order 1 (1 fix a bug, 1 overdue)', rows.length === 2 && /^My Billing ?shop\/customers\/customer-billing 2 \(0\) 1 enhance · 1 change 2/.test(rows[0]) && /^New Order ?shop\/orders\/order-create 1 \(0\) 1 fix a bug 1 \+0 −0 0 — 1/.test(rows[1]), rows.join(' | '));
+    T.check('…the weeks (this week marked), customers, who asks, the late one', (await page.$$('#craWeeks .nx-cra-col')).length === 12 && !!(await page.$('#craWeeks .nx-cra-col--now'))
+      && /Northwind Traders ?2[\s\S]*Contoso ?1/.test(await text(page, '#craCustomers')) && /sam\.lee ?2/.test(await text(page, '#craRequesters')) && /Wrong total on save[\s\S]*3 days late/.test(await text(page, '#craLate')), await text(page, '#craLate'));
+    await env.shot('change-requests-analytics.png');
+    await page.click('#craPages .nx-cra-prow[data-key="shop/orders/order-create"]');
+    await page.waitForSelector('#crGrid', { state: 'visible', timeout: 10000 });
+    await page.waitForTimeout(200);
+    T.check('a page clicked: its requests in the list', (await val(page, '#crListQ')) === 'shop/orders/order-create' && /1 shown · 3 in all/.test(await text(page, '#crListCount')), await text(page, '#crListCount'));
+    crStore.remove(x1.id); crStore.remove(x2.id);
+    await page.fill('#crListQ', '');
+    await page.click('#crViewList');
+    await page.waitForTimeout(400);
     page.once('dialog', (d) => d.accept());
     await page.click('#crGrid .nx-sc-carddel');
     await page.waitForSelector('#crNone', { timeout: 10000 }).catch(() => {});
