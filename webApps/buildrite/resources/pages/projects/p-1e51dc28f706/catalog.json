@@ -1,5 +1,5 @@
 {
- "scannedAt": "2026-11-17T10:52:19.857Z",
+ "scannedAt": "2026-11-17T10:53:21.518Z",
  "pages": [
   {
    "id": "vbredwoodapp//shell",
@@ -263,7 +263,15 @@
    ],
    "menu": "Equipment Catalog",
    "stories": [],
-   "sheet": null
+   "sheet": {
+    "at": "2026-11-17T10:53:21.479Z",
+    "by": "rite.user",
+    "codeHash": "bb816c79be041260",
+    "screenshots": 1,
+    "ai": false,
+    "rest": 9,
+    "chains": 39
+   }
   },
   {
    "id": "vbredwoodapp/equipment-foundation/equipment-analytics",
