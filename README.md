@@ -33,6 +33,11 @@ npm run desktop:fresh
 starts it without building. Build.Rite is itself a Visual Builder app (`webApps/buildrite`), served by a local server
 inside the desktop app (`desktop/lib/devserver.js`) at `http://localhost:18893` (set `BUILDRITE_PORT` to change it).
 
+While it starts, a splash plays the logo (`desktop/splash.html`): the BR box and *Build.Rite* letter by letter, then
+*Build* flips to *Write* (the box to WR) — *Write.Rite* — and once the app has loaded the box opens out into the app.
+It plays for about three seconds at least and never keeps the app hidden for more than 15. Set `BUILDRITE_NO_SPLASH=1`
+to start without it.
+
 Then:
 
 1. **Organizations & projects**: add your VB Studio organization and sign in.

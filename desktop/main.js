@@ -1294,6 +1294,51 @@ function showWebServices() {
 }
 
 /* ---------------------------------------------------------------------------
+ * The splash: the logo plays while Build.Rite starts (splash.html), then the box opens out into the app
+ * ------------------------------------------------------------------------- */
+
+let splash = null;
+let splashAt = 0; // when it showed
+let splashEnding = false;
+let splashDone = false;
+const SPLASH_MIN_MS = 3300; // Build.Rite, the flip to Write.Rite, a moment to read it
+const SPLASH_MAX_MS = 15000; // the app shows by then, whatever it is still doing
+const SPLASH_OUT_MS = 650; // the box opening out
+function createSplash() {
+  if (process.env.BUILDRITE_NO_SPLASH === '1') { splashDone = true; return; }
+  splash = new BrowserWindow({ width: 680, height: 440, frame: false, transparent: true, resizable: false, maximizable: false, minimizable: false, fullscreenable: false,
+    show: false, center: true, hasShadow: false, skipTaskbar: false, title: APP_NAME, backgroundColor: '#00000000',
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
+  splash.webContents.on('will-navigate', (event) => event.preventDefault());
+  splash.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  splash.once('ready-to-show', () => { if (splash && !splash.isDestroyed()) { splash.show(); splashAt = Date.now(); } });
+  // closed by hand (Alt+F4): the app shows at once
+  splash.on('closed', () => { splash = null; if (!splashDone) { splashDone = true; showMainWindow(); } });
+  splash.loadFile(path.join(__dirname, 'splash.html')).catch(() => endSplash(true));
+  setTimeout(() => endSplash(true), SPLASH_MAX_MS);
+}
+function showMainWindow() {
+  if (win && !win.isDestroyed() && !win.isVisible()) { win.show(); win.focus(); }
+}
+/** The app is ready (or could not start): once the logo has played, the box opens out and the main window takes over. */
+function endSplash(now) {
+  if (splashDone || splashEnding) return;
+  if (!splash || splash.isDestroyed()) { splashDone = true; showMainWindow(); return; }
+  splashEnding = true;
+  const wait = now ? 0 : Math.max(0, SPLASH_MIN_MS - (Date.now() - (splashAt || Date.now())));
+  setTimeout(() => {
+    const s = splash;
+    if (!s || s.isDestroyed()) { splashDone = true; showMainWindow(); return; }
+    s.webContents.executeJavaScript("document.documentElement.classList.add('out')").catch(() => {});
+    setTimeout(() => {
+      splashDone = true;
+      showMainWindow();
+      setTimeout(() => { try { if (!s.isDestroyed()) s.destroy(); } catch (e) { /* closed */ } }, 200);
+    }, SPLASH_OUT_MS);
+  }, wait);
+}
+
+/* ---------------------------------------------------------------------------
  * The window
  * ------------------------------------------------------------------------- */
 
@@ -1302,10 +1347,11 @@ function createWindow() {
     width: 1440, height: 900, minWidth: 1024, minHeight: 640, title: `${APP_NAME} ${app.getVersion()}`, backgroundColor: '#f5f4f2', show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: true },
   });
-  win.once('ready-to-show', () => win.show());
+  // shown now, or by the splash once the app has loaded (endSplash)
+  win.once('ready-to-show', () => { if (!splash || splashDone) win.show(); });
   win.on('page-title-updated', (event) => event.preventDefault());
-  // A page that never paints must not leave the app invisible.
-  setTimeout(() => { if (win && !win.isDestroyed() && !win.isVisible()) win.show(); }, 6000);
+  // A page that never paints must not leave the app invisible (with the splash: SPLASH_MAX_MS).
+  setTimeout(() => { if (win && !win.isDestroyed() && !win.isVisible() && (!splash || splashDone)) win.show(); }, 6000);
   // Links to other sites open in the default browser; Build.Rite itself and Oracle's hosts stay in the window.
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (allowedNav(url)) return { action: 'allow' };
@@ -1387,20 +1433,24 @@ if (!app.requestSingleInstanceLock()) {
     });
     session.defaultSession.setPermissionCheckHandler((wc, permission, origin) => localOnly(origin || (wc && !wc.isDestroyed() ? wc.getURL() : '')));
     Menu.setApplicationMenu(appMenu());
+    createSplash();
     createWindow();
     identity = loadSavedIdentity();
     if (!isBuilt(BUILD_DIR, WEB_APP)) {
       win.loadURL(problemUrl('Build.Rite is not built yet', 'Build it once with Oracle\'s VB build tool: npm run build (or start with npm run desktop:fresh, which builds first).'));
+      endSplash(true);
       return;
     }
     try {
       server = await createDevServer(Object.assign(await buildRiteOptions(), { buildDir: BUILD_DIR, webApp: WEB_APP, port: PORT }));
     } catch (e) {
       if (win && !win.isDestroyed()) win.loadURL(problemUrl('Could not start Build.Rite\'s local server', String((e && e.message) || e)));
+      endSplash(true);
       return;
     }
     pushLog(`${new Date().toTimeString().slice(0, 8)} Build.Rite at ${server.url}; you are ${me().displayName}`);
-    win.loadURL(appUrl()).catch(() => {});
+    // the app loaded: the splash finishes its logo, opens out, and the window shows
+    win.loadURL(appUrl()).then(() => endSplash(), () => endSplash());
     // first start: settings of another desktop app on this PC offered (connections, keys, minutes…)
     setTimeout(() => { offerImport().catch((e) => pushLog('import offer: ' + e.message)); }, 2500);
   });

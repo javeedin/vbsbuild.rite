@@ -1,0 +1,112 @@
+<!doctype html>
+<!-- Build.Rite's splash, shown while the app starts (desktop/main.js createSplash): the logo animates in — the BR box,
+     then "Build.Rite" letter by letter — then "Build" flips to "Write" (the box's BR to WR): Write.Rite. When the app is
+     ready, main.js adds the class "out" to <html>: the box opens out to the app's colour and the window hands over to
+     the app. Plain CSS, no script, nothing from the network. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Build.Rite</title>
+<style>
+  :root {
+    --navy-1: #0b1626; --navy-2: #13294b; --ink: #ffffff; --muted: #9fb3cc;
+    --b1: #6d5dfc; --b2: #2f6fd6; --accent: #ff8a3d; --app: #f5f4f2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; -webkit-user-select: none; user-select: none; cursor: default; }
+  body { display: grid; place-items: center; font-family: "Oracle Sans", "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; -webkit-app-region: drag; }
+
+  /* the card: deep navy, soft moving light behind the logo */
+  .card { position: relative; width: calc(100vw - 40px); height: calc(100vh - 40px); border-radius: 22px; overflow: hidden;
+    background: radial-gradient(120% 140% at 15% 0%, var(--navy-2) 0%, var(--navy-1) 60%); box-shadow: 0 24px 60px rgba(4, 12, 28, .45), 0 0 0 1px rgba(255, 255, 255, .06) inset;
+    animation: card-in .5s cubic-bezier(.2, .8, .2, 1) both; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(46px); opacity: .55; }
+  .blob.b1 { width: 320px; height: 320px; left: -80px; top: -110px; background: var(--b1); animation: drift1 7s ease-in-out infinite alternate; }
+  .blob.b2 { width: 280px; height: 280px; right: -90px; bottom: -120px; background: var(--b2); animation: drift2 8s ease-in-out infinite alternate; }
+  .blob.b3 { width: 160px; height: 160px; right: 22%; top: -70px; background: var(--accent); opacity: .22; animation: drift1 9s ease-in-out infinite alternate-reverse; }
+  .grain { position: absolute; inset: 0; background-image: radial-gradient(rgba(255, 255, 255, .05) 1px, transparent 1px); background-size: 18px 18px; mask-image: radial-gradient(70% 70% at 50% 45%, #000, transparent); }
+
+  .center { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 18px; }
+  .logo { display: flex; align-items: center; gap: 18px; perspective: 900px; }
+
+  /* the box: BR, flips to WR */
+  .boxwrap { width: 84px; height: 84px; perspective: 700px; animation: box-in .75s cubic-bezier(.34, 1.56, .64, 1) .15s both; }
+  .box { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; animation: box-flip .8s cubic-bezier(.65, 0, .35, 1) 1.85s both; }
+  .face { position: absolute; inset: 0; border-radius: 20px; display: grid; place-items: center; backface-visibility: hidden;
+    background: linear-gradient(135deg, var(--b1), var(--b2)); color: #fff; font-weight: 800; font-size: 32px; letter-spacing: -.02em;
+    box-shadow: 0 10px 28px rgba(47, 111, 214, .45), inset 0 1px 0 rgba(255, 255, 255, .35); overflow: hidden; }
+  .face.back { transform: rotateY(180deg); background: linear-gradient(135deg, var(--accent), #e8505b); box-shadow: 0 10px 28px rgba(232, 80, 91, .45), inset 0 1px 0 rgba(255, 255, 255, .35); }
+  .face::after { content: ""; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .55) 50%, transparent 60%); transform: translateX(-120%); animation: shine 1s ease-out 1.15s both; }
+  .face.back::after { animation-delay: 2.6s; }
+
+  /* the wordmark: Build.Rite, letter by letter; then Build flips to Write */
+  .word { display: flex; align-items: baseline; font-size: 54px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); line-height: 1; }
+  .flip { position: relative; display: inline-grid; justify-items: end; perspective: 600px; }
+  .w { grid-area: 1 / 1; display: inline-flex; transform-origin: 50% 55%; backface-visibility: hidden; }
+  .w1 { animation: flip-out .5s cubic-bezier(.55, 0, .45, 1) 1.85s both; }
+  .w2 { transform: rotateX(-90deg); opacity: 0; animation: flip-in .55s cubic-bezier(.2, .9, .3, 1.2) 2.25s both; color: #ffd0b0; }
+  .l { display: inline-block; opacity: 0; transform: translateY(26px) scale(.9); filter: blur(6px); animation: letter .55s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(.45s + var(--i) * 55ms); }
+  .w2 .l { opacity: 1; transform: none; filter: none; animation: none; }
+  .dot { color: var(--accent); }
+  .rite { color: #a9c7ff; }
+  .dot .l { animation-name: letter, dot-pop; animation-duration: .55s, .6s; animation-delay: calc(.45s + var(--i) * 55ms), 2.3s; animation-timing-function: cubic-bezier(.2, .8, .2, 1), ease-out; }
+
+  /* the line under it: Build it right. → Write it right. */
+  .tag { position: relative; height: 22px; width: 340px; text-align: center; color: var(--muted); font-size: 15px; letter-spacing: .02em; }
+  .tag span { position: absolute; inset: 0; }
+  .t1 { opacity: 0; animation: fade-up .6s ease-out 1.05s both, fade-out .35s ease-in 1.9s forwards; }
+  .t2 { opacity: 0; animation: fade-up .6s ease-out 2.35s both; color: #ffd0b0; }
+  .bar { position: absolute; left: 50%; bottom: 34px; width: 140px; height: 3px; margin-left: -70px; border-radius: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; opacity: 0; animation: fade-up .4s ease-out .8s both; }
+  .bar::before { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; border-radius: 3px; background: linear-gradient(90deg, transparent, var(--b2), var(--accent), transparent); animation: slide 1.3s ease-in-out infinite; }
+  .ver { position: absolute; right: 18px; bottom: 14px; color: rgba(159, 179, 204, .55); font-size: 11px; letter-spacing: .06em; }
+
+  /* the app is ready: the box opens out to the app's colour, the rest falls away */
+  .out .boxwrap { animation: box-out .7s cubic-bezier(.7, 0, .2, 1) both; }
+  .out .face { transition: background .45s ease, color .2s ease; }
+  .out .face.back { background: var(--app); color: transparent; box-shadow: none; }
+  .out .word, .out .tag, .out .bar, .out .ver { animation: away .35s ease-in both; }
+  .out .card { animation: card-out .7s ease-in .1s both; }
+
+  @keyframes card-in { from { opacity: 0; transform: scale(.94) translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes drift1 { to { transform: translate(60px, 40px) scale(1.15); } }
+  @keyframes drift2 { to { transform: translate(-50px, -30px) scale(1.1); } }
+  @keyframes box-in { 0% { opacity: 0; transform: scale(.2) rotate(-24deg); } 60% { opacity: 1; } 100% { opacity: 1; transform: scale(1) rotate(0); } }
+  @keyframes box-flip { from { transform: rotateY(0); } to { transform: rotateY(180deg); } }
+  @keyframes shine { to { transform: translateX(120%); } }
+  @keyframes letter { to { opacity: 1; transform: none; filter: none; } }
+  @keyframes flip-out { 0% { transform: rotateX(0); opacity: 1; } 100% { transform: rotateX(90deg); opacity: 0; } }
+  @keyframes flip-in { 0% { transform: rotateX(-90deg); opacity: 0; } 100% { transform: rotateX(0); opacity: 1; } }
+  @keyframes dot-pop { 0% { transform: scale(1); } 40% { transform: scale(1.7); text-shadow: 0 0 18px var(--accent); } 100% { transform: scale(1); } }
+  @keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes fade-out { to { opacity: 0; transform: translateY(-6px); } }
+  @keyframes slide { from { left: -40%; } to { left: 100%; } }
+  @keyframes box-out { 0% { transform: scale(1); } 100% { transform: scale(16); } }
+  @keyframes away { to { opacity: 0; transform: translateY(10px) scale(.97); filter: blur(4px); } }
+  @keyframes card-out { to { opacity: 0; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .boxwrap, .box, .w1, .w2, .l, .t1, .t2, .face::after, .dot .l { animation-duration: .01s !important; animation-delay: 0s !important; }
+    .blob, .bar::before { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="card" role="img" aria-label="Build.Rite is starting">
+    <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="grain"></div>
+    <div class="center">
+      <div class="logo">
+        <div class="boxwrap" aria-hidden="true"><div class="box"><div class="face front">BR</div><div class="face back">WR</div></div></div>
+        <div class="word" aria-hidden="true">
+          <span class="flip">
+            <span class="w w1"><span class="l" style="--i:0">B</span><span class="l" style="--i:1">u</span><span class="l" style="--i:2">i</span><span class="l" style="--i:3">l</span><span class="l" style="--i:4">d</span></span>
+            <span class="w w2"><span class="l">W</span><span class="l">r</span><span class="l">i</span><span class="l">t</span><span class="l">e</span></span>
+          </span><span class="dot"><span class="l" style="--i:5">.</span></span><span class="rite"><span class="l" style="--i:6">R</span><span class="l" style="--i:7">i</span><span class="l" style="--i:8">t</span><span class="l" style="--i:9">e</span></span>
+        </div>
+      </div>
+      <div class="tag"><span class="t1">Build it right.</span><span class="t2">Write it right.</span></div>
+    </div>
+    <div class="bar" aria-hidden="true"></div>
+    <div class="ver">THE TEAM'S TOOLS</div>
+  </div>
+</body>
+</html>
