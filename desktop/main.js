@@ -1301,9 +1301,9 @@ let splash = null;
 let splashAt = 0; // when it showed
 let splashEnding = false;
 let splashDone = false;
-const SPLASH_MIN_MS = 3300; // Build.Rite, the flip to Write.Rite, a moment to read it
-const SPLASH_MAX_MS = 15000; // the app shows by then, whatever it is still doing
-const SPLASH_OUT_MS = 650; // the box opening out
+const SPLASH_MIN_MS = 7000; // Build.Rite, the flip to Write.Rite (done at 6 s), a moment to read it
+const SPLASH_MAX_MS = 18000; // the app shows by then, whatever it is still doing
+const SPLASH_OUT_MS = 1150; // the box opening out
 function createSplash() {
   if (process.env.BUILDRITE_NO_SPLASH === '1') { splashDone = true; return; }
   splash = new BrowserWindow({ width: 680, height: 440, frame: false, transparent: true, resizable: false, maximizable: false, minimizable: false, fullscreenable: false,

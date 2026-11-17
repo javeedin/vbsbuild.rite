@@ -35,7 +35,7 @@ inside the desktop app (`desktop/lib/devserver.js`) at `http://localhost:18893` 
 
 While it starts, a splash plays the logo (`desktop/splash.html`): the BR box and *Build.Rite* letter by letter, then
 *Build* flips to *Write* (the box to WR) — *Write.Rite* — and once the app has loaded the box opens out into the app.
-It plays for about three seconds at least and never keeps the app hidden for more than 15. Set `BUILDRITE_NO_SPLASH=1`
+It plays for about seven seconds at least and never keeps the app hidden for more than 18. Set `BUILDRITE_NO_SPLASH=1`
 to start without it.
 
 Then:

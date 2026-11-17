@@ -27,7 +27,7 @@ T.check('opened out by the class "out": the box grows to the app\'s colour, the 
 T.check('nothing from the network, no script; calmer for reduced motion', !/https?:\/\//.test(html.replace(/<!--[\s\S]*?-->/g, '')) && !/<script/i.test(html) && /prefers-reduced-motion: reduce/.test(html));
 T.check('main.js: the splash before the window; the window waits for it', /createSplash\(\);\s*createWindow\(\);/.test(main) && /win\.once\('ready-to-show', \(\) => \{ if \(!splash \|\| splashDone\) win\.show\(\); \}\);/.test(main));
 T.check('…handed over once the app has loaded (after the logo has played), at once when it cannot start', /win\.loadURL\(appUrl\(\)\)\.then\(\(\) => endSplash\(\), \(\) => endSplash\(\)\);/.test(main)
-  && (main.match(/endSplash\(true\);/g) || []).length >= 2 && /SPLASH_MIN_MS = 3300/.test(main) && /classList\.add\('out'\)/.test(main));
+  && (main.match(/endSplash\(true\);/g) || []).length >= 2 && /SPLASH_MIN_MS = 7000/.test(main) && /classList\.add\('out'\)/.test(main));
 T.check('…never leaves the app hidden: at most SPLASH_MAX_MS, closing the splash shows the app; BUILDRITE_NO_SPLASH=1 skips it', /setTimeout\(\(\) => endSplash\(true\), SPLASH_MAX_MS\)/.test(main)
   && /splash\.on\('closed', \(\) => \{ splash = null; if \(!splashDone\) \{ splashDone = true; showMainWindow\(\); \} \}\);/.test(main) && /BUILDRITE_NO_SPLASH === '1'/.test(main));
 T.check('…a frameless, transparent, sandboxed window that never navigates', /frame: false, transparent: true/.test(main) && /splash\.webContents\.on\('will-navigate', \(event\) => event\.preventDefault\(\)\)/.test(main)

@@ -19,7 +19,7 @@
   /* the card: deep navy, soft moving light behind the logo */
   .card { position: relative; width: calc(100vw - 40px); height: calc(100vh - 40px); border-radius: 22px; overflow: hidden;
     background: radial-gradient(120% 140% at 15% 0%, var(--navy-2) 0%, var(--navy-1) 60%); box-shadow: 0 24px 60px rgba(4, 12, 28, .45), 0 0 0 1px rgba(255, 255, 255, .06) inset;
-    animation: card-in .5s cubic-bezier(.2, .8, .2, 1) both; }
+    animation: card-in .8s cubic-bezier(.2, .8, .2, 1) both; }
   .blob { position: absolute; border-radius: 50%; filter: blur(46px); opacity: .55; }
   .blob.b1 { width: 320px; height: 320px; left: -80px; top: -110px; background: var(--b1); animation: drift1 7s ease-in-out infinite alternate; }
   .blob.b2 { width: 280px; height: 280px; right: -90px; bottom: -120px; background: var(--b2); animation: drift2 8s ease-in-out infinite alternate; }
@@ -30,42 +30,42 @@
   .logo { display: flex; align-items: center; gap: 18px; perspective: 900px; }
 
   /* the box: BR, flips to WR */
-  .boxwrap { width: 84px; height: 84px; perspective: 700px; animation: box-in .75s cubic-bezier(.34, 1.56, .64, 1) .15s both; }
-  .box { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; animation: box-flip .8s cubic-bezier(.65, 0, .35, 1) 1.85s both; }
+  .boxwrap { width: 84px; height: 84px; perspective: 700px; animation: box-in 1.2s cubic-bezier(.34, 1.56, .64, 1) .3s both; }
+  .box { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; animation: box-flip 1.3s cubic-bezier(.65, 0, .35, 1) 4.4s both; }
   .face { position: absolute; inset: 0; border-radius: 20px; display: grid; place-items: center; backface-visibility: hidden;
     background: linear-gradient(135deg, var(--b1), var(--b2)); color: #fff; font-weight: 800; font-size: 32px; letter-spacing: -.02em;
     box-shadow: 0 10px 28px rgba(47, 111, 214, .45), inset 0 1px 0 rgba(255, 255, 255, .35); overflow: hidden; }
   .face.back { transform: rotateY(180deg); background: linear-gradient(135deg, var(--accent), #e8505b); box-shadow: 0 10px 28px rgba(232, 80, 91, .45), inset 0 1px 0 rgba(255, 255, 255, .35); }
-  .face::after { content: ""; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .55) 50%, transparent 60%); transform: translateX(-120%); animation: shine 1s ease-out 1.15s both; }
-  .face.back::after { animation-delay: 2.6s; }
+  .face::after { content: ""; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .55) 50%, transparent 60%); transform: translateX(-120%); animation: shine 1.6s ease-out 2.6s both; }
+  .face.back::after { animation-delay: 5.9s; }
 
   /* the wordmark: Build.Rite, letter by letter; then Build flips to Write */
   .word { display: flex; align-items: baseline; font-size: 54px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); line-height: 1; }
   .flip { position: relative; display: inline-grid; justify-items: end; perspective: 600px; }
   .w { grid-area: 1 / 1; display: inline-flex; transform-origin: 50% 55%; backface-visibility: hidden; }
-  .w1 { animation: flip-out .5s cubic-bezier(.55, 0, .45, 1) 1.85s both; }
-  .w2 { transform: rotateX(-90deg); opacity: 0; animation: flip-in .55s cubic-bezier(.2, .9, .3, 1.2) 2.25s both; color: #ffd0b0; }
-  .l { display: inline-block; opacity: 0; transform: translateY(26px) scale(.9); filter: blur(6px); animation: letter .55s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(.45s + var(--i) * 55ms); }
+  .w1 { animation: flip-out .9s cubic-bezier(.55, 0, .45, 1) 4.4s both; }
+  .w2 { transform: rotateX(-90deg); opacity: 0; animation: flip-in .9s cubic-bezier(.2, .9, .3, 1.2) 5.1s both; color: #ffd0b0; }
+  .l { display: inline-block; opacity: 0; transform: translateY(26px) scale(.9); filter: blur(6px); animation: letter .9s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(1.1s + var(--i) * 110ms); }
   .w2 .l { opacity: 1; transform: none; filter: none; animation: none; }
   .dot { color: var(--accent); }
   .rite { color: #a9c7ff; }
-  .dot .l { animation-name: letter, dot-pop; animation-duration: .55s, .6s; animation-delay: calc(.45s + var(--i) * 55ms), 2.3s; animation-timing-function: cubic-bezier(.2, .8, .2, 1), ease-out; }
+  .dot .l { animation-name: letter, dot-pop; animation-duration: .9s, 1s; animation-delay: calc(1.1s + var(--i) * 110ms), 5.2s; animation-timing-function: cubic-bezier(.2, .8, .2, 1), ease-out; }
 
   /* the line under it: Build it right. → Write it right. */
   .tag { position: relative; height: 22px; width: 340px; text-align: center; color: var(--muted); font-size: 15px; letter-spacing: .02em; }
   .tag span { position: absolute; inset: 0; }
-  .t1 { opacity: 0; animation: fade-up .6s ease-out 1.05s both, fade-out .35s ease-in 1.9s forwards; }
-  .t2 { opacity: 0; animation: fade-up .6s ease-out 2.35s both; color: #ffd0b0; }
-  .bar { position: absolute; left: 50%; bottom: 34px; width: 140px; height: 3px; margin-left: -70px; border-radius: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; opacity: 0; animation: fade-up .4s ease-out .8s both; }
-  .bar::before { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; border-radius: 3px; background: linear-gradient(90deg, transparent, var(--b2), var(--accent), transparent); animation: slide 1.3s ease-in-out infinite; }
+  .t1 { opacity: 0; animation: fade-up 1s ease-out 2.4s both, fade-out .6s ease-in 4.3s forwards; }
+  .t2 { opacity: 0; animation: fade-up 1s ease-out 5.3s both; color: #ffd0b0; }
+  .bar { position: absolute; left: 50%; bottom: 34px; width: 140px; height: 3px; margin-left: -70px; border-radius: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; opacity: 0; animation: fade-up .6s ease-out 1.6s both; }
+  .bar::before { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; border-radius: 3px; background: linear-gradient(90deg, transparent, var(--b2), var(--accent), transparent); animation: slide 2s ease-in-out infinite; }
   .ver { position: absolute; right: 18px; bottom: 14px; color: rgba(159, 179, 204, .55); font-size: 11px; letter-spacing: .06em; }
 
   /* the app is ready: the box opens out to the app's colour, the rest falls away */
-  .out .boxwrap { animation: box-out .7s cubic-bezier(.7, 0, .2, 1) both; }
-  .out .face { transition: background .45s ease, color .2s ease; }
+  .out .boxwrap { animation: box-out 1.2s cubic-bezier(.7, 0, .2, 1) both; }
+  .out .face { transition: background .8s ease, color .35s ease; }
   .out .face.back { background: var(--app); color: transparent; box-shadow: none; }
-  .out .word, .out .tag, .out .bar, .out .ver { animation: away .35s ease-in both; }
-  .out .card { animation: card-out .7s ease-in .1s both; }
+  .out .word, .out .tag, .out .bar, .out .ver { animation: away .6s ease-in both; }
+  .out .card { animation: card-out 1.1s ease-in .2s both; }
 
   @keyframes card-in { from { opacity: 0; transform: scale(.94) translateY(8px); } to { opacity: 1; transform: none; } }
   @keyframes drift1 { to { transform: translate(60px, 40px) scale(1.15); } }
