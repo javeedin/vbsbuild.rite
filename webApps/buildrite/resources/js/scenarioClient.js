@@ -21,7 +21,8 @@ define([], function () {
     get: function (id) { return call('/get?' + q('id', id)); },
     save: function (scenario) { return call('/save', 'POST', { scenario: scenario }); },
     remove: function (id) { return call('/remove', 'POST', { id: id }); },
-    draft: function (page) { return call('/draft', 'POST', { page: page }); },
+    // draft from the page; into = the scenario open (its id, name and notes kept, its main page's steps read again)
+    draft: function (page, into) { return call('/draft', 'POST', { page: page, into: into || null }); },
     // the journey continued on a page the last one goes to; where a page goes next
     extend: function (scenario, page) { return call('/extend', 'POST', { scenario: scenario, page: page }); },
     unlink: function (scenario, page) { return call('/unlink', 'POST', { scenario: scenario, page: page }); },
@@ -33,7 +34,8 @@ define([], function () {
     // every API of a page (to test one, or build a scenario from them); the order to run a scenario's steps in
     apis: function (page) { return call('/apis?' + q('page', page)); },
     suggest: function (scenario) { return call('/suggest', 'POST', { scenario: scenario }); },
-    run: function (id, allowWrites) { return call('/run', 'POST', { id: id, allowWrites: !!allowWrites }); },
+    // scope 'main': the scenario's own page only; else the whole flow
+    run: function (id, allowWrites, scope) { return call('/run', 'POST', { id: id, allowWrites: !!allowWrites, scope: scope || '' }); },
     // one step tried on its own, from the scenario as it is on the screen, with the values handed on so far
     tryStep: function (scenario, step, vars, allowWrites, search) { return call('/try', 'POST', { scenario: scenario, step: step, vars: vars || {}, allowWrites: !!allowWrites, search: search }); },
     // the page your app's window is on: { open, url, page, label }

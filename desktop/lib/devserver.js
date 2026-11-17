@@ -1098,7 +1098,7 @@ function createDevServer(o) {
               const pid = String(b.page || '');
               const facts = factsOf(pid);
               if (!facts) return jsonA(200, { ok: false, error: 'This page has no technical sheet yet: open it in Application pages and Build its sheet first.' });
-              const r = sc.draft(pid, facts, who(), optsOf(pid, facts));
+              const r = sc.draft(pid, facts, who(), Object.assign(optsOf(pid, facts), b.into && typeof b.into === 'object' ? { into: b.into } : {}));
               return jsonA(200, r.ok ? Object.assign(r, { next: nextOf(facts) }) : r);
             }
             // the journey continued on the next page (Next → the catalog → the cart)
@@ -1175,7 +1175,7 @@ function createDevServer(o) {
               return jsonA(200, r);
             }
             if (pathname === '/__api/scenarios/run' && post) {
-              const r = await sc.run(String(b.id || ''), env, { allowWrites: !!b.allowWrites, by: who() });
+              const r = await sc.run(String(b.id || ''), env, { allowWrites: !!b.allowWrites, by: who(), scope: b.scope === 'main' ? 'main' : 'all' });
               log(`API scenario ${b.id} -> ${r.ok ? (r.run.ok ? 'passed' : 'failed') + ' (' + r.run.passed + ' ok, ' + r.run.failed + ' failed, ' + r.run.skipped + ' skipped, ' + r.run.ms + ' ms)' : r.error}`);
               return jsonA(200, r);
             }

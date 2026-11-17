@@ -238,6 +238,41 @@ const ROOT = path.join(__dirname, 'fixtures', 'vb-sample');
     const c1 = fstore.throughPath(one, [FL, FD], fo, 'jane.doe');
     T.check('a one-page happy path continued along a path (same scenario, Order linked)', c1.ok && c1.continued && c1.scenario.id === one.id && c1.added.length === 1 && c1.scenario.journey.length === 2, JSON.stringify([c1.continued, c1.added]));
 
+    T.section('a scenario made first, then its page: its id, who made it, drafted into it, the main page run alone');
+    const cdir = path.join(tmp, 'scen-codes');
+    fs.mkdirSync(path.join(cdir, 'scenarios'), { recursive: true });
+    // two scenarios saved before ids existed (no code): they get theirs in the order they were made
+    fs.writeFileSync(path.join(cdir, 'scenarios', 'old2.json'), JSON.stringify({ id: 'old2', page: FL, name: 'Older two', steps: [], createdAt: '2026-01-02T00:00:00.000Z', by: 'sam.lee' }));
+    fs.writeFileSync(path.join(cdir, 'scenarios', 'old1.json'), JSON.stringify({ id: 'old1', page: FD, name: 'Older one', steps: [], createdAt: '2026-01-01T00:00:00.000Z', by: 'sam.lee' }));
+    const cst = S.open({ api, dir: cdir });
+    let every = cst.list('').scenarios;
+    T.check('the list of every scenario (any page): the ones saved before get their ids in the order they were made, newest first', every.map((x) => x.code + ':' + x.id).join() === 'SC-0002:old2,SC-0001:old1', every.map((x) => x.code + ':' + x.id).join());
+    const made = cst.save({ page: '', name: 'New scenario', steps: [] }, 'jane.doe');
+    T.check('a scenario needs its page before it is saved', !made.ok);
+    const first = cst.save({ page: FL, name: 'New scenario', kind: 'edge', notes: 'Closed orders give nothing.', steps: [] }, 'jane.doe');
+    T.check('a new scenario: the next id (SC-0003), who made it and when', first.ok && first.scenario.code === 'SC-0003' && first.scenario.by === 'jane.doe' && !!first.scenario.createdAt, JSON.stringify([first.scenario.code, first.scenario.by]));
+    const again = cst.save(Object.assign({}, first.scenario, { name: 'Closed orders' }), 'sam.lee');
+    T.check('…saved again: the same id, made by stays, changed by the latest', again.scenario.code === 'SC-0003' && again.scenario.by === 'jane.doe' && again.scenario.updatedBy === 'sam.lee');
+    const into = cst.draft(FL, fx[FL], 'jane.doe', { into: again.scenario });
+    T.check('Draft from the page into it: its steps from the page, its id, name, kind and notes kept (one scenario, not a new one)', into.ok && into.scenario.id === first.scenario.id && into.scenario.code === 'SC-0003'
+      && into.scenario.name === 'Closed orders' && into.scenario.kind === 'edge' && into.scenario.notes === 'Closed orders give nothing.' && into.scenario.steps.length === 1 && cst.list('').scenarios.length === 3, JSON.stringify([into.scenario.name, into.scenario.steps.length]));
+    const blankName = cst.draft(FL, fx[FL], 'jane.doe', { into: { page: FL, name: 'New scenario', steps: [] } });
+    T.check('…a scenario still called "New scenario" is named for its page', blankName.scenario.name === 'Happy path — Orders');
+    const withFlow = cst.extend(into.scenario, FD, fx[FD], 'jane.doe');
+    const redraft = cst.draft(FL, fx[FL], 'jane.doe', { into: withFlow.scenario });
+    T.check('…drafted again: the main page read again, its flow (Order) kept', redraft.scenario.steps.length === 3 && redraft.scenario.journey.map((j) => j.label).join() === 'Orders,Order' && redraft.scenario.steps.filter((x) => x.page === FD).length === 2);
+    const moved = cst.draft(FD, fx[FD], 'jane.doe', { into: redraft.scenario });
+    T.check('…its page changed: the old page\'s flow dropped, the new page\'s steps', moved.scenario.page === FD && moved.scenario.journey.length === 1 && moved.scenario.steps.every((x) => !x.page || x.page === FD), JSON.stringify(moved.scenario.journey));
+    const sh = cst.save(Object.assign({}, redraft.scenario, { steps: redraft.scenario.steps.map((x) => Object.assign({}, x, { expect: Object.assign({}, x.expect, { sameShape: false }) })) }), 'jane.doe').scenario;
+    r = await cst.run(sh.id, env, { by: 'jane.doe', scope: 'main' });
+    T.check('Save & run on the main page: only its steps run (the flow\'s wait), the run says so', r.run.scope === 'main' && r.run.rows[0].steps.length === 1 && r.run.rows[0].steps[0].state === 'ok', JSON.stringify(r.run.rows[0].steps.map((x) => [x.name, x.state])));
+    await new Promise((res) => setTimeout(res, 15));
+    r = await cst.run(sh.id, env, { by: 'jane.doe' });
+    T.check('…the whole flow: every step', r.run.scope === 'all' && r.run.rows[0].steps.length === 3);
+    every = cst.list('').scenarios;
+    const mine = every.filter((x) => x.id === sh.id)[0];
+    T.check('the list carries each one\'s last run: who tested it, when, passed or failed, the scope', mine.last && mine.last.by === 'jane.doe' && mine.last.scope === 'all' && !!mine.last.at, JSON.stringify(mine.last));
+
     T.section('the page as on your screen: its choices, the parts shown in one case only');
     T.check('shown or not, for the values chosen; null when it hangs on something not chosen (taken as shown)', S.evalWhen("requestTypeSel === 'EXTERNAL'", { requestTypeSel: 'INTERNAL' }) === false
       && S.evalWhen("requestTypeSel !== 'EXTERNAL' || $application.functions.flag($application.variables.f, 'A')", { requestTypeSel: 'INTERNAL' }) === true

@@ -133,7 +133,18 @@ function open(o) {
     try { names = fs.readdirSync(d).filter((n) => /\.json$/.test(n)).sort().reverse(); } catch (e) { names = []; }
     return names.slice(0, KEEP_RUNS).map((n) => { const r = readJson(path.join(d, n), null); return r ? summary(r) : null; }).filter(Boolean);
   }
-  const summary = (r) => ({ id: r.id, scenario: r.scenario, name: r.name, page: r.page, at: r.at, by: r.by, ms: r.ms, ok: r.ok, passed: r.passed, failed: r.failed, skipped: r.skipped, rows: r.rows.length });
+  const summary = (r) => ({ id: r.id, scenario: r.scenario, name: r.name, page: r.page, at: r.at, by: r.by, ms: r.ms, ok: r.ok, passed: r.passed, failed: r.failed, skipped: r.skipped, rows: r.rows.length, scope: r.scope || 'all' });
+  // the scenarios' readable ids (SC-0001, SC-0002 …): the next one; the ones saved before ids existed get theirs in the order they were made
+  const codeNo = (c) => { const m = /^SC-(\d+)$/.exec(str(c)); return m ? Number(m[1]) : 0; };
+  const codeOf = (n) => 'SC-' + String(n).padStart(4, '0');
+  function giveCodes(list) {
+    let top = list.reduce((a, x) => Math.max(a, codeNo(x.code)), 0);
+    list.filter((x) => !codeNo(x.code)).sort((a, b) => str(a.createdAt).localeCompare(str(b.createdAt))).forEach((x) => {
+      x.code = codeOf(++top);
+      try { writeJson(path.join(sDir(), slug(x.id) + '.json'), x); } catch (e) { /* given again next time */ }
+    });
+    return list;
+  }
 
   /** A scenario as it may be kept: its steps' fields only, sizes bounded. */
   function clean(s, by, old) {
@@ -154,7 +165,8 @@ function open(o) {
           itemsPath: str(st.lov.itemsPath).replace(/[^\w.[\]-]/g, '').slice(0, 120),
           picked: isObj(st.lov.picked) && str(st.lov.picked.key) ? { key: str(st.lov.picked.key).slice(0, 120), text: str(st.lov.picked.text).slice(0, 160), sub: str(st.lov.picked.sub).slice(0, 120) } : null } : null };
     });
-    return { id: str(s.id) || (old && old.id) || newId('sc'), page: str(s.page || (old && old.page)), name: str(s.name).slice(0, 200) || 'Scenario',
+    const code = [str(s.code), str(old && old.code)].filter((c) => /^SC-\d{4,6}$/.test(c))[0] || '';
+    return { id: str(s.id) || (old && old.id) || newId('sc'), code, page: str(s.page || (old && old.page)), name: str(s.name).slice(0, 200) || 'Scenario',
       kind: ['happy', 'edge', 'role', 'data'].indexOf(s.kind) !== -1 ? s.kind : 'happy', notes: str(s.notes).slice(0, 4000), allowWrites: !!s.allowWrites,
       data: (Array.isArray(s.data) ? s.data : []).slice(0, MAX_ROWS).filter(isObj).map((r) => Object.keys(r).slice(0, 40).reduce((a, k) => { a[str(k).slice(0, 60)] = str(r[k]).slice(0, 2000); return a; }, {})),
       steps, choices: (Array.isArray(s.choices) ? s.choices : []).filter(isObj).slice(0, 12).map((c) => ({ target: str(c.target).replace(/[^\w.-]/g, '').slice(0, 60), field: str(c.field).slice(0, 120),
@@ -512,14 +524,17 @@ function open(o) {
       if (!dirNow()) return no('Set up your workspace first: scenarios are kept per VB Studio project.');
       const p = str(page);
       const acc = accepts(env);
-      return { ok: true, scenarios: all().filter((s) => !p || s.page === p).sort((a, b) => (a.name < b.name ? -1 : 1)).map((s) => Object.assign(acc(s), { last: lastRun(s) })) };
+      const every = giveCodes(all());
+      return { ok: true, scenarios: every.filter((s) => !p || s.page === p).sort((a, b) => codeNo(b.code) - codeNo(a.code)).map((s) => Object.assign(acc(s), { last: lastRun(s) })) };
     },
     get(id, env) { const s = all().filter((x) => x.id === str(id))[0]; return s ? { ok: true, scenario: accepts(env)(s) } : no('No such scenario.'); },
     save(s, by, env) {
       if (!dirNow()) return no('Set up your workspace first.');
       if (!isObj(s) || !str(s.page)) return no('A scenario belongs to a page.');
-      const old = s.id ? all().filter((x) => x.id === str(s.id))[0] : null;
+      const every = all();
+      const old = s.id ? every.filter((x) => x.id === str(s.id))[0] : null;
       const c = clean(s, by, old);
+      if (!c.code) c.code = codeOf(giveCodes(every.filter((x) => x.id !== c.id)).reduce((a, x) => Math.max(a, codeNo(x.code)), 0) + 1);
       writeJson(path.join(sDir(), slug(c.id) + '.json'), c);
       return { ok: true, scenario: accepts(env)(c) };
     },
@@ -565,8 +580,23 @@ function open(o) {
       const ctx = { known: {}, start: [], lovFields: [], prefix: '', page: str(page) };
       const steps = stepsFor(f, opts, ctx);
       if (!steps.length) return no('This page makes no REST call to put in order (its technical sheet lists none: Build the sheet first).');
-      const s = clean({ page: page, name: 'Happy path — ' + (f.label || str(page).split('/').pop()), kind: 'happy', steps,
-        journey: [{ page: str(page), label: str(f.label || str(page).split('/').pop()) }], choices: choicesOf(f),
+      const label = str(f.label || str(page).split('/').pop());
+      const into = isObj(opts) && isObj(opts.into) ? opts.into : null;
+      if (into) {
+        // drafted into the scenario open: its id, name, kind, notes and writes kept; the main page's steps read again; the
+        // pages of its flow kept when the page is the same (dropped when the page changed: they followed the old one)
+        const same = str(into.page) === str(page);
+        const flowSteps = same ? (Array.isArray(into.steps) ? into.steps : []).filter((st) => isObj(st) && st.page && st.page !== str(page)) : [];
+        const journey = same && Array.isArray(into.journey) && into.journey.length ? [{ page: str(page), label }].concat(into.journey.slice(1)) : [{ page: str(page), label }];
+        const row0 = (Array.isArray(into.data) && isObj(into.data[0])) ? into.data[0] : {};
+        const data = ctx.start.length || Object.keys(row0).length ? [Object.assign({}, ctx.start.reduce((a, k) => { a[k] = ''; return a; }, {}), row0)] : [];
+        const keepName = str(into.name) && !/^(New scenario|Scenario)$/i.test(str(into.name));
+        const s = clean(Object.assign({}, into, { page: str(page), steps: steps.concat(flowSteps), journey, choices: choicesOf(f).concat(same ? (into.choices || []).filter((c) => !choicesOf(f).some((x) => x.target === c.target)) : []),
+          data, name: keepName ? into.name : 'Happy path — ' + label, notes: str(into.notes).trim() ? into.notes : notesOf(ctx) }), by, null);
+        return store.save(s, by, isObj(opts) ? opts.env : null);
+      }
+      const s = clean({ page: page, name: 'Happy path — ' + label, kind: 'happy', steps,
+        journey: [{ page: str(page), label }], choices: choicesOf(f),
         data: ctx.start.length ? [ctx.start.reduce((a, k) => { a[k] = ''; return a; }, {})] : [],
         notes: notesOf(ctx) }, by, null);
       return store.save(s, by, isObj(opts) ? opts.env : null);
@@ -652,11 +682,14 @@ function open(o) {
       const rowsIn = s.data.length ? s.data : [{}];
       const rows = [];
       const chosen = choiceVals(s);
+      // scope 'main': the steps of the scenario's own page only (the page tested first); else every step, the flow's too
+      const scope = op.scope === 'main' ? 'main' : 'all';
+      const runSteps = scope === 'main' ? s.steps.filter((st) => !st.page || st.page === s.page) : s.steps;
       for (const row of rowsIn) {
         const vars = Object.assign({}, chosen, row);
         const steps = [];
         let stop = false;
-        for (const st of s.steps) {
+        for (const st of runSteps) {
           if (stop) { steps.push(Object.assign(blank(st), { note: 'not run: an earlier step failed' })); continue; }
           const res = await runOne(s, st, vars, env, op);
           steps.push(res);
@@ -666,7 +699,7 @@ function open(o) {
         rows.push({ vars: row, steps, ok: steps.every((x) => x.state !== 'fail') });
       }
       const flat = [].concat(...rows.map((r) => r.steps));
-      const run = { id: now().toISOString().replace(/[:.]/g, '-') + '-' + Math.floor(Math.random() * 1e4), scenario: s.id, name: s.name, page: s.page, at: now().toISOString(), by: str(op.by),
+      const run = { id: now().toISOString().replace(/[:.]/g, '-') + '-' + Math.floor(Math.random() * 1e4), scenario: s.id, name: s.name, page: s.page, at: now().toISOString(), by: str(op.by), scope,
         ms: Date.now() - t0, ok: rows.every((r) => r.ok), passed: flat.filter((x) => x.state === 'ok').length, failed: flat.filter((x) => x.state === 'fail').length,
         skipped: flat.filter((x) => x.state === 'skip').length, rows };
       writeJson(path.join(rDir(s.page), run.id + '.json'), run);

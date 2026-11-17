@@ -81,6 +81,11 @@ define([], function () {
   var RECORDS = {
     // API Scenarios on one page ({ page: app/flow/page, label }), from a journey's linked page: its scenarios and APIs
     // in a tab of its own (flows/insights api-scenarios, its page variable given).
+    // One API scenario ({ scId, page, title }) — a row of the list, or + New scenario ('new-…', the page it starts on):
+    // its header and its Main scenario / Flow / Runs, in a tab of its own.
+    'api-scenario': { flow: 'insights', page: 'api-scenarios', icon: 'oj-ux-ico-check-circle', navId: 'api-scenarios',
+      key: function (p) { return p ? String(p.scId || '') : ''; },
+      title: function (p) { return (p && p.title) || 'Scenario'; } },
     'api-scenarios-page': { flow: 'insights', page: 'api-scenarios', icon: 'oj-ux-ico-check-circle', navId: 'api-scenarios',
       key: function (p) { return p ? String(p.page || '') : ''; },
       title: function (p) { return 'API · ' + ((p && p.label) || String((p && p.page) || '').split('/').pop() || 'page'); } },

@@ -124,7 +124,14 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
     constructor(context) {
       // opened on one page (Application pages → API on a page): its scenarios shown
       const helper = context && typeof context.getEventHelper === 'function' ? context.getEventHelper() : null;
-      try { bus.onFocus('api-scenarios', () => { if (helper) helper.fireCustomEvent('focusRequest', {}); }); } catch (e) { /* no shell */ }
+      // every tab of this screen (the list, each scenario) hears: a focus request (only the list takes it), a scenario saved,
+      // run or deleted elsewhere (the list reads them again)
+      const me = 'api-scenarios-' + (++PageModule.seq);
+      try {
+        bus.onFocus('api-scenarios', () => bus.emit('api-scenarios-focus', {}));
+        bus.on('api-scenarios-focus', me, () => { if (helper) helper.fireCustomEvent('focusRequest', {}); });
+        bus.on('api-scenarios-changed', me, () => { if (helper) helper.fireCustomEvent('scChanged', {}); });
+      } catch (e) { /* no shell */ }
       // back from your app's window (Build.Rite's own window gets the focus again): which page is it on now?
       try { if (typeof window !== 'undefined' && helper) window.addEventListener('focus', () => { try { helper.fireCustomEvent('appWhere', {}); } catch (e) { /* page gone */ } }); } catch (e) { /* no window */ }
       this._rows = new Map();   // step id → { sig, row }: a step shown again only when it changed (the page keeps its place)
@@ -416,12 +423,96 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
     runRows(r) {
       const rows = (r && r.rows) || [];
       return rows.map((row, i) => ({ label: rows.length > 1 ? 'Row ' + (i + 1) + ': ' + Object.keys(row.vars || {}).map((k) => k + '=' + row.vars[k]).join(', ') : '',
-        steps: (row.steps || []).map((s) => ({ name: s.name, call: s.call, state: s.state, icon: s.state === 'ok' ? '✓' : s.state === 'fail' ? '✗' : '–',
+        steps: (row.steps || []).map((s) => ({ step: s.step, name: s.name, call: s.call, state: s.state, icon: s.state === 'ok' ? '✓' : s.state === 'fail' ? '✗' : '–',
           facts: s.status ? s.status + ' · ' + s.ms + ' ms' + (s.rows != null ? ' · ' + s.rows + ' row(s)' : '') : '', note: s.note || '', checks: s.checks || [],
           values: s.lov && s.values ? s.lov.field + ': ' + s.lov.total + ' value(s) — ' + s.values.slice(0, 6).map((v) => v.text || v.key).join(', ') + (s.lov.total > 6 ? ', …' : '') : '',
           handed: Object.keys(s.extracted || {}).map((k) => k + ' = ' + s.extracted[k]).join(', '), answer: s.answer || '', url: s.request ? s.request.method + ' ' + s.request.url : 'Its answer' })) }));
     }
-    runList(runs) { return (runs || []).map((h) => ({ id: h.id, ok: h.ok, icon: h.ok ? '✓' : '✗', name: h.name, counts: h.passed + ' ok · ' + h.failed + ' failed · ' + h.skipped + ' not run · ' + Math.round(h.ms / 100) / 10 + ' s', when: when(h.at), by: h.by || '' })); }
+    // ── the list of every scenario; one scenario's header, its tabs, the gate to its flow ──
+    /** A scenario's status from its last run: passed · failed · not run · draft (no step yet). */
+    statusOf(s, last) {
+      const n = ((s && s.steps) || []).length;
+      const l = last === undefined ? s && s.last : last;
+      if (!n) return { key: 'draft', text: 'Draft' };
+      if (!l) return { key: 'notrun', text: 'Not run' };
+      return l.ok ? { key: 'passed', text: 'Passed' + (l.scope === 'main' ? ' (main page)' : '') } : { key: 'failed', text: 'Failed' + (l.scope === 'main' ? ' (main page)' : '') };
+    }
+    listRows(list, q, status, page, pages) {
+      const t = String(q || '').trim().toLowerCase();
+      const lbl = (id) => ((pages || []).filter((p) => p.id === id)[0] || {}).label || String(id || '').split('/').pop();
+      return (list || []).filter((s) => !page || s.page === page).map((s) => {
+        const st = this.statusOf(s);
+        const flowPages = ((s.journey || []).length || 1) - 1;
+        const main = (s.steps || []).filter((x) => !x.page || x.page === s.page).length;
+        return { id: s.id, code: s.code || '—', name: s.name, kind: (KINDS.filter((k) => k[0] === s.kind)[0] || KINDS[0])[1], page: s.page, pageLabel: lbl(s.page),
+          steps: main + ' step' + (main === 1 ? '' : 's') + (flowPages ? ' · flow: ' + (s.journey || []).slice(1).map((j) => j.label || j.page.split('/').pop()).join(' → ') : ''),
+          statusKey: st.key, statusText: st.text, tested: s.last ? when(s.last.at) : '—', by: (s.last && s.last.by) || '—', madeBy: s.by || '' };
+      }).filter((r) => (!status || status === 'all' || r.statusKey === status) && (!t || (r.code + ' ' + r.name + ' ' + r.pageLabel + ' ' + r.page).toLowerCase().indexOf(t) !== -1));
+    }
+    /** The status chips over the list, with how many each (of the page shown, or every page). */
+    listChips(list, page, cur) {
+      const rows = (list || []).filter((s) => !page || s.page === page);
+      const count = (k) => rows.filter((s) => this.statusOf(s).key === k).length;
+      return [['all', 'All', rows.length], ['passed', 'Passed', count('passed')], ['failed', 'Failed', count('failed')], ['notrun', 'Not run', count('notrun')], ['draft', 'Draft', count('draft')]]
+        .filter((c) => c[0] === 'all' || c[2] > 0 || c[0] === cur).map((c) => ({ key: c[0], text: c[1] + ' ' + c[2], cls: 'nx-sc-chip' + (c[0] === (cur || 'all') ? ' nx-sc-chip--on' : '') }));
+    }
+    /** The pages to pick from in the header (two with one title say so). */
+    pageOptions(pages, cur) {
+      const live = (pages || []).filter((p) => !p.deleted);
+      const byLabel = {};
+      live.forEach((p) => { const k = String(p.label || '').trim().toLowerCase(); byLabel[k] = (byLabel[k] || 0) + 1; });
+      const out = live.map((p) => ({ id: p.id, text: (p.label || p.id) + ' — ' + p.id + (byLabel[String(p.label || '').trim().toLowerCase()] > 1 ? ' (same title as another page)' : ''), on: p.id === cur }));
+      return [{ id: '', text: 'Pick the page it tests…', on: !cur }].concat(out.sort((a, b) => a.text.localeCompare(b.text)));
+    }
+    scTitle(sc) { return !sc ? 'API Scenarios' : (sc.code ? sc.code + ' · ' : '') + (sc.name || 'New scenario'); }
+    /** The header's facts: made (when, by), last tested (when, by, how), its status. */
+    headFacts(sc, runs) {
+      const last = (runs || [])[0] || null;
+      const st = this.statusOf(sc, last);
+      return { code: (sc && sc.code) || 'New — not saved yet', made: sc && sc.createdAt && sc.id ? when(sc.createdAt) + (sc.by ? ' · ' + sc.by : '') : '—',
+        tested: last ? when(last.at) + ' · ' + (last.scope === 'main' ? 'the main page' : 'the whole flow') : 'not yet', by: (last && last.by) || '—',
+        statusKey: st.key, statusText: st.text };
+    }
+    tabClass(key, cur) { return 'nx-sc-tab' + (key === (cur || 'main') ? ' nx-sc-tab--on' : ''); }
+    mainSteps(sc) { return ((sc && sc.steps) || []).filter((x) => !x.page || x.page === sc.page); }
+    flowSteps(sc) { return ((sc && sc.steps) || []).filter((x) => x.page && x.page !== sc.page); }
+    /**
+     * The gate to the flow: the main page's APIs, each run in the last run (a change of data held back counts as done).
+     * The connected pages come once every one of them has run without failing (or Continue anyway).
+     */
+    mainGate(sc, run, force) {
+      const mine = this.mainSteps(sc);
+      const res = this.runResults(sc, run);
+      const st = mine.map((x) => (res[x.id] ? res[x.id].state : ''));
+      const ok = st.filter((x) => x === 'ok').length;
+      const skip = st.filter((x) => x === 'skip').length;
+      const fail = st.filter((x) => x === 'fail').length;
+      const notrun = st.filter((x) => !x).length;
+      const done = mine.length > 0 && !fail && !notrun;
+      const text = !mine.length ? 'The main page has no step yet: Draft from the page in Main scenario first.'
+        : done ? 'The main page is done: all ' + mine.length + ' of its APIs ran' + (skip ? ' (' + skip + ' change data, held back)' : '') + '. Go on to the pages it leads to.'
+          : 'The main page first: ' + ok + ' of its ' + mine.length + ' APIs passed' + (fail ? ', ' + fail + ' failed' : '') + (notrun ? ', ' + notrun + ' not run yet' : '') + '. Run them all in Main scenario, then the connected pages open here.';
+      return { total: mine.length, ok, skip, fail, notrun, done, open: done || !!force, text, pct: mine.length ? Math.round((100 * (ok + skip)) / mine.length) : 0 };
+    }
+    /** The steps of one part: 'main' (the scenario's page; no page headings) or 'flow' (the pages after it). */
+    stepPart(sc, run, tries, trying, part) {
+      const rows = this.stepRows(sc, run, tries, trying);
+      const mainIds = {};
+      this.mainSteps(sc).forEach((x) => { mainIds[x.id] = true; });
+      if (part === 'main') return rows.filter((r) => mainIds[r.id]).map((r) => (r.pageHead ? Object.assign({}, r, { pageHead: '' }) : r));
+      return rows.filter((r) => !mainIds[r.id]);
+    }
+    /** A run's results for one part (the main page's steps, or the flow's); 'all' = every step. */
+    runPart(run, sc, part) {
+      const rows = this.runRows(run);
+      if (!part || part === 'all' || !sc) return rows;
+      const mainIds = {};
+      this.mainSteps(sc).forEach((x) => { mainIds[x.id] = true; });
+      const keep = (s) => (part === 'main' ? !!mainIds[s.step] : !mainIds[s.step]);
+      return rows.map((r) => Object.assign({}, r, { steps: r.steps.filter(keep) })).filter((r) => r.steps.length);
+    }
+    runList(runs) { return (runs || []).map((h) => ({ id: h.id, ok: h.ok, icon: h.ok ? '✓' : '✗', name: h.name, scope: h.scope === 'main' ? 'Main page' : 'Whole flow', counts: h.passed + ' ok · ' + h.failed + ' failed · ' + h.skipped + ' not run · ' + Math.round(h.ms / 100) / 10 + ' s', when: when(h.at), by: h.by || '' })); }
   }
+  PageModule.seq = 0;
   return PageModule;
 });

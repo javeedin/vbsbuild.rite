@@ -145,7 +145,7 @@ html[data-nx-product="buildrite"] .nx-nav-scroll { scrollbar-color: rgba(255, 25
 .nx-sc-call { font-size: 11.5px; color: #3b4a58; overflow-wrap: anywhere; }
 .nx-sc-wchip { font-size: 11px; font-weight: 700; color: #8a5300; background: #fff1db; border-radius: 9px; padding: 1px 7px; }
 .nx-sc-stepbody { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; margin-top: 8px; }
-.nx-sc-f { display: grid; gap: 3px; font-size: 12px; color: #4a5865; }
+.nx-sc-f { display: grid; gap: 3px; font-size: 12px; color: #4a5865; align-content: start; }
 .nx-sc-ta { width: 100%; max-width: none; }
 /* a list of values on the page (a dropdown a call fills) and its values, to pick from as a user does */
 .nx-sc-lovinfo { margin: 8px 0 0; font-size: 12.5px; color: #3b4a58; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -485,3 +485,49 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-sc-facts { display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap; }
 .nx-sc-fpath { margin-left: auto; }
 @media (max-width: 960px) { .nx-sc-cols--min { grid-template-columns: 1fr; } .nx-sc-railtext { writing-mode: horizontal-tb; transform: none; } .nx-sc-pagesrail { flex-direction: row; justify-content: center; } }
+
+/* API Scenarios: the list of every scenario */
+.nx-sc-listq { width: min(280px, 100%); }
+.nx-sc-listbar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 0 0 8px; }
+.nx-sc-pagechip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border-radius: 999px; background: #eef4fc; color: #1d4f91; font-size: 12.5px; font-weight: 600; }
+.nx-sc-pagechipx { border: 0; background: none; cursor: pointer; font-size: 15px; line-height: 1; color: inherit; padding: 0 4px; }
+.nx-sc-grid { display: grid; grid-template-columns: 90px minmax(200px, 1.6fr) minmax(170px, 1.3fr) 130px 140px 110px 120px; border-top: 1px solid var(--nx-line, #dde3ea); }
+.nx-sc-grow { display: contents; }
+.nx-sc-grow > span { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 9px 10px; border-bottom: 1px solid var(--nx-line, #dde3ea); min-width: 0; }
+.nx-sc-grow:not(.nx-sc-grow--head):hover > span { background: var(--nx-surface-2, #f5f7fa); }
+.nx-sc-grow--head > span { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #6b7889; padding-top: 7px; padding-bottom: 7px; }
+.nx-sc-gcode .nx-linkbtn { font: 700 12.5px/1.3 ui-monospace, Consolas, monospace; text-align: left; }
+.nx-sc-gnamebtn { border: 0; background: none; padding: 0; font: inherit; color: var(--nx-ink); text-align: left; cursor: pointer; }
+.nx-sc-gnamebtn:hover b { text-decoration: underline; }
+.nx-sc-gname .nx-note, .nx-sc-gpage code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-sc-gpage code { font-size: 11px; color: #6b7889; }
+.nx-sc-gacts { flex-direction: row !important; align-items: center; justify-content: flex-end !important; gap: 4px !important; }
+.nx-sc-status { display: inline-flex; align-self: flex-start; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #eef1f5; color: #4a5865; white-space: nowrap; }
+.nx-sc-status--passed { background: #e6f4ec; color: #1f7a45; }
+.nx-sc-status--failed { background: #fbe9e7; color: #a3271b; }
+.nx-sc-status--notrun { background: #fff3d6; color: #8a5a00; }
+@media (max-width: 1100px) { .nx-sc-grid { grid-template-columns: 80px 1.5fr 1.2fr 110px 120px; } .nx-sc-grow > span:nth-child(6), .nx-sc-grow > span:nth-child(7) { display: none; } }
+
+/* API Scenarios: one scenario — its header, its tabs, the gate to its flow */
+.nx-sc-header { display: grid; gap: 10px; }
+.nx-sc-code { font: 700 13px/1 ui-monospace, Consolas, monospace; padding: 6px 10px; border-radius: 8px; background: #1d4f91; color: #fff; white-space: nowrap; }
+.nx-sc-hfields { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 14px; align-items: end; }
+.nx-sc-hf { display: grid; gap: 3px; font-size: 12px; color: var(--nx-muted, #5b6876); min-width: 0; }
+.nx-sc-hf > span { font-weight: 600; }
+.nx-sc-hf b { font-size: 13px; color: var(--nx-ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-sc-hf--wide { grid-column: span 2; }
+.nx-sc-hf select { width: 100%; }
+.nx-sc-hfcheck { height: 34px; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--nx-ink); font-weight: 600; }
+.nx-sc-hfnotes { margin: 12px 0 -6px; }
+.nx-sc-tablock { margin-left: 6px; font-size: 13px; color: #8a5a00; }
+.nx-sc-gate { padding: 12px 14px; display: grid; gap: 8px; border-left: 4px solid #e0a526; }
+.nx-sc-gate--done { border-left-color: #2f9e5b; }
+.nx-sc-gatehead { display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; line-height: 1.45; }
+.nx-sc-gatehead [class^="oj-ux-ico-"] { font-size: 18px; color: #8a5a00; }
+.nx-sc-gate--done .nx-sc-gatehead [class^="oj-ux-ico-"] { color: #1f7a45; }
+.nx-sc-gatebar { width: 100%; }
+.nx-sc-gateacts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nx-sc-runlist { display: grid; grid-template-columns: 28px 110px 1fr 140px 120px 60px; }
+.nx-sc-runlist .nx-sc-runrow { display: contents; }
+.nx-sc-runlist .nx-sc-runrow > span { padding: 7px 8px; border-bottom: 1px solid var(--nx-line, #dde3ea); font-size: 13px; }
+.nx-sc-runlist .nx-sc-runrow--fail > span:first-child { color: #a3271b; }

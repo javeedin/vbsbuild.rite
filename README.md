@@ -87,51 +87,48 @@ password.
 
 ## API Scenarios: test a page's web services without opening it
 
-**Application → API Scenarios**, or the **API** button beside any page in Application pages. Pick a page and press
-**Draft from the page**: Build.Rite reads the page's code and lays out the user's journey through it, in APIs only:
-its lists of values in the order the form shows them (a list that depends on another, such as Task on Project or
-Delivery Location on Contract, sends what that one handed on; a field shown in one case only says when), the calls
-run as the page opens, then the calls of the actions that take a user on (Next, Add to cart, Submit…, its primary
-action, with the modules their chains use). Calls that change data come last, creates first. **Continue the
-journey** offers the pages the last page goes to (Next → the catalog → the cart): their steps are added after these,
-under the page they are on, with the values picked so far handed on. BI Publisher is run as the page's report, with
-the report's parameters taken from the code.
+**Application → API Scenarios** opens the list of every scenario: its ID (SC-0001…), name, the page it tests, its
+status (Passed, Failed, *(main page)* when only the main page was run, Not run, Draft), when it was last tested and by
+whom. Find searches the ID, name and page; the chips filter by status; ▶ Run runs one from the list; 🗑 deletes it.
+The **API** button beside a page in Application pages opens the list on that page's scenarios (× on the *Page:* chip
+shows them all again). When you come back from your app's window, the list says which page it is on, with
+**+ New scenario for it**.
 
-- **The flow from the page: testing is done when every page has passed.** Choosing a page shows the pages it leads
-  to in the app, and where those lead, up to 5 steps out: one column per step (*This page*, *It leads to*, *Then, 2 pages
-  on*…). Each page card shows how it is reached ("from Order Workbench · row click"), its APIs and how many passed, and
-  its state from the saved scenarios that go through it: *tested: every API passed*, *passed* with some APIs not run
-  yet, *failed in the last run*, *in a scenario, not run yet* or *not tested yet*. A page reached again ("also goes to
-  Order Workbench") is not walked twice. The headline counts it up (5 pages · 2 tested · 19 of 33 APIs passed) and
-  says when the flow's testing is complete. The card folds to its headline, and stays folded on this PC.
-  - **Test the path here** on a page builds the journey to it in one go: from the page, through each page on the way.
-    The scenario that is open is continued when its journey starts the same way; otherwise a new one is drafted.
-  - **A journey for each path** makes one journey scenario for every path of the flow that none follows yet (it asks
-    first, listing them). Then **Run all** tests the whole flow.
-  - A page's name opens it here; the list icon shows its APIs; the tab icon opens it in a tab of its own.
-- **More room.** The **‹** beside *Find a page…* folds the pages list away to a slim rail naming the page you are on,
-  so the steps get the full width. The rail's button brings the list back. The choice is kept on this PC.
-- **A journey's pages, one by one.** A scenario that goes through several pages has a **Journey** bar over its steps
-  (1 Order Workbench → 2 Order …), and each page's steps sit under its own heading. Each page shows how its steps
-  went in the last run and, on hover, when and by whom it was linked. On every page:
-  - **APIs** opens a dialog with that page's calls in this scenario, in the order they run (their step number in
-    the scenario, and how each went in the last run; **Step n** takes you to that step). Under it is every API the
-    page makes, in the order the page makes them: the ones in the scenario are marked with their step, the others
-    have **+ Add** (added after that page's other steps).
-  - On a linked page only:
-    - **Open in a tab** opens that page in API Scenarios in a tab of its own.
-    - **Remove link** takes the page out: its steps, the Data columns and choices only it used, and its part of the
-      notes. Any page linked after it goes too. You are asked first, and the scenario is saved. Use **Continue the
-      journey** to link it again.
-    - **Reconnect** does both in one go: the link is removed, then the page is linked again, its steps read fresh
-      from its code with the values picked so far handed on. Use it when a linked page's steps went wrong.
-- **Build it yourself from the page's APIs.** The **APIs of this page** tab lists every REST call and BI Publisher
-  report the page's code makes, with where the page uses it (a list of values and its field, as it opens, when you go
-  on, elsewhere): **▶ Test** one with its values, **+ Add to scenario** the ones you want (New scenario starts an
-  empty one). Then **Suggest order** proposes the order to run them in: a step after the one that hands it what it
+**+ New scenario** opens a scenario in a tab of its own:
+
+- **The header:** its ID (given when first saved), its name, the **page it tests**, its type (happy path, negative…),
+  when it was made and by whom, when it was last tested (the main page or the whole flow) and by whom, *Allow writes*,
+  and notes. Picking another page for a scenario that has steps asks first: its steps are cleared.
+- **Main scenario** tab: **Draft from the page** reads the page's code and puts its calls in the order a user meets
+  them: its lists of values in the order the form shows them (a list that depends on another, such as Task on Project
+  or Delivery Location on Contract, sends what that one handed on; a field shown in one case only says when), the calls
+  run as the page opens, then the calls of the actions that take a user on (Next, Add to cart, Submit…). Calls that
+  change data come last, creates first. BI Publisher is run as the page's report, with its parameters from the code.
+  **Save & run** runs the main page's APIs alone.
+- **Flow — expected pages** tab: the pages the main page leads to. It stays locked until every API of the main page
+  has run without failing (a call that changes data and was held back counts as done); the lock says how far it got
+  ("0 of its 3 APIs passed, 1 failed"). **Continue anyway** opens it early. Once open:
+  - **The pages it leads to**: one column per step out (*This page*, *It leads to*, *Then, 2 pages on*…, up to 5).
+    Each page card shows how it is reached ("from Order Workbench · row click"), its APIs and how many passed, and its
+    state from the saved scenarios that go through it (*tested: every API passed*, *failed in the last run*, *not
+    tested yet*…). The headline counts it up (5 pages · 2 tested · 19 of 33 APIs passed) and says when the flow's
+    testing is complete. **Add to the flow** on a page adds the pages on the way to it to this scenario.
+  - **Continue the flow** adds the page the last page goes to; its calls come after the main page's, under the page
+    they are on, with the values picked so far handed on. **▶ Run the whole flow** runs the main page, then each page.
+  - **The flow** bar (1 Order Workbench → 2 Order …) shows each page's steps and how they went in the last run, and
+    on hover when and by whom it was linked. **APIs** opens a dialog with that page's calls in this scenario in the
+    order they run (**Step n** takes you to that step, in its tab), and every API the page makes, with **+ Add** for
+    the ones not in the scenario. On a linked page: **Open in a tab** (that page's own scenarios), **Remove link** (its
+    steps go, and any page after it; asked first) and **Reconnect** (linked again, its steps read fresh from its code).
+- **Runs** tab: every run of this scenario, newest first (the main page or the whole flow, who ran it, how it went).
+
+- **Build it yourself from the page's APIs.** **Add from the page's APIs** (Main scenario) lists every REST call and
+  BI Publisher report the page's code makes, with where the page uses it (a list of values and its field, as it opens,
+  when you go on, elsewhere): **▶ Test** one with its values, **+ Add to scenario** the ones you want, then **Done
+  adding**. **Suggest order** proposes the order to run them in: a step after the one that hands it what it
   sends, otherwise as the page runs them, writes last; it says what is missing ("sends {{projectId}}, which no step
   hands on — Add: the Project list") with **+ Add it**, and **Apply this order** puts the steps in it.
-- **Delete** a scenario from its card (🗑), or all of a page's at once.
+- **Delete** a scenario from its header (its tab closes) or from the list (🗑). Its runs stay.
 - **Values handed on.** A value one call answers feeds the next: `id = auto:id` takes `id` from the first row of the
   answer, and `{{id}}` uses it. The values the page itself sends with a call are filled in from its code (a page value
   becomes `{{name}}`), and the hint lists every value the call accepts. A value the page gets from the screen before it
@@ -156,7 +153,7 @@ the report's parameters taken from the code.
 - **Writes held.** A call that changes data runs only when the scenario and the run both allow writes, and never
   against a host that looks like production.
 - **Every run kept** on this PC (`userData/api-scenarios`, under each project's hashed key), with who ran it, the
-  result of each step and its answer. The runs list shows a page's history; the scenario card shows its last run.
+  result of each step and its answer. The Runs tab shows a scenario's history; the list shows its last run.
 
 - **The page as on your screen.** A page can show different fields in different cases (Customer Type Internal:
   a Customer searched in a BI Publisher report; External: the app's own customer refs). Build.Rite reads the
@@ -164,8 +161,8 @@ the report's parameters taken from the code.
   field's condition (its oj-bind-if). The scenario starts as the page does (the first value); a step for a field not
   shown in the case chosen is shown as such and skipped when run, and the values chosen are there for the calls.
 - **The page your app's window shows.** An app can have two pages with one title (two "Create Equipment Request"s,
-  each with its own lists). When you come back from your app's window (▶ Run), API Scenarios says which page it is on
-  and offers to test that one; the page list marks it, and marks pages that share a title.
+  each with its own lists). The pages to pick from in the header say which ones share a title, the page's APIs name
+  the other one (**Test that one**), and the list says which page your app's window is on.
 
 Calls go out the same way as from the API tester: through the app's own backends, with the app's login.
 

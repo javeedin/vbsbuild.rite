@@ -1,9 +1,11 @@
 /*
  * API Scenarios (Application → API Scenarios; desktop/lib/apiScenarios.js), in a browser, on the sample VB app's real pages
- * (tests/fixtures/vb-sample) and the harness's fake backend: a page's calls drafted in the order the page makes them, run
- * purely through the APIs (no page opened), each answer checked, every run kept; a value the page gets from the screen
- * before it asked for under Data; BI Publisher run as the page's report where the page calls it; a call that changes data
- * held unless allowed; opened on a page from Application pages' API button.
+ * (tests/fixtures/vb-sample) and the harness's fake backend. The screen opens on the list of every scenario; + New scenario
+ * opens one in a tab of its own: its header (ID, name, the page it tests, type, status, made / tested by), then Main
+ * scenario (the page's calls drafted in the order the page makes them, run through the APIs alone), Flow (the pages it
+ * leads to, opened once the main page's APIs have all run) and Runs. Also: a value the page gets from the screen before it
+ * asked for under Data; BI Publisher run as the page's report; a call that changes data held unless allowed; lists of
+ * values and searches picked as on the page; built from the page's APIs; opened on a page from Application pages.
  *
  * Run:  node tests/e2e/api-scenarios.e2e.js   (after npm run build)
  */
@@ -83,94 +85,131 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     } });
   const page = env.page;
   const errs = () => env.errors.filter((e) => !/404|401|Failed to load resource/.test(e) && !e.startsWith('warning'));
-  const pick = async (id) => {
-    await page.click('#scPages .nx-sc-pagerow[data-key="' + id + '"]');
-    await page.waitForSelector('#scDraft', { timeout: 10000 });
+  // dialogs (confirms) are accepted; a section that reads one keeps its text through `asked`
+  let asked = '';
+  page.on('dialog', (d) => { asked = d.message(); d.accept().catch(() => {}); });
+  const vis = (sel) => page.evaluate((q) => { const e = Array.prototype.slice.call(document.querySelectorAll(q)).filter((x) => x.offsetParent !== null)[0]; return e ? e.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
+  const result = () => vis('.nx-flib-result');
+  const toList = async () => {
+    await page.click('.nx-tab[data-tab-id="api-scenarios"] .nx-tab-btn').catch(() => page.click('.nx-tab[data-tab-id="api-scenarios"]').catch(() => {}));
+    await page.waitForSelector('#scList', { state: 'visible', timeout: 15000 });
     await page.waitForTimeout(300);
   };
-  const draft = async () => { await page.click('#scDraft'); await page.waitForSelector('#scSteps .nx-sc-step', { timeout: 10000 }); await page.waitForTimeout(300); };
-  const saveRun = async () => {
-    const before = await page.$$eval('#scRuns .nx-sc-runrow', (r) => r.length).catch(() => 0);
-    await page.click('#scRunThis');
-    await page.waitForFunction((n) => document.querySelectorAll('#scRuns .nx-sc-runrow').length > n && document.querySelector('#scRun .nx-sc-res'), before, { timeout: 20000 });
+  // + New scenario (on the list) → its own tab; the page picked in its header
+  const newSc = async (id) => {
+    await toList();
+    const before = await page.$$eval('.nx-tab', (t) => t.length);
+    await page.click('#scNewBtn');
+    await page.waitForFunction((n) => document.querySelectorAll('.nx-tab').length > n, before, { timeout: 15000 });
+    await page.waitForSelector('#scPageSel', { state: 'visible', timeout: 15000 });
     await page.waitForTimeout(300);
+    if (id) {
+      await page.selectOption('#scPageSel', id);
+      await page.waitForSelector('#scDraft', { state: 'visible', timeout: 10000 });
+      await page.waitForTimeout(300);
+    }
   };
+  // the scenario tab shown closed (its list stays)
+  const closeSc = async () => {
+    await page.click('.nx-tab--on .nx-tab-close').catch(() => {});
+    await page.waitForTimeout(400);
+  };
+  const tabTitle = () => page.$eval('.nx-tab--on .nx-tab-title', (e) => e.textContent.trim()).catch(() => '');
+  const draft = async () => { await page.click('#scDraft'); await page.waitForSelector('#scSteps .nx-sc-step', { timeout: 10000 }); await page.waitForTimeout(400); };
+  const runCount = async () => Number(((await text(page, '#scTabRuns')).match(/\((\d+)\)/) || [])[1] || 0);
+  const runWith = async (sel) => {
+    const before = await runCount();
+    await page.click(sel);
+    await page.waitForFunction((n) => { const m = ((document.getElementById('scTabRuns') || {}).textContent || '').match(/\((\d+)\)/); return m && Number(m[1]) > n && document.querySelector('#scRun .nx-sc-res'); }, before, { timeout: 20000 });
+    await page.waitForTimeout(400);
+  };
+  const saveRun = () => runWith('#scRunThis');
   const results = () => page.$$eval('#scRun .nx-sc-res', (a) => a.map((x) => ({ state: (x.className.match(/nx-sc-res--(\w+)/) || [])[1], name: ((x.querySelector('b') || {}).textContent || '').trim(),
     note: ((x.querySelector('.nx-sc-resnote') || {}).textContent || '').trim(), handed: ((x.querySelector('.nx-sc-handed') || {}).textContent || '').trim() })));
+  const tab = async (k) => { await page.click('#scTab' + k); await page.waitForTimeout(400); };
   try {
-    T.section('a new screen in the menu, its pages from your workspace');
+    T.section('the list of every scenario, in the menu');
     await env.open('/?open=api-scenarios');
-    await page.waitForSelector('#scPages .nx-sc-pagerow', { timeout: 30000 });
-    const ids = await page.$$eval('#scPages .nx-sc-pagerow', (r) => r.map((x) => x.getAttribute('data-key')));
-    T.check('API Scenarios in the Application group; the workspace\'s pages listed', (await page.$('.nx-nav-item[data-nav-id="api-scenarios"], [data-nav-id="api-scenarios"]')) !== null
-      && [LIST, CREATE, DETAIL].every((x) => ids.indexOf(x) !== -1), ids.join());
+    await page.waitForSelector('#scList', { timeout: 30000 });
+    T.check('API Scenarios in the Application group: it opens on the list of every scenario — none yet, + New scenario',
+      (await page.$('[data-nav-id="api-scenarios"]')) !== null && /No scenario yet/.test(await text(page, '#scNone')) && !!(await page.$('#scNewBtn')) && !(await page.$('#scPages')), await text(page, '#scList'));
+    T.check('the page your app\'s window is on: said, with + New scenario for it', /Your app's window is on New Order shop\/orders\/order-create/.test(await text(page, '#scAppAt')) && !!(await page.$('#scAppAtNew')), await text(page, '#scAppAt'));
+    await env.shot('api-scenarios-empty.png');
 
-    T.section('the page your app\'s window is on: the one you test');
-    await page.waitForSelector('#scAppAt', { timeout: 10000 });
-    T.check('said: your app\'s window is on New Order (order-create); it is marked in the list', /Your app's window is on New Order shop\/orders\/order-create/.test(await text(page, '#scAppAt'))
-      && /● open in your app/.test(await text(page, '#scPages .nx-sc-pagerow[data-key="' + CREATE + '"]')), await text(page, '#scAppAt'));
-    T.check('two pages with one title ("New Order"): each says so', /same title as another page/.test(await text(page, '#scPages .nx-sc-pagerow[data-key="' + CREATE + '"]'))
-      && /same title as another page/.test(await text(page, '#scPages .nx-sc-pagerow[data-key="' + PICK + '"]')) && !/same title/.test(await text(page, '#scPages .nx-sc-pagerow[data-key="' + LIST + '"]')));
-    await page.click('#scAppAtOpen');
-    await page.waitForSelector('#scDraft', { timeout: 10000 });
-    T.check('"Test this page": that page opened, said to be the one you test', (await text(page, '#scPages .nx-sc-pagerow--on span')) === CREATE && /✓ the page you are testing/.test(await text(page, '#scAppAt')));
-    // the app's window goes elsewhere; back in Build.Rite, it follows
-    appUrl = 'http://localhost:18950/vp/shell/orders/order-list?from=menu';
-    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-    await page.waitForFunction(() => /Order Workbench/.test((document.getElementById('scAppAt') || {}).textContent || ''), null, { timeout: 10000 });
-    T.check('back from the app\'s window (now on Order Workbench): it follows, offers that page', /Your app's window is on Order Workbench shop\/orders\/order-list/.test(await text(page, '#scAppAt')) && !!(await page.$('#scAppAtOpen')), await text(page, '#scAppAt'));
-    appUrl = '';
-
-    T.section('a page\'s calls drafted, run through the APIs alone');
-    await pick(LIST);
+    T.section('+ New scenario: its own tab, a header, then its page');
+    await newSc('');
+    T.check('a tab of its own (New scenario), its header: not saved yet, no page yet, Draft (no step), made / tested nothing yet',
+      /New scenario/.test(await tabTitle()) && /New — not saved yet/.test(await text(page, '#scCode')) && /Draft/.test(await text(page, '#scStatus'))
+      && (await page.inputValue('#scName')) === 'New scenario' && (await page.$eval('#scPageSel', (s) => s.value)) === '' && /Pick the page this scenario tests/.test(await text(page, '#scPick'))
+      && (await text(page, '#scMade')) === '—' && /not yet/.test(await text(page, '#scTested')) && !(await page.$('#scTabs')), await text(page, '#scHeader'));
+    const opts = await page.$$eval('#scPageSel option', (o) => o.map((x) => x.textContent.trim()));
+    T.check('…the pages to pick from: every page of the workspace, two with one title said so', opts.some((x) => /^Order Workbench — shop\/orders\/order-list$/.test(x)) && opts.filter((x) => /same title as another page/.test(x)).length === 2, opts.join(' | '));
+    await page.selectOption('#scPageSel', LIST);
+    await page.waitForSelector('#scDraft', { state: 'visible', timeout: 10000 });
+    await page.waitForTimeout(300);
+    T.check('Order Workbench picked: named for it, the tabs Main scenario · Flow · Runs, Main open — no step yet, Draft from the page to start',
+      (await page.inputValue('#scName')) === 'Happy path — Order Workbench' && /Main scenario \(0\)/.test(await text(page, '#scTabMain')) && /Flow — expected pages \(0\)/.test(await text(page, '#scTabFlow'))
+      && /Runs \(0\)/.test(await text(page, '#scTabRuns')) && /No step yet/.test(await text(page, '#scNoSteps')), await text(page, '#scTabs'));
     await draft();
     const calls = await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()));
-    T.check('drafted from the page\'s code: its call, checked for status, time and shape', calls.join() === 'shopApi/getOrders', calls.join());
+    T.check('Draft from the page: its call from the page\'s code, saved — its ID SC-0001 in the header and on the tab', calls.join() === 'shopApi/getOrders' && (await text(page, '#scCode')) === 'SC-0001'
+      && /^SC-0001 · Happy path — Order Workbench$/.test(await tabTitle()) && /Not run/.test(await text(page, '#scStatus')) && /priya\.raman/.test(await text(page, '#scMade')), calls.join() + ' / ' + await tabTitle());
+    await tab('Flow');
+    T.check('Flow before the main page has run: locked — "the main page first: 0 of its 1 APIs passed, 1 not run yet"; no page to continue to yet',
+      /The main page first: 0 of its 1 APIs passed, 1 not run yet/.test(await text(page, '#scGateText')) && !!(await page.$('#scGateSkip')) && !(await page.$('#scNext')) && !!(await page.$('#scTabFlow .nx-sc-tablock')), await text(page, '#scGate'));
+    const lockedAdd = await page.$eval('#scFlowCols .nx-sc-fnode[data-page="' + DETAIL + '"] .nx-sc-fpath', (b) => b.disabled).catch(() => null);
+    T.check('…the pages it leads to shown (Order), Add to the flow waiting for the main page', lockedAdd === true, String(lockedAdd));
+    await tab('Main');
     await saveRun();
     let res = await results();
-    T.check('Save & run: passed, the answer checked (2xx, time, same shape as the example the page was built with)', /^✓ Passed/.test(await text(page, '#scRun h2')) && res.length === 1 && res[0].state === 'ok', await text(page, '#scRun h2'));
-    T.check('…the call went to the workspace\'s backend; nothing changed', env.calls.some((c) => /^GET \/shop\/v1\/orders/.test(c)) && env.writes.length === 0, env.calls.join(' | '));
-    T.check('…kept: the run listed, the scenario card shows its last run', (await page.$$('#scRuns .nx-sc-runrow')).length === 1 && /✓ passed/.test(await text(page, '.nx-sc-card .nx-sc-last')));
+    T.check('Save & run: the main page\'s API run alone, passed (2xx, time, the example\'s shape)', res.length === 1 && res[0].state === 'ok' && /The main page passed/.test(await result())
+      && env.calls.some((c) => /^GET \/shop\/v1\/orders/.test(c)) && env.writes.length === 0, JSON.stringify(res));
+    T.check('…the header: Passed (main page), last tested now · the main page, by you', /Passed \(main page\)/.test(await text(page, '#scStatus')) && /the main page/.test(await text(page, '#scTested')) && (await text(page, '#scTestedBy')) === 'priya.raman'
+      && /Runs \(1\)/.test(await text(page, '#scTabRuns')), await text(page, '#scHeader'));
     await env.shot('api-scenarios.png');
 
-    T.section('the journey: where the page goes next in the app');
-    await page.waitForSelector('#scNext', { timeout: 10000 });
-    T.check('Continue the journey: where Order Workbench goes (a row opens the order)', /→ Order\b/.test(await text(page, '#scNext')), await text(page, '#scNext'));
+    T.section('Flow: opened once the main page\'s APIs have all run');
+    await tab('Flow');
+    T.check('the main page is done: unlocked, the page it leads to offered (→ Order)', /The main page is done: all 1 of its APIs ran/.test(await text(page, '#scGateText')) && !(await page.$('#scTabFlow .nx-sc-tablock'))
+      && /→ Order\b/.test(await text(page, '#scNext')), await text(page, '#scGate') + ' / ' + await text(page, '#scNext'));
     await page.click('#scNext button[data-key="' + DETAIL + '"]');
     await page.waitForSelector('#scSteps .nx-sc-pagehead', { timeout: 10000 });
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(400);
     const heads = await page.$$eval('#scSteps .nx-sc-pagehead', (a) => a.map((x) => x.textContent.trim()));
-    const jcalls = await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()));
-    T.check('its steps after the list\'s, under the page they are on', heads.length === 2 && /^On Order Workbench/.test(heads[0]) && /^Then, on Order/.test(heads[1]) && jcalls.join() === 'shopApi/getOrders,shopApi/getOrderById', heads.join(' | ') + ' / ' + jcalls.join());
-    T.check('…the order\'s id handed on from the list (as a row clicked), nothing to give under Data', /id = auto:id/.test(await page.$eval('#scSteps .nx-sc-step:first-child oj-text-area[data-field="extract"] textarea', (t) => t.value))
-      && /^id = \{\{id\}\}$/.test((await page.$$eval('#scSteps oj-text-area[data-field="params"] textarea', (a) => a[1].value)).trim()), await page.$eval('#scSteps .nx-sc-step:first-child oj-text-area[data-field="extract"] textarea', (t) => t.value));
-    await saveRun();
+    T.check('Continue the flow → Order: its step in the Flow tab under its page (the main page\'s stays in Main)', heads.length === 1 && /^Then, on Order/.test(heads[0])
+      && (await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()))).join() === 'shopApi/getOrderById' && /Flow — expected pages \(1\)/.test(await text(page, '#scTabFlow')), heads.join(' | '));
+    T.check('…the order\'s id handed on from the list (as a row clicked)', /^id = \{\{id\}\}$/.test((await page.$eval('#scSteps oj-text-area[data-field="params"] textarea', (t) => t.value)).trim()));
+    await runWith('#scRunFlow');
     res = await results();
-    T.check('Save & run: the list, then the order it opened, as one journey', res.length === 2 && res.every((x) => x.state === 'ok') && /handed|id =/.test(res[0].handed || 'id =') && env.calls.some((c) => /^GET \/shop\/v1\/orders\/\w+$/.test(c)), JSON.stringify(res));
+    T.check('▶ Run the whole flow: the list, then the order it opened — this tab shows the flow\'s part', res.length === 1 && res[0].state === 'ok' && env.calls.some((c) => /^GET \/shop\/v1\/orders\/\w+$/.test(c))
+      && /The whole flow passed/.test(await result()) && /Passed$/.test(await text(page, '#scStatus')), JSON.stringify(res) + ' / ' + await text(page, '#scStatus'));
+    await tab('Runs');
+    const rl = await page.$$eval('#scRuns .nx-sc-runrow', (a) => a.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    T.check('Runs: both runs of this scenario, newest first — the whole flow, then the main page, by you', rl.length === 2 && /Whole flow/.test(rl[0]) && /Main page/.test(rl[1]) && rl.every((x) => /priya\.raman/.test(x))
+      && (await page.$$('#scRun .nx-sc-res')).length === 2, rl.join(' | '));
 
-    T.section('the journey\'s pages: their APIs, a tab of their own, a link taken out and made again');
-    // several API Scenarios tabs can live in the page: read the one that is showing
-    const vis = (sel) => page.evaluate((q) => { const all = Array.prototype.slice.call(document.querySelectorAll(q)); const e = all.filter((x) => x.offsetParent !== null)[0];
-      return e ? e.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
+    T.section('the flow\'s pages: their APIs, a tab of their own, a link taken out and made again');
+    const sc1Tab = await page.$eval('.nx-tab--on', (e) => e.getAttribute('data-tab-id'));
+    const goTab = async (id) => { await page.click('.nx-tab[data-tab-id="' + id + '"] .nx-tab-btn').catch(() => page.click('.nx-tab[data-tab-id="' + id + '"]').catch(() => {})); await page.waitForTimeout(400); };
+    T.check('the scenario named for its flow once it went on (Journey — Order Workbench → Order), its tab too', /^SC-0001 · Journey — Order Workbench → Order$/.test(await tabTitle())
+      && (await page.inputValue('#scName')) === 'Journey — Order Workbench → Order', await tabTitle());
+    await tab('Flow');
     await page.waitForSelector('#scJourney .nx-sc-jpage', { timeout: 10000 });
     const jchips = await page.$$eval('#scJourney .nx-sc-jpage', (a) => a.map((x) => ({ page: x.getAttribute('data-page'), t: x.textContent.replace(/\s+/g, ' ').trim(),
       unlink: !!x.querySelector('.nx-sc-junlink'), tab: !!x.querySelector('.nx-sc-jtab'), apis: !!x.querySelector('.nx-sc-japis'), title: x.getAttribute('title') || '' })));
-    T.check('a journey bar over the steps: 1 Order Workbench → 2 Order, each with its steps and how they ran; an APIs icon on both',
+    T.check('the flow bar in the Flow tab: 1 Order Workbench → 2 Order, each with its steps and how they ran; an APIs icon on both',
       jchips.length === 2 && jchips[0].page === LIST && jchips[1].page === DETAIL && /^1 Order Workbench 1 step · passed/.test(jchips[0].t) && /^2 Order 1 step · passed/.test(jchips[1].t) && jchips.every((x) => x.apis), JSON.stringify(jchips));
-    T.check('…only the linked page has Open in a tab, Reconnect and Remove the link (the first page is where it starts); when and by whom it was linked, on hover',
+    T.check('…only the linked page has Open in a tab, Reconnect and Remove the link (the main page is where it starts); when and by whom it was linked, on hover',
       !jchips[0].unlink && !jchips[0].tab && jchips[1].unlink && jchips[1].tab && /linked/i.test(jchips[1].title), jchips[1].title);
     const ph = await page.$$eval('#scSteps .nx-sc-pagehead', (a) => a.map((x) => ({ apis: !!x.querySelector('.nx-sc-papis'), unlink: !!x.querySelector('.nx-sc-punlink'), relink: !!x.querySelector('.nx-sc-prelink'), tab: !!x.querySelector('.nx-sc-ptab') })));
-    T.check('…the same on each page\'s heading in the steps: APIs on both, Open in a tab / Reconnect / Remove link on Order\'s',
-      ph.length === 2 && ph[0].apis && !ph[0].unlink && ph[1].apis && ph[1].unlink && ph[1].relink && ph[1].tab, JSON.stringify(ph));
-
-    await page.locator('#scSteps .nx-sc-pagehead').nth(1).scrollIntoViewIfNeeded().catch(() => {});
+    T.check('…the same on Order\'s heading over its steps (the Flow tab holds only the pages after the main one)', ph.length === 1 && ph[0].apis && ph[0].unlink && ph[0].relink && ph[0].tab, JSON.stringify(ph));
     await env.shot('api-scenarios-journey-head.png');
     // the APIs dialog of the linked page
-    await page.locator('#scSteps .nx-sc-pagehead .nx-sc-papis').nth(1).click();
+    await page.click('#scSteps .nx-sc-pagehead .nx-sc-papis');
     await page.waitForSelector('#scJApis #scJaList .nx-sc-jaapi', { timeout: 15000 });
     const jaSeq = await page.$$eval('#scJaSeq .nx-sc-jaq', (a) => a.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     const jaList = await page.$$eval('#scJaList .nx-sc-jaapi', (a) => a.map((x) => ({ key: x.getAttribute('data-key'), t: x.textContent.replace(/\s+/g, ' ').trim(), add: !!x.querySelector('[data-act="jAdd"]') })));
-    T.check('the APIs icon: a dialog — page 2 of the journey, Order, its path; its calls in this scenario in the order they run (getOrderById, step 2 of the scenario, passed)',
+    T.check('the APIs icon: a dialog — page 2 of the flow, Order, its path; its calls in this scenario in the order they run (getOrderById, step 2, passed)',
       /Page 2 of the journey/.test(await text(page, '#scJApis .nx-kicker')) && (await text(page, '#scJaTitle')) === 'Order' && /shop\/orders\/order-detail/.test(await text(page, '#scJApis .nx-sub'))
       && jaSeq.length === 1 && /^1 GET .*shopApi\/getOrderById.*Step 2$/.test(jaSeq[0]) && /passed/.test(jaSeq[0]), jaSeq.join(' | '));
     T.check('…and every API of the page in the order the page makes them, each marked with its step here (none to add)',
@@ -180,132 +219,151 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     await page.click('#scJaSeq .nx-sc-jaq button[data-act="jGo"]');
     await page.waitForTimeout(250);
     T.check('Step 2 in the dialog: it closes and takes you to that step (flashed)', !(await page.$('#scJApis')) && !!(await page.$('#scSteps .nx-sc-step--flash')));
-
-    // the first page's dialog: its own API, step 1; one not in the scenario is offered with + Add
+    // the main page's dialog: its own API, step 1 — Step 1 takes you to the Main scenario tab
     await page.click('#scJourney .nx-sc-jpage[data-page="' + LIST + '"] .nx-sc-japis');
     await page.waitForSelector('#scJApis #scJaList .nx-sc-jaapi', { timeout: 15000 });
-    const listApis = await page.$$eval('#scJaList .nx-sc-jaapi', (a) => a.map((x) => ({ key: x.getAttribute('data-key'), t: x.textContent.replace(/\s+/g, ' ').trim(), add: !!x.querySelector('[data-act="jAdd"]') })));
-    T.check('the first page\'s APIs: "The page the scenario starts on", getOrders as step 1, no Open in a tab',
+    const listApis = await page.$$eval('#scJaList .nx-sc-jaapi', (a) => a.map((x) => ({ key: x.getAttribute('data-key'), t: x.textContent.replace(/\s+/g, ' ').trim() })));
+    T.check('the main page\'s APIs: "The page the scenario starts on", getOrders as step 1, no Open in a tab',
       /The page the scenario starts on/.test(await text(page, '#scJApis .nx-kicker')) && listApis.some((x) => x.key === 'shopApi/getOrders' && /Step 1$/.test(x.t)) && !(await page.$('#scJaTab')), JSON.stringify(listApis));
-    await page.click('#scJApis .nx-modal-scrim').catch(() => {});
-    await page.waitForTimeout(200);
+    await page.click('#scJaSeq .nx-sc-jaq button[data-act="jGo"]');
+    await page.waitForSelector('#scTabMain.nx-sc-tab--on', { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(300);
+    T.check('…its Step 1: the Main scenario tab, that step flashed', !!(await page.$('#scTabMain.nx-sc-tab--on')) && !!(await page.$('#scSteps .nx-sc-step--flash')) && !(await page.$('#scJApis')));
+    await tab('Flow');
 
-    // the linked page in a tab of its own
+    // the linked page's own scenarios, in a tab of their own
     await page.click('#scJourney .nx-sc-jpage[data-page="' + DETAIL + '"] .nx-sc-jtab');
     await page.waitForSelector('.nx-tab[data-tab-id="api-scenarios-page:' + DETAIL + '"]', { timeout: 10000 });
-    await page.waitForFunction((d) => Array.prototype.slice.call(document.querySelectorAll('#scPages .nx-sc-pagerow--on')).some((x) => x.offsetParent !== null && x.getAttribute('data-key') === d), DETAIL, { timeout: 15000 }).catch(() => {});
-    T.check('Open in a tab: the page in a tab of its own (API · Order), on that page, its scenarios listed',
-      /API · Order/.test(await text(page, '.nx-tab--on .nx-tab-title')) && (await vis('#scPages .nx-sc-pagerow--on span')) === DETAIL && !!(await vis('#scList')), await text(page, '.nx-tab--on .nx-tab-title') + ' / ' + await vis('#scPages .nx-sc-pagerow--on span'));
+    await page.waitForFunction(() => Array.prototype.slice.call(document.querySelectorAll('#scListPage')).some((x) => x.offsetParent !== null), null, { timeout: 15000 }).catch(() => {});
+    T.check('Open in a tab: Order\'s own scenarios in a tab (API · Order) — the list on that page: none test it yet, + New scenario for it',
+      /API · Order/.test(await tabTitle()) && /^Page: Order\b/.test(await vis('#scListPage')) && /No scenario tests Order yet/.test(await vis('#scNoMatch')), await tabTitle() + ' / ' + await vis('#scListPage') + ' / ' + await vis('#scNoMatch'));
     await page.click('.nx-tab[data-tab-id="api-scenarios-page:' + DETAIL + '"] .nx-tab-close');
     await page.waitForTimeout(400);
-    await page.click('.nx-tab[data-tab-id="api-scenarios"] .nx-tab-btn').catch(() => page.click('.nx-tab[data-tab-id="api-scenarios"]').catch(() => {}));
-    await page.waitForSelector('#scJourney', { timeout: 10000 });
+    await goTab(sc1Tab);
+    await page.waitForSelector('#scJourney', { state: 'visible', timeout: 10000 });
 
     // take the link out (the confirm says what goes)
-    let asked = '';
-    const okAll = (d) => { asked = d.message(); d.accept().catch(() => {}); };
-    page.on('dialog', okAll);
+    asked = '';
     await page.click('#scJourney .nx-sc-jpage[data-page="' + DETAIL + '"] .nx-sc-junlink');
     await page.waitForFunction(() => !document.getElementById('scJourney'), null, { timeout: 10000 });
-    await page.waitForTimeout(300);
-    const unCalls = await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()));
-    T.check('Remove the link: asked first (Order, 1 step goes), then the journey bar goes, the list\'s step stays alone, Order\'s heading gone',
-      /Remove the link to Order\?/.test(asked) && /1 step\(s\)/.test(asked) && unCalls.join() === 'shopApi/getOrders' && (await page.$$('#scSteps .nx-sc-pagehead')).length === 0, asked + ' / ' + unCalls.join());
-    T.check('…said so, the scenario named for the one page again, and Order offered again under Continue the journey',
-      /Link removed: Order \(1 step\(s\)\)/.test(await text(page, '.nx-flib-result')) && /^Happy path — Order Workbench$/.test(await page.$eval('#scName', (e) => e.value)) && /→ Order\b/.test(await text(page, '#scNext')), await text(page, '.nx-flib-result') + ' / ' + await page.$eval('#scName', (e) => e.value));
+    await page.waitForTimeout(400);
+    T.check('Remove the link: asked first (Order, 1 step goes), then the flow bar and Order\'s step go (Flow (0))',
+      /Remove the link to Order\?/.test(asked) && /1 step\(s\)/.test(asked) && (await page.$$('#scSteps .nx-sc-call')).length === 0 && /Flow — expected pages \(0\)/.test(await text(page, '#scTabFlow')), asked + ' / ' + await text(page, '#scTabFlow'));
+    T.check('…said so, the scenario named for the one page again (its tab too), Order offered again to continue to',
+      /Link removed: Order \(1 step\(s\)\)/.test(await result()) && (await page.inputValue('#scName')) === 'Happy path — Order Workbench' && /^SC-0001 · Happy path — Order Workbench$/.test(await tabTitle())
+      && /→ Order\b/.test(await text(page, '#scNext')), await result() + ' / ' + await tabTitle());
     // link it again, then Reconnect: its steps read fresh
     await page.click('#scNext button[data-key="' + DETAIL + '"]');
     await page.waitForSelector('#scJourney .nx-sc-jpage[data-page="' + DETAIL + '"]', { timeout: 10000 });
     await page.waitForTimeout(300);
-    const relBox = (await page.$$('#scSteps oj-text-area[data-field="params"] textarea'))[1];
+    const relBox = await page.$('#scSteps oj-text-area[data-field="params"] textarea');
     await relBox.fill('id = 999'); await relBox.press('Tab'); await page.waitForTimeout(300);
     asked = '';
     await page.click('#scSteps .nx-sc-pagehead .nx-sc-prelink');
     await page.waitForFunction(() => /Reconnected/.test((document.querySelector('.nx-flib-result') || {}).textContent || ''), null, { timeout: 10000 });
     await page.waitForTimeout(300);
-    T.check('Continue the journey links it again; Reconnect (asked first) puts its step back as the page makes it — a broken value read fresh: id = {{id}}',
-      /Reconnect Order\?/.test(asked) && /^id = \{\{id\}\}$/.test((await page.$$eval('#scSteps oj-text-area[data-field="params"] textarea', (a) => a[1].value)).trim())
-      && (await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()))).join() === 'shopApi/getOrders,shopApi/getOrderById' && /Reconnected Order: 1 step\(s\)/.test(await text(page, '.nx-flib-result')), asked + ' / ' + await text(page, '.nx-flib-result'));
-    page.off('dialog', okAll);
-    await saveRun();
+    T.check('linked again; Reconnect (asked first) puts its step back as the page makes it — a broken value read fresh: id = {{id}}',
+      /Reconnect Order\?/.test(asked) && /^id = \{\{id\}\}$/.test((await page.$eval('#scSteps oj-text-area[data-field="params"] textarea', (t) => t.value)).trim())
+      && (await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()))).join() === 'shopApi/getOrderById' && /Reconnected Order: 1 step\(s\)/.test(await result()), asked + ' / ' + await result());
+    await runWith('#scRunFlow');
     res = await results();
-    T.check('…Save & run: the journey passes again', res.length === 2 && res.every((x) => x.state === 'ok'), JSON.stringify(res));
+    T.check('…▶ Run the whole flow: it passes again', res.length === 1 && res[0].state === 'ok' && /The whole flow passed/.test(await result()), JSON.stringify(res));
     await env.shot('api-scenarios-journey.png');
 
-    T.section('the flow from the page: every page it leads to, tested when every page has passed');
+    T.section('the flow map: every page the main page leads to, tested when every page has passed');
     await page.waitForSelector('#scFlow #scFlowCols .nx-sc-fnode', { timeout: 15000 });
     await page.waitForFunction(() => /2 tested/.test((document.getElementById('scFlowSum') || {}).textContent || ''), null, { timeout: 10000 }).catch(() => {});
     const fcols = await page.$$eval('#scFlowCols .nx-sc-flowcol', (a) => a.map((c) => ({ t: (c.querySelector('.nx-sc-flowcolt') || {}).textContent.trim(),
       nodes: Array.prototype.map.call(c.querySelectorAll('.nx-sc-fnode'), (x) => ({ page: x.getAttribute('data-page'), cls: x.className, t: x.textContent.replace(/\s+/g, ' ').trim() })) })));
-    T.check('on choosing a page, its flow: this page, then the pages it leads to (Order Workbench → Order, reached by a row click)',
+    T.check('the main page, then the pages it leads to (Order Workbench → Order, reached by a row click)',
       fcols.length === 2 && /This page/i.test(fcols[0].t) && /It leads to/i.test(fcols[1].t) && fcols[0].nodes[0].page === LIST && fcols[1].nodes[0].page === DETAIL
       && /from Order Workbench · row click/.test(fcols[1].nodes[0].t) && /also goes to Order Workbench/.test(fcols[1].nodes[0].t), JSON.stringify(fcols));
-    T.check('…each page with its APIs and how far the scenarios tested it (the journey ran: both passed)',
+    T.check('…each page with its APIs and how far the scenarios tested it (both passed)',
       /1 API · 1 passed/.test(fcols[1].nodes[0].t) && /tested: every API passed · \d+ scenario/.test(fcols[1].nodes[0].t) && /nx-sc-fnode--ok/.test(fcols[0].nodes[0].cls) && /nx-sc-fnode--ok/.test(fcols[1].nodes[0].cls), fcols[1].nodes[0].t);
     T.check('…the headline: 2 pages · 2 tested · 2 of 2 APIs passed — the flow\'s testing complete, marked so',
       /^2 pages · 2 tested · 2 of 2 APIs passed$/.test(await text(page, '#scFlowSum')) && /testing is complete/.test(await text(page, '#scFlowLeft')) && !!(await page.$('#scFlow.nx-sc-flow--done')), await text(page, '#scFlowSum') + ' / ' + await text(page, '#scFlowLeft'));
     await env.shot('api-scenarios-flow.png');
-    await page.click('#scFlowFold');
-    await page.waitForTimeout(250);
-    const folded = !(await page.$('#scFlowCols')) && /2 of 2 APIs passed/.test(await text(page, '#scFlowSum'));
-    await page.click('#scFlowFold');
-    await page.waitForSelector('#scFlowCols', { timeout: 5000 });
-    T.check('the flow folds to its headline and back', folded);
 
-    // a new happy path on the list: the path to Order continues it (its journey is the start of that path)
-    await page.click('#scDraft');
-    await page.waitForFunction(() => /^Happy path — Order Workbench$/.test((document.getElementById('scName') || {}).value || ''), null, { timeout: 15000 });
+    T.section('a second scenario on the same page: Continue anyway, then a page of the map added to the flow');
+    await closeSc();
+    await newSc(LIST);
+    await page.fill('#scName', 'Open an order from the list');
+    await page.press('#scName', 'Tab');
     await page.waitForTimeout(300);
+    await draft();
+    T.check('its own ID (SC-0002) and the name you gave it, kept by the draft', (await text(page, '#scCode')) === 'SC-0002' && /^SC-0002 · Open an order from the list$/.test(await tabTitle()), await tabTitle());
+    await tab('Flow');
+    const gated = await page.$eval('#scFlowCols .nx-sc-fnode[data-page="' + DETAIL + '"] .nx-sc-fpath', (b) => b.disabled).catch(() => null);
+    await page.click('#scGateSkip');
+    await page.waitForTimeout(300);
+    const opened = await page.$eval('#scFlowCols .nx-sc-fnode[data-page="' + DETAIL + '"] .nx-sc-fpath', (b) => b.disabled).catch(() => null);
+    T.check('not run yet: the flow waits — "Continue anyway" opens it (Add to the flow enabled, the pages to continue to offered)', gated === true && opened === false && !(await page.$('#scGateSkip'))
+      && /→ Order\b/.test(await text(page, '#scNext')), gated + ' → ' + opened);
     await page.click('#scFlowCols .nx-sc-fnode[data-page="' + DETAIL + '"] .nx-sc-fpath');
-    await page.waitForFunction(() => /Continued/.test((document.querySelector('.nx-flib-result') || {}).textContent || ''), null, { timeout: 15000 });
+    await page.waitForFunction(() => /The flow goes on to Order/.test((document.querySelector('.nx-flib-result') || {}).textContent || ''), null, { timeout: 15000 });
     await page.waitForTimeout(300);
-    T.check('"Test the path here" on Order: the open happy path continued along Order Workbench → Order, ready to run',
-      (await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()))).join() === 'shopApi/getOrders,shopApi/getOrderById'
-      && (await page.$$('#scJourney .nx-sc-jpage')).length === 2 && /Continued "Journey — Order Workbench → Order" — 1 page\(s\) linked/.test(await text(page, '.nx-flib-result')), await text(page, '.nx-flib-result'));
-    await page.click('#scFlowAll');
-    await page.waitForTimeout(500);
-    T.check('"A journey for each path": none made when every path already has its journey (said)', /already has its journey/.test(await text(page, '.nx-toast, .nx-toasts, [class*="toast"]')) || /already has its journey/.test(await page.evaluate(() => document.body.textContent)), await text(page, '[class*="toast"]'));
-    // that extra scenario taken away again (the later sections expect one journey here)
-    const okDel = (d) => d.accept().catch(() => {});
-    page.on('dialog', okDel);
-    const nCards = (await page.$$('#scList .nx-sc-card')).length;
-    await page.click('#scDelete');
-    await page.waitForFunction((n) => document.querySelectorAll('#scList .nx-sc-card').length === n - 1, nCards, { timeout: 10000 }).catch(() => {});
-    page.off('dialog', okDel);
+    T.check('Add to the flow on Order: the path to it added (its step under its page in Flow), the name kept as you gave it',
+      (await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()))).join() === 'shopApi/getOrderById' && (await page.$$('#scJourney .nx-sc-jpage')).length === 2
+      && (await page.inputValue('#scName')) === 'Open an order from the list' && /Flow — expected pages \(1\)/.test(await text(page, '#scTabFlow')), await result());
+    await page.click('#scSave');
+    await page.waitForTimeout(600);
+    await closeSc();
 
-    T.section('the pages list folded away for more room');
-    const wide0 = await page.$eval('.nx-sc-main', (e) => e.getBoundingClientRect().width);
-    await page.click('#scPagesMin');
-    await page.waitForSelector('#scPagesOpen', { timeout: 5000 });
+    T.section('the list: every scenario with its ID, page, status, last tested and by whom');
+    await toList();
+    const rows = await page.$$eval('#scGrid .nx-sc-grow:not(.nx-sc-grow--head)', (a) => a.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    T.check('both scenarios, newest ID first: SC-0002 (not run), SC-0001 (passed, tested by you, its flow to Order)', rows.length === 2 && /^SC-0002 Open an order from the list Happy path · 1 step · flow: Order Order Workbench.* Not run/.test(rows[0])
+      && /^SC-0001 Journey — Order Workbench → Order .* Passed .*priya\.raman/.test(rows[1]), rows.join(' | '));
+    const chips = await page.$$eval('#scList .nx-sc-listbar .nx-sc-chip', (a) => a.map((x) => x.textContent.trim()));
+    T.check('…status chips with counts (All 2 · Passed 1 · Not run 1)', chips.join() === 'All 2,Passed 1,Not run 1', chips.join());
+    await page.click('#scList .nx-sc-chip[data-key="passed"]');
+    await page.waitForTimeout(250);
+    const passedOnly = (await page.$$('#scGrid .nx-sc-grow:not(.nx-sc-grow--head)')).length;
+    await page.click('#scList .nx-sc-chip[data-key="all"]');
+    await page.fill('#scListQ', 'open an');
     await page.waitForTimeout(300);
-    const wide1 = await page.$eval('.nx-sc-main', (e) => e.getBoundingClientRect().width);
-    T.check('folded: a slim rail naming the page, the steps get the room (the list and its search gone)', !(await page.$('#scPages')) && !(await page.$('#scFind'))
-      && /^Pages · Order Workbench$/.test(await text(page, '#scPagesOpen')) && wide1 - wide0 > 200, Math.round(wide0) + ' → ' + Math.round(wide1) + ' / ' + await text(page, '#scPagesOpen'));
-    await env.shot('api-scenarios-folded.png');
-    await env.open('/?open=api-scenarios');
-    await page.waitForSelector('#scPagesOpen', { timeout: 30000 }).catch(() => {});
-    T.check('…kept on this PC: opened again, still folded', !!(await page.$('#scPagesOpen')) && !(await page.$('#scPages')));
-    await page.click('#scPagesOpen');
-    await page.waitForSelector('#scPages .nx-sc-pagerow', { timeout: 10000 });
-    T.check('the rail\'s button brings the list back', !!(await page.$('#scFind')) && !(await page.$('#scPagesOpen')));
+    const found = await page.$$eval('#scGrid .nx-sc-grow:not(.nx-sc-grow--head) .nx-sc-gopen', (a) => a.map((x) => x.textContent.trim()));
+    await page.fill('#scListQ', 'zzz');
+    await page.waitForTimeout(300);
+    const none = await text(page, '#scNoMatch');
+    await page.fill('#scListQ', '');
+    await page.waitForTimeout(300);
+    T.check('…a chip filters (Passed: 1), Find searches ID, name and page ("open an" → SC-0002; nothing → said)', passedOnly === 1 && found.join() === 'SC-0002' && /No scenario matches/.test(none), passedOnly + ' / ' + found.join() + ' / ' + none);
+    await env.shot('api-scenarios-list.png');
+    // ▶ Run from the list: the whole flow, the row's status follows
+    await page.click('#scGrid .nx-sc-grow[data-id] .nx-btn');
+    await page.waitForFunction(() => /Passed/.test((document.querySelector('#scGrid .nx-sc-grow:not(.nx-sc-grow--head)') || {}).textContent || ''), null, { timeout: 20000 }).catch(() => {});
+    T.check('▶ Run on a row (SC-0002): run there — the whole flow — and the row says Passed, tested by you', /^SC-0002 .* Passed .*priya\.raman/.test(await text(page, '#scGrid .nx-sc-grow:not(.nx-sc-grow--head)')), await text(page, '#scGrid .nx-sc-grow:not(.nx-sc-grow--head)'));
+    // the ID opens the scenario in its tab (the one open already is focused, not doubled)
+    await page.click('#scGrid .nx-sc-grow:not(.nx-sc-grow--head) .nx-sc-gopen');
+    await page.waitForSelector('#scHeader', { state: 'visible', timeout: 15000 });
+    await page.waitForTimeout(400);
+    T.check('its ID opens it in a tab of its own: SC-0002 · Open an order from the list, Passed, its run under Runs', /^SC-0002 · Open an order from the list$/.test(await tabTitle()) && /^Passed$/.test(await text(page, '#scStatus')) && /Runs \(1\)/.test(await text(page, '#scTabRuns')), await tabTitle() + ' / ' + await text(page, '#scStatus'));
+    await closeSc();
 
     T.section('a value the page gets from the screen before it');
-    await pick(DETAIL);
+    await newSc(DETAIL);
     await draft();
     const dataNow = await page.$eval('#scData textarea', (t) => t.value);
-    T.check('the draft asks for it under Data (a header, an empty row) and says so', /^id\s*$/.test(dataNow.trim()) && /Give id under Data/.test(await page.$eval('#scNotes textarea', (t) => t.value)), JSON.stringify(dataNow));
+    T.check('the draft (SC-0003) asks for it under Data (a header, an empty row) and says so in the notes', (await text(page, '#scCode')) === 'SC-0003' && /^id\s*$/.test(dataNow.trim())
+      && /Give id under Data/.test(await page.$eval('#scNotes textarea', (t) => t.value)), JSON.stringify(dataNow));
     await saveRun();
     res = await results();
-    T.check('run without it: the step says which value and where to give it', res[0].state === 'fail' && /no value for id — give it under Data/.test(res[0].note), JSON.stringify(res));
+    T.check('run without it: the step says which value and where to give it; the header says Failed (main page)', res[0].state === 'fail' && /no value for id — give it under Data/.test(res[0].note)
+      && /Failed \(main page\)/.test(await text(page, '#scStatus')), JSON.stringify(res));
+    await tab('Flow');
+    T.check('…the flow stays shut while a main-page API fails ("1 failed")', /The main page first: 0 of its 1 APIs passed, 1 failed/.test(await text(page, '#scGateText')), await text(page, '#scGateText'));
+    await tab('Main');
     await page.fill('#scData textarea', 'id\n41');
     await page.press('#scData textarea', 'Tab');
     await page.waitForTimeout(300);
     await saveRun();
     res = await results();
-    T.check('given (id = 41): sent with it, passed', res[0].state === 'ok' && env.calls.some((c) => c === 'GET /shop/v1/orders/41') && /^✓ Passed/.test(await text(page, '#scRun h2')), JSON.stringify(res));
+    T.check('given (id = 41): sent with it, passed', res[0].state === 'ok' && env.calls.some((c) => c === 'GET /shop/v1/orders/41') && /^✓ /.test(await text(page, '#scRun h2')) && /Passed \(main page\)/.test(await text(page, '#scStatus')), JSON.stringify(res));
+    await closeSc();
 
     T.section('BI Publisher where the page calls it; writes held');
-    await pick(CREATE);
+    await newSc(CREATE);
     await draft();
     const cc = await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()));
     T.check('its report in place of the SOAP call (its path found in the app\'s code), the create last and marked', cc.length === 3 && cc[0] === 'shopApi/getCustomers'
@@ -318,6 +376,9 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     res = await results();
     T.check('run: the reads and the report checked, the create not sent (writes not allowed)', res[0].state === 'ok' && res[1].state === 'ok' && res[2].state === 'skip' && env.writes.length === 0, JSON.stringify(res));
     T.check('…the report sent with the value given (P_CUSTOMER_ID = 42)', reportBodies.some((b) => /reportAbsolutePath>\/Custom\/Shop\/CUSTOMERS_RP\.xdo</.test(b) && /P_CUSTOMER_ID[\s\S]{0,200}>42</.test(b)), (reportBodies[reportBodies.length - 1] || '').slice(0, 300));
+    await tab('Flow');
+    T.check('…a change of data held back counts as done: the main page is done, its flow open', /The main page is done: all 3 of its APIs ran \(1 change data, held back\)/.test(await text(page, '#scGateText')), await text(page, '#scGateText'));
+    await tab('Main');
 
     T.section('a list of values: searched and picked as on the page, here and in the steps that send it');
     const s1 = '#scSteps .nx-sc-step:first-child';
@@ -326,18 +387,15 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
       && /Customer on the page: .*keeps id → hands it on as \{\{customer\}\}/.test(lovInfo), lovInfo);
     T.check('each step shows its API in full (method, the backend this PC reaches, the path)', /^GET http:\/\/127\.0\.0\.1:\d+\/shop\/v1\/customers$/.test(await text(page, s1 + ' .nx-sc-api'))
       && /^REPORT \/Custom\/Shop\/CUSTOMERS_RP\.xdo/.test(await text(page, '#scSteps .nx-sc-step:nth-child(2) .nx-sc-api')), await text(page, s1 + ' .nx-sc-api'));
-    // ▶ Run: this API alone, now
     await page.click(s1 + ' .nx-sc-trybtn');
     await page.waitForSelector(s1 + ' .nx-sc-tried', { timeout: 15000 });
     T.check('▶ Run: the API run on its own — what was sent, 200, its values, its answer', /^200 · \d+ ms/.test(await text(page, s1 + ' .nx-sc-tried b'))
       && /Sent: GET http:\/\/127\.0\.0\.1:\d+\/shop\/v1\/customers/.test(await text(page, s1 + ' .nx-sc-tried .nx-sc-sent')) && /2 value\(s\): Acme Tools, Blue River/.test(await text(page, s1 + ' .nx-sc-tried .nx-sc-resvalues'))
       && /"Blue River"/.test(await text(page, s1 + ' .nx-sc-tried pre')), await text(page, s1 + ' .nx-sc-tried'));
-    // the report sends the customer picked: the same list shows on its step too
     const pBox2 = (await page.$$('#scSteps oj-text-area[data-field="params"] textarea'))[1];
     await pBox2.fill('P_CUSTOMER_ID = {{customer}}'); await pBox2.press('Tab'); await page.waitForTimeout(500);
     const repStep = '#scSteps .nx-sc-step:nth-child(2)';
     T.check('a step that sends {{customer}}: the list right there, the same component the page uses', (await page.$$(repStep + ' .nx-sc-picker oj-select-single')).length === 1);
-    // searched as on the page: type, pick
     const where = () => page.evaluate(() => { const r = document.querySelector('#scSteps .nx-sc-step:nth-child(2) .nx-sc-picker').getBoundingClientRect(); return Math.round(r.top); });
     await page.click(repStep + ' .nx-sc-picker oj-select-single input');
     await page.keyboard.type('blue', { delay: 60 });
@@ -359,20 +417,22 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
       && /customer = 8/.test(await text(page, '#scRun .nx-sc-handed')), (reportBodies[reportBodies.length - 1] || '').slice(0, 200));
     await env.shot('api-scenarios-lov.png');
 
-    T.section('a search as you type (a report, as on the page): what you type is sent, what it finds is shown');
-    await env.open('/?open=api-scenarios');
-    await page.waitForSelector('#scPages .nx-sc-pagerow', { timeout: 30000 });
-    await pick(PICK);
+    T.section('another page for the same scenario (asked first), then a search as you type');
+    asked = '';
+    await page.selectOption('#scPageSel', PICK);
+    await page.waitForFunction(() => !document.querySelector('#scSteps .nx-sc-step'), null, { timeout: 10000 }).catch(() => {});
+    await page.waitForTimeout(400);
+    T.check('a page picked for a scenario with steps: asked first, each page named by its path when both have one title (its steps are cleared), ready to draft',
+      /Test New Order \(shop\/customers\/customer-pick\) instead of New Order \(shop\/orders\/order-create\)\?/.test(asked) && /cleared/.test(asked) && (await page.$$('#scSteps .nx-sc-step')).length === 0 && /^Happy path — New Order$/.test(await page.inputValue('#scName'))
+      && /^SC-0004/.test(await text(page, '#scCode')), asked.split('\n')[0] + ' / ' + await page.inputValue('#scName'));
     await draft();
     const t1 = '#scSteps .nx-sc-step:first-child';
     T.check('the Customer search found in the code: its report, the text typed as P_SEARCH, the fixed value as written', /^List of values: Customer — report CUST_LOV_RP \(a search as you type\)/.test(await page.$eval(t1 + ' .nx-sc-stepname', (e) => e.value))
       && /P_SEARCH = the text typed/.test(await text(page, t1 + ' .nx-sc-lovinfo')) && /P_SEARCH_BY = ALL/.test(await page.$eval(t1 + ' oj-text-area[data-field="params"] textarea', (t) => t.value)), await text(page, t1 + ' .nx-sc-lovinfo'));
-    // the page as on your screen: Customer Type (Internal) — the External-only Customer shown as not on the page
     T.check('the page as: Customer Type, Internal chosen (as the page starts); the External-only Customer not on the page', /The page as\s*Customer Type\s*Internal\s*External/.test(await text(page, '#scChoices'))
       && (await text(page, '#scChoices .nx-sc-chip--on')) === 'Internal' && (await page.$$('#scSteps .nx-sc-step--off')).length === 1
       && /Not on the page as chosen \(Customer Type is Internal\): skipped when run/.test(await text(page, '#scSteps .nx-sc-step--off .nx-sc-when')), await text(page, '#scChoices'));
     await page.click(t1 + ' .nx-sc-picker oj-select-single input');
-    // opened: the report's first rows (a blank search), as the page shows them when the field is clicked
     await page.locator(OPT, { hasText: 'MAPLE FREIGHT CO' }).first().waitFor({ timeout: 15000 });
     T.check('clicked: the report run with a blank search, its first rows listed', searches.indexOf('') !== -1 && (await page.locator(OPT).count()) === 2, JSON.stringify(searches));
     await page.keyboard.type('harbor', { delay: 60 });
@@ -393,41 +453,39 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     await page.waitForTimeout(300);
     T.check('External chosen: the report-backed Customer is the one not on the page now', (await page.$$('#scSteps .nx-sc-step--off')).length === 1
       && /report \/Custom\/Shop\/CUST_LOV_RP/.test(await text(page, '#scSteps .nx-sc-step--off .nx-sc-call')), await text(page, '#scSteps .nx-sc-step--off .nx-sc-call'));
-    // ▶ Run on that step: sent all the same (you asked for that one), said
     await page.click('#scSteps .nx-sc-step--off .nx-sc-trybtn');
     await page.waitForSelector('#scSteps .nx-sc-step--off .nx-sc-tried', { timeout: 15000 });
     T.check('▶ Run on a step not on the page as chosen: sent all the same, said why', /^200 · \d+ ms/.test(await text(page, '#scSteps .nx-sc-step--off .nx-sc-tried b'))
       && /not on the page as chosen \(Customer Type is External\): run because you asked/.test(await text(page, '#scSteps .nx-sc-step--off .nx-sc-tried')), await text(page, '#scSteps .nx-sc-step--off .nx-sc-tried'));
     T.check('the choices say how the page starts', /As on your screen/.test(await text(page, '#scChoices')), await text(page, '#scChoices'));
     await env.shot('api-scenarios-search.png');
+    await page.click('#scSave'); await page.waitForTimeout(600);
+    await closeSc();
 
     T.section('built by you from the page\'s APIs, the order suggested; deleted');
-    page.on('dialog', (d) => d.accept().catch(() => {}));
-    await env.open('/?open=api-scenarios');
-    await page.waitForSelector('#scPages .nx-sc-pagerow', { timeout: 30000 });
-    await pick(CREATE);
-    await page.click('#scNew');
+    await newSc(CREATE);
+    await page.click('#scApisBtn');
     await page.waitForSelector('#scApiList .nx-sc-apirow', { timeout: 15000 });
     const apiKeys = await page.$$eval('#scApiList .nx-sc-apirow', (a) => a.map((x) => x.getAttribute('data-key')));
     await page.waitForSelector('#scApiOverview', { timeout: 10000 });
     T.check('the page\'s counts as Application pages shows them (3 REST calls with BI Publisher\'s own, 1 BI report); its backends', /3 REST calls/.test(await text(page, '#scApiOverview'))
       && /1 BI reports/.test(await text(page, '#scApiOverview')) && /Oracle BI Publisher \(SOAP\)/.test(await text(page, '#scApiOverview')), await text(page, '#scApiOverview'));
-    T.check('another page with the same title: named, with its counts, to open', /Another page has this title: shop\/customers\/customer-pick — \d+ REST calls, 1 BI reports/.test(await text(page, '#scApiTwin')), await text(page, '#scApiTwin'));
+    T.check('another page with the same title: named, with its counts', /Another page has this title: shop\/customers\/customer-pick — \d+ REST calls, 1 BI reports/.test(await text(page, '#scApiTwin')), await text(page, '#scApiTwin'));
     T.check('BI Publisher\'s own service listed with the reports it runs (no Test of its own)', /Runs the reports below: CUSTOMERS_RP/.test(await text(page, '#scApiList .nx-sc-apirow[data-key="bipService/runBIPReport"]'))
       && !(await page.$('#scApiList .nx-sc-apirow[data-key="bipService/runBIPReport"] .nx-sc-apitry')));
-    T.check('New scenario (from APIs): the APIs tab, every API of the page — its list, BI Publisher\'s service, its report, its create', apiKeys.join() === 'shopApi/getCustomers,bipService/runBIPReport,report:CUSTOMERS_RP,shopApi/createOrder'
-      && /a list of values/.test(await text(page, '#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-apiwhere')) && /Building: My scenario — New Order · 0 step/.test(await text(page, '#scApiBar')), apiKeys.join());
+    T.check('Add from the page\'s APIs: every API of the page — its list, BI Publisher\'s service, its report, its create; building the new scenario', apiKeys.join() === 'shopApi/getCustomers,bipService/runBIPReport,report:CUSTOMERS_RP,shopApi/createOrder'
+      && /a list of values/.test(await text(page, '#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-apiwhere')) && /Building: Happy path — New Order · 0 step/.test(await text(page, '#scApiBar')), apiKeys.join() + ' / ' + await text(page, '#scApiBar'));
     await page.click('#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-apitry');
     await page.waitForSelector('#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-tried', { timeout: 15000 });
     T.check('▶ Test: that API alone — 200, its values, what was sent', /^200 · \d+ ms/.test(await text(page, '#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-tried b'))
       && /2 value\(s\): Acme Tools, Blue River/.test(await text(page, '#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-resvalues')), await text(page, '#scApiList .nx-sc-apirow[data-key="shopApi/getCustomers"] .nx-sc-tried'));
     await env.shot('api-scenarios-apis.png');
-    // added in the wrong order: the create, the report, then the list
     for (const k of ['shopApi/createOrder', 'report:CUSTOMERS_RP', 'shopApi/getCustomers']) { await page.click('#scApiList .nx-sc-apirow[data-key="' + k + '"] .nx-sc-apiadd'); await page.waitForTimeout(200); }
-    T.check('+ Add to scenario: three steps in the order added', /Building: My scenario — New Order · 3 step\(s\) \(not saved yet\)/.test(await text(page, '#scApiBar'))
+    T.check('+ Add to scenario: three steps in the order added', /Building: Happy path — New Order · 3 step\(s\) \(not saved yet\)/.test(await text(page, '#scApiBar'))
       && /In the scenario/.test(await text(page, '#scApiList .nx-sc-apirow[data-key="shopApi/createOrder"] .nx-sc-apiadd')), await text(page, '#scApiBar'));
     await page.click('#scApiGo');
     await page.waitForSelector('#scSteps .nx-sc-step', { timeout: 10000 });
+    T.check('Done adding: the APIs fold away, the three steps in Main scenario', !(await page.$('#scApiList')) && (await page.$$('#scSteps .nx-sc-step')).length === 3 && /Main scenario \(3\)/.test(await text(page, '#scTabMain')));
     const rp = (await page.$$('#scSteps oj-text-area[data-field="params"] textarea'))[1];
     await rp.fill('P_CUSTOMER_ID = {{customer}}'); await rp.press('Tab'); await page.waitForTimeout(400);
     await page.click('#scSuggestBtn');
@@ -440,9 +498,14 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     await page.waitForTimeout(400);
     const after = await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()));
     T.check('Apply this order: the steps in it', after[0] === 'shopApi/getCustomers' && /CUSTOMERS_RP/.test(after[1]) && after[2] === 'shopApi/createOrder', after.join(' | '));
-    await page.click('#scSave'); await page.waitForTimeout(800);
+    await page.click('#scSave');
+    await page.waitForFunction(() => /^SC-\d+$/.test(((document.getElementById('scCode') || {}).textContent || '').trim()), null, { timeout: 10000 });
+    await page.waitForTimeout(300);
+    T.check('Save: its ID given (SC-0005), on the tab too', (await text(page, '#scCode')) === 'SC-0005' && /^SC-0005 · Happy path — New Order$/.test(await tabTitle()), await tabTitle());
+    await closeSc();
     // one that misses a value: the report alone, sending {{customer}}
-    await page.click('#scNew');
+    await newSc(CREATE);
+    await page.click('#scApisBtn');
     await page.waitForSelector('#scApiList .nx-sc-apirow', { timeout: 15000 });
     await page.click('#scApiList .nx-sc-apirow[data-key="report:CUSTOMERS_RP"] .nx-sc-apiname');
     await page.waitForSelector('#scApiList .nx-sc-apirow[data-key="report:CUSTOMERS_RP"] .nx-sc-apivals textarea', { timeout: 5000 });
@@ -458,25 +521,40 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     await page.waitForFunction(() => document.querySelectorAll('#scSteps .nx-sc-step').length === 2, null, { timeout: 10000 });
     await page.waitForTimeout(300);
     T.check('+ Add it: added, the order suggested again (the list first)', /^List of values: Customer/.test(await text(page, '#scSuggest .nx-sc-suggorder li:first-child')) && !(await page.$('#scMissing')), await text(page, '#scSuggest'));
-    await page.click('#scSave'); await page.waitForTimeout(800);
-    // delete: one by its card, then all of the page's
-    await page.click('#scTabScenarios').catch(() => {});
-    const cardsBefore = (await page.$$('#scList .nx-sc-card')).length;
-    await page.click('#scList .nx-sc-card .nx-sc-carddel');
-    await page.waitForFunction((n) => document.querySelectorAll('#scList .nx-sc-card').length === n - 1, cardsBefore, { timeout: 10000 });
-    T.check('🗑 on a card: that scenario deleted', (await page.$$('#scList .nx-sc-card')).length === cardsBefore - 1, cardsBefore + ' → ' + (await page.$$('#scList .nx-sc-card')).length);
-    await page.click('#scDeleteAll');
-    await page.waitForSelector('#scNone', { timeout: 10000 });
-    T.check('Delete all: none left on the page', (await page.$$('#scList .nx-sc-card')).length === 0);
+    await page.click('#scSave');
+    await page.waitForFunction(() => /^SC-\d+$/.test(((document.getElementById('scCode') || {}).textContent || '').trim()), null, { timeout: 10000 });
+    await page.waitForTimeout(300);
+    // delete: this one from its header (its tab closes), then one from the list
+    const tabsBefore = (await page.$$('.nx-tab')).length;
+    asked = '';
+    await page.click('#scDelete');
+    await page.waitForFunction((n) => document.querySelectorAll('.nx-tab').length === n - 1, tabsBefore, { timeout: 10000 }).catch(() => {});
+    await page.waitForTimeout(300);
+    T.check('Delete in the header: asked first (SC-0006), deleted, its tab closed', /Delete the scenario SC-0006/.test(asked) && (await page.$$('.nx-tab')).length === tabsBefore - 1, asked + ' / ' + (await page.$$('.nx-tab')).length);
+    await toList();
+    const ids0 = await page.$$eval('#scGrid .nx-sc-gopen', (a) => a.map((x) => x.textContent.trim()));
+    asked = '';
+    await page.click('#scGrid .nx-sc-grow[data-id] .nx-sc-carddel');
+    await page.waitForFunction((n) => document.querySelectorAll('#scGrid .nx-sc-gopen').length === n - 1, ids0.length, { timeout: 10000 }).catch(() => {});
+    const ids1 = await page.$$eval('#scGrid .nx-sc-gopen', (a) => a.map((x) => x.textContent.trim()));
+    T.check('🗑 on a row: asked, that scenario deleted (SC-0005); the others stay', ids0.join() === 'SC-0005,SC-0004,SC-0003,SC-0002,SC-0001' && /Delete the scenario SC-0005/.test(asked) && ids1.join() === 'SC-0004,SC-0003,SC-0002,SC-0001', ids0.join() + ' → ' + ids1.join());
     await env.shot('api-scenarios-build.png');
 
     T.section('opened on a page from Application pages');
     await env.open('/?open=app-pages');
     await page.waitForSelector('#pgRows .nx-pg-row', { timeout: 30000 });
     await page.click('.nx-pg-apibtn[data-key="' + DETAIL + '"]');
-    await page.waitForSelector('#scPages .nx-sc-pagerow--on', { timeout: 15000 });
-    T.check('the API button beside a page opens API Scenarios on it, its scenario and last run there', (await text(page, '#scPages .nx-sc-pagerow--on span')) === DETAIL
-      && /✓ passed/.test(await text(page, '.nx-sc-card .nx-sc-last')), await text(page, '#scPages .nx-sc-pagerow--on'));
+    await page.waitForFunction(() => Array.prototype.slice.call(document.querySelectorAll('#scListPage')).some((x) => x.offsetParent !== null), null, { timeout: 15000 });
+    await page.waitForTimeout(400);
+    // grid rows are display: contents — a row shows when its first cell does
+    const shownRows = () => page.$$eval('#scGrid .nx-sc-grow:not(.nx-sc-grow--head)', (a) => a.filter((x) => x.firstElementChild && x.firstElementChild.offsetParent !== null).map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    const r1 = await shownRows();
+    T.check('the API button beside a page opens the list on its scenarios: SC-0003 tests Order, passed', /^Page: Order\b/.test(await vis('#scListPage'))
+      && r1.length === 1 && /^SC-0003 .* Passed/.test(r1[0]), await vis('#scListPage') + ' / ' + r1.join(' | '));
+    await env.shot('api-scenarios-from-pages.png');
+    await page.evaluate(() => { const b = Array.prototype.slice.call(document.querySelectorAll('#scListPage .nx-sc-pagechipx')).filter((x) => x.offsetParent !== null)[0]; if (b) b.click(); });
+    await page.waitForTimeout(300);
+    T.check('…× on the page chip: every scenario again', (await shownRows()).length === 4, (await shownRows()).join(' | '));
 
     T.check('no page errors', errs().length === 0, errs().slice(0, 3).join(' | '));
   } catch (e) {

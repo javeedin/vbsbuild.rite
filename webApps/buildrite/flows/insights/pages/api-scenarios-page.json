@@ -9,15 +9,11 @@
       "defaultValue": [],
       "description": "The workspace app's pages (the Application pages catalog)."
     },
-    "q": {
-      "type": "string",
-      "defaultValue": ""
-    },
     "page": {
       "type": "string",
       "defaultValue": "",
       "input": "fromCaller",
-      "description": "The page chosen (its id: app/flow/page). A tab of its own (a linked page opened from a journey) is given it."
+      "description": "The page the open scenario tests (its id: app/flow/page). In the list: the page its scenarios are shown for (a page's own tab, or Application pages → API). A new scenario's tab is given it."
     },
     "facts": {
       "type": "any",
@@ -74,11 +70,6 @@
       "defaultValue": [],
       "description": "Where the journey's last page goes next in the app: [{ id, label, via }]."
     },
-    "tab": {
-      "type": "string",
-      "defaultValue": "scenarios",
-      "description": "scenarios | apis (every API of the page)"
-    },
     "apis": {
       "type": "any[]",
       "defaultValue": [],
@@ -129,10 +120,46 @@
       "defaultValue": true,
       "description": "The flow card unfolded (kept on this PC)."
     },
-    "pagesMin": {
+    "scId": {
+      "type": "string",
+      "defaultValue": "",
+      "input": "fromCaller",
+      "description": "The scenario this tab shows (its id; 'new-…' for one being made). Empty: the list of every scenario."
+    },
+    "scTab": {
+      "type": "string",
+      "defaultValue": "main",
+      "description": "The scenario's tab: 'main' (its page's APIs), 'flow' (the pages it leads to), 'runs'."
+    },
+    "allSc": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "Every scenario, with its last run (the list)."
+    },
+    "listQ": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "The list's search: ID, name or page."
+    },
+    "listStatus": {
+      "type": "string",
+      "defaultValue": "all",
+      "description": "The list's status filter: all, passed, failed, notrun, draft."
+    },
+    "listPage": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "The list shown for one page only (its id), or every page."
+    },
+    "flowForce": {
       "type": "boolean",
       "defaultValue": false,
-      "description": "The pages list folded to a slim rail (kept on this PC)."
+      "description": "Continue to the flow before every API of the main page has run (Continue anyway)."
+    },
+    "showApis": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "The main page's APIs shown under the toolbar (Add from the page's APIs)."
     }
   },
   "events": {
@@ -142,6 +169,10 @@
     },
     "appWhere": {
       "description": "You came back from your app's window: where is it now?",
+      "payloadType": "object"
+    },
+    "scChanged": {
+      "description": "A scenario was saved, run or deleted in another tab: the list reads them again (shellBus topic api-scenarios-changed).",
       "payloadType": "object"
     }
   },
@@ -164,7 +195,7 @@
         {
           "chain": "scChain",
           "parameters": {
-            "act": "load",
+            "act": "focus",
             "key": "",
             "value": "",
             "step": ""
@@ -284,6 +315,45 @@
             "act": "{{ $event.detail.updatedFrom === 'internal' ? 'apiVals' : 'none' }}",
             "key": "{{ $event.currentTarget.dataset.key }}",
             "value": "{{ $event.detail.value || '' }}",
+            "step": ""
+          }
+        }
+      ]
+    },
+    "scChanged": {
+      "chains": [
+        {
+          "chain": "scChain",
+          "parameters": {
+            "act": "list",
+            "key": "",
+            "value": "",
+            "step": ""
+          }
+        }
+      ]
+    },
+    "onListField": {
+      "chains": [
+        {
+          "chain": "scChain",
+          "parameters": {
+            "act": "listField",
+            "key": "{{ $event.currentTarget.dataset.field }}",
+            "value": "{{ $event.currentTarget.value }}",
+            "step": ""
+          }
+        }
+      ]
+    },
+    "onSel": {
+      "chains": [
+        {
+          "chain": "scChain",
+          "parameters": {
+            "act": "{{ $event.currentTarget.dataset.act }}",
+            "key": "{{ $event.currentTarget.value }}",
+            "value": "",
             "step": ""
           }
         }

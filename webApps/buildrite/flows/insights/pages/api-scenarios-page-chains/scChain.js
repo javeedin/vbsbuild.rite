@@ -1,61 +1,198 @@
 define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pagesClient', 'resources/js/shellBus'], (ActionChain, SC, PC, bus) => {
   'use strict';
 
-  // API Scenarios: load | page (id) | draft | new | open (id) | run (id) | runAll | save | saveRun | saveRunWrites | delete | pick (step, value) | tryStep (step)
-  //   | field (key, value) | stepField (step, key, value) | addStep | up | down | removeStep | toggleWrites | toggleShape | showRun
+  // API Scenarios. The screen opens on the list of every scenario; + New scenario (or a row) opens one scenario in a tab of
+  // its own: its header (ID, name, the page it tests, type, status, made / tested by), then three tabs — Main scenario (the
+  // page's own APIs: drafted from its code, run), Flow (the pages it leads to, opened once the main page's APIs have all
+  // run) and Runs.
+  // list: load | list | listField (key, value) | newSc (key = page) | openSc (key) | runSc (key) | deleteCard (key) | where
+  // one scenario: setPage (key) | scTab (key) | draft | save | saveRun | saveRunWrites | runFlow | delete | gateSkip
+  //   | toggleApis | showRun (key) | field (key, value) | stepField (step, key, value) | pick | tryStep | choice | addStep
+  //   | up | down | removeStep | toggleWrites | toggleShape | apiOpen | apiVals | apiTry | apiAdd | suggest | applySuggest
+  //   | closeSuggest | addMissing | extend (key) | flowPath (key) | flowLoad | jApis | jClose | jTab | jGo | jAdd
+  //   | jUnlink | jRelink
   const copy = (o) => JSON.parse(JSON.stringify(o || null));
   const pairs = (text, sep) => String(text || '').split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const i = l.indexOf(sep); return i === -1 ? [l.trim(), ''] : [l.slice(0, i).trim(), l.slice(i + sep.length).trim()]; }).filter((p) => p[0]);
   class scChain extends ActionChain {
     async run(context, { act, key, value, step }) {
       const v = context.$page.variables;
       const say = (r, text) => { v.result = r.ok ? (text ? { ok: true, text } : null) : { ok: false, text: (r.body && r.body.error) || 'It did not work.' }; if (text || !r.ok) bus.toast(r.ok ? text : v.result.text, r.ok ? 'success' : 'error'); };
-      // every API of the page (the APIs tab)
-      const loadApis = async (id) => { const r = await SC.apis(id || v.page); if ((id || v.page) !== v.page) return; if (r.ok) { v.apis = r.body.apis || []; v.apiChoices = r.body.choices || []; v.apiInfo = { overview: r.body.overview || null, twins: r.body.twins || [] }; } else say(r); };
       const newId = () => 'u' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
-      // the page's flow: every page it leads to, how far each is tested (the flow card)
+      const labelOf = (pid) => ((v.pages || []).filter((p) => p.id === pid)[0] || {}).label || String(pid || '').split('/').pop();
+      const changed = () => { try { bus.emit('api-scenarios-changed', { at: Date.now() }); } catch (e) { /* no listeners */ } };
+      const tabId = () => 'api-scenario:' + v.scId;
+      const retitle = () => { if (v.scId && v.sc && v.sc.id) { try { bus.rename(tabId(), (v.sc.code ? v.sc.code + ' · ' : '') + (v.sc.name || 'Scenario')); } catch (e) { /* no shell */ } } };
+
+      // ── the list of every scenario ──
+      const loadList = async () => { const l = await SC.list(''); if (l.ok) v.allSc = l.body.scenarios || []; else say(l); };
+      // the page your app's window is on (it follows you back from that window)
+      const where = async () => { const r = await SC.where(); v.appAt = r.ok && r.body && r.body.open ? { open: true, url: r.body.url || '', page: r.body.page || '', label: r.body.label || '' } : null; };
+
+      // ── one scenario: its page's code (the APIs, the facts), its flow, its runs ──
+      const loadApis = async (id) => { const r = await SC.apis(id || v.page); if ((id || v.page) !== v.page) return; if (r.ok) { v.apis = r.body.apis || []; v.apiChoices = r.body.choices || []; v.apiInfo = { overview: r.body.overview || null, twins: r.body.twins || [] }; } else say(r); };
       const loadFlow = async (id) => {
-        if (!id) return;
+        if (!id) { v.flow = null; return; }
         const r = await SC.flow(id);
         if (id !== v.page) return;
         v.flow = r.ok ? r.body : { error: (r.body && r.body.error) || 'The flow could not be read.', nodes: [] };
       };
-      const remember = (k, val) => { try { window.localStorage.setItem('br.sc.' + k, val ? '1' : '0'); } catch (e) { /* not kept */ } };
-      const recalled = (k, d) => { try { const x = window.localStorage.getItem('br.sc.' + k); return x === null ? d : x === '1'; } catch (e) { return d; } };
-      const loadPage = async (id) => {
-        v.page = id; v.sc = null; v.run = null; v.result = null; v.tries = {}; v.nextPages = []; v.apis = []; v.apiInfo = null; v.apiTries = {}; v.apiVals = {}; v.apiOpen = ''; v.suggestion = null;
-        if (v.tab === 'apis') loadApis(id);
-        v.flow = null;
-        const [l, sh, rs] = await Promise.all([SC.list(id), PC.sheet(context.$application.path, id), SC.runs(id), loadFlow(id)]);
-        v.scenarios = l.ok ? l.body.scenarios || [] : [];
-        if (!l.ok) say(l);
+      const loadRuns = async () => { if (!v.sc || !v.sc.page) { v.runs = []; return; } const rs = await SC.runs(v.sc.page); v.runs = rs.ok ? (rs.body.runs || []).filter((x) => v.sc && x.scenario === v.sc.id) : []; };
+      const nextFor = async () => { if (!v.sc || !v.sc.page) { v.nextPages = []; return; } const j = v.sc.journey || []; const last = j.length ? j[j.length - 1].page : v.sc.page; const r = await SC.next(last); if (r.ok) v.nextPages = r.body.next || []; };
+      const loadContext = async () => {
+        v.page = (v.sc && v.sc.page) || '';
+        v.apis = []; v.apiInfo = null; v.apiTries = {}; v.apiVals = {}; v.apiOpen = ''; v.facts = null;
+        if (!v.page) { v.flow = null; v.runs = []; v.nextPages = []; return; }
+        if (v.showApis) loadApis(v.page);
+        const [sh] = await Promise.all([PC.sheet(context.$application.path, v.page), loadFlow(v.page), loadRuns(), nextFor()]);
         const s = sh && sh.body ? (sh.body.sheet || sh.body) : null;
         v.facts = s && s.facts ? s.facts : null;
-        v.runs = rs.ok ? rs.body.runs || [] : [];
       };
-      const reloadList = async () => { const l = await SC.list(v.page); if (l.ok) v.scenarios = l.body.scenarios || []; const rs = await SC.runs(v.page); if (rs.ok) v.runs = rs.body.runs || []; await loadFlow(v.page); };
+      const blankSc = (page) => ({ page: page || '', name: 'New scenario', kind: 'happy', notes: '', allowWrites: false, data: [], steps: [], choices: [], journey: page ? [{ page, label: labelOf(page) }] : [] });
+      const openScenario = async (id) => {
+        v.run = null; v.tries = {}; v.suggestion = null; v.result = null; v.flowForce = false; v.scTab = 'main';
+        if (/^new/.test(String(id))) { v.sc = blankSc(v.page || ''); await loadContext(); return; }
+        const r = await SC.get(id);
+        if (!r.ok) { say(r); v.sc = null; return; }
+        v.sc = copy(r.body.scenario);
+        await loadContext();
+        if (v.runs.length) { const rr = await SC.runOf(v.sc.page, v.runs[0].id); if (rr.ok) v.run = rr.body.run; }
+        retitle();
+      };
       const steps = () => (v.sc && v.sc.steps) || [];
       const setSteps = (list) => { v.sc = Object.assign({}, v.sc, { steps: list }); };
-      const doRun = async (id, writes) => {
-        v.busy = true;
-        try {
-          const r = await SC.run(id, writes);
-          if (r.ok && r.body.run.ok) { v.run = r.body.run; say({ ok: true }, 'Passed: ' + r.body.run.passed + ' check(s) ok.'); }
-          else if (r.ok) { v.run = r.body.run; say({ ok: false, body: { error: 'Failed: ' + r.body.run.failed + ' step(s) failed — see each step\'s checks below.' } }); }
-          else say(r);
-          await reloadList();
-        } finally { v.busy = false; }
-      };
+      const afterChange = async () => { await Promise.all([loadRuns(), loadFlow(v.page)]); retitle(); changed(); };
       const save = async () => {
+        if (!v.sc) return { ok: false, body: { error: 'No scenario.' } };
+        if (!v.sc.page) return { ok: false, body: { error: 'Pick the page this scenario tests first (Page, in the header).' } };
         const r = await SC.save(v.sc);
-        if (r.ok) { v.sc = copy(r.body.scenario); await reloadList(); }
+        if (r.ok) { v.sc = copy(r.body.scenario); await afterChange(); }
         return r;
       };
+      const doRun = async (id, writes, scope) => {
+        v.busy = true;
+        try {
+          const r = await SC.run(id, writes, scope);
+          const what = scope === 'main' ? 'The main page' : 'The whole flow';
+          if (r.ok && r.body.run.ok) { v.run = r.body.run; say({ ok: true }, what + ' passed: ' + r.body.run.passed + ' check(s) ok.'); }
+          else if (r.ok) { v.run = r.body.run; say({ ok: false, body: { error: what + ' failed: ' + r.body.run.failed + ' step(s) failed — see each step\'s checks below.' } }); }
+          else say(r);
+          await afterChange();
+        } finally { v.busy = false; }
+      };
 
-      // the page your app's window is on (it follows you back from that window)
-      const where = async () => { const r = await SC.where(); v.appAt = r.ok && r.body && r.body.open ? { open: true, url: r.body.url || '', page: r.body.page || '', label: r.body.label || '' } : null; };
       if (act === 'where') { await where(); return; }
-      // where the journey's last page goes next (offered to continue there)
-      const nextFor = async () => { if (!v.sc) return; const j = v.sc.journey || []; const last = j.length ? j[j.length - 1].page : v.sc.page; const r = await SC.next(last); if (r.ok) v.nextPages = r.body.next || []; };
+      if (act === 'load') {
+        v.flowOpen = true;
+        const c = await PC.catalog(context.$application.path);
+        v.pages = c && c.ok && c.body ? (c.body.pages || []) : [];
+        if (v.scId) { await openScenario(v.scId); return; }
+        // the list: opened on one page's scenarios (Application pages → API, a flow page's own tab)
+        await where();
+        const handed = !v.page && typeof bus.takeFocus === 'function' ? bus.takeFocus('api-scenarios') : null;
+        if (handed && handed.page) v.listPage = handed.page;
+        else if (v.page) v.listPage = v.page;
+        await loadList();
+        return;
+      }
+      if (act === 'list') { if (!v.scId) await loadList(); return; }
+      // opened on one page's scenarios by another screen (Application pages → API): only the list takes it
+      if (act === 'focus') {
+        if (v.scId) return;
+        const handed = typeof bus.takeFocus === 'function' ? bus.takeFocus('api-scenarios') : null;
+        if (handed && handed.page) v.listPage = handed.page;
+        await loadList();
+        return;
+      }
+      if (act === 'listField') { if (key === 'q') v.listQ = String(value || ''); return; }
+      if (act === 'listStatus') { v.listStatus = String(key || 'all'); return; }
+      if (act === 'listPageClear') { v.listPage = ''; return; }
+      if (act === 'listPage') { v.listPage = String(key || ''); return; }
+      if (act === 'newSc') {
+        const page = String(key || v.listPage || '');
+        bus.open({ record: 'api-scenario', params: { scId: 'new-' + Date.now().toString(36), page, title: 'New scenario' } });
+        return;
+      }
+      if (act === 'openSc') {
+        const s0 = (v.allSc || []).filter((x) => x.id === key)[0];
+        bus.open({ record: 'api-scenario', params: { scId: key, page: s0 ? s0.page : '', title: s0 ? (s0.code ? s0.code + ' · ' : '') + s0.name : 'Scenario' } });
+        return;
+      }
+      if (act === 'runSc') {
+        if (v.busy) return;
+        v.busy = true;
+        try {
+          const s0 = (v.allSc || []).filter((x) => x.id === key)[0];
+          const r = await SC.run(key, false, '');
+          if (r.ok) say({ ok: r.body.run.ok, body: { error: (s0 ? s0.name + ': ' : '') + r.body.run.failed + ' step(s) failed.' } }, (s0 ? s0.name + ': ' : '') + 'passed, ' + r.body.run.passed + ' check(s) ok.');
+          else say(r);
+          await loadList();
+          changed();
+        } finally { v.busy = false; }
+        return;
+      }
+      if (act === 'deleteCard') {
+        const s0 = (v.allSc || []).filter((x) => x.id === key)[0];
+        if (!s0) return;
+        if (typeof window !== 'undefined' && window.confirm && !window.confirm('Delete the scenario ' + (s0.code ? s0.code + ' ' : '') + '"' + s0.name + '"? (Its runs stay.)')) return;
+        const r = await SC.remove(key);
+        if (r.ok) { await loadList(); changed(); try { bus.close('api-scenario:' + key); } catch (e) { /* not open */ } }
+        say(r, 'Deleted "' + s0.name + '".');
+        return;
+      }
+
+      // ── one scenario ──
+      if (act === 'scTab') { v.scTab = ['main', 'flow', 'runs'].indexOf(key) !== -1 ? key : 'main'; if (v.scTab === 'flow' && !v.flow && v.page) await loadFlow(v.page); return; }
+      if (act === 'gateSkip') { v.flowForce = true; return; }
+      if (act === 'setPage') {
+        if (!v.sc || key === v.sc.page) return;
+        if (steps().length) {
+          let yes = true;
+          // two pages with one title: each named by its path too
+          const a = labelOf(key), b = labelOf(v.sc.page);
+          const na = a === b ? a + ' (' + key + ')' : a, nb = a === b ? b + ' (' + v.sc.page + ')' : b;
+          try { yes = window.confirm('Test ' + na + ' instead of ' + nb + '?\n\nThe steps (and the flow pages) are for ' + nb + ': they are cleared. Then Draft from the page reads the new page\'s APIs.'); } catch (e) { /* no DOM */ }
+          if (!yes) { try { const el = document.getElementById('scPageSel'); if (el) el.value = v.sc.page; } catch (e) { /* no DOM */ } return; }
+        }
+        const nm = !v.sc.name || /^(New scenario|Happy path — .*)$/.test(v.sc.name) ? (key ? 'Happy path — ' + labelOf(key) : 'New scenario') : v.sc.name;
+        v.sc = Object.assign({}, v.sc, { page: key, name: nm, steps: [], choices: [], journey: key ? [{ page: key, label: labelOf(key) }] : [] });
+        v.run = null; v.tries = {}; v.suggestion = null; v.flowForce = false;
+        await loadContext();
+        if (key) v.result = { ok: true, text: labelOf(key) + ': press Draft from the page to put its APIs in the order the page makes them, or Add from the page\'s APIs.' };
+        return;
+      }
+      if (act === 'draft') {
+        if (!v.sc || !v.sc.page || v.busy) { if (v.sc && !v.sc.page) say({ ok: false, body: { error: 'Pick the page this scenario tests first (Page, in the header).' } }); return; }
+        v.busy = true;
+        try {
+          const r = await SC.draft(v.sc.page, v.sc);
+          if (r.ok) {
+            v.sc = copy(r.body.scenario); v.run = null; v.tries = {}; v.nextPages = r.body.next || [];
+            await afterChange();
+            const n = steps().filter((x) => !x.page || x.page === v.sc.page).length;
+            say(r, 'Drafted ' + n + ' step(s) from ' + labelOf(v.sc.page) + ', in the order the page makes them (saved as ' + v.sc.code + '). Check the values, then Save & run.');
+          } else say(r);
+        } finally { v.busy = false; }
+        return;
+      }
+      if (act === 'save') { const r = await save(); say(r, 'Saved' + (v.sc && v.sc.code ? ' as ' + v.sc.code : '') + '.'); return; }
+      if (act === 'saveRun' || act === 'saveRunWrites' || act === 'runFlow' || act === 'runFlowWrites') {
+        const r = await save();
+        if (!r.ok) { say(r); return; }
+        await doRun(v.sc.id, act === 'saveRunWrites' || act === 'runFlowWrites', act === 'runFlow' || act === 'runFlowWrites' ? '' : 'main');
+        return;
+      }
+      if (act === 'delete') {
+        if (!v.sc || !v.sc.id) return;
+        if (typeof window !== 'undefined' && window.confirm && !window.confirm('Delete the scenario ' + (v.sc.code || '') + ' "' + v.sc.name + '"? (Its runs stay.)')) return;
+        const r = await SC.remove(v.sc.id);
+        say(r, 'Deleted.');
+        if (r.ok) { changed(); try { bus.close(tabId()); } catch (e) { /* no shell */ } }
+        return;
+      }
+      if (act === 'showRun') { const r = await SC.runOf(v.sc ? v.sc.page : v.page, key); if (r.ok) v.run = r.body.run; else say(r); return; }
+      if (act === 'toggleApis') { v.showApis = !v.showApis; if (v.showApis && !v.apis.length && v.page) await loadApis(v.page); return; }
+
+      // the flow: where the page goes next in the app (Next → the catalog → the cart)
       if (act === 'extend') {
         if (!v.sc || v.busy) return;
         v.busy = true;
@@ -63,19 +200,50 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
           const r = await SC.extend(v.sc, key);
           if (r.ok) {
             v.sc = copy(r.body.scenario); v.nextPages = r.body.next || [];
-            await reloadList();
+            await afterChange();
             const j = v.sc.journey || [];
-            say(r, 'The journey goes on to ' + ((j[j.length - 1] || {}).label || key) + ': its calls added after these, with the values picked so far. Save & run it.');
+            say(r, 'The flow goes on to ' + ((j[j.length - 1] || {}).label || key) + ': its calls added after the main page\'s, with the values picked so far. Run the whole flow.');
           } else say(r);
         } finally { v.busy = false; }
         return;
       }
-      // ── the journey's pages: their APIs, a tab of their own, the link removed or re-made ──
+      // a page of the flow map added to the flow: the path to it (pages linked on another path are taken out first)
+      if (act === 'flowPath') {
+        const n = ((v.flow && v.flow.nodes) || []).filter((x) => x.page === key)[0];
+        if (!n || v.busy || !v.sc) return;
+        const j = (v.sc.journey || []).map((x) => x.page);
+        let same = 0;
+        while (same < j.length && same < n.path.length && j[same] === n.path[same]) same++;
+        if (same < j.length && same >= 1) {
+          const drop = (v.sc.journey || []).slice(same).map((x) => x.label || x.page);
+          let yes = true;
+          try { yes = window.confirm('Go on to ' + n.label + ' instead?\n\nThe flow pages on the other path (' + drop.join(', ') + ') are taken out of this scenario first.'); } catch (e) { /* no DOM */ }
+          if (!yes) return;
+          const u = await SC.unlink(v.sc, j[same]);
+          if (!u.ok) { say(u); return; }
+          v.sc = copy(u.body.scenario);
+        }
+        v.busy = true;
+        try {
+          const r = await SC.path(v.sc, n.path);
+          if (!r.ok) { say(r); return; }
+          v.sc = copy(r.body.scenario); v.tries = {}; v.nextPages = r.body.next || []; v.suggestion = null;
+          await afterChange();
+          const sk = r.body.skipped || [];
+          say(r, 'The flow goes on to ' + n.label + ' — ' + (r.body.added || []).length + ' page(s) added'
+            + (sk.length ? '; passed through ' + sk.map((x) => (x.label || x.page.split('/').pop()) + ' (' + x.why + ')').join(', ') : '') + '. Run the whole flow.');
+        } finally { v.busy = false; }
+        return;
+      }
+      if (act === 'flowLoad') { await loadFlow(v.page); return; }
+      if (act === 'flowFold') { v.flowOpen = !v.flowOpen; return; }
+
+      // ── the flow's pages: their APIs, a list of their own, the link removed or re-made ──
       const jPage = (pid) => ((v.sc && v.sc.journey) || []).filter((x) => x.page === pid)[0] || null;
       const jIdx = (pid) => ((v.sc && v.sc.journey) || []).findIndex((x) => x.page === pid);
       if (act === 'jClose') { v.journeyApis = null; return; }
       if (act === 'jApis') {
-        const j = jPage(key) || { page: key, label: key.split('/').pop() };
+        const j = jPage(key) || { page: key, label: labelOf(key) };
         v.journeyApis = { page: j.page, label: j.label || j.page.split('/').pop(), idx: Math.max(0, jIdx(key)), loading: true, error: '', apis: null };
         const r = await SC.apis(key);
         if (!v.journeyApis || v.journeyApis.page !== key) return;
@@ -83,15 +251,18 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         return;
       }
       if (act === 'jTab') {
+        // that page's own scenarios, in a tab (the list, filtered to it: + New scenario tests it on its own)
         const fnode = ((v.flow && v.flow.nodes) || []).filter((x) => x.page === key)[0];
-        const j = jPage(key) || { page: key, label: fnode ? fnode.label : '' };
+        const j = jPage(key) || { page: key, label: fnode ? fnode.label : labelOf(key) };
         v.journeyApis = null;
         bus.open({ record: 'api-scenarios-page', params: { page: j.page, label: j.label || '' } });
         return;
       }
       if (act === 'jGo') {
         v.journeyApis = null;
-        setTimeout(() => { const el = document.getElementById('scStep-' + key); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('nx-sc-step--flash'); setTimeout(() => el.classList.remove('nx-sc-step--flash'), 1600); } }, 60);
+        const st = steps().filter((x) => x.id === key)[0];
+        if (st && v.sc) v.scTab = (!st.page || st.page === v.sc.page) ? 'main' : 'flow';
+        setTimeout(() => { const el = document.getElementById('scStep-' + key); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('nx-sc-step--flash'); setTimeout(() => el.classList.remove('nx-sc-step--flash'), 1600); } }, 120);
         return;
       }
       if (act === 'jAdd') {
@@ -120,7 +291,7 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         let yes = true;
         try {
           yes = window.confirm(act === 'jUnlink'
-            ? 'Remove the link to ' + what + '?\n\n' + n + ' step(s) of ' + (after.length ? 'those pages' : 'that page') + ' are taken out of this scenario, with the values only they used. The scenario is saved. Continue the journey again below to link it anew.'
+            ? 'Remove the link to ' + what + '?\n\n' + n + ' step(s) of ' + (after.length ? 'those pages' : 'that page') + ' are taken out of this scenario, with the values only they used. The scenario is saved. Continue the flow again to link it anew.'
             : 'Reconnect ' + (j[at].label || key) + '?\n\nIts link is removed (' + n + ' step(s)' + (after.length ? ', and ' + after.join(', ') : '') + '), then the page is linked again: its steps read fresh from its code, with the values picked so far handed on. The scenario is saved.');
         } catch (e) { /* no DOM */ }
         if (!yes) return;
@@ -129,103 +300,17 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
           const r = act === 'jUnlink' ? await SC.unlink(v.sc, key) : await SC.relink(v.sc, key);
           if (!r.ok) { say(r); return; }
           v.sc = copy(r.body.scenario); v.nextPages = r.body.next || []; v.suggestion = null; v.journeyApis = null;
-          await reloadList();
+          await afterChange();
           const rm = r.body.removed || { pages: [], steps: 0 };
           say(r, act === 'jUnlink'
-            ? 'Link removed: ' + rm.pages.map((x) => x.label || x.page).join(', ') + ' (' + rm.steps + ' step(s)). Continue the journey below to link it again.'
-            : 'Reconnected ' + (rm.pages[0] ? rm.pages[0].label || key : key) + ': ' + steps().filter((x) => x.page === key).length + ' step(s) read fresh from its code. Save & run.');
+            ? 'Link removed: ' + rm.pages.map((x) => x.label || x.page).join(', ') + ' (' + rm.steps + ' step(s)). Continue the flow to link it again.'
+            : 'Reconnected ' + (rm.pages[0] ? rm.pages[0].label || key : key) + ': ' + steps().filter((x) => x.page === key).length + ' step(s) read fresh from its code. Run the whole flow.');
         } finally { v.busy = false; }
         return;
       }
-      // the pages list folded to a rail (more room), and the flow card folded: both kept on this PC
-      if (act === 'pagesMin') { v.pagesMin = key !== 'open'; remember('pagesMin', v.pagesMin); return; }
-      if (act === 'flowFold') { v.flowOpen = !v.flowOpen; remember('flowOpen', v.flowOpen); return; }
-      if (act === 'flowLoad') { await loadFlow(v.page); return; }
-      // a journey along the path of the flow to that page (continued from the open scenario when it starts the same way)
-      if (act === 'flowPath') {
-        const n = ((v.flow && v.flow.nodes) || []).filter((x) => x.page === key)[0];
-        if (!n || v.busy) return;
-        v.busy = true;
-        try {
-          const r = await SC.path(v.sc && v.sc.page === v.page ? v.sc : null, n.path);
-          if (!r.ok) { say(r); return; }
-          v.sc = copy(r.body.scenario); v.run = null; v.tries = {}; v.nextPages = r.body.next || []; v.suggestion = null; v.tab = 'scenarios';
-          await reloadList();
-          const sk = r.body.skipped || [];
-          say(r, (r.body.continued ? 'Continued "' : 'A journey: "') + v.sc.name + '" — ' + (r.body.added || []).length + ' page(s) linked'
-            + (sk.length ? '; passed through ' + sk.map((x) => (x.label || x.page.split('/').pop()) + ' (' + x.why + ')').join(', ') : '') + '. Save & run it to test that path.');
-        } finally { v.busy = false; }
-        return;
-      }
-      // a journey for every path of the flow (one scenario each, skipped when one already follows that path)
-      if (act === 'flowAll') {
-        const nodes = (v.flow && v.flow.nodes) || [];
-        const leaves = nodes.filter((x) => x.depth > 0 && !(x.next || []).length && !x.noSheet).slice(0, 8);
-        if (!leaves.length || v.busy) return;
-        const same = (sc, path) => { const j = (sc.journey || []).map((x) => x.page); return j.length === path.length && j.every((pg, i) => pg === path[i]); };
-        const todo = leaves.filter((x) => !(v.scenarios || []).some((sc) => same(sc, x.path)));
-        if (!todo.length) { bus.toast('Every path of the flow already has its journey: Run all tests the whole flow.', 'info'); return; }
-        let yes = true;
-        try { yes = window.confirm('Make ' + todo.length + ' journey scenario(s), one for each path of the flow not followed yet?\n\n' + todo.map((x) => '• ' + x.path.map((pg) => ((nodes.filter((y) => y.page === pg)[0] || {}).label || pg)).join(' → ')).join('\n') + '\n\nThen Run all tests the whole flow.'); } catch (e) { /* no DOM */ }
-        if (!yes) return;
-        v.busy = true;
-        const made = [];
-        try {
-          for (const x of todo) {
-            const r = await SC.path(null, x.path);
-            if (r.ok) made.push(r.body.scenario);
-          }
-          if (made.length) { v.sc = copy(made[made.length - 1]); v.run = null; v.tries = {}; v.suggestion = null; v.tab = 'scenarios'; }
-          await reloadList();
-          say({ ok: made.length > 0, body: { error: 'No journey could be made for those paths.' } }, made.length + ' journey(s) made, one for each path: ' + made.map((m) => m.name.replace(/^Journey — /, '')).join(' · ') + '. Run all tests the whole flow.');
-        } finally { v.busy = false; }
-        return;
-      }
-      if (act === 'load') {
-        v.pagesMin = recalled('pagesMin', false);
-        v.flowOpen = recalled('flowOpen', true);
-        const c = await PC.catalog(context.$application.path);
-        v.pages = c && c.ok && c.body ? (c.body.pages || []) : [];
-        await where();
-        // a tab of its own is given its page (a journey's linked page): it never takes what was handed to API Scenarios
-        const handed = !v.page && typeof bus.takeFocus === 'function' ? bus.takeFocus('api-scenarios') : null;
-        if (handed && handed.page) await loadPage(handed.page);
-        else if (v.page) await loadPage(v.page);
-        return;
-      }
-      if (act === 'page') { await loadPage(key); return; }
-      if (act === 'draft') {
-        v.busy = true;
-        try {
-          const r = await SC.draft(v.page);
-          if (r.ok) { v.sc = copy(r.body.scenario); v.run = null; v.tries = {}; v.nextPages = r.body.next || []; await reloadList(); say(r, 'Drafted: ' + v.sc.steps.length + ' step(s) in the order the page makes them. Check the values and checks, then Save & run.'); } else say(r);
-        } finally { v.busy = false; }
-        return;
-      }
-      if (act === 'new') {
-        const label = ((v.pages || []).filter((p) => p.id === v.page)[0] || {}).label || v.page;
-        if (!v.apis.length) await loadApis(v.page);
-        v.sc = { page: v.page, name: 'My scenario — ' + label, kind: 'happy', notes: 'Built from the page\'s APIs.', allowWrites: false, data: [], steps: [], choices: copy(v.apiChoices || []), journey: [{ page: v.page, label }] };
-        v.run = null; v.tries = {}; v.nextPages = []; v.suggestion = null; v.tab = 'apis';
-        v.result = { ok: true, text: 'A new scenario: + Add the APIs you want from this list, then Suggest order and Save.' };
-        return;
-      }
-      if (act === 'open') { const s = (v.scenarios || []).filter((x) => x.id === key)[0]; v.sc = copy(s); v.run = null; v.tries = {}; v.nextPages = []; nextFor();  if (s && s.last) { const r = await SC.runOf(v.page, s.last.id); if (r.ok) v.run = r.body.run; } return; }
-      if (act === 'run') { await doRun(key, false); return; }
-      if (act === 'runAll') { for (const s of (v.scenarios || []).slice()) { await doRun(s.id, false); } return; }
-      if (act === 'save') { const r = await save(); say(r, 'Saved.'); return; }
-      if (act === 'saveRun' || act === 'saveRunWrites') { const r = await save(); if (!r.ok) { say(r); return; } await doRun(v.sc.id, act === 'saveRunWrites'); return; }
-      if (act === 'delete') {
-        if (!v.sc || !v.sc.id) return;
-        if (typeof window !== 'undefined' && window.confirm && !window.confirm('Delete the scenario "' + v.sc.name + '"? (Its runs stay.)')) return;
-        const r = await SC.remove(v.sc.id); say(r, 'Deleted.'); if (r.ok) { v.sc = null; await reloadList(); }
-        return;
-      }
-      if (act === 'showRun') { const r = await SC.runOf(v.page, key); if (r.ok) v.run = r.body.run; else say(r); return; }
+
       if (act === 'field') {
-        if (key === 'q') { v.q = value; return; }
         if (key === 'apiQ') { v.apiQ = value; return; }
-        if (key === 'lovQ') { v.lovQ = value; return; }
         if (key === 'addCall') { v.addCall = value; return; }
         if (!v.sc) return;
         if (key === 'data') {
@@ -275,8 +360,6 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         v.result = { ok: true, text: (c ? c.field + ': ' + ((c.values.filter((x) => x.key === value)[0] || {}).text || value) : value) + ' — the steps for fields not shown in this case are skipped. Save & run.' };
         return;
       }
-      // the tabs: the page's scenarios; every API of the page
-      if (act === 'tab') { v.tab = key === 'apis' ? 'apis' : 'scenarios'; if (v.tab === 'apis' && !v.apis.length && v.page) await loadApis(v.page); return; }
       if (act === 'apiOpen') { v.apiOpen = v.apiOpen === key ? '' : key; return; }
       if (act === 'apiVals') { v.apiVals = Object.assign({}, v.apiVals, { [key]: value }); return; }
       const apiStep = (k) => {
@@ -286,7 +369,7 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         if (v.apiVals[k] !== undefined) st.params = pairs(v.apiVals[k], '=').reduce((o, p) => { o[p[0]] = p[1]; return o; }, {});
         return st;
       };
-      // ▶ Test: this API alone, now, with its values (and those the scenario open has handed on)
+      // ▶ Test: this API alone, now, with its values (and those the scenario has handed on)
       if (act === 'apiTry') {
         const st = apiStep(key);
         if (!st || v.busy) return;
@@ -299,18 +382,22 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         } finally { v.busy = false; }
         return;
       }
-      // + Add to scenario: the API as a step at the end of the scenario open (or of a new one)
+      // + Add to scenario: the API as a step of the main page, after its other steps
       const addApi = (k) => {
         const st = apiStep(k);
-        if (!st) return null;
+        if (!st || !v.sc) return null;
         st.id = newId(); st.page = st.page || v.page;
-        if (!v.sc) v.sc = { page: v.page, name: 'My scenario — ' + ((v.pages || []).filter((p) => p.id === v.page)[0] || {}).label, kind: 'happy', notes: 'Built from the page\'s APIs.', allowWrites: false, data: [], steps: [], choices: copy(v.apiChoices || []), journey: [{ page: v.page, label: ((v.pages || []).filter((p) => p.id === v.page)[0] || {}).label || v.page }] };
-        v.sc = Object.assign({}, v.sc, { steps: (v.sc.steps || []).concat([st]) });
+        if (!(v.sc.choices || []).length && (v.apiChoices || []).length) v.sc = Object.assign({}, v.sc, { choices: copy(v.apiChoices) });
+        const list = steps().slice();
+        let at = -1;
+        list.forEach((x, i) => { if ((x.page || v.sc.page) === v.sc.page) at = i; });
+        list.splice(at + 1, 0, st);
+        setSteps(list);
         return st;
       };
       if (act === 'apiAdd') {
         const st = addApi(key);
-        if (st) v.result = { ok: true, text: 'Added "' + st.name + '" as step ' + v.sc.steps.length + '. Add more, then Suggest order and Save.' };
+        if (st) v.result = { ok: true, text: 'Added "' + st.name + '" (step ' + (steps().indexOf(steps().filter((x) => x.id === st.id)[0]) + 1) + '). Add more, then Suggest order and Save.' };
         return;
       }
       // Suggest order: what each step needs and hands on, how the page runs them; what is missing
@@ -339,26 +426,6 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         if (r.ok) v.suggestion = r.body;
         return;
       }
-      // delete: one scenario (its card), or all of the page's
-      if (act === 'deleteCard') {
-        const s0 = (v.scenarios || []).filter((x) => x.id === key)[0];
-        if (!s0) return;
-        if (typeof window !== 'undefined' && window.confirm && !window.confirm('Delete the scenario "' + s0.name + '"? (Its runs stay.)')) return;
-        const r = await SC.remove(key);
-        if (r.ok) { if (v.sc && v.sc.id === key) { v.sc = null; v.run = null; } await reloadList(); }
-        say(r, 'Deleted "' + s0.name + '".');
-        return;
-      }
-      if (act === 'deleteAll') {
-        const all = (v.scenarios || []).slice();
-        if (!all.length) return;
-        if (typeof window !== 'undefined' && window.confirm && !window.confirm('Delete all ' + all.length + ' scenario(s) of this page? (Their runs stay.)')) return;
-        for (const s0 of all) await SC.remove(s0.id);
-        v.sc = null; v.run = null; v.suggestion = null;
-        await reloadList();
-        say({ ok: true }, 'Deleted ' + all.length + ' scenario(s).');
-        return;
-      }
       if (act === 'toggleWrites') { if (v.sc) v.sc = Object.assign({}, v.sc, { allowWrites: !v.sc.allowWrites }); return; }
       if (act === 'stepField' || act === 'toggleShape') {
         const id = act === 'toggleShape' ? key : step;
@@ -383,8 +450,13 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         const rep = /^report:/.test(v.addCall);
         const r = ((v.facts && v.facts.integrations && v.facts.integrations.rest) || []).filter((x) => x.endpoint === v.addCall)[0] || {};
         const writes = !rep && r.method && !/^GET$/i.test(r.method);
-        setSteps(steps().concat([{ id, name: rep ? 'Report ' + v.addCall.slice(7).split('/').pop().replace(/\.xdo$/, '') : (r.summary || v.addCall), endpoint: rep ? '' : v.addCall, report: rep ? { path: v.addCall.slice(7) } : null,
-          params: {}, extra: '', body: '', extract: [], expect: { status: '2xx', minRows: null, maxRows: null, maxMs: 10000, sameShape: !writes && !rep, fields: [] }, writes: !!writes }]));
+        const st = { id, page: v.sc.page, name: rep ? 'Report ' + v.addCall.slice(7).split('/').pop().replace(/\.xdo$/, '') : (r.summary || v.addCall), endpoint: rep ? '' : v.addCall, report: rep ? { path: v.addCall.slice(7) } : null,
+          params: {}, extra: '', body: '', extract: [], expect: { status: '2xx', minRows: null, maxRows: null, maxMs: 10000, sameShape: !writes && !rep, fields: [] }, writes: !!writes };
+        const list = steps().slice();
+        let at = -1;
+        list.forEach((x, i) => { if ((x.page || v.sc.page) === v.sc.page) at = i; });
+        list.splice(at + 1, 0, st);
+        setSteps(list);
         v.addCall = '';
         try { const el = document.getElementById('scAddCall'); if (el) el.value = ''; } catch (e) { /* not drawn */ }
         return;
