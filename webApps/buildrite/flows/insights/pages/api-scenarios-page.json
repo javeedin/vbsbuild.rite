@@ -16,7 +16,8 @@
     "page": {
       "type": "string",
       "defaultValue": "",
-      "description": "The page chosen (its id: app/flow/page)."
+      "input": "fromCaller",
+      "description": "The page chosen (its id: app/flow/page). A tab of its own (a linked page opened from a journey) is given it."
     },
     "facts": {
       "type": "any",
@@ -107,6 +108,11 @@
       "type": "any",
       "defaultValue": null,
       "description": "The order suggested for the scenario's steps, and what they miss."
+    },
+    "journeyApis": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The APIs dialog of a page of the journey: { page, label, idx, loading, error, apis }."
     },
     "apiInfo": {
       "type": "any",

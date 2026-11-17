@@ -160,7 +160,12 @@ function open(o) {
       steps, choices: (Array.isArray(s.choices) ? s.choices : []).filter(isObj).slice(0, 12).map((c) => ({ target: str(c.target).replace(/[^\w.-]/g, '').slice(0, 60), field: str(c.field).slice(0, 120),
         values: (Array.isArray(c.values) ? c.values : []).filter(isObj).slice(0, 30).map((x) => ({ key: str(x.key).slice(0, 120), text: str(x.text).slice(0, 160) })), value: str(c.value).slice(0, 120),
         start: str(c.start).slice(0, 120), startFrom: str(c.startFrom).replace(/[^\w.-]/g, '').slice(0, 80) })).filter((c) => c.target && c.values.length),
-      journey: (Array.isArray(s.journey) ? s.journey : []).filter(isObj).slice(0, 12).map((j) => ({ page: str(j.page).slice(0, 200), label: str(j.label).slice(0, 200) })).filter((j) => j.page),
+      // a page the journey went on to keeps what it added (data columns, choices, where its notes start), so its link can be removed cleanly
+      journey: (Array.isArray(s.journey) ? s.journey : []).filter(isObj).slice(0, 12).map((j) => Object.assign({ page: str(j.page).slice(0, 200), label: str(j.label).slice(0, 200) },
+        Array.isArray(j.vars) ? { vars: j.vars.map((v) => str(v).replace(/[^\w.-]/g, '').slice(0, 60)).filter(Boolean).slice(0, 40) } : {},
+        Array.isArray(j.choices) ? { choices: j.choices.map((v) => str(v).replace(/[^\w.-]/g, '').slice(0, 60)).filter(Boolean).slice(0, 12) } : {},
+        Number.isFinite(Number(j.notesAt)) && j.notesAt !== null && j.notesAt !== '' ? { notesAt: Math.max(0, Math.min(4000, Math.round(Number(j.notesAt)))) } : {},
+        str(j.linkedAt) ? { linkedAt: str(j.linkedAt).slice(0, 40), linkedBy: str(j.linkedBy).slice(0, 120) } : {})).filter((j) => j.page),
       by: (old && old.by) || str(by), createdAt: (old && old.createdAt) || now().toISOString(), updatedAt: now().toISOString(), updatedBy: str(by) };
   }
 
@@ -583,13 +588,58 @@ function open(o) {
       const ctx = { known, start: start.slice(), lovFields: [], prefix: 'p' + (journey.length + 1) + '-', page: str(page), prev: s0.steps };
       const more = stepsFor(f, opts, ctx);
       if (!more.length) return no('That page makes no call to add (its code lists none).');
-      journey.push({ page: str(page), label: str(f.label || str(page).split('/').pop()) });
+      const row0 = (s0.data && s0.data[0]) || {};
+      const addedVars = ctx.start.filter((k) => !(k in row0));
+      const newChoices = choicesOf(f).filter((c) => !(s0.choices || []).some((x) => x.target === c.target));
+      journey.push({ page: str(page), label: str(f.label || str(page).split('/').pop()), vars: addedVars, choices: newChoices.map((c) => c.target), notesAt: str(s0.notes).length,
+        linkedAt: now().toISOString(), linkedBy: str(by) });
       const data = (s0.data && s0.data.length ? s0.data : [{}]).map((r, i) => (i ? r : Object.assign({}, r, ctx.start.filter((k) => !(k in r)).reduce((a, k) => { a[k] = ''; return a; }, {}))));
-      const choices = (s0.choices || []).concat(choicesOf(f).filter((c) => !(s0.choices || []).some((x) => x.target === c.target)));
+      const choices = (s0.choices || []).concat(newChoices);
       const s = Object.assign({}, s0, { steps: s0.steps.concat(more), journey, choices, data: data.some((r) => Object.keys(r).length) ? data : [],
         name: /^Happy path — /.test(s0.name) || /^Journey — /.test(s0.name) ? 'Journey — ' + journey.map((j) => j.label).filter(Boolean).join(' → ') : s0.name,
         notes: s0.notes + ' Then ' + (f.label || page) + ': ' + notesOf(ctx, true) });
       return store.save(s, by, isObj(opts) ? opts.env : null);
+    },
+
+    /**
+     * The link to a page the journey went on to, removed: that page and every page after it (they came through it),
+     * their steps, and what they added (data columns and choices nothing else uses, their notes). The journey can then be
+     * continued again from the page before it. Saved at once.
+     */
+    unlink(scenario, page, by, opts) {
+      if (!isObj(scenario) || !str(scenario.page)) return no('No scenario.');
+      const s0 = clean(scenario, by, null);
+      const j = s0.journey || [];
+      const at = j.findIndex((x, i) => i > 0 && x.page === str(page));
+      if (at < 1) return no(j.length && j[0].page === str(page) ? 'That is the page the scenario starts on: it has no link to remove.' : 'That page is not linked in this scenario.');
+      const gone = j.slice(at);
+      const goneP = gone.map((x) => x.page);
+      const keepJ = j.slice(0, at);
+      const isGone = (st) => goneP.indexOf(st.page) !== -1 || gone.some((x, k) => new RegExp('^p' + (at + k + 1) + '-').test(st.id));
+      const steps = s0.steps.filter((st) => !isGone(st));
+      const removedSteps = s0.steps.length - steps.length;
+      const text = (st) => [JSON.stringify(st.params || {}), st.body || '', st.extra || '', st.when || ''].join(' ');
+      const used = (k) => steps.some((st) => text(st).indexOf('{{' + k + '}}') !== -1);
+      const dropVars = [].concat(...gone.map((x) => x.vars || [])).filter((k) => !used(k));
+      const dropChoices = [].concat(...gone.map((x) => x.choices || [])).filter((t) => !steps.some((st) => str(st.when).indexOf(t) !== -1));
+      const data = (s0.data || []).map((r) => Object.keys(r).filter((k) => dropVars.indexOf(k) === -1).reduce((a, k) => { a[k] = r[k]; return a; }, {})).filter((r, i) => i === 0 || Object.keys(r).length);
+      const choices = (s0.choices || []).filter((c) => dropChoices.indexOf(c.target) === -1);
+      // the notes as they were before that page was added
+      let notes = s0.notes;
+      if (Number.isFinite(gone[0].notesAt) && gone[0].notesAt <= notes.length) notes = notes.slice(0, gone[0].notesAt);
+      else { const i = notes.indexOf(' Then ' + (gone[0].label || gone[0].page) + ':'); if (i !== -1) notes = notes.slice(0, i); }
+      const labels = keepJ.map((x) => x.label).filter(Boolean);
+      const name = /^Journey — /.test(s0.name) ? (keepJ.length > 1 ? 'Journey — ' + labels.join(' → ') : 'Happy path — ' + (labels[0] || str(s0.page).split('/').pop())) : s0.name;
+      const s = Object.assign({}, s0, { steps, journey: keepJ, data: data.some((r) => Object.keys(r).length) ? data : [], choices, notes, name });
+      const r = store.save(s, by, isObj(opts) ? opts.env : null);
+      return r.ok ? Object.assign(r, { removed: { pages: gone.map((x) => ({ page: x.page, label: x.label })), steps: removedSteps, vars: dropVars, choices: dropChoices } }) : r;
+    },
+    /** A linked page read again from its code and linked anew (its link removed first: its steps come back fresh). */
+    relink(scenario, page, facts, by, opts) {
+      const u = store.unlink(scenario, page, by, opts);
+      if (!u.ok) return u;
+      const r = store.extend(u.scenario, page, facts, by, opts);
+      return r.ok ? Object.assign(r, { removed: u.removed }) : r;
     },
 
     /** Runs a scenario: each step, for each row of its data (or once). */

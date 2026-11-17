@@ -148,6 +148,90 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     res = await results();
     T.check('Save & run: the list, then the order it opened, as one journey', res.length === 2 && res.every((x) => x.state === 'ok') && /handed|id =/.test(res[0].handed || 'id =') && env.calls.some((c) => /^GET \/shop\/v1\/orders\/\w+$/.test(c)), JSON.stringify(res));
 
+    T.section('the journey\'s pages: their APIs, a tab of their own, a link taken out and made again');
+    // several API Scenarios tabs can live in the page: read the one that is showing
+    const vis = (sel) => page.evaluate((q) => { const all = Array.prototype.slice.call(document.querySelectorAll(q)); const e = all.filter((x) => x.offsetParent !== null)[0];
+      return e ? e.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
+    await page.waitForSelector('#scJourney .nx-sc-jpage', { timeout: 10000 });
+    const jchips = await page.$$eval('#scJourney .nx-sc-jpage', (a) => a.map((x) => ({ page: x.getAttribute('data-page'), t: x.textContent.replace(/\s+/g, ' ').trim(),
+      unlink: !!x.querySelector('.nx-sc-junlink'), tab: !!x.querySelector('.nx-sc-jtab'), apis: !!x.querySelector('.nx-sc-japis'), title: x.getAttribute('title') || '' })));
+    T.check('a journey bar over the steps: 1 Order Workbench → 2 Order, each with its steps and how they ran; an APIs icon on both',
+      jchips.length === 2 && jchips[0].page === LIST && jchips[1].page === DETAIL && /^1 Order Workbench 1 step · passed/.test(jchips[0].t) && /^2 Order 1 step · passed/.test(jchips[1].t) && jchips.every((x) => x.apis), JSON.stringify(jchips));
+    T.check('…only the linked page has Open in a tab, Reconnect and Remove the link (the first page is where it starts); when and by whom it was linked, on hover',
+      !jchips[0].unlink && !jchips[0].tab && jchips[1].unlink && jchips[1].tab && /linked/i.test(jchips[1].title), jchips[1].title);
+    const ph = await page.$$eval('#scSteps .nx-sc-pagehead', (a) => a.map((x) => ({ apis: !!x.querySelector('.nx-sc-papis'), unlink: !!x.querySelector('.nx-sc-punlink'), relink: !!x.querySelector('.nx-sc-prelink'), tab: !!x.querySelector('.nx-sc-ptab') })));
+    T.check('…the same on each page\'s heading in the steps: APIs on both, Open in a tab / Reconnect / Remove link on Order\'s',
+      ph.length === 2 && ph[0].apis && !ph[0].unlink && ph[1].apis && ph[1].unlink && ph[1].relink && ph[1].tab, JSON.stringify(ph));
+
+    await page.locator('#scSteps .nx-sc-pagehead').nth(1).scrollIntoViewIfNeeded().catch(() => {});
+    await env.shot('api-scenarios-journey-head.png');
+    // the APIs dialog of the linked page
+    await page.locator('#scSteps .nx-sc-pagehead .nx-sc-papis').nth(1).click();
+    await page.waitForSelector('#scJApis #scJaList .nx-sc-jaapi', { timeout: 15000 });
+    const jaSeq = await page.$$eval('#scJaSeq .nx-sc-jaq', (a) => a.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    const jaList = await page.$$eval('#scJaList .nx-sc-jaapi', (a) => a.map((x) => ({ key: x.getAttribute('data-key'), t: x.textContent.replace(/\s+/g, ' ').trim(), add: !!x.querySelector('[data-act="jAdd"]') })));
+    T.check('the APIs icon: a dialog — page 2 of the journey, Order, its path; its calls in this scenario in the order they run (getOrderById, step 2 of the scenario, passed)',
+      /Page 2 of the journey/.test(await text(page, '#scJApis .nx-kicker')) && (await text(page, '#scJaTitle')) === 'Order' && /shop\/orders\/order-detail/.test(await text(page, '#scJApis .nx-sub'))
+      && jaSeq.length === 1 && /^1 GET .*shopApi\/getOrderById.*Step 2$/.test(jaSeq[0]) && /passed/.test(jaSeq[0]), jaSeq.join(' | '));
+    T.check('…and every API of the page in the order the page makes them, each marked with its step here (none to add)',
+      jaList.length === 1 && jaList[0].key === 'shopApi/getOrderById' && /Step 2$/.test(jaList[0].t) && !jaList[0].add && /Every API of the page \(1\)/.test(await text(page, '#scJApis')), JSON.stringify(jaList));
+    T.check('…with Open in a tab (a linked page)', !!(await page.$('#scJaTab')));
+    await env.shot('api-scenarios-journey-apis.png');
+    await page.click('#scJaSeq .nx-sc-jaq button[data-act="jGo"]');
+    await page.waitForTimeout(250);
+    T.check('Step 2 in the dialog: it closes and takes you to that step (flashed)', !(await page.$('#scJApis')) && !!(await page.$('#scSteps .nx-sc-step--flash')));
+
+    // the first page's dialog: its own API, step 1; one not in the scenario is offered with + Add
+    await page.click('#scJourney .nx-sc-jpage[data-page="' + LIST + '"] .nx-sc-japis');
+    await page.waitForSelector('#scJApis #scJaList .nx-sc-jaapi', { timeout: 15000 });
+    const listApis = await page.$$eval('#scJaList .nx-sc-jaapi', (a) => a.map((x) => ({ key: x.getAttribute('data-key'), t: x.textContent.replace(/\s+/g, ' ').trim(), add: !!x.querySelector('[data-act="jAdd"]') })));
+    T.check('the first page\'s APIs: "The page the scenario starts on", getOrders as step 1, no Open in a tab',
+      /The page the scenario starts on/.test(await text(page, '#scJApis .nx-kicker')) && listApis.some((x) => x.key === 'shopApi/getOrders' && /Step 1$/.test(x.t)) && !(await page.$('#scJaTab')), JSON.stringify(listApis));
+    await page.click('#scJApis .nx-modal-scrim').catch(() => {});
+    await page.waitForTimeout(200);
+
+    // the linked page in a tab of its own
+    await page.click('#scJourney .nx-sc-jpage[data-page="' + DETAIL + '"] .nx-sc-jtab');
+    await page.waitForSelector('.nx-tab[data-tab-id="api-scenarios-page:' + DETAIL + '"]', { timeout: 10000 });
+    await page.waitForFunction((d) => Array.prototype.slice.call(document.querySelectorAll('#scPages .nx-sc-pagerow--on')).some((x) => x.offsetParent !== null && x.getAttribute('data-key') === d), DETAIL, { timeout: 15000 }).catch(() => {});
+    T.check('Open in a tab: the page in a tab of its own (API · Order), on that page, its scenarios listed',
+      /API · Order/.test(await text(page, '.nx-tab--on .nx-tab-title')) && (await vis('#scPages .nx-sc-pagerow--on span')) === DETAIL && !!(await vis('#scList')), await text(page, '.nx-tab--on .nx-tab-title') + ' / ' + await vis('#scPages .nx-sc-pagerow--on span'));
+    await page.click('.nx-tab[data-tab-id="api-scenarios-page:' + DETAIL + '"] .nx-tab-close');
+    await page.waitForTimeout(400);
+    await page.click('.nx-tab[data-tab-id="api-scenarios"] .nx-tab-btn').catch(() => page.click('.nx-tab[data-tab-id="api-scenarios"]').catch(() => {}));
+    await page.waitForSelector('#scJourney', { timeout: 10000 });
+
+    // take the link out (the confirm says what goes)
+    let asked = '';
+    const okAll = (d) => { asked = d.message(); d.accept().catch(() => {}); };
+    page.on('dialog', okAll);
+    await page.click('#scJourney .nx-sc-jpage[data-page="' + DETAIL + '"] .nx-sc-junlink');
+    await page.waitForFunction(() => !document.getElementById('scJourney'), null, { timeout: 10000 });
+    await page.waitForTimeout(300);
+    const unCalls = await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()));
+    T.check('Remove the link: asked first (Order, 1 step goes), then the journey bar goes, the list\'s step stays alone, Order\'s heading gone',
+      /Remove the link to Order\?/.test(asked) && /1 step\(s\)/.test(asked) && unCalls.join() === 'shopApi/getOrders' && (await page.$$('#scSteps .nx-sc-pagehead')).length === 0, asked + ' / ' + unCalls.join());
+    T.check('…said so, the scenario named for the one page again, and Order offered again under Continue the journey',
+      /Link removed: Order \(1 step\(s\)\)/.test(await text(page, '.nx-flib-result')) && /^Happy path — Order Workbench$/.test(await page.$eval('#scName', (e) => e.value)) && /→ Order\b/.test(await text(page, '#scNext')), await text(page, '.nx-flib-result') + ' / ' + await page.$eval('#scName', (e) => e.value));
+    // link it again, then Reconnect: its steps read fresh
+    await page.click('#scNext button[data-key="' + DETAIL + '"]');
+    await page.waitForSelector('#scJourney .nx-sc-jpage[data-page="' + DETAIL + '"]', { timeout: 10000 });
+    await page.waitForTimeout(300);
+    const relBox = (await page.$$('#scSteps oj-text-area[data-field="params"] textarea'))[1];
+    await relBox.fill('id = 999'); await relBox.press('Tab'); await page.waitForTimeout(300);
+    asked = '';
+    await page.click('#scSteps .nx-sc-pagehead .nx-sc-prelink');
+    await page.waitForFunction(() => /Reconnected/.test((document.querySelector('.nx-flib-result') || {}).textContent || ''), null, { timeout: 10000 });
+    await page.waitForTimeout(300);
+    T.check('Continue the journey links it again; Reconnect (asked first) puts its step back as the page makes it — a broken value read fresh: id = {{id}}',
+      /Reconnect Order\?/.test(asked) && /^id = \{\{id\}\}$/.test((await page.$$eval('#scSteps oj-text-area[data-field="params"] textarea', (a) => a[1].value)).trim())
+      && (await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()))).join() === 'shopApi/getOrders,shopApi/getOrderById' && /Reconnected Order: 1 step\(s\)/.test(await text(page, '.nx-flib-result')), asked + ' / ' + await text(page, '.nx-flib-result'));
+    page.off('dialog', okAll);
+    await saveRun();
+    res = await results();
+    T.check('…Save & run: the journey passes again', res.length === 2 && res.every((x) => x.state === 'ok'), JSON.stringify(res));
+    await env.shot('api-scenarios-journey.png');
+
     T.section('a value the page gets from the screen before it');
     await pick(DETAIL);
     await draft();

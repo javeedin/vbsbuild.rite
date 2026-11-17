@@ -1100,6 +1100,25 @@ function createDevServer(o) {
               const r = sc.extend(b.scenario, pid, facts, who(), optsOf(pid, facts));
               return jsonA(200, r.ok ? Object.assign(r, { next: nextOf(facts) }) : r);
             }
+            // the link to a page the journey went on to: removed (that page and the pages after it), or read again and linked anew
+            if ((pathname === '/__api/scenarios/unlink' || pathname === '/__api/scenarios/relink') && post) {
+              const pid = String(b.page || '');
+              const sc0 = b.scenario || {};
+              let r;
+              if (pathname === '/__api/scenarios/relink') {
+                const facts = factsOf(pid);
+                if (!facts) return jsonA(200, { ok: false, error: 'That page is not in the code any more.' });
+                r = sc.relink(sc0, pid, facts, who(), optsOf(pid, facts));
+              } else {
+                const f0 = factsOf(String(sc0.page || ''));
+                r = sc.unlink(sc0, pid, who(), f0 ? optsOf(String(sc0.page), f0) : {});
+              }
+              if (!r.ok) return jsonA(200, r);
+              const j = r.scenario.journey || [];
+              const last = factsOf(j.length ? j[j.length - 1].page : r.scenario.page);
+              log(`API Scenarios: ${pathname.slice(-6)} ${pid} in "${r.scenario.name}" (${r.removed ? r.removed.steps : 0} step(s) removed)`);
+              return jsonA(200, Object.assign(r, { next: last ? nextOf(last) : [] }));
+            }
             // every API of a page, to test one or build a scenario from them
             if (pathname === '/__api/scenarios/apis' && !post) {
               const pid = q('page');

@@ -36,12 +36,13 @@ T.check('a screen\'s tab opens its page (routeOf); no other app to link to', JSO
 T.section('records: screens opened from another, in a tab of their own');
 const R = N.RECORDS;
 T.check('each record opens a page that exists, under a menu item', Object.keys(R).every((k) => exists(R[k]) && !!N.item(R[k].navId)), Object.keys(R).filter((k) => !exists(R[k])).join());
-T.eq('the records', Object.keys(R).sort().join(), 'jira-analysis,jira-analysis-set,jira-progress,jira-sprint,vbs-project,vbs-setup');
+T.eq('the records', Object.keys(R).sort().join(), 'api-scenarios-page,jira-analysis,jira-analysis-set,jira-progress,jira-sprint,vbs-project,vbs-setup');
 T.eq('a sprint: keyed by its id, titled by its name', R['jira-sprint'].key({ id: 6, name: '2026-07' }) + ' / ' + R['jira-sprint'].title({ id: 6, name: '2026-07' }), '6 / Sprint 2026-07');
 T.eq('a set of stories: the same set (any order, any case) is the same tab', R['jira-analysis-set'].key({ keys: 'abc-36, ABC-23' }), 'ABC-23,ABC-36');
 T.eq('…titled by its keys, or how many', [R['jira-analysis-set'].title({ keys: 'ABC-1,ABC-2' }), R['jira-analysis-set'].title({ keys: 'ABC-1,ABC-2,ABC-3' })].join(' / '), 'AI · ABC-1, ABC-2 / AI · 3 stories');
 T.check('one set-up wizard tab, one daily progress tab', R['vbs-setup'].key({}) === 'setup' && R['jira-progress'].key({}) === 'daily');
 T.eq('a VB Studio project: keyed by host/org/project, titled by its name', R['vbs-project'].key({ key: 'h/o/p' }) + ' / ' + R['vbs-project'].title({ key: 'h/o/shop-app' }), 'h/o/p / shop-app');
+T.eq('a journey\'s page in API Scenarios: keyed by the page, titled API · its label (or its last part)', R['api-scenarios-page'].key({ page: 'shop/orders/order-detail' }) + ' / ' + R['api-scenarios-page'].title({ page: 'shop/orders/order-detail', label: 'Order' }) + ' / ' + R['api-scenarios-page'].title({ page: 'shop/orders/order-detail' }) + ' / ' + R['api-scenarios-page'].navId, 'shop/orders/order-detail / API · Order / API · order-detail / api-scenarios');
 
 T.section('the search box');
 const s1 = N.search('jira');

@@ -24,6 +24,8 @@ define([], function () {
     draft: function (page) { return call('/draft', 'POST', { page: page }); },
     // the journey continued on a page the last one goes to; where a page goes next
     extend: function (scenario, page) { return call('/extend', 'POST', { scenario: scenario, page: page }); },
+    unlink: function (scenario, page) { return call('/unlink', 'POST', { scenario: scenario, page: page }); },
+    relink: function (scenario, page) { return call('/relink', 'POST', { scenario: scenario, page: page }); },
     next: function (page) { return call('/next?' + q('page', page)); },
     // every API of a page (to test one, or build a scenario from them); the order to run a scenario's steps in
     apis: function (page) { return call('/apis?' + q('page', page)); },

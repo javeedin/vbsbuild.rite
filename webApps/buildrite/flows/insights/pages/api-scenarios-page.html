@@ -210,11 +210,43 @@
                 </oj-bind-if>
               </div>
             </oj-bind-if>
+            <!-- the journey: the pages it goes through; a linked page's APIs, its own tab, its link re-made or removed -->
+            <oj-bind-if test="[[ $variables.sc && $variables.sc.journey && $variables.sc.journey.length > 1 ]]">
+              <div class="nx-sc-journey" id="scJourney" role="list" aria-label="The pages of the journey">
+                <span class="nx-sc-jlbl">Journey</span>
+                <oj-bind-for-each data="[[ $functions.journeyRows($variables.sc, $variables.run) ]]">
+                  <template data-oj-as="jp">
+                    <oj-bind-if test="[[ jp.data.idx > 0 ]]"><span class="nx-sc-jarrow" aria-hidden="true">→</span></oj-bind-if>
+                    <div :class="[[ 'nx-sc-jpage' + (jp.data.linked ? ' nx-sc-jpage--linked' : '') + (jp.data.state ? ' nx-sc-jpage--' + jp.data.state : '') ]]" role="listitem" :data-page="[[ jp.data.page ]]" :title="[[ jp.data.title ]]">
+                      <span class="nx-sc-jn"><oj-bind-text value="[[ jp.data.n ]]"></oj-bind-text></span>
+                      <span class="nx-sc-jtext"><b><oj-bind-text value="[[ jp.data.label ]]"></oj-bind-text></b>
+                        <span class="nx-note"><oj-bind-text value="[[ jp.data.steps + (jp.data.stateText ? ' · ' + jp.data.stateText : '') ]]"></oj-bind-text></span></span>
+                      <span class="nx-sc-jacts">
+                        <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-sc-japis" data-act="jApis" :data-key="[[ jp.data.page ]]" on-click="[[ $listeners.onAct ]]" title="Its APIs and their order in this scenario" aria-label="APIs"><span class="oj-ux-ico-list" aria-hidden="true"></span></button>
+                        <oj-bind-if test="[[ jp.data.linked ]]">
+                          <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-sc-jtab" data-act="jTab" :data-key="[[ jp.data.page ]]" on-click="[[ $listeners.onAct ]]" title="Open this page in a tab of its own" aria-label="Open in a tab"><span class="oj-ux-ico-external-link" aria-hidden="true"></span></button>
+                          <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-sc-jrelink" data-act="jRelink" :data-key="[[ jp.data.page ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]" title="Reconnect: remove the link and link this page again, its steps read fresh from its code" aria-label="Reconnect"><span class="oj-ux-ico-refresh" aria-hidden="true"></span></button>
+                          <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-sc-junlink" data-act="jUnlink" :data-key="[[ jp.data.page ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]" title="Remove the link: this page's steps go (and any page after it); continue the journey again below" aria-label="Remove the link"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+                        </oj-bind-if>
+                      </span>
+                    </div>
+                  </template>
+                </oj-bind-for-each>
+              </div>
+            </oj-bind-if>
             <ol class="nx-sc-steps" id="scSteps">
               <oj-bind-for-each data="[[ $functions.stepRows($variables.sc, $variables.run, $variables.tries, $variables.trying) ]]">
                 <template data-oj-as="st">
                   <li :class="[[ 'nx-sc-step' + (st.data.writes ? ' nx-sc-step--writes' : '') + (st.data.pageHead ? ' nx-sc-step--pagestart' : '') + (st.data.off ? ' nx-sc-step--off' : '') ]]" :id="[[ 'scStep-' + st.data.id ]]">
-                    <oj-bind-if test="[[ !!st.data.pageHead ]]"><p class="nx-sc-pagehead"><oj-bind-text value="[[ st.data.pageHead ]]"></oj-bind-text></p></oj-bind-if>
+                    <oj-bind-if test="[[ !!st.data.pageHead ]]"><div class="nx-sc-pagehead"><span class="nx-sc-pagetitle"><oj-bind-text value="[[ st.data.pageHead ]]"></oj-bind-text></span>
+                      <span class="nx-sc-pageacts">
+                        <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-sc-papis" data-act="jApis" :data-key="[[ st.data.pageId ]]" on-click="[[ $listeners.onAct ]]" title="Its APIs and their order in this scenario"><span class="oj-ux-ico-list" aria-hidden="true"></span>APIs</button>
+                        <oj-bind-if test="[[ st.data.pageLinked ]]">
+                          <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-sc-ptab" data-act="jTab" :data-key="[[ st.data.pageId ]]" on-click="[[ $listeners.onAct ]]" title="Open this page in a tab of its own"><span class="oj-ux-ico-external-link" aria-hidden="true"></span>Open in a tab</button>
+                          <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-sc-prelink" data-act="jRelink" :data-key="[[ st.data.pageId ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]" title="Remove the link and link this page again, its steps read fresh"><span class="oj-ux-ico-refresh" aria-hidden="true"></span>Reconnect</button>
+                          <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-sc-punlink" data-act="jUnlink" :data-key="[[ st.data.pageId ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]" title="Remove the link to this page (its steps go)"><span class="oj-ux-ico-close" aria-hidden="true"></span>Remove link</button>
+                        </oj-bind-if>
+                      </span></div></oj-bind-if>
                     <div class="nx-sc-stephead">
                       <span class="nx-sc-stepn"><oj-bind-text value="[[ st.data.n ]]"></oj-bind-text></span>
                       <input class="nx-cm-input nx-sc-stepname" data-field="name" :data-step="[[ st.data.id ]]" :value="[[ st.data.name ]]" on-change="[[ $listeners.onStep ]]" aria-label="Step name">
@@ -370,4 +402,59 @@
       </oj-bind-if>
     </section>
   </div>
+
+  <!-- a journey page's APIs: their order in this scenario, and every API of the page with its step here (or Add) -->
+  <oj-bind-if test="[[ !!$variables.journeyApis ]]">
+    <div class="nx-modal" id="scJApis">
+      <button type="button" class="nx-modal-scrim" aria-label="Close" data-act="jClose" on-click="[[ $listeners.onAct ]]"></button>
+      <div class="nx-dialog nx-sc-jadlg" role="dialog" aria-modal="true" aria-label="The page's APIs">
+        <div class="nx-dialog-head">
+          <div class="nx-dialog-titles">
+            <div class="nx-kicker"><oj-bind-text value="[[ $variables.journeyApis.idx > 0 ? 'Page ' + ($variables.journeyApis.idx + 1) + ' of the journey' : 'The page the scenario starts on' ]]"></oj-bind-text></div>
+            <h2 class="nx-dialog-title" id="scJaTitle"><oj-bind-text value="[[ $variables.journeyApis.label ]]"></oj-bind-text></h2>
+            <div class="nx-sub"><code><oj-bind-text value="[[ $variables.journeyApis.page ]]"></oj-bind-text></code></div>
+          </div>
+          <oj-bind-if test="[[ $variables.journeyApis.idx > 0 ]]">
+            <button type="button" class="nx-btn nx-btn--sm" id="scJaTab" data-act="jTab" :data-key="[[ $variables.journeyApis.page ]]" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-external-link" aria-hidden="true"></span> Open in a tab</button>
+          </oj-bind-if>
+          <button type="button" class="nx-iconbtn" aria-label="Close" data-act="jClose" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+        </div>
+        <div class="nx-dialog-body nx-sc-jabody">
+          <h3 class="nx-sc-jah">In this scenario, in the order they run</h3>
+          <oj-bind-if test="[[ $functions.jaSequence($variables.journeyApis, $variables.sc, $variables.run).length === 0 ]]"><p class="nx-note" id="scJaNoSeq">None of this page's APIs is a step of this scenario yet.</p></oj-bind-if>
+          <ol class="nx-sc-jaseq" id="scJaSeq">
+            <oj-bind-for-each data="[[ $functions.jaSequence($variables.journeyApis, $variables.sc, $variables.run) ]]"><template data-oj-as="q">
+              <li :class="[[ 'nx-sc-jaq' + (q.data.state ? ' nx-sc-jaq--' + q.data.state : '') ]]">
+                <span class="nx-sc-jaseqn"><oj-bind-text value="[[ q.data.seq ]]"></oj-bind-text></span>
+                <span :class="[[ 'nx-pg-method nx-sc-apim nx-pg-method--' + q.data.mclass ]]"><oj-bind-text value="[[ q.data.method ]]"></oj-bind-text></span>
+                <span class="nx-sc-janame"><b><oj-bind-text value="[[ q.data.name ]]"></oj-bind-text></b>
+                  <code><oj-bind-text value="[[ q.data.call ]]"></oj-bind-text></code></span>
+                <oj-bind-if test="[[ !!q.data.lov ]]"><span class="nx-sc-lovchip"><oj-bind-text value="[[ q.data.lov ]]"></oj-bind-text></span></oj-bind-if>
+                <oj-bind-if test="[[ q.data.writes ]]"><span class="nx-sc-wchip">changes data</span></oj-bind-if>
+                <span class="nx-sc-jastate"><oj-bind-text value="[[ q.data.stateText ]]"></oj-bind-text></span>
+                <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="jGo" :data-key="[[ q.data.id ]]" on-click="[[ $listeners.onAct ]]" :title="[[ 'Step ' + q.data.n + ' of the scenario' ]]"><oj-bind-text value="[[ 'Step ' + q.data.n ]]"></oj-bind-text></button>
+              </li>
+            </template></oj-bind-for-each>
+          </ol>
+          <h3 class="nx-sc-jah"><oj-bind-text value="[[ 'Every API of the page' + ($variables.journeyApis.apis ? ' (' + $variables.journeyApis.apis.length + ')' : '') + ', in the order the page makes them' ]]"></oj-bind-text></h3>
+          <oj-bind-if test="[[ $variables.journeyApis.loading ]]"><div class="nx-empty">Reading the page's code…</div></oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.journeyApis.error ]]"><div class="nx-sc-err"><oj-bind-text value="[[ $variables.journeyApis.error ]]"></oj-bind-text></div></oj-bind-if>
+          <div class="nx-sc-jalist" id="scJaList">
+            <oj-bind-for-each data="[[ $functions.jaApis($variables.journeyApis, $variables.sc) ]]"><template data-oj-as="a">
+              <div :class="[[ 'nx-sc-jaapi' + (a.data.inScenario ? ' nx-sc-jaapi--in' : '') ]]" :data-key="[[ a.data.key ]]">
+                <span class="nx-sc-jaseqn"><oj-bind-text value="[[ a.data.n ]]"></oj-bind-text></span>
+                <span :class="[[ 'nx-pg-method nx-sc-apim nx-pg-method--' + a.data.mclass ]]"><oj-bind-text value="[[ a.data.method ]]"></oj-bind-text></span>
+                <span class="nx-sc-janame"><b><oj-bind-text value="[[ a.data.name ]]"></oj-bind-text></b>
+                  <code><oj-bind-text value="[[ a.data.path ]]"></oj-bind-text></code>
+                  <span class="nx-note"><oj-bind-text value="[[ a.data.role ]]"></oj-bind-text></span></span>
+                <oj-bind-if test="[[ a.data.writes ]]"><span class="nx-sc-wchip">changes data</span></oj-bind-if>
+                <oj-bind-if test="[[ a.data.inScenario ]]"><span class="nx-sc-jain"><oj-bind-text value="[[ 'Step ' + a.data.step ]]"></oj-bind-text></span></oj-bind-if>
+                <oj-bind-if test="[[ !a.data.inScenario && !a.data.transport ]]"><button type="button" class="nx-btn nx-btn--sm" data-act="jAdd" :data-key="[[ a.data.key ]]" on-click="[[ $listeners.onAct ]]" title="Add it to this scenario, after this page's other steps">+ Add</button></oj-bind-if>
+              </div>
+            </template></oj-bind-for-each>
+          </div>
+        </div>
+      </div>
+    </div>
+  </oj-bind-if>
 </div>

@@ -97,6 +97,20 @@ journey** offers the pages the last page goes to (Next → the catalog → the c
 under the page they are on, with the values picked so far handed on. BI Publisher is run as the page's report, with
 the report's parameters taken from the code.
 
+- **A journey's pages, one by one.** A scenario that goes through several pages has a **Journey** bar over its steps
+  (1 Order Workbench → 2 Order …), and each page's steps sit under its own heading. Each page shows how its steps
+  went in the last run and, on hover, when and by whom it was linked. On every page:
+  - **APIs** opens a dialog with that page's calls in this scenario, in the order they run (their step number in
+    the scenario, and how each went in the last run; **Step n** takes you to that step). Under it is every API the
+    page makes, in the order the page makes them: the ones in the scenario are marked with their step, the others
+    have **+ Add** (added after that page's other steps).
+  - On a linked page only:
+    - **Open in a tab** opens that page in API Scenarios in a tab of its own.
+    - **Remove link** takes the page out: its steps, the Data columns and choices only it used, and its part of the
+      notes. Any page linked after it goes too. You are asked first, and the scenario is saved. Use **Continue the
+      journey** to link it again.
+    - **Reconnect** does both in one go: the link is removed, then the page is linked again, its steps read fresh
+      from its code with the values picked so far handed on. Use it when a linked page's steps went wrong.
 - **Build it yourself from the page's APIs.** The **APIs of this page** tab lists every REST call and BI Publisher
   report the page's code makes, with where the page uses it (a list of values and its field, as it opens, when you go
   on, elsewhere): **▶ Test** one with its values, **+ Add to scenario** the ones you want (New scenario starts an

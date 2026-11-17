@@ -60,11 +60,78 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         } finally { v.busy = false; }
         return;
       }
+      // ── the journey's pages: their APIs, a tab of their own, the link removed or re-made ──
+      const jPage = (pid) => ((v.sc && v.sc.journey) || []).filter((x) => x.page === pid)[0] || null;
+      const jIdx = (pid) => ((v.sc && v.sc.journey) || []).findIndex((x) => x.page === pid);
+      if (act === 'jClose') { v.journeyApis = null; return; }
+      if (act === 'jApis') {
+        const j = jPage(key) || { page: key, label: key.split('/').pop() };
+        v.journeyApis = { page: j.page, label: j.label || j.page.split('/').pop(), idx: Math.max(0, jIdx(key)), loading: true, error: '', apis: null };
+        const r = await SC.apis(key);
+        if (!v.journeyApis || v.journeyApis.page !== key) return;
+        v.journeyApis = Object.assign({}, v.journeyApis, { loading: false, apis: r.ok ? r.body.apis || [] : [], error: r.ok ? '' : (r.body && r.body.error) || 'Could not read the page\'s APIs.' });
+        return;
+      }
+      if (act === 'jTab') {
+        const j = jPage(key) || { page: key, label: '' };
+        v.journeyApis = null;
+        bus.open({ record: 'api-scenarios-page', params: { page: j.page, label: j.label || '' } });
+        return;
+      }
+      if (act === 'jGo') {
+        v.journeyApis = null;
+        setTimeout(() => { const el = document.getElementById('scStep-' + key); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('nx-sc-step--flash'); setTimeout(() => el.classList.remove('nx-sc-step--flash'), 1600); } }, 60);
+        return;
+      }
+      if (act === 'jAdd') {
+        const ja = v.journeyApis;
+        const a = ja && (ja.apis || []).filter((x) => x.key === key)[0];
+        if (!a || !v.sc) return;
+        const st = copy(a.step);
+        st.id = newId(); st.page = ja.page;
+        delete st.accepts; delete st.api;
+        const list = steps().slice();
+        let at = -1;
+        list.forEach((x, i) => { if ((x.page || v.sc.page) === ja.page) at = i; });
+        list.splice(at === -1 ? list.length : at + 1, 0, st);
+        setSteps(list);
+        v.result = { ok: true, text: 'Added "' + st.name + '" after ' + (ja.label || 'the page') + '\'s other steps (step ' + (list.indexOf(st) + 1) + '). Save to keep it.' };
+        return;
+      }
+      if (act === 'jUnlink' || act === 'jRelink') {
+        if (!v.sc || v.busy) return;
+        const at = jIdx(key);
+        const j = v.sc.journey || [];
+        if (at < 1) return;
+        const after = j.slice(at + 1).map((x) => x.label || x.page);
+        const n = steps().filter((x) => j.slice(at).some((y) => y.page === (x.page || v.sc.page))).length;
+        const what = (j[at].label || key) + (after.length ? ' and the page' + (after.length > 1 ? 's' : '') + ' after it (' + after.join(', ') + ')' : '');
+        let yes = true;
+        try {
+          yes = window.confirm(act === 'jUnlink'
+            ? 'Remove the link to ' + what + '?\n\n' + n + ' step(s) of ' + (after.length ? 'those pages' : 'that page') + ' are taken out of this scenario, with the values only they used. The scenario is saved. Continue the journey again below to link it anew.'
+            : 'Reconnect ' + (j[at].label || key) + '?\n\nIts link is removed (' + n + ' step(s)' + (after.length ? ', and ' + after.join(', ') : '') + '), then the page is linked again: its steps read fresh from its code, with the values picked so far handed on. The scenario is saved.');
+        } catch (e) { /* no DOM */ }
+        if (!yes) return;
+        v.busy = true;
+        try {
+          const r = act === 'jUnlink' ? await SC.unlink(v.sc, key) : await SC.relink(v.sc, key);
+          if (!r.ok) { say(r); return; }
+          v.sc = copy(r.body.scenario); v.nextPages = r.body.next || []; v.suggestion = null; v.journeyApis = null;
+          await reloadList();
+          const rm = r.body.removed || { pages: [], steps: 0 };
+          say(r, act === 'jUnlink'
+            ? 'Link removed: ' + rm.pages.map((x) => x.label || x.page).join(', ') + ' (' + rm.steps + ' step(s)). Continue the journey below to link it again.'
+            : 'Reconnected ' + (rm.pages[0] ? rm.pages[0].label || key : key) + ': ' + steps().filter((x) => x.page === key).length + ' step(s) read fresh from its code. Save & run.');
+        } finally { v.busy = false; }
+        return;
+      }
       if (act === 'load') {
         const c = await PC.catalog(context.$application.path);
         v.pages = c && c.ok && c.body ? (c.body.pages || []) : [];
         await where();
-        const handed = typeof bus.takeFocus === 'function' ? bus.takeFocus('api-scenarios') : null;
+        // a tab of its own is given its page (a journey's linked page): it never takes what was handed to API Scenarios
+        const handed = !v.page && typeof bus.takeFocus === 'function' ? bus.takeFocus('api-scenarios') : null;
         if (handed && handed.page) await loadPage(handed.page);
         else if (v.page) await loadPage(v.page);
         return;

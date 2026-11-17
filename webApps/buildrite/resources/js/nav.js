@@ -79,6 +79,11 @@ define([], function () {
 
   // Screens that open a record in a tab of its own: the tab id is kind + ':' + key, so a record opens once.
   var RECORDS = {
+    // API Scenarios on one page ({ page: app/flow/page, label }), from a journey's linked page: its scenarios and APIs
+    // in a tab of its own (flows/insights api-scenarios, its page variable given).
+    'api-scenarios-page': { flow: 'insights', page: 'api-scenarios', icon: 'oj-ux-ico-check-circle', navId: 'api-scenarios',
+      key: function (p) { return p ? String(p.page || '') : ''; },
+      title: function (p) { return 'API · ' + ((p && p.label) || String((p && p.page) || '').split('/').pop() || 'page'); } },
     // One Jira sprint ({ id: Jira's sprint id, name }), from Jira stories' By sprint: its report in a tab of its own.
     'jira-sprint': { flow: 'insights', page: 'jira-sprint', icon: 'oj-ux-ico-list', navId: 'jira',
       key: function (p) { return p ? String(p.id || p.name || '') : ''; },

@@ -146,6 +146,38 @@ const ROOT = path.join(__dirname, 'fixtures', 'vb-sample');
       && JSON.stringify(j2.scenario.data) === '[]', JSON.stringify([js[0].extract, j2.scenario.data]));
     r = await store.run(j2.scenario.id, env, {});
     T.check('run as one: the list, then the order it opened (41), the create held', r.run.rows[0].steps[0].extracted.id === '41' && r.run.rows[0].steps[1].state === 'ok' && r.run.rows[0].steps[2].state === 'skip', JSON.stringify(r.run.rows[0].steps.map((x) => x.state)));
+    T.check('…the linked page remembers when it was linked, what it added and where its notes start', !!j2.scenario.journey[1].linkedAt && j2.scenario.journey[1].linkedBy === 'jane.doe'
+      && Array.isArray(j2.scenario.journey[1].vars) && j2.scenario.journey[1].notesAt === j1.scenario.notes.length, JSON.stringify(j2.scenario.journey[1]));
+
+    T.section('a link removed, then made again');
+    const p3 = { label: 'Cart', integrations: { rest: [{ endpoint: 'shopApi/getCart', method: 'GET' }], reports: [], lovs: [] },
+      logic: { chains: [{ name: 'LoadCartChain', calls: ['shopApi/getCart'] }] }, features: { lifecycle: [{ when: 'when the page opens', chains: ['LoadCartChain'] }], actions: [] } };
+    const j3 = store.extend(j2.scenario, 'shop/cart/cart', p3, 'jane.doe');
+    T.check('three pages: Orders → Order → Cart', j3.ok && j3.scenario.journey.length === 3 && j3.scenario.steps.length === 4 && /Orders → Order → Cart$/.test(j3.scenario.name), j3.scenario.name);
+    let u = store.unlink(j3.scenario, 'shop/orders/order-list', 'jane.doe');
+    T.check('the first page has no link to remove: said', !u.ok && /starts on/.test(u.error));
+    u = store.unlink(j3.scenario, 'shop/nowhere', 'jane.doe');
+    T.check('…a page not in the journey: said', !u.ok && /not linked/.test(u.error));
+    u = store.unlink(j3.scenario, 'shop/cart/cart', 'jane.doe');
+    T.check('the last link removed: Cart\'s step gone, the journey and the name back to Orders → Order, the notes as before, saved', u.ok && u.scenario.journey.length === 2 && u.scenario.steps.length === 3
+      && u.scenario.steps.every((x) => x.page !== 'shop/cart/cart') && u.scenario.name === 'Journey — Orders → Order' && u.scenario.notes === j2.scenario.notes
+      && u.removed.steps === 1 && u.removed.pages[0].label === 'Cart' && store.get(j3.scenario.id).scenario.steps.length === 3, JSON.stringify(u.removed));
+    u = store.unlink(j3.scenario, 'shop/orders/order-detail', 'jane.doe');
+    T.check('a link in the middle removed: that page and the pages after it go (they came through it); a happy path again', u.ok && u.scenario.journey.length === 1 && u.scenario.steps.length === 1
+      && u.removed.pages.map((x) => x.label).join() === 'Order,Cart' && u.removed.steps === 3 && /^Happy path — Orders$/.test(u.scenario.name), JSON.stringify(u.removed));
+    const back = store.extend(u.scenario, 'shop/orders/order-detail', p2, 'jane.doe');
+    T.check('…and linked again (Continue the journey): its steps back, the value handed on again', back.ok && back.scenario.steps.length === 3 && back.scenario.steps[1].params.id === '{{id}}');
+    const before = back.scenario.steps.map((x) => x.id).join();
+    const edited = JSON.parse(JSON.stringify(back.scenario));
+    edited.steps[1].params.id = 'BROKEN';
+    const rl = store.relink(edited, 'shop/orders/order-detail', p2, 'jane.doe');
+    T.check('Reconnect: the link removed and made again, the page\'s steps read fresh (a broken value fixed), the first page\'s kept', rl.ok && rl.scenario.steps.length === 3
+      && rl.scenario.steps[1].params.id === '{{id}}' && rl.scenario.steps[0].id === back.scenario.steps[0].id && rl.removed.steps === 2 && rl.scenario.journey.length === 2, before + ' | ' + JSON.stringify(rl.scenario.steps.map((x) => [x.id, x.params])));
+    const withVar = store.extend(Object.assign({}, j1.scenario, { data: [{ customer: 'C1' }] }), 'shop/orders/order-detail', Object.assign({}, p2, { integrations: Object.assign({}, p2.integrations, { rest: [{ endpoint: 'shopApi/getOrderById', method: 'GET', params: { id: '{{orderRef}}' } }] }) }), 'jane.doe');
+    const wv = withVar.scenario.journey[1].vars || [];
+    const un2 = store.unlink(withVar.scenario, 'shop/orders/order-detail', 'jane.doe');
+    T.check('a data column only that page added is taken out with it; one that was there before stays', withVar.ok && un2.ok && Object.keys(un2.scenario.data[0] || {}).indexOf('customer') !== -1
+      && wv.every((k) => Object.keys(un2.scenario.data[0] || {}).indexOf(k) === -1), JSON.stringify([wv, withVar.scenario.data, un2.scenario.data]));
     const onlyGo = store.draft('shop/orders/order-detail', p2, 'jane.doe').scenario.steps.map((x) => x.endpoint).join();
     T.check('a page\'s journey: what runs as it opens and what its actions that go on call (Submit), not the rest (Cancel)', onlyGo === 'shopApi/getOrderById,shopApi/createOrder', onlyGo);
 

@@ -399,3 +399,40 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-fsql-callbody { padding: 0 12px 10px; }
 .nx-fsql-dlg { width: min(620px, 100%); }
 .nx-fsql-dlgacts { padding: 0 16px 16px; }
+
+/* API Scenarios: the journey's pages (APIs, own tab, reconnect, remove link) and their APIs dialog */
+.nx-sc-journey { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; margin: 6px 0 10px; border: 1px solid var(--nx-line, #dde3ea); border-radius: 10px; background: var(--nx-surface, #fff); }
+.nx-sc-jlbl { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--nx-muted, #4a5865); }
+.nx-sc-jarrow { color: var(--nx-muted, #6b7886); font-weight: 700; }
+.nx-sc-jpage { display: inline-flex; align-items: center; gap: 8px; padding: 5px 6px 5px 8px; border: 1px solid var(--nx-line, #d3dce6); border-radius: 999px; background: var(--nx-head, #f6f8fa); max-width: 100%; }
+.nx-sc-jpage--linked { background: #fff8e6; border-color: #f0d28a; }
+.nx-sc-jpage--ok { box-shadow: inset 3px 0 0 #2f9e5b; }
+.nx-sc-jpage--bad { box-shadow: inset 3px 0 0 #c0392b; }
+.nx-sc-jn { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; align-items: center; justify-content: center; background: #1d4f91; color: #fff; font-size: 11px; font-weight: 700; flex: none; }
+.nx-sc-jtext { display: grid; line-height: 1.2; min-width: 0; }
+.nx-sc-jtext b { font-size: 13px; }
+.nx-sc-jtext .nx-note { font-size: 11px; }
+.nx-sc-jacts { display: inline-flex; gap: 2px; }
+.nx-sc-junlink:hover { color: #b42318; }
+.nx-sc-pagehead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nx-sc-pagetitle { flex: 1 1 260px; min-width: 0; }
+.nx-sc-pageacts { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.nx-sc-punlink:hover { color: #b42318; }
+.nx-sc-step--flash { animation: nx-sc-flash 1.6s ease-out; }
+@keyframes nx-sc-flash { 0% { box-shadow: 0 0 0 3px #2e6fd8; } 100% { box-shadow: 0 0 0 0 transparent; } }
+.nx-sc-jadlg { width: min(900px, 100%); max-height: 88vh; display: flex; flex-direction: column; }
+.nx-sc-jadlg #scJaTab { margin-left: auto; margin-right: 8px; align-self: center; }
+.nx-sc-jabody { overflow: auto; }
+.nx-sc-jah { font-size: 13px; margin: 6px 0 8px; color: var(--nx-ink, #1d2b36); }
+.nx-sc-jaseq { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 4px; }
+.nx-sc-jaq, .nx-sc-jaapi { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--nx-line, #e3e8ee); border-radius: 8px; flex-wrap: wrap; }
+.nx-sc-jaq--ok { border-left: 3px solid #2f9e5b; }
+.nx-sc-jaq--bad { border-left: 3px solid #c0392b; }
+.nx-sc-jaq--skip { border-left: 3px solid #9aa9b8; }
+.nx-sc-jaseqn { display: inline-flex; min-width: 22px; height: 22px; border-radius: 6px; align-items: center; justify-content: center; background: var(--nx-head, #eef2f6); font-size: 11.5px; font-weight: 700; }
+.nx-sc-janame { display: grid; gap: 1px; flex: 1 1 280px; min-width: 0; }
+.nx-sc-janame code { font-size: 11.5px; overflow-wrap: anywhere; color: var(--nx-muted, #4a5865); }
+.nx-sc-jastate { font-size: 12px; color: var(--nx-muted, #4a5865); white-space: nowrap; }
+.nx-sc-jalist { display: grid; gap: 4px; }
+.nx-sc-jaapi--in { background: #f3fbf5; border-color: #b7e0c4; }
+.nx-sc-jain { font-size: 12px; font-weight: 600; color: #1d5b33; white-space: nowrap; }

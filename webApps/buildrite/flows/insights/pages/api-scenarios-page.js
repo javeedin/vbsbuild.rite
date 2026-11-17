@@ -241,17 +241,20 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
         const pg = st.page || (sc && sc.page) || '';
         const prevPg = i ? (steps[i - 1].page || (sc && sc.page) || '') : null;
         const pageHead = multi && pg !== prevPg ? (i ? 'Then, on ' : 'On ') + (jl[pg] || pg.split('/').pop()) + '  ·  ' + pg : '';
+        // a page the journey went on to: its link can be removed, re-made, opened in its own tab; any page: its APIs
+        const jIdx = ((sc && sc.journey) || []).findIndex((x) => x.page === pg);
         // a part of the page not shown for the values chosen (the other Customer field)
         const chosen = ((sc && sc.choices) || []).reduce((a, c) => { a[c.target] = c.value; return a; }, {});
         const off = !!st.when && evalWhen(st.when, chosen) === false;
         const offNote = off ? 'Not on the page as chosen (' + ((sc && sc.choices) || []).filter((c) => new RegExp('\\b' + c.target + '\\b').test(st.when)).map((c) => c.field + ' is ' + ((c.values.filter((x) => x.key === c.value)[0] || {}).text || c.value)).join(', ') + '): skipped when run' : '';
-        const sig = JSON.stringify([st, i, pageHead, off, used.map((n) => vars[n]), uses.map((u) => [u, resOf(u.id) ? (resOf(u.id).at || run && run.id) : '']), T[st.id] ? T[st.id].at : '', trying === st.id]);
+        const sig = JSON.stringify([st, i, pageHead, jIdx, off, used.map((n) => vars[n]), uses.map((u) => [u, resOf(u.id) ? (resOf(u.id).at || run && run.id) : '']), T[st.id] ? T[st.id].at : '', trying === st.id]);
         keep.add(st.id);
         const hit = this._rows.get(st.id);
         if (hit && hit.sig === sig) return hit.row;
         const ex = st.expect || {};
         const acc = st.accepts || [];
         const row = { id: st.id, n: i + 1, name: st.name, call: st.report ? 'report ' + st.report.path : st.endpoint, writes: !!st.writes, pageHead,
+          pageId: pageHead ? pg : '', pageLinked: !!pageHead && jIdx > 0,
           when: st.when ? 'On the page only when ' + st.when : '', off, offNote,
           api: fullApi(st), trying: trying === st.id, tried: triedOf(st),
           params: linesOf(st.params, '='), extract: (st.extract || []).map((e) => e.var + ' = ' + e.from).join('\n'),
@@ -282,6 +285,61 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
       return [cols.join(',')].concat(rows.map((r) => cols.map((c) => r[c] || '').join(','))).join('\n');
     }
     /** The APIs tab: every API of the page, each with where it is used, its values to test, its last test. */
+    /** The pages the journey goes through: where each starts, its steps, when it was linked (a page after the first). */
+    /** Each step's result in the last run of this scenario, over every data row: a failure in any row wins, then a pass, then a skip. */
+    runResults(sc, run) {
+      const res = {};
+      if (!sc || !run || run.scenario !== sc.id) return res;
+      const rank = { fail: 3, ok: 2, skip: 1 };
+      (run.rows || []).forEach((row) => (row.steps || []).forEach((r) => {
+        if (!r || !r.step) return;
+        if (!res[r.step] || (rank[r.state] || 0) > (rank[res[r.step].state] || 0)) res[r.step] = r;
+      }));
+      return res;
+    }
+    journeyRows(sc, run) {
+      const j = (sc && sc.journey) || [];
+      const steps = (sc && sc.steps) || [];
+      const res = this.runResults(sc, run);
+      return j.map((x, idx) => {
+        const mine = steps.filter((st) => (st.page || sc.page) === x.page);
+        const bad = mine.filter((st) => res[st.id] && res[st.id].state === 'fail').length;
+        const ran = mine.filter((st) => res[st.id]).length;
+        return { page: x.page, label: x.label || x.page.split('/').pop(), idx, n: String(idx + 1), linked: idx > 0, last: idx === j.length - 1,
+          steps: mine.length + (mine.length === 1 ? ' step' : ' steps') + (mine.filter((st) => st.writes).length ? ' · ' + mine.filter((st) => st.writes).length + ' change data' : ''),
+          state: !ran ? '' : bad ? 'bad' : 'ok', stateText: !ran ? '' : bad ? bad + ' failed in the last run' : 'passed in the last run',
+          title: x.page + (x.linkedAt ? '\nLinked ' + String(x.linkedAt).replace('T', ' ').slice(0, 16) + (x.linkedBy ? ' by ' + x.linkedBy : '') : '') };
+      });
+    }
+    /** The APIs dialog: the page's calls in this scenario, in the order they run (the scenario's step numbers). */
+    jaSequence(ja, sc, run) {
+      if (!ja || !sc) return [];
+      const res = this.runResults(sc, run);
+      const out = [];
+      (sc.steps || []).forEach((st, i) => {
+        if ((st.page || sc.page) !== ja.page) return;
+        const r = res[st.id];
+        const m = st.report ? 'REPORT' : ((st.api && st.api.method) || (st.writes ? 'POST' : 'GET'));
+        out.push({ id: st.id, n: String(i + 1), seq: String(out.length + 1), name: st.name, call: st.report ? 'report ' + st.report.path : st.endpoint, method: m, mclass: m.toLowerCase(),
+          writes: !!st.writes, lov: st.lov ? st.lov.field : '', state: r ? (r.state === 'skip' ? 'skip' : r.state === 'fail' ? 'bad' : 'ok') : '',
+          stateText: r ? (r.state === 'skip' ? 'skipped' : r.state === 'fail' ? '✗ ' + (r.status || 'failed') : '✓ passed' + (r.status ? ' · ' + r.status : '')) : 'not run' });
+      });
+      return out;
+    }
+    /** The APIs dialog: every API of the page, in the order the page makes them, each marked with its step here (or Add). */
+    jaApis(ja, sc) {
+      if (!ja || !ja.apis) return [];
+      const at = {};
+      ((sc && sc.steps) || []).forEach((st, i) => { if ((st.page || sc.page) !== ja.page) return; const k = st.report ? 'report:' + (st.report.name || '') : st.endpoint; if (!at[k]) at[k] = String(i + 1); });
+      const ROLE = { list: 'list of values', opens: 'as the page opens', next: 'when you go on', other: 'elsewhere on the page', transport: 'BI Publisher service' };
+      return ja.apis.slice().sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0)).map((a, i) => {
+        const st = a.step || {};
+        const m = st.report ? 'REPORT' : ((st.api && st.api.method) || 'CALL');
+        return { key: a.key, n: String(i + 1), method: m, mclass: m.toLowerCase(), name: st.name, path: st.report ? st.report.path : ((st.api && st.api.path) || st.endpoint),
+          role: a.field ? a.field + ' · ' + ROLE.list : (ROLE[a.role] || ''), roleKey: a.role || 'other', writes: !!st.writes, transport: a.role === 'transport',
+          step: at[a.key] || '', inScenario: !!at[a.key] };
+      });
+    }
     apiRows(apis, q, tries, sc, open, vals) {
       const t = String(q || '').trim().toLowerCase();
       const inSc = {};
