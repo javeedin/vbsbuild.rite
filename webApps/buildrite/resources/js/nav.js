@@ -53,7 +53,7 @@ define([], function () {
       // Change requests: a change asked of a page — who asked, the customer, the Jira story, the issue — made with Code
       // Fix and followed until it is fixed (flows/insights change-requests; desktop/lib/changeRequests.js)
       { id: 'change-requests', label: 'Change requests', icon: 'oj-ux-ico-edit', route: { flow: 'insights', page: 'change-requests' },
-        keywords: 'change requests cr enhancement fix bug request customer jira issue code fix page approve applied saved fixed due priority' },
+        keywords: 'change requests cr enhancement fix bug request customer jira issue code fix page approve applied saved fixed due priority new page menu knowledge base fdd analytics' },
       // The FDD documents "Analyze with AI" reads (flows/fdd library): uploaded into the project's data and pushed to
       // git, so every user has them; one is the latest.
       { id: 'fdd-library', label: 'FDD library', icon: 'oj-ux-ico-upload', route: { flow: 'fdd', page: 'library' },

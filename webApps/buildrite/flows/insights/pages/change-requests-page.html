@@ -209,7 +209,7 @@
           <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="crDelete" data-act="delete" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.fixBusy ]]">Delete</button>
         </div>
         <div class="nx-sc-hfields">
-          <div class="nx-sc-hf nx-sc-hf--wide"><span>Page</span>
+          <div class="nx-sc-hf nx-sc-hf--wide"><span><oj-bind-text value="[[ $variables.cr.kind === 'page' ? 'Make it like (a page of the app)' : 'Page' ]]"></oj-bind-text></span>
             <div class="nx-sc-pagepick">
               <select class="nx-cm-input" id="crPageSel" data-field="page" on-change="[[ $listeners.onField ]]" aria-label="The page">
                 <oj-bind-for-each data="[[ $functions.pageOptions($variables.pages, $variables.cr.page) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
@@ -242,6 +242,8 @@
 
       <div class="nx-sc-tabs" role="tablist" id="crTabs">
         <button type="button" role="tab" id="crTabReq" :aria-selected="[[ $variables.crTab === 'request' ? 'true' : 'false' ]]" :class="[[ $functions.tabClass('request', $variables.crTab) ]]" data-act="tab" data-key="request" on-click="[[ $listeners.onAct ]]">Request</button>
+        <button type="button" role="tab" id="crTabKb" :aria-selected="[[ $variables.crTab === 'kb' ? 'true' : 'false' ]]" :class="[[ $functions.tabClass('kb', $variables.crTab) ]]" data-act="tab" data-key="kb" on-click="[[ $listeners.onAct ]]">
+          <oj-bind-text value="[[ 'Knowledge base' + ($functions.kbHas($variables.cr.knowledge) ? ' ✓' : '') ]]"></oj-bind-text></button>
         <button type="button" role="tab" id="crTabFix" :aria-selected="[[ $variables.crTab === 'fix' ? 'true' : 'false' ]]" :class="[[ $functions.tabClass('fix', $variables.crTab) ]]" data-act="tab" data-key="fix" on-click="[[ $listeners.onAct ]]">
           <oj-bind-text value="[[ 'Code fix' + ($variables.cr.attempts ? ' (' + $variables.cr.attempts + ')' : '') ]]"></oj-bind-text></button>
         <button type="button" role="tab" id="crTabHow" :aria-selected="[[ $variables.crTab === 'how' ? 'true' : 'false' ]]" :class="[[ $functions.tabClass('how', $variables.crTab) ]]" data-act="tab" data-key="how" on-click="[[ $listeners.onAct ]]">How it was fixed</button>
@@ -251,9 +253,54 @@
 
       <!-- Request: what should change -->
       <oj-bind-if test="[[ $variables.crTab === 'request' ]]">
+        <!-- a new page: what it is, where it goes in the menu, and how the app links a page (learnt from its code) -->
+        <oj-bind-if test="[[ $variables.cr.kind === 'page' ]]">
+          <div class="nx-card nx-sc-sec nx-cr-np" id="crNewPage">
+            <div class="nx-sc-head"><div><h2>The new page</h2><span class="nx-note"><oj-bind-text value="[[ 'Made like ' + ($variables.cr.page ? $functions.pageLabel($variables.pages, $variables.cr.page) : 'the page picked in the header') + ' — the same template, layout and style — and linked into your app the way its other pages are.' ]]"></oj-bind-text></span></div></div>
+            <div class="nx-sc-hfields">
+              <label class="nx-sc-hf nx-sc-hf--wide"><span>Title</span><input class="nx-cm-input" id="crNpTitle" data-field="np.title" :value="[[ $functions.npOf($variables.cr).title ]]" on-change="[[ $listeners.onField ]]" placeholder="e.g. Customer Statements"></label>
+              <label class="nx-sc-hf"><span>Page name</span><input class="nx-cm-input" id="crNpName" data-field="np.name" :value="[[ $functions.npName($variables.cr) ]]" on-change="[[ $listeners.onField ]]" placeholder="from the title"></label>
+              <label class="nx-sc-hf"><span>Flow</span>
+                <select class="nx-cm-input" id="crNpFlow" data-field="np.flow" on-change="[[ $listeners.onField ]]">
+                  <oj-bind-for-each data="[[ $functions.flowOptions($variables.menuInfo, $functions.npOf($variables.cr).flow) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+                </select></label>
+              <label class="nx-sc-hf nx-sc-hf--wide"><span>In the menu</span>
+                <select class="nx-cm-input" id="crNpGroup" data-field="np.group" on-change="[[ $listeners.onField ]]">
+                  <oj-bind-for-each data="[[ $functions.groupOptions($variables.menuInfo, $functions.npOf($variables.cr).group) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+                </select></label>
+              <oj-bind-if test="[[ !!$functions.npOf($variables.cr).group ]]">
+                <label class="nx-sc-hf"><span>Menu label</span><input class="nx-cm-input" id="crNpLabel" data-field="np.label" :value="[[ $functions.npOf($variables.cr).label ]]" on-change="[[ $listeners.onField ]]" placeholder="the title"></label>
+                <label class="nx-sc-hf"><span>Icon</span><input class="nx-cm-input" id="crNpIcon" list="crNpIcons" data-field="np.icon" :value="[[ $functions.npOf($variables.cr).icon ]]" on-change="[[ $listeners.onField ]]" placeholder="like the one before it">
+                  <datalist id="crNpIcons"><oj-bind-for-each data="[[ $functions.iconOptions($variables.menuInfo) ]]"><template data-oj-as="i"><option :value="[[ i.data ]]"></option></template></oj-bind-for-each></datalist></label>
+                <label class="nx-sc-hf"><span>Place</span>
+                  <select class="nx-cm-input" id="crNpAfter" data-field="np.after" on-change="[[ $listeners.onField ]]">
+                    <oj-bind-for-each data="[[ $functions.afterOptions($variables.menuInfo, $functions.npOf($variables.cr).group, $functions.npOf($variables.cr).after) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+                  </select></label>
+              </oj-bind-if>
+            </div>
+            <div class="nx-note nx-cr-npfiles" id="crNpFiles"><span class="oj-ux-ico-file-code" aria-hidden="true"></span> <oj-bind-text value="[[ $functions.npFiles($variables.cr) ]]"></oj-bind-text></div>
+            <oj-bind-if test="[[ !!$variables.menuInfo && !!$variables.menuInfo.error ]]"><div class="nx-an-stale"><oj-bind-text value="[[ $variables.menuInfo.error ]]"></oj-bind-text></div></oj-bind-if>
+            <oj-bind-if test="[[ !!$variables.menuInfo && !$variables.menuInfo.error ]]">
+              <div class="nx-cr-link" id="crNpLinks">
+                <div class="nx-cr-linkhead"><span class="oj-ux-ico-link" aria-hidden="true"></span> <b>How it gets linked</b> <span class="nx-note"><oj-bind-text value="[[ $functions.menuSummary($variables.menuInfo) ]]"></oj-bind-text></span></div>
+                <p class="nx-note"><oj-bind-text value="[[ $functions.refText($variables.menuInfo) ]]"></oj-bind-text></p>
+                <ul class="nx-cr-places">
+                  <oj-bind-for-each data="[[ $functions.placesNeeded($variables.menuInfo) ]]"><template data-oj-as="p">
+                    <li :title="[[ $functions.placeLines(p.data) ]]"><span class="nx-cr-placeok" aria-hidden="true">✓</span><code><oj-bind-text value="[[ p.data.file ]]"></oj-bind-text></code> <span class="nx-note"><oj-bind-text value="[[ p.data.kinds.join(' · ') ]]"></oj-bind-text></span></li>
+                  </template></oj-bind-for-each>
+                </ul>
+                <oj-bind-if test="[[ $functions.placesLinks($variables.menuInfo).length > 0 ]]">
+                  <details class="nx-cr-links"><summary><oj-bind-text value="[[ 'Also linked from ' + $functions.placesLinks($variables.menuInfo).length + ' other page(s) — not needed for a new page' ]]"></oj-bind-text></summary>
+                    <ul class="nx-cr-places"><oj-bind-for-each data="[[ $functions.placesLinks($variables.menuInfo) ]]"><template data-oj-as="p"><li><code><oj-bind-text value="[[ p.data.file ]]"></oj-bind-text></code></li></template></oj-bind-for-each></ul>
+                  </details>
+                </oj-bind-if>
+              </div>
+            </oj-bind-if>
+          </div>
+        </oj-bind-if>
         <div class="nx-card nx-sc-sec" id="crReqCard">
-          <h2>What should change</h2>
-          <p class="nx-note">Say it as you would to a developer: what is on the page now, what it should do instead, and why. This is what the AI is asked to make.</p>
+          <h2><oj-bind-text value="[[ $variables.cr.kind === 'page' ? 'What the new page should do' : 'What should change' ]]"></oj-bind-text></h2>
+          <p class="nx-note"><oj-bind-text value="[[ $variables.cr.kind === 'page' ? 'Say what the page shows and does, who uses it, what it reads and saves. The Knowledge base tab adds the FDD sections and rules to build it from.' : 'Say it as you would to a developer: what is on the page now, what it should do instead, and why. This is what the AI is asked to make.' ]]"></oj-bind-text></p>
           <textarea class="nx-fx-text nx-cr-text" id="crRequest" rows="6" data-field="request" :value="[[ $variables.cr.request ]]" on-change="[[ $listeners.onField ]]" placeholder="e.g. Add a Home button before the Next button; it goes back to the dashboard."></textarea>
           <h2 class="nx-cr-h2">Notes</h2>
           <textarea class="nx-fx-text nx-cr-text" id="crNotes" rows="3" data-field="notes" :value="[[ $variables.cr.notes ]]" on-change="[[ $listeners.onField ]]" placeholder="Anything else: agreed with whom, screenshots sent by e-mail, what to watch for…"></textarea>
@@ -261,6 +308,59 @@
             <button type="button" class="nx-btn nx-btn--sm" id="crSave2" data-act="save" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.fixBusy ]]">Save</button>
             <button type="button" class="nx-btn nx-btn--sm nx-btn--primary nx-aibtn" id="crAskFromReq" data-act="ask" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.fixBusy || !$functions.canAskNew($variables.cr, $variables.fix) ]]" :title="[[ $functions.canAskNew($variables.cr, $variables.fix) ? 'Saves it, then the AI reads the page and proposes the change' : ($variables.fix ? 'A proposal is already under way: see Code fix' : 'Pick the page and say what should change first') ]]"><span aria-hidden="true">✨</span>Save &amp; ask the AI to make it</button>
             <span class="nx-note"><oj-bind-text value="[[ !$variables.cr.page ? 'Pick the page first (header).' : 'It opens Code fix with the AI\'s proposal — nothing is written to the code until you approve it.' ]]"></oj-bind-text></span>
+          </div>
+        </div>
+      </oj-bind-if>
+
+      <!-- Knowledge base: what the AI builds it from — an FDD's sections (functional and technical) and your notes -->
+      <oj-bind-if test="[[ $variables.crTab === 'kb' ]]">
+        <oj-bind-if test="[[ $variables.kbAsk ]]">
+          <div class="nx-cr-kbask" id="crKbAsk">
+            <span class="oj-ux-ico-information" aria-hidden="true"></span>
+            <div><b>Before the AI makes the page: what should it build it from?</b><span class="nx-note">Choose the FDD and tick its sections — the functional ones (what the page does) and the technical ones (its services, data, errors) — and add your notes or rules. Without them the AI works only from your request and the page it is like.</span></div>
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="crKbGoOn" data-act="ask" data-key="force" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.fixBusy ]]">Ask the AI now, without</button>
+          </div>
+        </oj-bind-if>
+        <div class="nx-card nx-sc-sec" id="crKbCard">
+          <div class="nx-sc-head"><div><h2>Knowledge base</h2><span class="nx-note" id="crKbSum"><oj-bind-text value="[[ 'What the AI builds from, besides the code: ' + $functions.kbSummary($variables.cr.knowledge, $variables.kbDoc) ]]"></oj-bind-text></span></div></div>
+          <div class="nx-cr-kbtop">
+            <label class="nx-sc-hf nx-cr-kbfdd"><span>FDD (from the FDD library)</span>
+              <select class="nx-cm-input" id="crKbFdd" data-field="kb.fdd" on-change="[[ $listeners.onField ]]">
+                <oj-bind-for-each data="[[ $functions.fddOptions($variables.fddLib, $variables.cr.knowledge && $variables.cr.knowledge.fdd) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+              </select></label>
+            <oj-bind-if test="[[ !!$variables.kbDoc ]]">
+              <button type="button" class="nx-btn nx-btn--sm nx-aibtn" id="crKbSuggest" data-act="kbSuggest" on-click="[[ $listeners.onAct ]]"><span aria-hidden="true">✨</span>Tick the sections that match the request</button>
+              <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="crKbClear" data-act="kbClear" on-click="[[ $listeners.onAct ]]">Untick all</button>
+            </oj-bind-if>
+          </div>
+          <oj-bind-if test="[[ !!$variables.kbDoc ]]">
+            <div class="nx-sc-listbar nx-cr-kbbar">
+              <oj-bind-for-each data="[[ $functions.kbChips($variables.kbDoc, $variables.cr.knowledge, $variables.kbFilter) ]]"><template data-oj-as="c">
+                <button type="button" :class="[[ c.data.cls ]]" data-act="kbFilter" :data-key="[[ c.data.key ]]" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ c.data.text ]]"></oj-bind-text></button>
+              </template></oj-bind-for-each>
+              <span class="nx-min-flex"></span>
+              <input type="search" class="nx-cm-input nx-cr-kbq" id="crKbQ" placeholder="Find a section…" data-field="kbQ" :value="[[ $variables.kbQ ]]" on-input="[[ $listeners.onField ]]">
+            </div>
+            <div class="nx-cr-kblist" id="crKbList">
+              <oj-bind-for-each data="[[ $functions.kbRows($variables.kbDoc, $variables.cr.knowledge, $variables.kbFilter, $variables.kbQ) ]]"><template data-oj-as="r">
+                <button type="button" :class="[[ $functions.kbRowClass(r.data) ]]" data-act="kbToggle" :data-key="[[ r.data.key ]]" on-click="[[ $listeners.onAct ]]" :aria-pressed="[[ r.data.on ? 'true' : 'false' ]]">
+                  <span class="nx-cr-kbtick" aria-hidden="true"><oj-bind-text value="[[ r.data.on ? '☑' : '☐' ]]"></oj-bind-text></span>
+                  <span class="nx-cr-kbn"><oj-bind-text value="[[ r.data.n ]]"></oj-bind-text></span>
+                  <span class="nx-cr-kbt"><oj-bind-text value="[[ r.data.t ]]"></oj-bind-text></span>
+                  <oj-bind-if test="[[ r.data.tech ]]"><span class="nx-cr-kbtech">Technical</span></oj-bind-if>
+                  <span class="nx-note"><oj-bind-text value="[[ r.data.chars ? r.data.chars + ' chars' : '' ]]"></oj-bind-text></span>
+                </button>
+              </template></oj-bind-for-each>
+            </div>
+          </oj-bind-if>
+          <h2 class="nx-cr-h2">Notes and rules</h2>
+          <textarea class="nx-fx-text nx-cr-text" id="crKbNotes" rows="4" data-field="kb.notes" :value="[[ ($variables.cr.knowledge && $variables.cr.knowledge.notes) || '' ]]" on-change="[[ $listeners.onField ]]" placeholder="Business rules, the services or tables to use, what the customer agreed, what not to do…"></textarea>
+          <oj-bind-if test="[[ $functions.kbHas($variables.cr.knowledge) ]]">
+            <details class="nx-cr-kbprev" id="crKbPreview"><summary><oj-bind-text value="[[ 'What the AI will read (' + $functions.kbText($variables.kbDoc, $variables.cr.knowledge).length + ' characters)' ]]"></oj-bind-text></summary><pre><oj-bind-text value="[[ $functions.kbText($variables.kbDoc, $variables.cr.knowledge) ]]"></oj-bind-text></pre></details>
+          </oj-bind-if>
+          <div class="nx-fx-row nx-cr-reqbar">
+            <button type="button" class="nx-btn nx-btn--sm" id="crKbSave" data-act="save" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.fixBusy ]]">Save</button>
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--primary nx-aibtn" id="crKbAsk2" data-act="ask" data-key="force" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.fixBusy || !$functions.canAskNew($variables.cr, $variables.fix) ]]"><span aria-hidden="true">✨</span><oj-bind-text value="[[ $variables.cr.kind === 'page' ? 'Save & ask the AI to make the page' : 'Save & ask the AI to make it' ]]"></oj-bind-text></button>
           </div>
         </div>
       </oj-bind-if>
@@ -297,8 +397,9 @@
               <h2>Make it with Code Fix</h2>
               <blockquote class="nx-fx-req" id="crAskReq"><oj-bind-text value="[[ $functions.askText($variables.cr) || 'Nothing asked yet: say what should change in Request.' ]]"></oj-bind-text></blockquote>
               <div class="nx-note"><oj-bind-text value="[[ $functions.askFacts($variables.cr, $variables.pages) ]]"></oj-bind-text></div>
+              <div class="nx-note" id="crAskKb"><span class="oj-ux-ico-book" aria-hidden="true"></span> <oj-bind-text value="[[ 'Knowledge base: ' + $functions.kbSummary($variables.cr.knowledge, $variables.kbDoc) ]]"></oj-bind-text></div>
               <div class="nx-fx-row">
-                <button type="button" class="nx-btn nx-btn--primary nx-aibtn" id="crAsk" data-act="ask" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.fixBusy || !$functions.canAsk($variables.cr) || !($variables.fixInfo && $variables.fixInfo.ok) ]]"><span aria-hidden="true">✨</span>Ask the AI for the change</button>
+                <button type="button" class="nx-btn nx-btn--primary nx-aibtn" id="crAsk" data-act="ask" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.fixBusy || !$functions.canAsk($variables.cr) || !($variables.fixInfo && $variables.fixInfo.ok) ]]"><span aria-hidden="true">✨</span><oj-bind-text value="[[ $variables.cr.kind === 'page' ? 'Ask the AI to make the page' : 'Ask the AI for the change' ]]"></oj-bind-text></button>
                 <span class="nx-note">The AI reads the page's code and proposes the exact change; nothing is written until you approve it.</span>
               </div>
             </div>

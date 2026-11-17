@@ -113,6 +113,39 @@
     "codeBusy": {
       "type": "boolean",
       "defaultValue": false
+    },
+    "menuInfo": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "A new page: the app's menu (groups, items), its flows and where a page like it is registered (/__fix/app-menu)."
+    },
+    "fddLib": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "The FDD library's documents (resources/fdd/library.json)."
+    },
+    "kbDoc": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The FDD chosen for the knowledge base, with its sections."
+    },
+    "kbFilter": {
+      "type": "string",
+      "defaultValue": "all",
+      "description": "all | functional | technical"
+    },
+    "kbQ": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "kbAsk": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "Asked for a knowledge base before the AI makes a new page (shown once; Ask the AI now goes on without)."
+    },
+    "kbSkip": {
+      "type": "boolean",
+      "defaultValue": false
     }
   },
   "events": {

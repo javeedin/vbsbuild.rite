@@ -1,4 +1,5 @@
-define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pagesClient', 'resources/js/shellBus', 'resources/js/codeView', 'resources/js/crAnalytics'], (ActionChain, FX, PC, bus, CV, CRA) => {
+define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pagesClient', 'resources/js/shellBus', 'resources/js/codeView', 'resources/js/crAnalytics', 'resources/js/fddClient', 'resources/js/crKnowledge'],
+  (ActionChain, FX, PC, bus, CV, CRA, FC, K) => {
   'use strict';
 
   // Change requests. The screen opens on the list; + New change request (or a row) opens one in a tab of its own: its
@@ -9,6 +10,9 @@ define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pag
   // one:  field (key, value) | save | delete | tab (key) | openPage
   //   Code fix: ask | refine | apply | applyNoPull | run | commit | push | openProject | undo | undoForce | test | discard
   //   | openFix (key) | newAttempt
+  //   New page: field np.* (title, name, flow, group, label, icon, after) — the app's menu and where a page like it is
+  //   registered read again as the group / place changes. Knowledge base: field kb.fdd / kb.notes / kbQ | kbFilter (key)
+  //   | kbToggle (key) | kbSuggest | kbClear; ask with key 'force' goes on without one.
   const copy = (o) => JSON.parse(JSON.stringify(o || null));
   class crChain extends ActionChain {
     async run(context, { act, key, value }) {
@@ -21,6 +25,26 @@ define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pag
       const retitle = () => { if (v.crId && v.cr && v.cr.id) { try { bus.rename(tabId(), (v.cr.code ? v.cr.code + ' · ' : '') + (v.cr.title || String(v.cr.request || '').split('\n')[0].slice(0, 50) || 'Change request')); } catch (e) { /* no shell */ } } };
 
       // ── the list ──
+      // a new page: the app's menu, its flows, where a page like it is registered (for the group / place chosen)
+      const loadMenu = async () => {
+        if (!v.cr || v.cr.kind !== 'page' || !v.cr.page) { v.menuInfo = null; return; }
+        const np = v.cr.newPage || {};
+        const r = await FX.appMenu(v.cr.page, np.group || '', np.after || '');
+        v.menuInfo = r.ok ? r.body : { error: (r.body && r.body.error) || 'The app\'s menu could not be read.' };
+        if (r.ok && !np.flow) v.cr = Object.assign({}, v.cr, { newPage: Object.assign({}, np, { flow: r.body.likeFlow || '' }) });
+      };
+      // the knowledge base's FDD, with its sections
+      const loadDoc = async () => {
+        const id = v.cr && v.cr.knowledge && v.cr.knowledge.fdd;
+        if (!id) { v.kbDoc = null; return; }
+        if (v.kbDoc && v.kbDoc.id === id) return;
+        const d = (v.fddLib || []).filter((x) => x.id === id)[0];
+        const r = await FC.doc(context.$application.path, id, d ? d.uploadedAt : '');
+        v.kbDoc = r.ok ? Object.assign({ id: id }, r.body) : null;
+      };
+      const kb = () => Object.assign({ fdd: '', fddLabel: '', sections: [], notes: '' }, (v.cr && v.cr.knowledge) || {});
+      const setKb = (patch) => { v.cr = Object.assign({}, v.cr, { knowledge: Object.assign(kb(), patch) }); };
+      const kebab = (t) => String(t || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').replace(/^(\d)/, 'p-$1').slice(0, 60);
       const loadList = async () => { const l = await FX.crList(''); if (l.ok) { v.all = l.body.requests || []; v.an = CRA.model(v.all, { weeks: 12 }); } else say(l); };
       // ── one change request: its Code Fix attempts (Code Fix's own list for its page, the ones it made) ──
       const loadAttempts = async () => {
@@ -62,11 +86,12 @@ define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pag
         jira: '', issue: '', dueOn: '', fixedOn: '', fixedBy: '', state: 'open', notes: '', fixes: [], events: [], status: 'new', statusText: 'New' });
       const openOne = async () => {
         v.fix = null; v.attempts = []; v.result = null; v.fixResult = null; v.refine = ''; v.crTab = 'request';
+        v.menuInfo = null; v.kbDoc = null; v.kbAsk = false; v.kbSkip = false;
         if (/^new/.test(String(v.crId))) { v.cr = blank(v.page); return; }
         const g = await FX.crGet(v.crId);
         if (!g.ok) { say(g); v.cr = null; return; }
         v.cr = copy(g.body.request);
-        await Promise.all([loadAttempts(), loadFix()]);
+        await Promise.all([loadAttempts(), loadFix(), loadMenu(), loadDoc()]);
         retitle();
       };
       const save = async () => {
@@ -77,7 +102,8 @@ define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pag
       };
 
       if (act === 'load') {
-        const [c, i] = await Promise.all([PC.catalog(context.$application.path), FX.info()]);
+        const [c, i, lib] = await Promise.all([PC.catalog(context.$application.path), FX.info(), FC.library(context.$application.path)]);
+        v.fddLib = lib && lib.ok ? (lib.body.docs || []) : [];
         v.pages = c && c.ok && c.body ? (c.body.pages || []) : [];
         v.fixInfo = i.ok ? i.body : { ok: false, error: (i.body && i.body.error) || 'Code Fix needs the desktop app.' };
         if (v.crId) { await openOne(); return; }
@@ -110,10 +136,36 @@ define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pag
       if (!v.cr) return;
       if (act === 'field') {
         if (key === 'refine') { v.refine = String(value == null ? '' : value); return; }
+        const val = String(value == null ? '' : value);
+        // a new page: what it is and where it goes in the menu
+        if (/^np\./.test(key)) {
+          const k = key.slice(3);
+          const np = Object.assign({ title: '', name: '', flow: '', group: '', label: '', icon: '', after: '' }, v.cr.newPage || {});
+          if (k === 'title' && (!np.name || np.name === kebab(np.title))) np.name = kebab(val); // the name follows the title until it is typed
+          if (k === 'title' && (!np.label || np.label === np.title)) np.label = val;
+          if (k === 'group') np.after = '';
+          np[k] = k === 'name' ? kebab(val) : val;
+          v.cr = Object.assign({}, v.cr, { newPage: np }, k === 'title' && !v.cr.title ? { title: val } : {});
+          if (k === 'group' || k === 'after') await loadMenu();
+          return;
+        }
+        // the knowledge base: the FDD, the notes, the sections' search
+        if (key === 'kb.fdd') {
+          const d = (v.fddLib || []).filter((x) => x.id === val)[0];
+          setKb({ fdd: val, fddLabel: d ? d.name + (d.version ? ' v' + d.version : '') : '', sections: val === kb().fdd ? kb().sections : [] });
+          v.kbDoc = null;
+          await loadDoc();
+          return;
+        }
+        if (key === 'kb.notes') { setKb({ notes: val }); return; }
+        if (key === 'kbQ') { v.kbQ = val; return; }
         const patch = {};
         patch[key] = String(value == null ? '' : value);
         if (key === 'page') patch.pageLabel = labelOf(patch.page);
+        // a new page: made like the page picked; its title from the request's title to start with
+        if (key === 'kind' && patch.kind === 'page' && !v.cr.newPage) patch.newPage = { title: v.cr.title || '', name: kebab(v.cr.title), flow: '', group: '', label: v.cr.title || '', icon: '', after: '' };
         v.cr = Object.assign({}, v.cr, patch);
+        if ((key === 'kind' || key === 'page') && v.cr.kind === 'page') await loadMenu();
         return;
       }
       if (act === 'tab') {
@@ -147,6 +199,20 @@ define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pag
         if (w && w.key) bus.open({ record: 'vbs-project', params: { key: w.key, name: w.name, ws: w.ws } });
         return;
       }
+      // the knowledge base: filter, tick a section, suggest from the request, clear
+      if (act === 'kbFilter') { v.kbFilter = String(key || 'all'); return; }
+      if (act === 'kbToggle') { const ks = kb().sections.slice(); const i = ks.indexOf(key); if (i === -1) ks.push(key); else ks.splice(i, 1); setKb({ sections: ks }); return; }
+      if (act === 'kbSuggest') {
+        if (!v.kbDoc) { say({ ok: false, body: { error: 'Choose an FDD first.' } }); return; }
+        const np = v.cr.newPage || {};
+        const got = K.suggest(v.kbDoc, [v.cr.title, v.cr.request, np.title].filter(Boolean).join('. '));
+        const ks = kb().sections.slice();
+        got.forEach((k) => { if (ks.indexOf(k) === -1) ks.push(k); });
+        setKb({ sections: ks });
+        say({ ok: true }, got.length ? got.length + ' section' + (got.length === 1 ? '' : 's') + ' of the FDD match the request: ticked.' : 'No section of this FDD matches the request\'s words: tick them by hand.');
+        return;
+      }
+      if (act === 'kbClear') { setKb({ sections: [] }); return; }
       if (act === 'openFix') { const g = await FX.get(key); if (g.ok) { v.fix = g.body.fix; v.fixResult = null; v.code = null; } else say(g); return; }
       if (act === 'newAttempt') { v.fix = null; v.fixResult = null; v.refine = ''; return; }
 
@@ -164,18 +230,33 @@ define(['vb/action/actionChain', 'resources/js/codeFixClient', 'resources/js/pag
           if (!v.cr.page) { v.fixResult = { ok: false, text: 'Pick the page this change is for (in the header) first.' }; return; }
           const request = String(v.cr.request || v.cr.title || '').trim();
           if (!refine && !request) { v.fixResult = { ok: false, text: 'Say what should change first (Request tab).' }; return; }
+          const isPage = v.cr.kind === 'page';
+          const np = Object.assign({}, v.cr.newPage || {});
+          if (isPage && !refine) {
+            if (!np.title) { v.crTab = 'request'; v.fixResult = { ok: false, text: 'Give the new page a title (Request tab, The new page).' }; return; }
+            np.name = np.name || kebab(np.title);
+            np.flow = np.flow || (v.menuInfo && v.menuInfo.likeFlow) || '';
+            // before the AI makes a page: what should it build it from? (asked once; "Ask the AI now" goes on without)
+            const has = kb().sections.length || String(kb().notes || '').trim();
+            if (!has && key !== 'force' && !v.kbSkip) { v.crTab = 'kb'; v.kbAsk = true; return; }
+          }
+          if (key === 'force') v.kbSkip = true;
+          v.kbAsk = false;
+          if (v.cr.knowledge && v.cr.knowledge.fdd) await loadDoc();
+          const knowledge = K.text(v.kbDoc, kb().sections, kb().notes);
           if (refine && (!v.fix || !String(v.refine || '').trim())) { v.fixResult = { ok: false, text: 'Say what to change in the proposal.' }; return; }
           // saved first: the attempt belongs to it (a new one gets its CR number now)
           const s = await save();
           if (!s.ok) { fail(s); return; }
-          v.fixProgress = (refine ? 'Asking ' + ai + ' again with what you said' : 'Reading ' + labelOf(v.cr.page) + '\'s code and asking ' + ai) + ' — a careful answer takes a minute or two. Nothing is changed in the code.';
+          v.fixProgress = (refine ? 'Asking ' + ai + ' again with what you said' : (isPage ? 'Reading ' + labelOf(v.cr.page) + ' (the page it is like) and where your app registers its pages, and asking ' : 'Reading ' + labelOf(v.cr.page) + '\'s code and asking ') + ai)
+            + (knowledge ? ', with your knowledge base' : '') + ' — a careful answer takes a minute or two. Nothing is changed in the code.';
           const refs = { jira: v.cr.jira || '', issue: v.cr.issue || v.cr.code || '' };
-          const r = await FX.analyze(refine ? { id: v.cr.page, request: v.fix.request, kind: v.fix.kind, refine: v.refine.trim(), parent: v.fix.id, images: [] }
-            : { id: v.cr.page, request: request, kind: v.cr.kind, images: [], refs: refs });
+          const r = await FX.analyze(refine ? { id: v.cr.page, request: v.fix.request, kind: v.fix.kind, refine: v.refine.trim(), parent: v.fix.id, images: [], knowledge: knowledge }
+            : Object.assign({ id: v.cr.page, request: request, kind: v.cr.kind, images: [], refs: refs, knowledge: knowledge }, isPage ? { newPage: np } : {}));
           if (!r.ok) { fail(r); return; }
           v.fix = r.body.fix;
           if (refine) { v.refine = ''; try { const el = document.getElementById('crRefine'); if (el) el.value = ''; } catch (e) { /* no DOM */ } }
-          const l = await FX.crLink(v.cr.id, v.fix.id, refine ? 'asked again' : 'asked the AI');
+          const l = await FX.crLink(v.cr.id, v.fix.id, refine ? 'asked again' : (isPage ? 'asked the AI for the page' : 'asked the AI'));
           if (l.ok) v.cr = copy(l.body.request);
           v.crTab = 'fix';
           await loadAttempts();

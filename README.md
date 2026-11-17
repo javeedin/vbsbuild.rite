@@ -223,6 +223,29 @@ Its status follows its Code fix — New, Proposed, Applied, **Fixed** once its c
 by themselves), Undone — unless you set it On hold, Closed or Rejected. A request kept past its due date and not fixed
 says *overdue*. Change requests are kept on this PC per VB Studio project.
 
+### A new page, linked into your app's menu
+
+A change request of the kind **New page** makes a page that is not there yet. Pick the page it is **like** (in the
+header): the new one gets the same template, layout and style. Then, in **The new page**: its title (the page name and
+its files follow it — `flows/<flow>/pages/<name>-page.html`, `.js`, `.json`), its flow, and where it goes in the menu:
+a group of your app's menu (or *not in the menu*), its label, its icon and its place (after which item).
+
+Build.Rite does not assume how your app's menu works: it **learns it from the code** — the groups and items of the
+menu (an `app-flow.js` like `NAV_GROUPS`, a `nav.js`, the shell page) with each item's route, the flows and their
+pages — and finds **every place a page in the menu is registered**: its flow's list of pages, the menu item, the maps
+of menu id → flow and page or page → menu id, the navigation chain. **How it gets linked** lists them; links from other
+pages (a page that opens it) are kept apart, as a new page does not need them. The AI is told to add the new page to
+every one of those places the same way, with the exact text of those files to copy from, and the proposal is checked
+for it: the page's files are made, the page is linked in every place, and its label is in the menu — a place left out
+is asked again. Approving writes the page and its links in your working folder and saves them, like any Code fix.
+
+**Knowledge base** (a tab of every change request; for a new page, asking the AI asks for it first): what the AI
+builds from besides the code. Choose an **FDD of the FDD library** and tick its sections — **functional and technical**
+alike (a section whose heading, or a heading above it, says technical design, integration, interface, API, service,
+data model, table, report, security, errors… is tagged *Technical*; the chips filter All / Functional / Technical) —
+or let **Tick the sections that match the request** choose; add your **notes and rules**. *What the AI will read* shows
+the text exactly. (Analyze with AI on a Jira story keeps choosing its FDD as before.)
+
 **Analytics** (the tab beside Requests) works the figures out across every change request: how many, open and fixed,
 the average and median time to fix (from the day it was asked to the day its change was saved), how many were fixed at
 the first try, the lines and files changed, what is overdue; where they are (status) and what kind of change they are;
@@ -366,7 +389,7 @@ Options:
 | Path | What |
 |---|---|
 | `webApps/buildrite/` | Build.Rite's screens: a Visual Builder app (`app-flow.*`, `pages/shell-page*`, `flows/insights`, `flows/fdd`, `resources/js`, `resources/css`) |
-| `desktop/` | the Electron desktop app: `main.js` (the window, the stores, ▶ Run, the Run console), `lib/` (the engines: `vbs.js` VB Studio and your workspace, `workPreview.js` building it, `codeFix.js` and `changeNote.js`, `changeRequests.js` (+ `resources/js/crAnalytics.js`), `issues.js`, `pages.js`, `pageScan.js`, `devserver.js` the local server, `appRoles.js` the roles in your app's code, …) |
+| `desktop/` | the Electron desktop app: `main.js` (the window, the stores, ▶ Run, the Run console), `lib/` (the engines: `vbs.js` VB Studio and your workspace, `workPreview.js` building it, `codeFix.js` and `changeNote.js`, `changeRequests.js` (+ `resources/js/crAnalytics.js`, `crKnowledge.js`), `appMenu.js` (your app's menu and where its pages are registered), `issues.js`, `pages.js`, `pageScan.js`, `devserver.js` the local server, `appRoles.js` the roles in your app's code, …) |
 | `services/jira/` | the Jira service connection the Jira screens read through (read only) |
 | `tools/` | `run-vb-app.js` (run a VB app from its folder), `check-tools.js` (build preflight), `get-electron.js`, `fdd.js` (the FDD library from a terminal) |
 | `tests/` | dependency-free `node` test suites (`npm test`), and browser tests in `tests/e2e` (Playwright) |

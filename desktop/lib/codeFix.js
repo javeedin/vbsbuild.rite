@@ -43,6 +43,7 @@ const crypto = require('crypto');
 const scan = require('./pageScan');
 const gitPaths = require('./gitPaths');
 const changeNote = require('./changeNote');
+const appMenu = require('./appMenu');
 const { runGit } = gitPaths;
 
 const MAX_CODE = 170000;    // characters of code sent to the AI
@@ -282,6 +283,42 @@ function diffOf(rel, oldText, newText) {
   });
   hunks.forEach((h) => { const f = h.rows.filter((r) => r.o)[0] || h.rows[0]; h.head = 'line ' + (f.o || f.n); });
   return { file: rel, created: oldText == null, added: rows.filter((r) => r.t === '+').length, removed: rows.filter((r) => r.t === '-').length, hunks: hunks };
+}
+
+// ── A new page (Change requests → New page): made like an existing page, linked where the app registers its pages ──
+/**
+ * Its checks, on the edits tried: its files made, linked in every place the app registers a page like it (its flow's
+ * page list, the menu, route maps, the navigation chain…) and, when it goes in the menu, its label in the menu file.
+ */
+function newPageChecks(np, files) {
+  if (!np) return [];
+  const out = [];
+  const made = ['.html', '.js', '.json'].map((x) => np.base + x).filter((rel) => !(files[rel] && files[rel].old == null));
+  out.push({ file: np.base + '.html', name: 'the new page\'s files are made (' + np.name + '-page.html, .js and .json)', ok: !made.length, detail: made.length ? 'missing: ' + made.join(', ') : '' });
+  const missing = np.places.filter((rel) => !(files[rel] && files[rel].neu.indexOf(np.name) !== -1));
+  out.push({ file: np.places[0] || np.base + '.json', name: 'the new page is linked in every place the app registers a page (' + np.places.length + ' file' + (np.places.length === 1 ? '' : 's') + ', like ' + np.refLabel + ')', ok: !missing.length, detail: missing.length ? 'not added in: ' + missing.join(', ') : '' });
+  if (np.menu && np.menuFile) {
+    const mf = files[np.menuFile];
+    out.push({ file: np.menuFile, name: 'it is in the menu, under ' + np.menu.group + ', as "' + np.menu.label + '"', ok: !!(mf && mf.neu.indexOf(np.menu.label) !== -1), detail: mf ? '' : 'the menu file was not changed' });
+  }
+  return out;
+}
+/** What the AI is told for a new page: what to make, like which page, where the app registers a page and how. */
+function newPageText(np, excerpt) {
+  const lines = [
+    '', 'NEW PAGE — this request is for a NEW page. Do not change the page above (its files are only the model): make a new one.',
+    '  Title: ' + np.title,
+    '  Its files, each a FILE with an empty SEARCH and the whole file as REPLACE: ' + np.base + '.html, ' + np.base + '.js, ' + np.base + '.json'
+      + ' — and ' + np.base + '-chains/<ChainName>.js for every chain it runs.',
+    '  Make it like PAGE ' + np.likeLabel + ' (its complete files are in CODE below): the same page template and layout, the same header actions style, naming, chains, services and JSON shape.',
+    np.menu ? '  Menu: put it in the app\'s menu under "' + np.menu.group + '", labelled "' + np.menu.label + '"' + (np.menu.icon ? ', icon ' + np.menu.icon : '') + (np.menu.after ? ', right after "' + np.menu.after + '"' : '') + '.'
+      : '  Menu: NOT in the menu (it is opened from another page): register it in its flow only.',
+    '', 'HOW THIS APP REGISTERS A PAGE: the page ' + np.refLabel + ' (page ' + np.refPage + (np.refNavId ? ', menu id ' + np.refNavId : '') + ') is named in each place below. Add the new page to EVERY one of them,'
+      + ' the same way and next to it (the same fields; a new menu id like the others — for this page "' + np.name + '" unless the others follow another pattern; a new access code like theirs, if they have one,'
+      + ' and say under Risks that it must be given to roles where the app keeps them):'
+  ].concat(np.placesInfo.map((x) => '  - ' + x.file + ': ' + x.kinds.join('; ') + ' (line' + (x.lines.length === 1 ? ' ' : 's ') + x.lines.map((l) => l.n).join(', ') + ')'));
+  lines.push('', 'REGISTRATION FILES (exact text; copy SEARCH lines from here)', excerpt);
+  return lines.join('\n') + '\n';
 }
 
 // ── The checks: the page rules the tests enforce, on the new code (a rule the old code broke too is "already") ───────
@@ -624,6 +661,58 @@ function open(opts) {
     return L.join('\n');
   }
 
+  /**
+   * A new page asked (Change requests → New page): checked and placed — its name, its flow, its menu group — and the
+   * places the app registers a page like it (from the menu item it goes after, else the page it is made like).
+   * → { title, name, flow, base, menu, places, placesInfo, excerpt… } | { error }
+   */
+  function newPageOf(x, f, facts) {
+    const title = str(x.title).trim().slice(0, 120);
+    if (!title) return { error: 'Give the new page a title.' };
+    const name = appMenu.kebab(x.name || title);
+    if (!/^[a-z][a-z0-9-]{1,59}$/.test(name)) return { error: 'The page name must be letters, digits and dashes (e.g. equipment-report).' };
+    const flows = appMenu.flows(f, facts.app);
+    const flow = str(x.flow) || facts.flow;
+    const fl = flows.filter((z) => z.flow === flow)[0];
+    if (!fl) return { error: 'There is no flow "' + flow + '" in the app.' };
+    const base = 'webApps/' + facts.app + '/flows/' + flow + '/pages/' + name + '-page';
+    if (fl.pages.indexOf(name) !== -1 || fs.existsSync(path.join(f, base + '.html'))) return { error: 'There is a page "' + name + '" in ' + flow + ' already: give the new page another name.' };
+    const m = appMenu.menu(f, facts.app);
+    const group = str(x.group) ? m.groups.filter((g) => g.key === str(x.group) || g.label === str(x.group))[0] : null;
+    if (str(x.group) && !group) return { error: 'There is no menu group "' + x.group + '" in the app\'s menu.' };
+    const after = group ? (group.items.filter((it) => it.id === str(x.after))[0] || group.items[group.items.length - 1]) : null;
+    // the page it is registered like: the menu item it goes after (in the menu), else the page it is made like
+    const ref = after && after.route ? { flow: after.route.flow, page: after.route.page } : { flow: facts.flow, page: facts.page };
+    const reg = appMenu.registrations(f, facts.app, ref);
+    let needed = reg.places.filter((pl) => pl.needed);
+    if (!group) needed = needed.filter((pl) => /-flow\.json$/.test(pl.file)); // not in the menu: its flow only
+    const flowJson = fl.file;
+    needed = needed.filter((pl) => !/-flow\.json$/.test(pl.file) || pl.file === flowJson);
+    if (!needed.some((pl) => pl.file === flowJson)) needed.unshift({ file: flowJson, kinds: ['its flow\'s list of pages (where the new page goes)'], lines: [{ n: 1, text: '' }], needed: true });
+    return {
+      title: title, name: name, flow: flow, app: facts.app, base: base, page: facts.app + '/' + flow + '/' + name,
+      like: facts.id, likeLabel: facts.label || facts.id, refPage: ref.flow + '/' + ref.page, refNavId: reg.ref.navId, refLabel: reg.ref.label || ref.page,
+      menu: group ? { group: group.label, key: group.key, label: str(x.label).trim().slice(0, 80) || title, icon: str(x.icon).trim().slice(0, 60) || (after && after.icon) || '', after: after ? after.label : '', afterId: after ? after.id : '' } : null,
+      menuFile: m.file, places: needed.map((pl) => pl.file), placesInfo: needed.map((pl) => ({ file: pl.file, kinds: pl.kinds, lines: pl.lines })),
+      links: reg.places.filter((pl) => !pl.needed).map((pl) => pl.file), excerpt: appMenu.excerpts(f, needed)
+    };
+  }
+  /** The app's menu, its flows and where a page like `ref` is registered — for the New page form. */
+  function appMenuOf(b) {
+    const f = folder();
+    const facts = scan.analyze(f, str(b && b.id));
+    if (!facts) return no('Pick the page the new one is like first.');
+    const m = appMenu.menu(f, facts.app);
+    const fls = appMenu.flows(f, facts.app);
+    const x = b || {};
+    const group = str(x.group) ? m.groups.filter((g) => g.key === str(x.group))[0] : null;
+    const after = group ? (group.items.filter((it) => it.id === str(x.after))[0] || group.items[group.items.length - 1]) : null;
+    const ref = after && after.route ? { flow: after.route.flow, page: after.route.page } : { flow: facts.flow, page: facts.page };
+    const reg = appMenu.registrations(f, facts.app, ref);
+    return { ok: true, app: facts.app, like: facts.id, likeFlow: facts.flow, menu: m, flows: fls.map((z) => ({ flow: z.flow, pages: z.pages, file: z.file })), ref: reg.ref,
+      places: reg.places.map((pl) => ({ file: pl.file, kinds: pl.kinds, lines: pl.lines.slice(0, 6), needed: pl.needed })) };
+  }
+
   async function analyze(b) {
     b = b || {};
     if (!o.ai || typeof o.ai.chat !== 'function') return no('No AI is set up: choose one in AI settings.');
@@ -643,7 +732,9 @@ function open(opts) {
     if (!images.length && parent && (parent.images || []).length) {
       images = parent.images.map((im) => { try { return { name: im.name, mime: im.mime, base64: fs.readFileSync(path.join(fixDir(parent.id), im.file)).toString('base64') }; } catch (e) { return null; } }).filter(Boolean);
     }
-    const kind = { fix: 'Fix a bug', enhance: 'Enhance', change: 'Change' }[str(b.kind)] || '';
+    const np = b.newPage ? newPageOf(b.newPage, f, facts) : (parent && parent.newPage && parent.newPageAsked ? newPageOf(parent.newPageAsked, f, facts) : null);
+    if (np && np.error) return no(np.error);
+    const kind = { fix: 'Fix a bug', enhance: 'Enhance', change: 'Change', page: 'New page' }[str(b.kind)] || (np ? 'New page' : '');
     let user = 'REQUEST' + (kind ? ' (' + kind + ')' : '') + ':\n' + request + '\n';
     if (parent && str(b.refine).trim()) {
       user += '\nYOUR EARLIER PROPOSAL for this request:\n' + str(parent.markdown).slice(0, 12000) + '\n\nIts edits touched: ' + (parent.files || []).join(', ')
@@ -653,6 +744,10 @@ function open(opts) {
     user += '\nFACTS\n' + factsText(facts) + '\n\nCODE (complete files; copy SEARCH lines exactly from here)\n' + code.text;
     if (code.skipped.length) user += '\n(Not included, too large: ' + code.skipped.join(', ') + ')\n';
     if (str(b.context).trim()) user += '\n' + str(b.context).trim().slice(0, 40000) + '\n';
+    if (np) user += newPageText(np, np.excerpt);
+    // what the person gave the AI to build from (Change requests → Knowledge base: FDD sections, rules, notes)
+    const knowledge = str(b.knowledge || (parent && parent.knowledge) || '').trim().slice(0, 40000);
+    if (knowledge) user += '\nKNOWLEDGE BASE (given by the person — the FDD sections, business rules and notes this ' + (np ? 'page' : 'change') + ' must follow; use it, and where it disagrees with the code, say so under Risks):\n' + knowledge + '\n';
     // an issue (Build.Rite's Issues): its verdict first, its number in the comments of the code it changes
     const issue = b.issue && b.issue.key ? { key: str(b.issue.key).slice(0, 40), title: str(b.issue.title).slice(0, 200), number: str(b.issue.number).slice(0, 40), jira: str(b.issue.jira).slice(0, 40) } : null;
     // the Jira story and the issue number the change is for (asked with the request; asked again: the earlier ones)
@@ -665,7 +760,7 @@ function open(opts) {
     if (!r || !r.ok) return no((r && r.error) || 'The AI did not answer.');
     let parsed = parseAnswer(r.text);
     let tried = tryEdits(f, parsed.edits, facts.app);
-    let checks = checksFor(f, tried.files);
+    let checks = checksFor(f, tried.files).concat(newPageChecks(np, tried.files));
     let retried = false;
     const newFails = (cs) => cs.filter((c) => !c.ok && !c.already);
     // (an issue that does not belong to this page's code has no edits: nothing to ask again)
@@ -678,7 +773,7 @@ function open(opts) {
       const again = await o.ai.chat({ feature: 'codefix', system: system, user: user + '\n\nYOUR PREVIOUS ANSWER:\n' + r.text.slice(0, 30000) + '\n\nIT COULD NOT BE USED:\n' + why.join('\n\n')
         + '\n\nGive the whole answer again, in the format, with every SEARCH copied exactly from the CODE above.', maxTokens: MAX_TOKENS, images: pics });
       if (again && again.ok) {
-        const p2 = parseAnswer(again.text), t2 = tryEdits(f, p2.edits, facts.app), c2 = checksFor(f, t2.files);
+        const p2 = parseAnswer(again.text), t2 = tryEdits(f, p2.edits, facts.app), c2 = checksFor(f, t2.files).concat(newPageChecks(np, t2.files));
         if (p2.questions || (t2.errors.length + newFails(c2).length) <= (tried.errors.length + newFails(checks).length)) { r = again; parsed = p2; tried = t2; checks = c2; retried = true; }
       }
     }
@@ -695,6 +790,8 @@ function open(opts) {
       page: facts.id, app: facts.app, label: facts.label, request: request, kind: str(b.kind), refine: str(b.refine).trim(), parent: parent ? parent.id : '',
       at: now().toISOString(), by: str(b.by), provider: r.provider || '', model: r.model || '', ms: Date.now() - t0, retried: retried,
       folder: f, workspace: wsNow ? wsNow.label || path.basename(f) : '', refs: refs, sent: { files: code.files, skipped: code.skipped, chars: code.chars },
+      newPage: np ? { title: np.title, name: np.name, flow: np.flow, page: np.page, like: np.like, menu: np.menu, places: np.places, links: np.links, refLabel: np.refLabel } : null,
+      newPageAsked: np ? (b.newPage || (parent && parent.newPageAsked) || null) : null, knowledge: knowledge,
       markdown: parsed.markdown || r.text, questions: parsed.questions, edits: parsed.edits, problems: tried.errors, checks: checks,
       files: files, hashes: files.reduce((m, k) => { m[k] = sha(tried.files[k].old); return m; }, {}),
       diff: files.map((k) => diffOf(k, tried.files[k].old, tried.files[k].neu)),
@@ -1386,7 +1483,7 @@ function open(opts) {
   }
 
   return {
-    info: info, setFolder: setFolder, pick: pick, code: code,
+    info: info, setFolder: setFolder, pick: pick, code: code, appMenu: appMenuOf,
     list: (pageId) => ({ ok: true, fixes: data().fixes.filter((x) => !pageId || x.page === str(pageId)).map((x) => ({ id: x.id, request: x.request, status: x.status, at: x.at, by: x.by, files: x.files, provider: x.provider })) }),
     get: (id) => { const x = local(id) || sharedOne(id); return x ? ok(x.shared ? x : slim(x)) : no('No such fix.'); },
     history: history, flush: () => pubChain,
@@ -1397,4 +1494,4 @@ function open(opts) {
   };
 }
 
-module.exports = { open, failuresOf, parseAnswer, tryEdits, diffOf, regionsOf, checksFor, htmlRules, unslotted, relatedTests, safeRel, SYSTEM, issueRules, verdictOf };
+module.exports = { open, failuresOf, parseAnswer, tryEdits, diffOf, regionsOf, newPageChecks, newPageText, checksFor, htmlRules, unslotted, relatedTests, safeRel, SYSTEM, issueRules, verdictOf };

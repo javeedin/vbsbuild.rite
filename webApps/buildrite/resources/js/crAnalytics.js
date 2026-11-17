@@ -13,7 +13,7 @@ define([], function () {
   var DAY = 86400000;
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   var STATUS = [['new', 'New'], ['progress', 'In progress'], ['fixed', 'Fixed'], ['hold', 'On hold'], ['closed', 'Closed']];
-  var KINDS = [['fix', 'Fix a bug'], ['enhance', 'Enhance'], ['change', 'Change']];
+  var KINDS = [['fix', 'Fix a bug'], ['enhance', 'Enhance'], ['change', 'Change'], ['page', 'New page']];
   var PRIS = [['urgent', 'Urgent'], ['high', 'High'], ['medium', 'Medium'], ['low', 'Low']];
   var AGES = [[0, 7, 'Up to a week'], [8, 30, '8–30 days'], [31, 90, '1–3 months'], [91, Infinity, 'Over 3 months']];
 
@@ -109,10 +109,12 @@ define([], function () {
     priorities.forEach(function (x) { x.w = width(x.n, pmax); });
 
     // page by page: how many, of which kind, fixed or not, the lines and files its fixes changed, the last one
-    var pages = tally(list, function (r) { return r.page; }, function (r, k) { return r.pageLabel || String(k).split('/').pop(); });
+    // a new page counts under its own page (app/flow/name), not the page it was made like
+    var pageOf = function (r) { return r.targetPage || r.page; };
+    var pages = tally(list, pageOf, function (r, k) { return r.targetLabel || r.pageLabel || String(k).split('/').pop(); });
     pages.forEach(function (p) {
-      var of = list.filter(function (r) { return r.page === p.key; });
-      p.kinds = { fix: 0, enhance: 0, change: 0 };
+      var of = list.filter(function (r) { return pageOf(r) === p.key; });
+      p.kinds = { fix: 0, enhance: 0, change: 0, page: 0 };
       p.progress = 0; p.added = 0; p.removed = 0;
       var files = {}, last = 0, d = [];
       of.forEach(function (r) {
@@ -136,7 +138,7 @@ define([], function () {
       p.area = flowParts.length >= 2 ? flowParts[0] + '/' + flowParts[1] : p.key;
     });
     // an area: the app's flow the pages are in
-    var areas = tally(list, function (r) { var x = String(r.page || '').split('/'); return x.length >= 2 ? x[0] + '/' + x[1] : r.page; }, function (r, k) { return k; });
+    var areas = tally(list, function (r) { var x = String(pageOf(r) || '').split('/'); return x.length >= 2 ? x[0] + '/' + x[1] : pageOf(r); }, function (r, k) { return k; });
 
     var customers = tally(list, function (r) { return String(r.customer || '').trim() || '(no customer)'; }).slice(0, 10);
     var requesters = tally(list, function (r) { return String(r.requestedBy || '').trim() || '(not said)'; }).slice(0, 10);

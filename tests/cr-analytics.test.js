@@ -42,7 +42,7 @@ T.check('overdue: an open one past its due date (bad); none → ok', k('late').n
 
 T.section('shares: status, kind, priority');
 T.eq('status in order, with counts', m.status.map((s) => s.label + ' ' + s.n).join(', '), 'New 1, In progress 1, Fixed 2, On hold 1, Closed 1');
-T.eq('kinds, with how many fixed', m.kinds.map((x) => x.label + ' ' + x.n + '/' + x.fixed).join(', '), 'Fix a bug 2/1, Enhance 2/1, Change 2/0');
+T.eq('kinds, with how many fixed', m.kinds.map((x) => x.label + ' ' + x.n + '/' + x.fixed).join(', '), 'Fix a bug 2/1, Enhance 2/1, Change 2/0, New page 0/0');
 T.eq('priorities, most urgent first, open counted', m.priorities.map((x) => x.label + ' ' + x.n + ' (' + x.open + ' open)').join(', '), 'Urgent 1 (0 open), High 1 (0 open), Medium 3 (2 open), Low 1 (1 open)');
 
 T.section('page by page');

@@ -67,6 +67,8 @@ define([], function () {
     get: function (id) { return call('get?id=' + encodeURIComponent(id || '')); },
     // one file of a fix in full: { before, after, regions, beforeRegions, files, from } (Change requests → How it was fixed)
     code: function (id, file) { return call('code?id=' + encodeURIComponent(id || '') + '&file=' + encodeURIComponent(file || '')); },
+    // the app's menu (groups, items), its flows, and where a page like `id` is registered: { menu, flows, ref, places } (New page)
+    appMenu: function (id, group, after) { return call('app-menu?id=' + encodeURIComponent(id || '') + '&group=' + encodeURIComponent(group || '') + '&after=' + encodeURIComponent(after || '')); },
     prepImage: prepImage, queueImages: queueImages, takeImages: takeImages,
     imgUrl: function (fix, n) { return fix ? '/__fix/img?id=' + encodeURIComponent(fix.id) + '&n=' + n : ''; },
     shotUrl: function (fix, which) { return fix && fix.preview ? '/__fix/shot?id=' + encodeURIComponent(fix.id) + '&which=' + which + '&t=' + encodeURIComponent(fix.preview.at || '') : ''; },

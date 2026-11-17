@@ -1,10 +1,10 @@
-define(['resources/js/shellBus', 'resources/js/codeFixView', 'resources/js/codeView'], (bus, CFV, CV) => {
+define(['resources/js/shellBus', 'resources/js/codeFixView', 'resources/js/codeView', 'resources/js/crKnowledge'], (bus, CFV, CV, K) => {
   'use strict';
 
   // Change requests: binding helpers (crChain does the work through resources/js/codeFixClient.js). The list's groups:
   // New (nothing asked yet) · In progress (a proposal, questions, applied…) · Fixed (its change saved) · On hold · Closed
   // (closed or rejected).
-  const KINDS = [['fix', 'Fix a bug'], ['enhance', 'Enhance'], ['change', 'Change']];
+  const KINDS = [['fix', 'Fix a bug'], ['enhance', 'Enhance'], ['change', 'Change'], ['page', 'New page']];
   const PRIORITIES = [['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['urgent', 'Urgent']];
   const STATES = [['open', 'Open'], ['hold', 'On hold'], ['closed', 'Closed'], ['rejected', 'Rejected']];
   const CHIPS = [['all', 'All'], ['new', 'New'], ['progress', 'In progress'], ['fixed', 'Fixed'], ['hold', 'On hold'], ['closed', 'Closed']];
@@ -20,6 +20,7 @@ define(['resources/js/shellBus', 'resources/js/codeFixView', 'resources/js/codeV
   const dayText = (d) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(d || '')); return m ? Number(m[3]) + ' ' + MON[Number(m[2]) - 1] + ' ' + m[1] : ''; };
   const opts = (list, sel) => list.map((x) => ({ id: x[0], label: x[1], on: x[0] === sel }));
   const canAsk = (cr) => !!(cr && cr.page && String(cr.request || cr.title || '').trim());
+  const kebab = (t) => String(t || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').replace(/^(\d)/, 'p-$1').slice(0, 60);
   const pageLabel = (pages, id) => { const p = (pages || []).filter((x) => x && x.id === id)[0]; return p ? String(p.label || p.id) : String(id || '').split('/').pop(); };
 
   class PageModule {
@@ -153,6 +154,51 @@ define(['resources/js/shellBus', 'resources/js/codeFixView', 'resources/js/codeV
         : 'With the change — ' + lines + ' lines (+' + code.added + ' −' + code.removed + '); added lines green, changed amber, a red line where lines were taken away.') + ' From ' + code.from + '.';
     }
     fileDiff(f, file) { return ((f && f.diff) || []).filter((d) => d.file === file); }
+
+    // ── a new page: what it is, where it goes in the menu, how the app links it (learnt from its code) ──
+    npOf(cr) { return (cr && cr.newPage) || {}; }
+    flowOptions(mi, sel) { return ((mi && mi.flows) || []).map((f) => ({ id: f.flow, text: f.flow + ' (' + f.pages.length + ' pages)', on: f.flow === sel })); }
+    groupOptions(mi, sel) {
+      const gs = ((mi && mi.menu && mi.menu.groups) || []).map((g) => ({ id: g.key, text: g.label + ' (' + g.items.length + ')', on: g.key === sel }));
+      return [{ id: '', text: 'Not in the menu (opened from another page)', on: !sel }].concat(gs);
+    }
+    afterOptions(mi, group, sel) {
+      const g = ((mi && mi.menu && mi.menu.groups) || []).filter((x) => x.key === group)[0];
+      const items = g ? g.items : [];
+      const cur = sel || (items.length ? items[items.length - 1].id : '');
+      return items.map((it) => ({ id: it.id, text: 'after ' + it.label, on: it.id === cur }));
+    }
+    iconOptions(mi) { const seen = {}; ((mi && mi.menu && mi.menu.groups) || []).forEach((g) => g.items.forEach((it) => { if (it.icon) seen[it.icon] = true; })); return Object.keys(seen).sort(); }
+    npName(cr) { const np = (cr && cr.newPage) || {}; return np.name || kebab(np.title); }
+    npFiles(cr) {
+      const np = (cr && cr.newPage) || {};
+      const name = np.name || kebab(np.title);
+      if (!name || !np.flow) return 'Give it a title and a flow: its files are named after it.';
+      return 'Its files: flows/' + np.flow + '/pages/' + name + '-page.html, .js, .json (+ its chains).';
+    }
+    menuSummary(mi) {
+      if (!mi) return '';
+      if (!mi.menu || !mi.menu.found) return 'Build.Rite found no menu definition in the app: the new page is registered in its flow, and the AI is told how the page it is like is linked.';
+      const n = mi.menu.groups.reduce((a, g) => a + g.items.length, 0);
+      return 'Your app\'s menu is in ' + mi.menu.file + ': ' + mi.menu.groups.length + ' groups, ' + n + ' items.';
+    }
+    placesNeeded(mi) { return ((mi && mi.places) || []).filter((p) => p.needed); }
+    placesLinks(mi) { return ((mi && mi.places) || []).filter((p) => !p.needed); }
+    placeLines(p) { return (p.lines || []).map((l) => 'line ' + l.n + ': ' + l.text).join('\n'); }
+    refText(mi) { return !mi || !mi.ref ? '' : 'A page in the menu is registered in these places (as ' + (mi.ref.label || mi.ref.page) + ' is' + (mi.ref.group ? ', under ' + mi.ref.group : '') + ') — the new page is added to each, the same way:'; }
+
+    // ── the knowledge base: an FDD's sections (functional and technical), the person's notes ──
+    fddOptions(lib, sel) { return [{ id: '', text: lib && lib.length ? 'Choose an FDD…' : 'No FDD in the library yet (Application → FDD library)', on: !sel }].concat((lib || []).map((d) => ({ id: d.id, text: d.name + (d.version ? ' v' + d.version : '') + ' · ' + (d.sections || 0) + ' sections', on: d.id === sel }))); }
+    kbRows(doc, kb, filter, q) { return K.outline(doc, (kb && kb.sections) || [], filter, q); }
+    kbChips(doc, kb, cur) {
+      const all = K.outline(doc, (kb && kb.sections) || [], 'all', '');
+      const tech = all.filter((r) => r.tech).length;
+      return [['all', 'All ' + all.length], ['functional', 'Functional ' + (all.length - tech)], ['technical', 'Technical ' + tech]].map((c) => ({ key: c[0], text: c[1], cls: 'nx-sc-chip' + ((cur || 'all') === c[0] ? ' nx-sc-chip--on' : '') }));
+    }
+    kbRowClass(r) { return 'nx-cr-kbrow nx-cr-kbrow--l' + Math.min(4, r.l) + (r.on ? ' nx-cr-kbrow--on' : ''); }
+    kbText(doc, kb) { return K.text(doc, (kb && kb.sections) || [], kb && kb.notes); }
+    kbSummary(kb, doc) { return K.summary(kb, doc); }
+    kbHas(kb) { return !!(kb && (((kb.sections || []).length) || String(kb.notes || '').trim())); }
   }
   PageModule.seq = 0;
   return PageModule;

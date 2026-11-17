@@ -10,6 +10,9 @@
  *   (YYYY-MM-DD), jira, issue, dueOn, fixedOn / fixedBy (set when its change is saved — or by hand), state (open |
  *   hold | closed | rejected), notes; fixes (the Code Fix ids, newest last) and fixId (the one shown); events (what
  *   happened, when, by whom); created / updated (when, by whom).
+ *   A new page (kind page): page is the page it is made like, newPage { title, name, flow, group, label, icon, after }
+ *   says what it is and where it goes in the menu. knowledge { fdd, fddLabel, sections: [keys], notes }: what the AI
+ *   builds it from (an FDD's sections, functional and technical, and the person's notes).
  * Its status follows its Code Fix: New (nothing asked yet), Proposed, Questions, Needs redo, Applied (testing), Fixed
  * (the change saved), Undone — unless it is On hold, Closed or Rejected.
  *
@@ -21,7 +24,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const KINDS = { fix: 'Fix a bug', enhance: 'Enhance', change: 'Change' };
+const KINDS = { fix: 'Fix a bug', enhance: 'Enhance', change: 'Change', page: 'New page' };
 const PRIORITIES = { low: 'Low', medium: 'Medium', high: 'High', urgent: 'Urgent' };
 const STATES = { open: 'Open', hold: 'On hold', closed: 'Closed', rejected: 'Rejected' };
 const MAX_EVENTS = 200;
@@ -52,6 +55,22 @@ function statusOf(cr, fix) {
   return { key: 'new', text: 'New' };
 }
 
+/** A new page's own fields (Change requests → New page), each within its size; null when none is given. */
+function cleanNewPage(x) {
+  if (!isObj(x)) return null;
+  const out = {};
+  [['title', 120], ['name', 60], ['flow', 80], ['group', 80], ['label', 80], ['icon', 60], ['after', 80]].forEach((p) => { out[p[0]] = cut(x[p[0]], p[1]); });
+  out.name = out.name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+  return out.title || out.name ? out : null;
+}
+/** What the AI builds it from: an FDD (its id, its name) and the sections chosen, and the person's notes. */
+function cleanKnowledge(x) {
+  if (!isObj(x)) return null;
+  const sections = (Array.isArray(x.sections) ? x.sections : []).map((k) => cut(k, 40)).filter(Boolean).slice(0, 80);
+  const out = { fdd: cut(x.fdd, 80), fddLabel: cut(x.fddLabel, 160), sections: sections, notes: str(x.notes).trim().slice(0, 8000) };
+  return out.sections.length || out.notes || out.fdd ? out : null;
+}
+
 /** A change request as kept: only known fields, each within its size; what the earlier copy had is kept where not given. */
 function clean(c, by, old, now) {
   const o = old || {};
@@ -79,6 +98,8 @@ function clean(c, by, old, now) {
     fixedAuto: !!o.fixedAuto && (!has('fixedOn') || day(c.fixedOn) === str(o.fixedOn)) && (!has('fixedBy') || cut(c.fixedBy, 120) === str(o.fixedBy)),
     state: STATES[has('state') ? str(c.state) : str(o.state)] ? (has('state') ? str(c.state) : str(o.state)) : 'open',
     notes: has('notes') ? str(c.notes).trim().slice(0, 8000) : str(o.notes),
+    newPage: has('newPage') ? cleanNewPage(c.newPage) : (isObj(o.newPage) ? o.newPage : null),
+    knowledge: has('knowledge') ? cleanKnowledge(c.knowledge) : (isObj(o.knowledge) ? o.knowledge : null),
     fixes: Array.isArray(o.fixes) ? o.fixes.slice() : [],
     fixId: str(o.fixId),
     events: Array.isArray(o.events) ? o.events.slice(-MAX_EVENTS) : [],
@@ -120,6 +141,9 @@ function open(opts) {
     return Object.assign({}, cr, {
       status: st.key, statusText: st.text, fixStatus: fix ? fix.status : '', fixedOnShown: fixedOn, fixedByShown: fixedBy,
       kindText: KINDS[cr.kind] || KINDS.change, priorityText: PRIORITIES[cr.priority] || PRIORITIES.medium, stateText: STATES[cr.state] || STATES.open,
+      // the page it is about: a new page's own id once named (app/flow/name), else the page
+      targetPage: cr.kind === 'page' && cr.newPage && cr.newPage.name && cr.newPage.flow ? str(cr.page).split('/')[0] + '/' + cr.newPage.flow + '/' + cr.newPage.name : str(cr.page),
+      targetLabel: cr.kind === 'page' && cr.newPage && cr.newPage.title ? cr.newPage.title + ' (new)' : str(cr.pageLabel),
       attempts: (cr.fixes || []).length,
       // its Code Fix in short (Change requests → Analytics): the files and lines it changes, when it was applied and saved
       fixSum: fix ? {
