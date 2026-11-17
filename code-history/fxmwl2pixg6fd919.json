@@ -1,0 +1,465 @@
+{
+ "id": "fxmwl2pixg6fd919",
+ "images": [],
+ "page": "vbredwoodapp/customer-portal/project-create-request",
+ "app": "vbredwoodapp",
+ "label": "Create Equipment Request",
+ "request": "Home button from the previous change is being shown",
+ "kind": "fix",
+ "refine": "",
+ "parent": "",
+ "at": "2026-11-17T19:16:24.724Z",
+ "by": "rite.user",
+ "provider": "Claude (Anthropic)",
+ "model": "claude-opus-4-8",
+ "ms": 19839,
+ "retried": false,
+ "workspace": "Equiprite_Rebuild_v1 ▸ Javeed_Dev",
+ "refs": {
+  "jira": "",
+  "issue": ""
+ },
+ "sent": {
+  "files": [
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.json",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/AddressSuggestionSelectedChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/AgreementSelectedChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureContractChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureExternalContactChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureExternalCustomerChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureFallbackCustomerChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureInvOrgLocationChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureProjectNameChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureShipToSiteChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/ClearAgreementContextChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CustomerSelectedChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CustomerTypeaheadChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/GoHomeChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/HydrateDraftChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/LoadAgreementsChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/LoadContractsChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/LocationDrawerToggleChain.js"
+  ],
+  "chars": 169208
+ },
+ "markdown": "## Summary\nThe \"Home\" secondary action uses `secondary-action` (singular), which the `oj-sp-general-overview-page` template does not recognize, so it is silently not drawn. I'll switch it to the correct `secondary-actions` array attribute so the Home button appears beside Next.\n\nWait — the request says the Home button **is being shown** and should not be. Let me re-read.\n\n## How it works today\nThe page's header currently declares `secondary-action='[[ {\"label\": \"Home\", \"display\": \"on\"} ]]'` with `on-sp-secondary-action=\"[[ $listeners.goHome ]]\"`, which fires `GoHomeChain` (navigates to `home`). This was added by a previous Build.Rite change.\n\n## What is wrong\nThe request is to remove the Home button that the previous change added — it is being shown and is no longer wanted. The cause is the three header attributes (`secondary-action`, `on-sp-secondary-action`) plus the `goHome` listener and `GoHomeChain`, all added by change `fxmwkx2vfhe80251`.\n\n## The change\n- `project-create-request-page.html` — remove the `secondary-action` and `on-sp-secondary-action` attributes from the template header (and the change-marker comments around them), leaving only the Next primary action.\n- `project-create-request-page.json` — remove the `goHome` event listener entry.\n\nI'll leave `GoHomeChain.js` in place (an unreferenced chain is harmless and removing a file is a bigger change); but since the rule is \"every chain a listener calls exists,\" an orphan chain is fine. To keep it tidy I note it under Risks.\n\n## After the change\nThe Create Equipment Request page header shows only the **Next** primary button. The **Home** button is gone.\n\n## Risks\n- `GoHomeChain.js` remains in the chains folder but is now unreferenced — harmless (an orphan chain is allowed). Delete it separately if you want the folder clean.\n- No other page uses the `goHome` listener; removal is local to this page.\n\n## How to test\n1. Open `/vp/shell/customer-portal/project-create-request` (Create Equipment Request).\n2. Look at the page header: confirm only **Next** is shown and there is no **Home** button beside it.\n3. Fill the form and click **Next** — it still navigates to the Request Catalog as before.\n\n## Questions\nNone.",
+ "questions": "",
+ "problems": [],
+ "checks": [
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.json",
+   "name": "valid JSON",
+   "ok": true,
+   "detail": "",
+   "already": false
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "already": false,
+   "name": "no oj-bind-for-each inside a table or select",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "already": true,
+   "name": "no String()/Number()/Boolean() or inline functions in bindings",
+   "ok": false,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "already": false,
+   "name": "no regex literals in bindings",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "already": false,
+   "name": "every listener the HTML uses is declared in the page JSON",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "already": false,
+   "name": "every oj- component used is imported",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "already": false,
+   "name": "every chain the page runs is in its chains folder",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "already": false,
+   "name": "markup inside the Redwood page template sits in one of its slots (it is drawn)",
+   "ok": true,
+   "detail": ""
+  }
+ ],
+ "files": [
+  "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+  "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.json"
+ ],
+ "diff": [
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "created": false,
+   "added": 5,
+   "removed": 6,
+   "hunks": [
+    {
+     "rows": [
+      {
+       "t": " ",
+       "s": "",
+       "o": "1",
+       "n": "1"
+      },
+      {
+       "t": "-",
+       "s": "<!-- Build.Rite change fxmwkx2vfhe80251 — Create Equipment Request",
+       "o": "2",
+       "n": ""
+      },
+      {
+       "t": "-",
+       "s": "     Request:      add new button 'Home' before Next button (Enhance)",
+       "o": "3",
+       "n": ""
+      },
+      {
+       "t": "-",
+       "s": "     Requested by: rite.user on 17 Nov 2026 at 22:08 (UTC+05:30)",
+       "o": "4",
+       "n": ""
+      },
+      {
+       "t": "-",
+       "s": "     Changed by:   rite.user on 17 Nov 2026 at 22:09 (UTC+05:30) — approved and applied in Code fix, in the workspace's working folder",
+       "o": "5",
+       "n": ""
+      },
+      {
+       "t": "+",
+       "s": "<!-- Build.Rite change fxmwl2pixg6fd919 — Create Equipment Request",
+       "o": "",
+       "n": "2"
+      },
+      {
+       "t": "+",
+       "s": "     Request:      Home button from the previous change is being shown (Fix a bug)",
+       "o": "",
+       "n": "3"
+      },
+      {
+       "t": "+",
+       "s": "     Requested by: rite.user on 18 Nov 2026 at 00:46 (UTC+05:30)",
+       "o": "",
+       "n": "4"
+      },
+      {
+       "t": "+",
+       "s": "     Changed by:   rite.user on 18 Nov 2026 at 00:47 (UTC+05:30) — approved and applied in Code fix, in the workspace's working folder",
+       "o": "",
+       "n": "5"
+      },
+      {
+       "t": " ",
+       "s": "     Proposed by:  Claude (Anthropic) (claude-opus-4-8)",
+       "o": "6",
+       "n": "6"
+      },
+      {
+       "t": " ",
+       "s": "     Issue:        —",
+       "o": "7",
+       "n": "7"
+      },
+      {
+       "t": " ",
+       "s": "     Jira story:   —",
+       "o": "8",
+       "n": "8"
+      },
+      {
+       "t": " ",
+       "s": "     Also changed: project-create-request-page.json (JSON files cannot hold comments) -->",
+       "o": "9",
+       "n": "9"
+      },
+      {
+       "t": " ",
+       "s": "<oj-sp-general-overview-page id=\"projectCreateRequestPage\" page-title=\"Create Equipment Request\"",
+       "o": "10",
+       "n": "10"
+      },
+      {
+       "t": " ",
+       "s": "  primary-action='[[ {\"label\": \"Next\", \"display\": \"on\"} ]]' on-sp-primary-action=\"[[ $listeners.nextToCatalog ]]\"",
+       "o": "11",
+       "n": "11"
+      },
+      {
+       "t": "-",
+       "s": "  secondary-action='[[ {\"label\": \"Home\", \"display\": \"on\"} ]]' on-sp-secondary-action=\"[[ $listeners.goHome ]]\"",
+       "o": "12",
+       "n": ""
+      },
+      {
+       "t": " ",
+       "s": "  display-options.responsive-padding=\"on\" display-mode=\"mixed\">",
+       "o": "13",
+       "n": "12"
+      },
+      {
+       "t": "-",
+       "s": "<!-- end of Build.Rite change fxmwkx2vfhe80251 -->",
+       "o": "14",
+       "n": ""
+      },
+      {
+       "t": "+",
+       "s": "  <!-- Build.Rite change fxmwl2pixg6fd919 (continued — see its note above): Home button from the previous change is being shown -->",
+       "o": "",
+       "n": "13"
+      },
+      {
+       "t": " ",
+       "s": "  <div class=\"oj-flex\" slot=\"main\">",
+       "o": "15",
+       "n": "14"
+      },
+      {
+       "t": " ",
+       "s": "    <div class=\"oj-flex-item\" style=\"flex: 1 1 100%; width: 100%; max-width: 100%; padding: 0; margin: 0; box-sizing: border-box;\">",
+       "o": "16",
+       "n": "15"
+      },
+      {
+       "t": " ",
+       "s": "      <oj-bind-if",
+       "o": "17",
+       "n": "16"
+      }
+     ],
+     "head": "line 1"
+    }
+   ]
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.json",
+   "created": false,
+   "added": 0,
+   "removed": 8,
+   "hunks": [
+    {
+     "rows": [
+      {
+       "t": " ",
+       "s": "        }",
+       "o": "508",
+       "n": "508"
+      },
+      {
+       "t": " ",
+       "s": "      ]",
+       "o": "509",
+       "n": "509"
+      },
+      {
+       "t": " ",
+       "s": "    },",
+       "o": "510",
+       "n": "510"
+      },
+      {
+       "t": "-",
+       "s": "    \"goHome\": {",
+       "o": "511",
+       "n": ""
+      },
+      {
+       "t": "-",
+       "s": "      \"chains\": [",
+       "o": "512",
+       "n": ""
+      },
+      {
+       "t": "-",
+       "s": "        {",
+       "o": "513",
+       "n": ""
+      },
+      {
+       "t": "-",
+       "s": "          \"chain\": \"GoHomeChain\",",
+       "o": "514",
+       "n": ""
+      },
+      {
+       "t": "-",
+       "s": "          \"parameters\": {}",
+       "o": "515",
+       "n": ""
+      },
+      {
+       "t": "-",
+       "s": "        }",
+       "o": "516",
+       "n": ""
+      },
+      {
+       "t": "-",
+       "s": "      ]",
+       "o": "517",
+       "n": ""
+      },
+      {
+       "t": "-",
+       "s": "    },",
+       "o": "518",
+       "n": ""
+      },
+      {
+       "t": " ",
+       "s": "    \"onClearAgreementContext\": {",
+       "o": "519",
+       "n": "511"
+      },
+      {
+       "t": " ",
+       "s": "      \"chains\": [",
+       "o": "520",
+       "n": "512"
+      },
+      {
+       "t": " ",
+       "s": "        {",
+       "o": "521",
+       "n": "513"
+      }
+     ],
+     "head": "line 508"
+    }
+   ]
+  }
+ ],
+ "status": "applied",
+ "events": [
+  {
+   "at": "2026-11-17T19:16:24.724Z",
+   "what": "asked",
+   "by": "rite.user",
+   "detail": "Home button from the previous change is being shown"
+  },
+  {
+   "at": "2026-11-17T19:16:24.728Z",
+   "what": "proposed",
+   "by": "Claude (Anthropic)",
+   "detail": "2 file(s), +0 −18"
+  },
+  {
+   "at": "2026-11-17T19:17:33.984Z",
+   "what": "approved and applied",
+   "by": "rite.user",
+   "detail": "in C:\\javeed\\equiprite-rebuild-v1-javeed_dev\\working (buildrite-working) · In your workspace's working folder (Equiprite_Rebuild_v1 ▸ Javeed_Dev): nothing pulled — Get latest is in its project's tab. · 2 change note(s) written in the code"
+  },
+  {
+   "at": "2026-11-17T19:17:33.994Z",
+   "what": "tested",
+   "by": "rite.user",
+   "detail": "nothing broke (checks only)"
+  }
+ ],
+ "updatedAt": "2026-11-17T19:17:33.994Z",
+ "applied": {
+  "at": "2026-11-17T19:17:33.983Z",
+  "by": "rite.user",
+  "branch": "buildrite-working",
+  "upstream": "",
+  "pull": {
+   "done": false,
+   "workspace": true,
+   "text": "In your workspace's working folder (Equiprite_Rebuild_v1 ▸ Javeed_Dev): nothing pulled — Get latest is in its project's tab."
+  },
+  "live": false,
+  "workspace": "Equiprite_Rebuild_v1 ▸ Javeed_Dev",
+  "folder": "C:\\javeed\\equiprite-rebuild-v1-javeed_dev\\working",
+  "notes": 2
+ },
+ "baseline": [],
+ "tests": {
+  "at": "2026-11-17T19:17:33.994Z",
+  "ok": true,
+  "checks": [
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.json",
+    "name": "valid JSON",
+    "ok": true,
+    "detail": "",
+    "already": false
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+    "already": false,
+    "name": "no oj-bind-for-each inside a table or select",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+    "already": true,
+    "name": "no String()/Number()/Boolean() or inline functions in bindings",
+    "ok": false,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+    "already": false,
+    "name": "no regex literals in bindings",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+    "already": false,
+    "name": "every listener the HTML uses is declared in the page JSON",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+    "already": false,
+    "name": "every oj- component used is imported",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+    "already": false,
+    "name": "every chain the page runs is in its chains folder",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+    "already": false,
+    "name": "markup inside the Redwood page template sits in one of its slots (it is drawn)",
+    "ok": true,
+    "detail": ""
+   }
+  ],
+  "unit": [],
+  "e2eFiles": [],
+  "none": true
+ }
+}
