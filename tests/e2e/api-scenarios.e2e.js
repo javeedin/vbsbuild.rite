@@ -232,6 +232,63 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     T.check('…Save & run: the journey passes again', res.length === 2 && res.every((x) => x.state === 'ok'), JSON.stringify(res));
     await env.shot('api-scenarios-journey.png');
 
+    T.section('the flow from the page: every page it leads to, tested when every page has passed');
+    await page.waitForSelector('#scFlow #scFlowCols .nx-sc-fnode', { timeout: 15000 });
+    await page.waitForFunction(() => /2 tested/.test((document.getElementById('scFlowSum') || {}).textContent || ''), null, { timeout: 10000 }).catch(() => {});
+    const fcols = await page.$$eval('#scFlowCols .nx-sc-flowcol', (a) => a.map((c) => ({ t: (c.querySelector('.nx-sc-flowcolt') || {}).textContent.trim(),
+      nodes: Array.prototype.map.call(c.querySelectorAll('.nx-sc-fnode'), (x) => ({ page: x.getAttribute('data-page'), cls: x.className, t: x.textContent.replace(/\s+/g, ' ').trim() })) })));
+    T.check('on choosing a page, its flow: this page, then the pages it leads to (Order Workbench → Order, reached by a row click)',
+      fcols.length === 2 && /This page/i.test(fcols[0].t) && /It leads to/i.test(fcols[1].t) && fcols[0].nodes[0].page === LIST && fcols[1].nodes[0].page === DETAIL
+      && /from Order Workbench · row click/.test(fcols[1].nodes[0].t) && /also goes to Order Workbench/.test(fcols[1].nodes[0].t), JSON.stringify(fcols));
+    T.check('…each page with its APIs and how far the scenarios tested it (the journey ran: both passed)',
+      /1 API · 1 passed/.test(fcols[1].nodes[0].t) && /tested: every API passed · \d+ scenario/.test(fcols[1].nodes[0].t) && /nx-sc-fnode--ok/.test(fcols[0].nodes[0].cls) && /nx-sc-fnode--ok/.test(fcols[1].nodes[0].cls), fcols[1].nodes[0].t);
+    T.check('…the headline: 2 pages · 2 tested · 2 of 2 APIs passed — the flow\'s testing complete, marked so',
+      /^2 pages · 2 tested · 2 of 2 APIs passed$/.test(await text(page, '#scFlowSum')) && /testing is complete/.test(await text(page, '#scFlowLeft')) && !!(await page.$('#scFlow.nx-sc-flow--done')), await text(page, '#scFlowSum') + ' / ' + await text(page, '#scFlowLeft'));
+    await env.shot('api-scenarios-flow.png');
+    await page.click('#scFlowFold');
+    await page.waitForTimeout(250);
+    const folded = !(await page.$('#scFlowCols')) && /2 of 2 APIs passed/.test(await text(page, '#scFlowSum'));
+    await page.click('#scFlowFold');
+    await page.waitForSelector('#scFlowCols', { timeout: 5000 });
+    T.check('the flow folds to its headline and back', folded);
+
+    // a new happy path on the list: the path to Order continues it (its journey is the start of that path)
+    await page.click('#scDraft');
+    await page.waitForFunction(() => /^Happy path — Order Workbench$/.test((document.getElementById('scName') || {}).value || ''), null, { timeout: 15000 });
+    await page.waitForTimeout(300);
+    await page.click('#scFlowCols .nx-sc-fnode[data-page="' + DETAIL + '"] .nx-sc-fpath');
+    await page.waitForFunction(() => /Continued/.test((document.querySelector('.nx-flib-result') || {}).textContent || ''), null, { timeout: 15000 });
+    await page.waitForTimeout(300);
+    T.check('"Test the path here" on Order: the open happy path continued along Order Workbench → Order, ready to run',
+      (await page.$$eval('#scSteps .nx-sc-call', (a) => a.map((x) => x.textContent.trim()))).join() === 'shopApi/getOrders,shopApi/getOrderById'
+      && (await page.$$('#scJourney .nx-sc-jpage')).length === 2 && /Continued "Journey — Order Workbench → Order" — 1 page\(s\) linked/.test(await text(page, '.nx-flib-result')), await text(page, '.nx-flib-result'));
+    await page.click('#scFlowAll');
+    await page.waitForTimeout(500);
+    T.check('"A journey for each path": none made when every path already has its journey (said)', /already has its journey/.test(await text(page, '.nx-toast, .nx-toasts, [class*="toast"]')) || /already has its journey/.test(await page.evaluate(() => document.body.textContent)), await text(page, '[class*="toast"]'));
+    // that extra scenario taken away again (the later sections expect one journey here)
+    const okDel = (d) => d.accept().catch(() => {});
+    page.on('dialog', okDel);
+    const nCards = (await page.$$('#scList .nx-sc-card')).length;
+    await page.click('#scDelete');
+    await page.waitForFunction((n) => document.querySelectorAll('#scList .nx-sc-card').length === n - 1, nCards, { timeout: 10000 }).catch(() => {});
+    page.off('dialog', okDel);
+
+    T.section('the pages list folded away for more room');
+    const wide0 = await page.$eval('.nx-sc-main', (e) => e.getBoundingClientRect().width);
+    await page.click('#scPagesMin');
+    await page.waitForSelector('#scPagesOpen', { timeout: 5000 });
+    await page.waitForTimeout(300);
+    const wide1 = await page.$eval('.nx-sc-main', (e) => e.getBoundingClientRect().width);
+    T.check('folded: a slim rail naming the page, the steps get the room (the list and its search gone)', !(await page.$('#scPages')) && !(await page.$('#scFind'))
+      && /^Pages · Order Workbench$/.test(await text(page, '#scPagesOpen')) && wide1 - wide0 > 200, Math.round(wide0) + ' → ' + Math.round(wide1) + ' / ' + await text(page, '#scPagesOpen'));
+    await env.shot('api-scenarios-folded.png');
+    await env.open('/?open=api-scenarios');
+    await page.waitForSelector('#scPagesOpen', { timeout: 30000 }).catch(() => {});
+    T.check('…kept on this PC: opened again, still folded', !!(await page.$('#scPagesOpen')) && !(await page.$('#scPages')));
+    await page.click('#scPagesOpen');
+    await page.waitForSelector('#scPages .nx-sc-pagerow', { timeout: 10000 });
+    T.check('the rail\'s button brings the list back', !!(await page.$('#scFind')) && !(await page.$('#scPagesOpen')));
+
     T.section('a value the page gets from the screen before it');
     await pick(DETAIL);
     await draft();

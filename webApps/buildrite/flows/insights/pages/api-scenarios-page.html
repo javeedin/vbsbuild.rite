@@ -11,10 +11,21 @@
 
   <oj-bind-if test="[[ !!$variables.result ]]"><div :class="[[ 'nx-flib-result ' + ($variables.result.ok ? 'nx-flib-result--ok' : 'nx-flib-result--err') ]]" id="scResult"><oj-bind-text value="[[ $variables.result.text ]]"></oj-bind-text></div></oj-bind-if>
 
-  <div class="nx-sc-cols">
+  <div :class="[[ 'nx-sc-cols' + ($variables.pagesMin ? ' nx-sc-cols--min' : '') ]]">
     <!-- the pages -->
-    <aside class="nx-card nx-sc-pages" aria-label="Pages">
-      <input type="search" class="nx-cm-input" id="scFind" placeholder="Find a page…" data-field="q" :value="[[ $variables.q ]]" on-input="[[ $listeners.onField ]]">
+    <aside :class="[[ 'nx-card nx-sc-pages' + ($variables.pagesMin ? ' nx-sc-pages--min' : '') ]]" aria-label="Pages">
+      <!-- folded: a slim rail (more room for the steps); its button unfolds the list -->
+      <oj-bind-if test="[[ $variables.pagesMin ]]">
+        <button type="button" class="nx-sc-pagesrail" id="scPagesOpen" data-act="pagesMin" data-key="open" on-click="[[ $listeners.onAct ]]" title="Show the pages list" aria-label="Show the pages list">
+          <span class="oj-ux-ico-chevron-right" aria-hidden="true"></span>
+          <span class="nx-sc-railtext"><oj-bind-text value="[[ 'Pages' + ($variables.page ? ' · ' + $functions.pageLabelOf($variables.pages, $variables.page) : '') ]]"></oj-bind-text></span>
+        </button>
+      </oj-bind-if>
+      <oj-bind-if test="[[ !$variables.pagesMin ]]">
+      <div class="nx-sc-pageshead">
+        <input type="search" class="nx-cm-input" id="scFind" placeholder="Find a page…" data-field="q" :value="[[ $variables.q ]]" on-input="[[ $listeners.onField ]]">
+        <button type="button" class="nx-iconbtn nx-iconbtn--sm" id="scPagesMin" data-act="pagesMin" data-key="min" on-click="[[ $listeners.onAct ]]" title="Fold the pages list away (more room for the steps)" aria-label="Fold the pages list"><span class="oj-ux-ico-chevron-left" aria-hidden="true"></span></button>
+      </div>
       <div class="nx-sc-pagelist" id="scPages" role="list">
         <oj-bind-for-each data="[[ $functions.pagesShown($variables.pages, $variables.q, $variables.appAt) ]]">
           <template data-oj-as="p">
@@ -28,6 +39,7 @@
         </oj-bind-for-each>
         <oj-bind-if test="[[ !$variables.pages.length ]]"><p class="nx-note" id="scNoPages">No pages: set up your workspace (its pages show in Application pages).</p></oj-bind-if>
       </div>
+      </oj-bind-if>
     </aside>
 
     <section class="nx-sc-main">
@@ -46,6 +58,69 @@
       </oj-bind-if>
       <oj-bind-if test="[[ !$variables.page ]]"><div class="nx-card nx-card-pad nx-empty" id="scPick">Choose a page: its scenarios — its calls in order, each answer checked — show here.</div></oj-bind-if>
       <oj-bind-if test="[[ !!$variables.page ]]">
+        <!-- the page's flow: every page it leads to, how far each is tested; testing ends when every page has passed -->
+        <oj-bind-if test="[[ !!$variables.flow ]]">
+          <div :class="[[ 'nx-card nx-sc-flow' + ($functions.flowHead($variables.flow).done ? ' nx-sc-flow--done' : '') ]]" id="scFlow">
+            <div class="nx-sc-flowhead">
+              <button type="button" class="nx-sc-flowfold" id="scFlowFold" data-act="flowFold" on-click="[[ $listeners.onAct ]]" :aria-expanded="[[ $variables.flowOpen ? 'true' : 'false' ]]" :title="[[ $variables.flowOpen ? 'Fold the flow' : 'Show the flow' ]]">
+                <span :class="[[ $variables.flowOpen ? 'oj-ux-ico-chevron-down' : 'oj-ux-ico-chevron-right' ]]" aria-hidden="true"></span>
+                <span class="oj-ux-ico-network-flow-diagram" aria-hidden="true"></span>
+                <b>The flow from this page</b>
+              </button>
+              <oj-bind-if test="[[ !$variables.flow.error ]]">
+                <span class="nx-sc-flowsum" id="scFlowSum"><oj-bind-text value="[[ $functions.flowHead($variables.flow).text ]]"></oj-bind-text></span>
+                <span class="nx-sc-flowbar" :title="[[ $functions.flowHead($variables.flow).pct + '% of the flow\'s APIs passed' ]]"><span :style.width="[[ $functions.flowHead($variables.flow).pct + '%' ]]"></span></span>
+                <span class="nx-min-flex"></span>
+                <oj-bind-if test="[[ $functions.flowHead($variables.flow).paths > 0 ]]">
+                  <button type="button" class="nx-btn nx-btn--sm" id="scFlowAll" data-act="flowAll" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]" title="A journey for every path of the flow (one scenario each), then Run all tests the whole flow">
+                    <span class="oj-ux-ico-play" aria-hidden="true"></span><oj-bind-text value="[[ ' A journey for each path (' + $functions.flowHead($variables.flow).paths + ')' ]]"></oj-bind-text></button>
+                </oj-bind-if>
+              </oj-bind-if>
+              <button type="button" class="nx-iconbtn nx-iconbtn--sm" id="scFlowRefresh" data-act="flowLoad" on-click="[[ $listeners.onAct ]]" title="Read the flow again" aria-label="Read the flow again"><span class="oj-ux-ico-refresh" aria-hidden="true"></span></button>
+            </div>
+            <oj-bind-if test="[[ !!$variables.flow.error ]]"><p class="nx-note" id="scFlowErr"><oj-bind-text value="[[ $variables.flow.error ]]"></oj-bind-text></p></oj-bind-if>
+            <oj-bind-if test="[[ $variables.flowOpen && !$variables.flow.error ]]">
+              <p :class="[[ 'nx-sc-flowleft' + ($functions.flowHead($variables.flow).done ? ' nx-sc-flowleft--done' : '') ]]" id="scFlowLeft"><oj-bind-text value="[[ $functions.flowHead($variables.flow).left ]]"></oj-bind-text></p>
+              <div class="nx-sc-flowcols" id="scFlowCols">
+                <oj-bind-for-each data="[[ $functions.flowCols($variables.flow) ]]">
+                  <template data-oj-as="col">
+                    <div class="nx-sc-flowcol">
+                      <div class="nx-sc-flowcolt"><oj-bind-text value="[[ col.data.title ]]"></oj-bind-text></div>
+                      <oj-bind-for-each data="[[ col.data.nodes ]]">
+                        <template data-oj-as="fn">
+                          <div :class="[[ 'nx-sc-fnode nx-sc-fnode--' + fn.data.state + (fn.data.first ? ' nx-sc-fnode--first' : '') ]]" :data-page="[[ fn.data.page ]]" :title="[[ fn.data.pathText + (fn.data.scens ? '\n\nTested in:\n' + fn.data.scens : '') ]]">
+                            <div class="nx-sc-fnodet">
+                              <span class="nx-sc-fdot" aria-hidden="true"></span>
+                              <oj-bind-if test="[[ fn.data.first ]]"><b><oj-bind-text value="[[ fn.data.label ]]"></oj-bind-text></b></oj-bind-if>
+                              <oj-bind-if test="[[ !fn.data.first ]]"><button type="button" class="nx-sc-fname" data-act="page" :data-key="[[ fn.data.page ]]" on-click="[[ $listeners.onAct ]]" title="Test this page on its own here"><oj-bind-text value="[[ fn.data.label ]]"></oj-bind-text></button></oj-bind-if>
+                            </div>
+                            <div class="nx-note nx-sc-fhow"><oj-bind-text value="[[ fn.data.how ]]"></oj-bind-text></div>
+                            <div class="nx-sc-fapis"><oj-bind-text value="[[ fn.data.apisText ]]"></oj-bind-text></div>
+                            <span class="nx-sc-fbar" aria-hidden="true"><span :style.width="[[ fn.data.pct + '%' ]]"></span></span>
+                            <div class="nx-sc-fstate"><oj-bind-text value="[[ fn.data.stateText + (fn.data.nScens ? ' · ' + fn.data.nScens + (fn.data.nScens === 1 ? ' scenario' : ' scenarios') : '') ]]"></oj-bind-text></div>
+                            <oj-bind-if test="[[ !!fn.data.also ]]"><div class="nx-note nx-sc-falso"><oj-bind-text value="[[ 'also goes to ' + fn.data.also ]]"></oj-bind-text></div></oj-bind-if>
+                            <div class="nx-sc-facts">
+                              <oj-bind-if test="[[ !fn.data.noSheet ]]">
+                                <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-sc-fapisbtn" data-act="jApis" :data-key="[[ fn.data.page ]]" on-click="[[ $listeners.onAct ]]" title="Its APIs and their order in this scenario" aria-label="APIs"><span class="oj-ux-ico-list" aria-hidden="true"></span></button>
+                              </oj-bind-if>
+                              <oj-bind-if test="[[ !fn.data.first ]]">
+                                <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-sc-ftab" data-act="jTab" :data-key="[[ fn.data.page ]]" on-click="[[ $listeners.onAct ]]" title="Open this page in a tab of its own" aria-label="Open in a tab"><span class="oj-ux-ico-external-link" aria-hidden="true"></span></button>
+                                <oj-bind-if test="[[ !fn.data.noSheet ]]">
+                                  <button type="button" class="nx-btn nx-btn--sm nx-sc-fpath" data-act="flowPath" :data-key="[[ fn.data.page ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy ]]" :title="[[ 'A journey along ' + fn.data.pathText + ' (continued from the scenario open when it starts the same way)' ]]">Test the path here</button>
+                                </oj-bind-if>
+                              </oj-bind-if>
+                            </div>
+                          </div>
+                        </template>
+                      </oj-bind-for-each>
+                    </div>
+                  </template>
+                </oj-bind-for-each>
+              </div>
+              <oj-bind-if test="[[ $functions.flowHead($variables.flow).cut > 0 ]]"><p class="nx-note"><oj-bind-text value="[[ $functions.flowHead($variables.flow).cut + ' more page(s) further on are not shown: open a page of the flow to see its own flow.' ]]"></oj-bind-text></p></oj-bind-if>
+            </oj-bind-if>
+          </div>
+        </oj-bind-if>
         <!-- two tabs: the page's scenarios; every API of the page (test one, build a scenario from them) -->
         <div class="nx-sc-tabs" role="tablist">
           <button type="button" role="tab" id="scTabScenarios" :aria-selected="[[ $variables.tab !== 'apis' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab !== 'apis' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="scenarios" on-click="[[ $listeners.onAct ]]">

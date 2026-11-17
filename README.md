@@ -97,6 +97,20 @@ journey** offers the pages the last page goes to (Next → the catalog → the c
 under the page they are on, with the values picked so far handed on. BI Publisher is run as the page's report, with
 the report's parameters taken from the code.
 
+- **The flow from the page: testing is done when every page has passed.** Choosing a page shows the pages it leads
+  to in the app, and where those lead, up to 5 steps out: one column per step (*This page*, *It leads to*, *Then, 2 pages
+  on*…). Each page card shows how it is reached ("from Order Workbench · row click"), its APIs and how many passed, and
+  its state from the saved scenarios that go through it: *tested: every API passed*, *passed* with some APIs not run
+  yet, *failed in the last run*, *in a scenario, not run yet* or *not tested yet*. A page reached again ("also goes to
+  Order Workbench") is not walked twice. The headline counts it up (5 pages · 2 tested · 19 of 33 APIs passed) and
+  says when the flow's testing is complete. The card folds to its headline, and stays folded on this PC.
+  - **Test the path here** on a page builds the journey to it in one go: from the page, through each page on the way.
+    The scenario that is open is continued when its journey starts the same way; otherwise a new one is drafted.
+  - **A journey for each path** makes one journey scenario for every path of the flow that none follows yet (it asks
+    first, listing them). Then **Run all** tests the whole flow.
+  - A page's name opens it here; the list icon shows its APIs; the tab icon opens it in a tab of its own.
+- **More room.** The **‹** beside *Find a page…* folds the pages list away to a slim rail naming the page you are on,
+  so the steps get the full width. The rail's button brings the list back. The choice is kept on this PC.
 - **A journey's pages, one by one.** A scenario that goes through several pages has a **Journey** bar over its steps
   (1 Order Workbench → 2 Order …), and each page's steps sit under its own heading. Each page shows how its steps
   went in the last run and, on hover, when and by whom it was linked. On every page:

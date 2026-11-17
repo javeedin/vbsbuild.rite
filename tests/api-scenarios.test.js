@@ -181,6 +181,63 @@ const ROOT = path.join(__dirname, 'fixtures', 'vb-sample');
     const onlyGo = store.draft('shop/orders/order-detail', p2, 'jane.doe').scenario.steps.map((x) => x.endpoint).join();
     T.check('a page\'s journey: what runs as it opens and what its actions that go on call (Submit), not the rest (Cancel)', onlyGo === 'shopApi/getOrderById,shopApi/createOrder', onlyGo);
 
+    T.section('a page\'s flow: every page it leads to, and how far the scenarios tested each');
+    const fstore = S.open({ api, dir: path.join(tmp, 'scen-flow') });
+    const FL = 'shop/flow/list', FD = 'shop/flow/detail', FC = 'shop/flow/cart', FK = 'shop/flow/checkout', FH = 'shop/flow/help';
+    const fx = {};
+    fx[FL] = Object.assign({}, p1, { label: 'Orders', next: [{ id: FD, label: 'Order', via: ['Open'] }, { id: FH, label: 'Help', via: ['Help'] }] });
+    fx[FD] = Object.assign({}, p2, { label: 'Order', next: [{ id: FC, label: 'Cart', via: ['Add to cart'] }, { id: FL, label: 'Orders', via: ['Back'] }] });
+    fx[FC] = Object.assign({}, p1, { label: 'Cart', next: [{ id: FK, label: 'Checkout', via: ['Checkout'] }] });
+    fx[FK] = { label: 'Checkout', integrations: { rest: [{ endpoint: 'shopApi/createOrder', method: 'POST', path: '/shop/v1/orders' }], reports: [], lovs: [] },
+      logic: { chains: [{ name: 'PayChain', calls: ['shopApi/createOrder'] }] }, features: { lifecycle: [], actions: [{ label: 'Pay', chains: ['PayChain'] }] } };
+    const fo = (id) => fx[id] || null;
+    let fl = fstore.flow(FL, fo);
+    const byP = (f) => f.nodes.reduce((a, n) => { a[n.page] = n; return a; }, {});
+    let nb = byP(fl);
+    T.check('walked from the page: where it goes, and where those go (breadth first), each with its depth and how it is reached',
+      fl.ok && fl.nodes.map((n) => n.label + ':' + n.depth).join() === 'Orders:0,Order:1,Help:1,Cart:2,Checkout:3' && nb[FD].via === 'Open' && nb[FC].via === 'Add to cart', JSON.stringify(fl.nodes.map((n) => [n.label, n.depth, n.via])));
+    T.check('…the path to each page (to build a journey along it); a page reached again is not walked twice (Order goes back to Orders)',
+      nb[FK].path.join(' > ') === [FL, FD, FC, FK].join(' > ') && nb[FD].also.join() === FL && fl.nodes.filter((n) => n.page === FL).length === 1, nb[FK].path.join(' > ') + ' / ' + nb[FD].also.join());
+    T.check('…its APIs counted per page (writes too); a page with no technical sheet said so',
+      nb[FL].apis === 1 && nb[FD].apis === 2 && nb[FD].writes === 1 && nb[FK].apis === 1 && nb[FH].noSheet && nb[FH].state === 'nosheet', JSON.stringify([nb[FD].keys, nb[FH].stateText]));
+    T.check('nothing tested yet: every page "not tested yet", 0 of 5 APIs passed, the flow not complete; its paths counted',
+      fl.summary.pages === 5 && fl.summary.tested === 0 && fl.summary.untested === 4 && fl.summary.apis === 5 && fl.summary.passed === 0 && !fl.summary.complete && fl.summary.paths === 2
+      && nb[FL].stateText === 'not tested yet', JSON.stringify(fl.summary));
+    T.check('…as deep as asked (depth 1: the page and where it goes)', fstore.flow(FL, fo, { depth: 1 }).nodes.map((n) => n.label).join() === 'Orders,Order,Help');
+    T.check('…a page with no sheet: said', !fstore.flow(FH, fo).ok && /no technical sheet/.test(fstore.flow(FH, fo).error));
+    // a journey along the path to the cart, in one go
+    let tp = fstore.throughPath(null, [FL, FD, FC], fo, 'jane.doe');
+    T.check('a journey along a path: drafted on the first page, every later page linked in turn, saved',
+      tp.ok && tp.scenario.journey.map((j) => j.label).join(' → ') === 'Orders → Order → Cart' && tp.added.map((a) => a.label).join() === 'Order,Cart' && !tp.continued
+      && fstore.get(tp.scenario.id).ok && /^Journey — Orders → Order → Cart$/.test(tp.scenario.name), JSON.stringify([tp.scenario && tp.scenario.name, tp.added, tp.skipped]));
+    fl = fstore.flow(FL, fo); nb = byP(fl);
+    T.check('…in a scenario but not run yet: those pages say so', nb[FL].state === 'notrun' && nb[FC].state === 'notrun' && nb[FK].state === 'none' && nb[FL].scenarios[0].name === tp.scenario.name, JSON.stringify(nb[FL].scenarios));
+    // the stand-in backend answers fewer fields than the app's examples: the shape check off for these runs
+    const noShape = (sc) => fstore.save(Object.assign({}, sc, { steps: sc.steps.map((st) => Object.assign({}, st, { expect: Object.assign({}, st.expect, { sameShape: false }) })) }), 'jane.doe').scenario;
+    tp.scenario = noShape(tp.scenario);
+    r = await fstore.run(tp.scenario.id, env, { by: 'jane.doe' });
+    fl = fstore.flow(FL, fo); nb = byP(fl);
+    T.check('run: Orders and Cart tested (every API passed); Order passed with its create not run (writes held), so not complete',
+      r.run.ok && nb[FL].state === 'ok' && nb[FC].state === 'ok' && nb[FD].state === 'part' && nb[FD].passed === 1 && /1 of its 2 APIs not run yet/.test(nb[FD].stateText)
+      && fl.summary.tested === 2 && fl.summary.passed === 3 && !fl.summary.complete, JSON.stringify([nb[FD].state, nb[FD].stateText, fl.summary]));
+    tp = fstore.throughPath(tp.scenario, [FL, FD, FC, FK], fo, 'jane.doe');
+    T.check('a longer path from that journey: continued from it (Checkout linked), not drafted again', tp.ok && tp.continued && tp.added.map((a) => a.label).join() === 'Checkout'
+      && tp.scenario.journey.length === 4 && fstore.list(FL).scenarios.length === 1, JSON.stringify(tp.added));
+    const thr = fstore.throughPath(null, [FL, FH], fo, 'jane.doe');
+    T.check('…a page on the path with no sheet: passed through, said why', thr.ok && thr.skipped.length === 1 && thr.skipped[0].page === FH && /no technical sheet/.test(thr.skipped[0].why) && thr.scenario.journey.length === 1);
+    const sendWas = env.send;
+    env.send = ((orig) => async (name, rel, init) => (/^\/shop\/v1\/orders(\?|$)/.test(rel) && init.method === 'GET' ? { status: 500, statusText: '', headers: { 'content-type': 'application/json' }, body: Buffer.from('{}'), ms: 5 } : orig(name, rel, init)))(env.send);
+    thr.scenario = noShape(thr.scenario);
+    r = await fstore.run(thr.scenario.id, env, { by: 'jane.doe' });
+    env.send = sendWas;
+    fl = fstore.flow(FL, fo); nb = byP(fl);
+    T.check('a scenario failing on a page: still tested where another passed (the best of them shows), its failure listed with it',
+      !r.run.ok && nb[FL].state === 'ok' && nb[FL].scenarios.some((x) => x.state === 'bad'), JSON.stringify(nb[FL].scenarios.map((x) => [x.name, x.state])));
+
+    const one = fstore.draft(FL, fx[FL], 'jane.doe').scenario;
+    const c1 = fstore.throughPath(one, [FL, FD], fo, 'jane.doe');
+    T.check('a one-page happy path continued along a path (same scenario, Order linked)', c1.ok && c1.continued && c1.scenario.id === one.id && c1.added.length === 1 && c1.scenario.journey.length === 2, JSON.stringify([c1.continued, c1.added]));
+
     T.section('the page as on your screen: its choices, the parts shown in one case only');
     T.check('shown or not, for the values chosen; null when it hangs on something not chosen (taken as shown)', S.evalWhen("requestTypeSel === 'EXTERNAL'", { requestTypeSel: 'INTERNAL' }) === false
       && S.evalWhen("requestTypeSel !== 'EXTERNAL' || $application.functions.flag($application.variables.f, 'A')", { requestTypeSel: 'INTERNAL' }) === true

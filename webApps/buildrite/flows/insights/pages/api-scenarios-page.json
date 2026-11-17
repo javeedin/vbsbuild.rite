@@ -118,6 +118,21 @@
       "type": "any",
       "defaultValue": null,
       "description": "The page's counts (as Application pages shows them) and the pages with the same title."
+    },
+    "flow": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The page's flow: every page it leads to, how far each is tested (/__api/scenarios/flow)."
+    },
+    "flowOpen": {
+      "type": "boolean",
+      "defaultValue": true,
+      "description": "The flow card unfolded (kept on this PC)."
+    },
+    "pagesMin": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "The pages list folded to a slim rail (kept on this PC)."
     }
   },
   "events": {

@@ -694,6 +694,140 @@ function open(o) {
       if (/^no value for /.test(str(res.note))) res.note = res.note.replace(/ — give it under Data, or hand it on from an earlier step$/, ' — run the steps before it (Save & run), pick it from a list of values, or give it under Data');
       return { ok: true, result: Object.assign(res, { at: now().toISOString() }), vars };
     },
+
+    /**
+     * A page's flow: the pages it leads to in the app (where it goes next, and where those go), each with its APIs and
+     * how far the saved scenarios have tested it. Testing the flow is done when every page's APIs ran and passed.
+     * factsOf(page) → its facts (or null). Pages are walked breadth first, up to opts.depth deep and opts.max pages; a
+     * page reached again is not walked twice (its link is kept as `also`).
+     */
+    flow(page, factsOf, opts) {
+      const o = opts || {};
+      const maxDepth = Math.max(1, Math.min(8, Number(o.depth) || 5));
+      const maxPages = Math.max(2, Math.min(60, Number(o.max) || 30));
+      const startId = str(page);
+      const fStart = typeof factsOf === 'function' ? factsOf(startId) : null;
+      if (!fStart) return no('This page has no technical sheet yet: open it in Application pages and Build its sheet first.');
+      const isBip = (r) => /runBIPReport$/i.test(str(r.endpoint)) || /\/xmlpserver\//i.test(str(r.path));
+      const apisOf = (f) => {
+        const integ = (f && f.integrations) || {};
+        const rest = (integ.rest || []).filter((r) => isObj(r) && str(r.endpoint) && !isBip(r));
+        const keys = rest.map((r) => str(r.endpoint)).concat((integ.reports || []).map((n) => 'report:' + str(isObj(n) ? n.name : n)).filter((k) => k !== 'report:'));
+        return { keys: Array.from(new Set(keys)), writes: rest.filter((r) => str(r.method || 'GET').toUpperCase() !== 'GET').length };
+      };
+      // how a page is reached, in words: the button whose chain it is ("Submit"), else the chain's name ("RowClickChain" → "row click")
+      const viaWord = (f, chain) => {
+        const a = (((f && f.features) || {}).actions || []).filter((x) => isObj(x) && Array.isArray(x.chains) && x.chains.indexOf(chain) !== -1)[0];
+        if (a && str(a.label) && !/:/.test(str(a.label)) && str(a.label).length <= 40) return str(a.label);
+        if (!/Chain$/.test(str(chain)) && !/[a-z][A-Z]/.test(str(chain))) return str(chain);
+        return str(chain).replace(/Chain$/, '').replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').trim().toLowerCase() || str(chain);
+      };
+      const nodes = [];
+      const byId = {};
+      let cut = 0;
+      const add = (id, f, depth, parent, via) => {
+        const a = apisOf(f);
+        const n = { page: id, label: str((f && f.label) || id.split('/').pop()), depth, parent: parent || '', via: via || '', apis: a.keys.length, keys: a.keys, writes: a.writes,
+          next: [], also: [], noSheet: !f };
+        nodes.push(n); byId[id] = n;
+        return n;
+      };
+      add(startId, fStart, 0, '', '');
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        if (n.noSheet || n.depth >= maxDepth) continue;
+        const f = factsOf(n.page);
+        ((f && f.next) || []).filter((x) => isObj(x) && str(x.id) && x.id !== n.page).forEach((x) => {
+          const id = str(x.id);
+          const via = (Array.isArray(x.via) ? x.via : []).map(str).filter(Boolean).slice(0, 2).map((c) => viaWord(f, c)).join(', ');
+          if (byId[id]) { if (n.also.indexOf(id) === -1 && byId[id].parent !== n.page) n.also.push(id); return; }
+          if (nodes.length >= maxPages) { cut++; return; }
+          let fx = null;
+          try { fx = factsOf(id); } catch (e) { fx = null; }
+          const c = add(id, fx, n.depth + 1, n.page, via);
+          if (!fx) c.label = str(x.label || id.split('/').pop());
+          n.next.push(id);
+        });
+      }
+      // the path from the page to each page of the flow (to build a journey along it)
+      nodes.forEach((n) => { const p = []; let at = n; while (at) { p.unshift(at.page); at = at.parent ? byId[at.parent] : null; } n.path = p; });
+      // what the saved scenarios tested: every scenario going through a page of the flow, its last run step by step
+      const scs = dirNow() ? all() : [];
+      const pagesOfSc = (s) => Array.from(new Set([s.page].concat((s.journey || []).map((j) => j.page), (s.steps || []).map((st) => st.page || s.page)).filter(Boolean)));
+      const runFull = {};
+      const lastFull = (s) => {
+        if (s.id in runFull) return runFull[s.id];
+        const sum = lastRun(s);
+        runFull[s.id] = sum ? readJson(path.join(rDir(s.page), slug(sum.id) + '.json'), null) : null;
+        return runFull[s.id];
+      };
+      const keyOf = (st) => (st.report ? 'report:' + str(st.report.name) : str(st.endpoint));
+      const rank = { fail: 3, ok: 2, skip: 1 };
+      nodes.forEach((n) => {
+        const covered = scs.filter((s) => pagesOfSc(s).indexOf(n.page) !== -1);
+        const passed = {};
+        const inSc = {};
+        n.scenarios = covered.map((s) => {
+          const mine = (s.steps || []).filter((st) => (st.page || s.page) === n.page);
+          mine.forEach((st) => { inSc[keyOf(st)] = true; });
+          const run = lastFull(s);
+          const res = {};
+          ((run && run.rows) || []).forEach((row) => (row.steps || []).forEach((r) => {
+            if (r && r.step && (!res[r.step] || (rank[r.state] || 0) > (rank[res[r.step].state] || 0))) res[r.step] = r;
+          }));
+          const states = mine.map((st) => (res[st.id] ? res[st.id].state : ''));
+          mine.forEach((st, i) => { if (states[i] === 'ok') passed[keyOf(st)] = true; });
+          const state = !mine.length ? 'none' : !run ? 'notrun' : states.some((x) => x === 'fail') ? 'bad' : states.some((x) => x === 'ok') ? 'ok' : 'notrun';
+          return { id: s.id, name: s.name, start: s.page, steps: mine.length, state, at: run ? str(run.at) : '' };
+        }).filter((x) => x.steps > 0);
+        n.inScenario = n.keys.filter((k) => inSc[k]).length;
+        n.passed = n.keys.filter((k) => passed[k]).length;
+        const st = n.scenarios.map((x) => x.state);
+        n.state = n.noSheet ? 'nosheet' : st.indexOf('ok') !== -1 ? (n.passed >= n.apis ? 'ok' : 'part') : st.indexOf('bad') !== -1 ? 'bad' : st.length ? 'notrun' : 'none';
+        n.stateText = { ok: 'tested: every API passed', part: 'passed — ' + (n.apis - n.passed) + ' of its ' + n.apis + ' APIs not run yet', bad: 'failed in the last run',
+          notrun: 'in a scenario, not run yet', none: 'not tested yet', nosheet: 'no technical sheet yet' }[n.state];
+      });
+      const apis = nodes.reduce((a, n) => a + n.apis, 0);
+      const passedApis = nodes.reduce((a, n) => a + n.passed, 0);
+      const tested = nodes.filter((n) => n.state === 'ok').length;
+      const leaves = nodes.filter((n) => n.depth > 0 && !n.next.length);
+      return { ok: true, page: startId, label: nodes[0].label, nodes, cut, depth: maxDepth,
+        summary: { pages: nodes.length, tested, failed: nodes.filter((n) => n.state === 'bad').length, untested: nodes.filter((n) => n.state === 'none').length,
+          apis, passed: passedApis, paths: leaves.length, complete: nodes.length > 1 && tested === nodes.length && passedApis >= apis } };
+    },
+    /**
+     * A journey along a path of the flow (the page → … → a page it leads to): continued from `scenario` when its journey
+     * is the start of that path, else drafted from the first page; every later page linked in turn. A page with no call
+     * of its own is passed through (said in `skipped`). Saved.
+     */
+    throughPath(scenario, pages, factsOf, by, optsFor) {
+      const list = (Array.isArray(pages) ? pages : []).map(str).filter(Boolean).slice(0, 12);
+      if (!list.length) return no('No path to follow.');
+      const opt = (pg, f) => (typeof optsFor === 'function' ? optsFor(pg, f) : {});
+      let s = null;
+      let from = 1;
+      let cont = false;
+      const j = isObj(scenario) && Array.isArray(scenario.journey) && scenario.journey.length ? scenario.journey.map((x) => str(x.page)) : null;
+      if (isObj(scenario) && str(scenario.page) === list[0] && j && j.length <= list.length && j.every((pg, i) => pg === list[i])) { s = scenario; from = j.length; cont = true; }
+      if (!s) {
+        const f0 = factsOf(list[0]);
+        if (!f0) return no('That page has no technical sheet yet.');
+        const d = store.draft(list[0], f0, by, opt(list[0], f0));
+        if (!d.ok) return d;
+        s = d.scenario;
+      }
+      const added = [];
+      const skipped = [];
+      for (let i = from; i < list.length; i++) {
+        const f = factsOf(list[i]);
+        if (!f) { skipped.push({ page: list[i], why: 'no technical sheet yet' }); continue; }
+        const r = store.extend(s, list[i], f, by, opt(list[i], f));
+        if (!r.ok) { skipped.push({ page: list[i], label: str(f.label), why: r.error }); continue; }
+        s = r.scenario;
+        added.push({ page: list[i], label: str(f.label || list[i].split('/').pop()) });
+      }
+      return { ok: true, scenario: s, added, skipped, continued: cont };
+    },
     runs(page) { if (!dirNow()) return no('Set up your workspace first.'); return { ok: true, runs: runsOf(str(page)) }; },
     runOf(page, runId) { const r = readJson(path.join(rDir(page), slug(runId) + '.json'), null); return r ? { ok: true, run: r } : no('No such run.'); },
   };

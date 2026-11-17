@@ -436,3 +436,52 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-sc-jalist { display: grid; gap: 4px; }
 .nx-sc-jaapi--in { background: #f3fbf5; border-color: #b7e0c4; }
 .nx-sc-jain { font-size: 12px; font-weight: 600; color: #1d5b33; white-space: nowrap; }
+
+/* API Scenarios: the pages list folded to a slim rail (more room for the steps) */
+.nx-sc-cols--min { grid-template-columns: 44px 1fr; }
+.nx-sc-pageshead { display: flex; gap: 6px; align-items: center; }
+.nx-sc-pageshead .nx-cm-input { flex: 1; min-width: 0; }
+.nx-sc-pages--min { padding: 4px; }
+.nx-sc-pagesrail { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; padding: 10px 0; border: 0; border-radius: 8px; background: none; cursor: pointer; color: inherit; font: inherit; }
+.nx-sc-pagesrail:hover { background: var(--nx-head, #f3f6f9); }
+.nx-sc-railtext { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 12px; font-weight: 600; white-space: nowrap; max-height: calc(100vh - 300px); overflow: hidden; text-overflow: ellipsis; }
+
+/* API Scenarios: the flow from the page — every page it leads to, how far each is tested */
+.nx-sc-flow { padding: 10px 14px 12px; display: grid; gap: 8px; }
+.nx-sc-flow--done { box-shadow: inset 4px 0 0 #2f9e5b; }
+.nx-sc-flowhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.nx-sc-flowfold { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 2px 0; cursor: pointer; color: inherit; font: inherit; }
+.nx-sc-flowsum { font-size: 13px; color: var(--nx-ink-2, #4a5868); }
+.nx-sc-flowbar, .nx-sc-fbar { display: inline-block; width: 120px; height: 6px; border-radius: 3px; background: #e6ebf1; overflow: hidden; }
+.nx-sc-flowbar > span, .nx-sc-fbar > span { display: block; height: 100%; background: #2f9e5b; border-radius: 3px; }
+.nx-sc-flowleft { margin: 0; font-size: 13px; color: #8a5a00; }
+.nx-sc-flowleft--done { color: #1f7a45; font-weight: 600; }
+.nx-sc-flowcols { display: flex; gap: 0; overflow-x: auto; padding-bottom: 4px; }
+.nx-sc-flowcol { display: flex; flex-direction: column; gap: 8px; min-width: 210px; max-width: 250px; padding: 0 14px 0 0; position: relative; }
+.nx-sc-flowcol + .nx-sc-flowcol { padding-left: 22px; }
+.nx-sc-flowcol + .nx-sc-flowcol::before { content: '→'; position: absolute; left: 2px; top: 34px; color: #8b98a8; font-size: 16px; }
+.nx-sc-flowcolt { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #6b7889; }
+.nx-sc-fnode { border: 1px solid var(--nx-line, #d3dce6); border-left-width: 4px; border-radius: 10px; padding: 8px 10px; background: var(--nx-surface, #fff); display: grid; gap: 3px; }
+.nx-sc-fnode--first { background: #eef4fc; }
+.nx-sc-fnode--ok { border-left-color: #2f9e5b; }
+.nx-sc-fnode--part { border-left-color: #8cc9a3; }
+.nx-sc-fnode--bad { border-left-color: #c0392b; }
+.nx-sc-fnode--notrun { border-left-color: #e0a526; }
+.nx-sc-fnode--none, .nx-sc-fnode--nosheet { border-left-color: #b9c3cf; border-style: dashed; border-left-style: solid; }
+.nx-sc-fnodet { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.nx-sc-fdot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: #b9c3cf; }
+.nx-sc-fnode--ok .nx-sc-fdot { background: #2f9e5b; }
+.nx-sc-fnode--part .nx-sc-fdot { background: #8cc9a3; }
+.nx-sc-fnode--bad .nx-sc-fdot { background: #c0392b; }
+.nx-sc-fnode--notrun .nx-sc-fdot { background: #e0a526; }
+.nx-sc-fname { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: #1d4f91; cursor: pointer; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-sc-fname:hover { text-decoration: underline; }
+.nx-sc-fhow, .nx-sc-falso { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-sc-fapis { font-size: 12px; }
+.nx-sc-fbar { width: 100%; height: 4px; }
+.nx-sc-fstate { font-size: 12px; color: var(--nx-ink-2, #4a5868); }
+.nx-sc-fnode--bad .nx-sc-fstate { color: #a3271b; }
+.nx-sc-fnode--ok .nx-sc-fstate { color: #1f7a45; }
+.nx-sc-facts { display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap; }
+.nx-sc-fpath { margin-left: auto; }
+@media (max-width: 960px) { .nx-sc-cols--min { grid-template-columns: 1fr; } .nx-sc-railtext { writing-mode: horizontal-tb; transform: none; } .nx-sc-pagesrail { flex-direction: row; justify-content: center; } }

@@ -27,6 +27,9 @@ define([], function () {
     unlink: function (scenario, page) { return call('/unlink', 'POST', { scenario: scenario, page: page }); },
     relink: function (scenario, page) { return call('/relink', 'POST', { scenario: scenario, page: page }); },
     next: function (page) { return call('/next?' + q('page', page)); },
+    // the page's flow (every page it leads to, how far each is tested); a journey along a path of it
+    flow: function (page) { return call('/flow?' + q('page', page)); },
+    path: function (scenario, pages) { return call('/path', 'POST', { scenario: scenario || null, pages: pages || [] }); },
     // every API of a page (to test one, or build a scenario from them); the order to run a scenario's steps in
     apis: function (page) { return call('/apis?' + q('page', page)); },
     suggest: function (scenario) { return call('/suggest', 'POST', { scenario: scenario }); },

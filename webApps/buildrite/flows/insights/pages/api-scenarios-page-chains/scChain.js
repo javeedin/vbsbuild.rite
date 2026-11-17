@@ -12,17 +12,27 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
       // every API of the page (the APIs tab)
       const loadApis = async (id) => { const r = await SC.apis(id || v.page); if ((id || v.page) !== v.page) return; if (r.ok) { v.apis = r.body.apis || []; v.apiChoices = r.body.choices || []; v.apiInfo = { overview: r.body.overview || null, twins: r.body.twins || [] }; } else say(r); };
       const newId = () => 'u' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
+      // the page's flow: every page it leads to, how far each is tested (the flow card)
+      const loadFlow = async (id) => {
+        if (!id) return;
+        const r = await SC.flow(id);
+        if (id !== v.page) return;
+        v.flow = r.ok ? r.body : { error: (r.body && r.body.error) || 'The flow could not be read.', nodes: [] };
+      };
+      const remember = (k, val) => { try { window.localStorage.setItem('br.sc.' + k, val ? '1' : '0'); } catch (e) { /* not kept */ } };
+      const recalled = (k, d) => { try { const x = window.localStorage.getItem('br.sc.' + k); return x === null ? d : x === '1'; } catch (e) { return d; } };
       const loadPage = async (id) => {
         v.page = id; v.sc = null; v.run = null; v.result = null; v.tries = {}; v.nextPages = []; v.apis = []; v.apiInfo = null; v.apiTries = {}; v.apiVals = {}; v.apiOpen = ''; v.suggestion = null;
         if (v.tab === 'apis') loadApis(id);
-        const [l, sh, rs] = await Promise.all([SC.list(id), PC.sheet(context.$application.path, id), SC.runs(id)]);
+        v.flow = null;
+        const [l, sh, rs] = await Promise.all([SC.list(id), PC.sheet(context.$application.path, id), SC.runs(id), loadFlow(id)]);
         v.scenarios = l.ok ? l.body.scenarios || [] : [];
         if (!l.ok) say(l);
         const s = sh && sh.body ? (sh.body.sheet || sh.body) : null;
         v.facts = s && s.facts ? s.facts : null;
         v.runs = rs.ok ? rs.body.runs || [] : [];
       };
-      const reloadList = async () => { const l = await SC.list(v.page); if (l.ok) v.scenarios = l.body.scenarios || []; const rs = await SC.runs(v.page); if (rs.ok) v.runs = rs.body.runs || []; };
+      const reloadList = async () => { const l = await SC.list(v.page); if (l.ok) v.scenarios = l.body.scenarios || []; const rs = await SC.runs(v.page); if (rs.ok) v.runs = rs.body.runs || []; await loadFlow(v.page); };
       const steps = () => (v.sc && v.sc.steps) || [];
       const setSteps = (list) => { v.sc = Object.assign({}, v.sc, { steps: list }); };
       const doRun = async (id, writes) => {
@@ -73,7 +83,8 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         return;
       }
       if (act === 'jTab') {
-        const j = jPage(key) || { page: key, label: '' };
+        const fnode = ((v.flow && v.flow.nodes) || []).filter((x) => x.page === key)[0];
+        const j = jPage(key) || { page: key, label: fnode ? fnode.label : '' };
         v.journeyApis = null;
         bus.open({ record: 'api-scenarios-page', params: { page: j.page, label: j.label || '' } });
         return;
@@ -126,7 +137,53 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         } finally { v.busy = false; }
         return;
       }
+      // the pages list folded to a rail (more room), and the flow card folded: both kept on this PC
+      if (act === 'pagesMin') { v.pagesMin = key !== 'open'; remember('pagesMin', v.pagesMin); return; }
+      if (act === 'flowFold') { v.flowOpen = !v.flowOpen; remember('flowOpen', v.flowOpen); return; }
+      if (act === 'flowLoad') { await loadFlow(v.page); return; }
+      // a journey along the path of the flow to that page (continued from the open scenario when it starts the same way)
+      if (act === 'flowPath') {
+        const n = ((v.flow && v.flow.nodes) || []).filter((x) => x.page === key)[0];
+        if (!n || v.busy) return;
+        v.busy = true;
+        try {
+          const r = await SC.path(v.sc && v.sc.page === v.page ? v.sc : null, n.path);
+          if (!r.ok) { say(r); return; }
+          v.sc = copy(r.body.scenario); v.run = null; v.tries = {}; v.nextPages = r.body.next || []; v.suggestion = null; v.tab = 'scenarios';
+          await reloadList();
+          const sk = r.body.skipped || [];
+          say(r, (r.body.continued ? 'Continued "' : 'A journey: "') + v.sc.name + '" — ' + (r.body.added || []).length + ' page(s) linked'
+            + (sk.length ? '; passed through ' + sk.map((x) => (x.label || x.page.split('/').pop()) + ' (' + x.why + ')').join(', ') : '') + '. Save & run it to test that path.');
+        } finally { v.busy = false; }
+        return;
+      }
+      // a journey for every path of the flow (one scenario each, skipped when one already follows that path)
+      if (act === 'flowAll') {
+        const nodes = (v.flow && v.flow.nodes) || [];
+        const leaves = nodes.filter((x) => x.depth > 0 && !(x.next || []).length && !x.noSheet).slice(0, 8);
+        if (!leaves.length || v.busy) return;
+        const same = (sc, path) => { const j = (sc.journey || []).map((x) => x.page); return j.length === path.length && j.every((pg, i) => pg === path[i]); };
+        const todo = leaves.filter((x) => !(v.scenarios || []).some((sc) => same(sc, x.path)));
+        if (!todo.length) { bus.toast('Every path of the flow already has its journey: Run all tests the whole flow.', 'info'); return; }
+        let yes = true;
+        try { yes = window.confirm('Make ' + todo.length + ' journey scenario(s), one for each path of the flow not followed yet?\n\n' + todo.map((x) => '• ' + x.path.map((pg) => ((nodes.filter((y) => y.page === pg)[0] || {}).label || pg)).join(' → ')).join('\n') + '\n\nThen Run all tests the whole flow.'); } catch (e) { /* no DOM */ }
+        if (!yes) return;
+        v.busy = true;
+        const made = [];
+        try {
+          for (const x of todo) {
+            const r = await SC.path(null, x.path);
+            if (r.ok) made.push(r.body.scenario);
+          }
+          if (made.length) { v.sc = copy(made[made.length - 1]); v.run = null; v.tries = {}; v.suggestion = null; v.tab = 'scenarios'; }
+          await reloadList();
+          say({ ok: made.length > 0, body: { error: 'No journey could be made for those paths.' } }, made.length + ' journey(s) made, one for each path: ' + made.map((m) => m.name.replace(/^Journey — /, '')).join(' · ') + '. Run all tests the whole flow.');
+        } finally { v.busy = false; }
+        return;
+      }
       if (act === 'load') {
+        v.pagesMin = recalled('pagesMin', false);
+        v.flowOpen = recalled('flowOpen', true);
         const c = await PC.catalog(context.$application.path);
         v.pages = c && c.ok && c.body ? (c.body.pages || []) : [];
         await where();

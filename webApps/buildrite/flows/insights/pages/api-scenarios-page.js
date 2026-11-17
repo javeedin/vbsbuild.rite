@@ -130,6 +130,11 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
       this._rows = new Map();   // step id → { sig, row }: a step shown again only when it changed (the page keeps its place)
       this._prov = new Map();   // scenario id|step id → LovProvider (one per list, kept while the scenario is open)
     }
+    /** A page's title (the rail of the folded pages list). */
+    pageLabelOf(pages, id) {
+      const p = (pages || []).filter((x) => x && x.id === id)[0];
+      return p ? String(p.label || p.id) : String(id || '').split('/').pop();
+    }
     pagesShown(pages, q, appAt) {
       const t = String(q || '').trim().toLowerCase();
       const live = (pages || []).filter((p) => !p.deleted);
@@ -325,6 +330,39 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient'], (bus, SC) => {
           stateText: r ? (r.state === 'skip' ? 'skipped' : r.state === 'fail' ? '✗ ' + (r.status || 'failed') : '✓ passed' + (r.status ? ' · ' + r.status : '')) : 'not run' });
       });
       return out;
+    }
+    /** The flow card: the pages by how far they are from this one (a column each), each page with its state. */
+    flowCols(flow) {
+      if (!flow || !flow.nodes || !flow.nodes.length) return [];
+      const byId = {};
+      flow.nodes.forEach((n) => { byId[n.page] = n; });
+      const cols = [];
+      flow.nodes.forEach((n) => {
+        const c = cols[n.depth] || (cols[n.depth] = { depth: n.depth, title: n.depth === 0 ? 'This page' : n.depth === 1 ? 'It leads to' : 'Then, ' + n.depth + ' pages on', nodes: [] });
+        const from = n.parent && byId[n.parent] ? byId[n.parent].label : '';
+        c.nodes.push({ page: n.page, label: n.label, depth: n.depth, state: n.state, stateText: n.stateText, first: n.depth === 0,
+          how: n.depth ? 'from ' + from + (n.via ? ' · ' + n.via : '') : 'where the flow starts',
+          apisText: n.noSheet ? 'no technical sheet' : n.apis + (n.apis === 1 ? ' API' : ' APIs') + (n.writes ? ' (' + n.writes + ' change data)' : '') + (n.apis ? ' · ' + n.passed + ' passed' : ''),
+          pct: n.apis ? Math.round((100 * n.passed) / n.apis) : (n.state === 'ok' ? 100 : 0),
+          also: (n.also || []).map((x) => (byId[x] ? byId[x].label : x.split('/').pop())).join(', '),
+          scens: (n.scenarios || []).map((x) => x.name + ' — ' + ({ ok: 'passed', bad: 'failed', notrun: 'not run yet' }[x.state] || x.state)).join('\n'),
+          nScens: (n.scenarios || []).length, noSheet: !!n.noSheet, leaf: n.depth > 0 && !(n.next || []).length,
+          pathText: (n.path || []).map((x) => (byId[x] ? byId[x].label : x)).join(' → ') });
+      });
+      return cols.filter(Boolean);
+    }
+    /** The flow's headline: how far it is tested, and what is left. */
+    flowHead(flow) {
+      const s = flow && flow.summary;
+      if (!s) return { text: '', pct: 0, done: false, left: '' };
+      const pct = s.apis ? Math.round((100 * s.passed) / s.apis) : (s.pages && s.tested === s.pages ? 100 : 0);
+      const parts = [s.pages + (s.pages === 1 ? ' page' : ' pages'), s.tested + ' tested'];
+      if (s.failed) parts.push(s.failed + ' failed');
+      parts.push(s.passed + ' of ' + s.apis + ' APIs passed');
+      const left = s.complete ? 'Every page of the flow has passed: its testing is complete.'
+        : s.pages <= 1 ? 'This page leads to no other page in the code: its own APIs are the whole flow.'
+          : 'Testing is complete when every page of the flow has passed' + (s.untested ? ' — ' + s.untested + ' not tested yet' : '') + '.';
+      return { text: parts.join(' · '), pct, done: !!s.complete, left, paths: s.paths || 0, cut: flow.cut || 0 };
     }
     /** The APIs dialog: every API of the page, in the order the page makes them, each marked with its step here (or Add). */
     jaApis(ja, sc) {

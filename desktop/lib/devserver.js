@@ -1144,6 +1144,21 @@ function createDevServer(o) {
               return jsonA(200, sc.suggest(scn, fb, fb[first] ? optsOf(first, fb[first]) : { env }));
             }
             if (pathname === '/__api/scenarios/next' && !post) { const facts = factsOf(q('page')); return jsonA(200, { ok: true, next: nextOf(facts) }); }
+            // the page's flow: every page it leads to, with how far the saved scenarios tested each
+            if (pathname === '/__api/scenarios/flow' && !post) {
+              const cache = {};
+              const fo = (pid) => { if (!(pid in cache)) cache[pid] = factsOf(pid); return cache[pid]; };
+              return jsonA(200, sc.flow(q('page'), fo, { depth: Number(q('depth')) || 5, max: 30 }));
+            }
+            // a journey along a path of the flow (continued from the scenario when it is the start of that path)
+            if (pathname === '/__api/scenarios/path' && post) {
+              const r = sc.throughPath(b.scenario || null, b.pages, factsOf, who(), optsOf);
+              if (!r.ok) return jsonA(200, r);
+              const j = r.scenario.journey || [];
+              const last = factsOf(j.length ? j[j.length - 1].page : r.scenario.page);
+              log(`API Scenarios: journey along ${(b.pages || []).length} page(s) -> "${r.scenario.name}" (${r.added.length} linked, ${r.skipped.length} passed through)`);
+              return jsonA(200, Object.assign(r, { next: last ? nextOf(last) : [] }));
+            }
             // one step tried on its own (▶ beside it): its answer, not kept as a run
             if (pathname === '/__api/scenarios/try' && post) {
               const r = await sc.tryStep(b.scenario, String(b.step || ''), env, { vars: b.vars, search: b.search, allowWrites: !!b.allowWrites, by: who() });
