@@ -16,11 +16,11 @@
   "files": [
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.json",
-    "lines": 628
+    "lines": 636
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
-    "lines": 778
+    "lines": 789
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.js",
@@ -73,6 +73,10 @@
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CustomerTypeaheadChain.js",
     "lines": 75
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/GoHomeChain.js",
+    "lines": 28
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/HydrateDraftChain.js",
@@ -143,13 +147,20 @@
     "lines": 72
    }
   ],
-  "codeHash": "82e0455d9b5ad4f8",
+  "codeHash": "cf3f1d58689f8965",
   "features": {
    "sections": [
     "Create Equipment Request",
     "Clear agreement?"
    ],
    "actions": [
+    {
+     "label": "Close",
+     "listener": "closeRequest",
+     "chains": [
+      "GoHomeChain"
+     ]
+    },
     {
      "label": "Use this location",
      "listener": "useLocation",
@@ -502,6 +513,22 @@
       "customerSearchRequested"
      ],
      "lines": 75
+    },
+    {
+     "name": "GoHomeChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/GoHomeChain.js",
+     "about": "Wired to the header \"Close\" button (closeRequest listener). Leaves the create-request form and navigates to the application's default (home) page.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [
+      "page __default"
+     ],
+     "modules": [],
+     "on": [
+      "closeRequest"
+     ],
+     "lines": 28
     },
     {
      "name": "HydrateDraftChain",
@@ -1704,6 +1731,7 @@
    ]
   },
   "links": [
+   "page __default",
    "page request-catalog"
   ],
   "next": [
@@ -1715,7 +1743,9 @@
     ]
    }
   ],
-  "unresolvedLinks": []
+  "unresolvedLinks": [
+   "page __default"
+  ]
  },
  "ai": null,
  "screenshots": [
@@ -1731,7 +1761,7 @@
   }
  ],
  "stories": [],
- "at": "2026-11-17T10:11:11.860Z",
+ "at": "2026-11-17T10:21:15.188Z",
  "by": "rite.user",
- "codeHash": "82e0455d9b5ad4f8"
+ "codeHash": "cf3f1d58689f8965"
 }
