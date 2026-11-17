@@ -16,11 +16,11 @@
   "files": [
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.json",
-    "lines": 636
+    "lines": 628
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
-    "lines": 789
+    "lines": 787
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.js",
@@ -147,20 +147,13 @@
     "lines": 72
    }
   ],
-  "codeHash": "cf3f1d58689f8965",
+  "codeHash": "ca67bac5a555e769",
   "features": {
    "sections": [
     "Create Equipment Request",
     "Clear agreement?"
    ],
    "actions": [
-    {
-     "label": "Close",
-     "listener": "closeRequest",
-     "chains": [
-      "GoHomeChain"
-     ]
-    },
     {
      "label": "Use this location",
      "listener": "useLocation",
@@ -517,17 +510,15 @@
     {
      "name": "GoHomeChain",
      "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/GoHomeChain.js",
-     "about": "Wired to the header \"Close\" button (closeRequest listener). Leaves the create-request form and navigates to the application's default (home) page.",
+     "about": "Fired by the header \"Home\" button (secondary action on the overview page). Navigates the user to the application's home page.",
      "calls": [],
      "reports": [],
      "local": [],
      "opens": [
-      "page __default"
+      "page home"
      ],
      "modules": [],
-     "on": [
-      "closeRequest"
-     ],
+     "on": [],
      "lines": 28
     },
     {
@@ -1731,7 +1722,7 @@
    ]
   },
   "links": [
-   "page __default",
+   "page home",
    "page request-catalog"
   ],
   "next": [
@@ -1744,7 +1735,7 @@
    }
   ],
   "unresolvedLinks": [
-   "page __default"
+   "page home"
   ]
  },
  "ai": null,
@@ -1761,7 +1752,7 @@
   }
  ],
  "stories": [],
- "at": "2026-11-17T10:21:15.188Z",
+ "at": "2026-11-17T19:22:37.326Z",
  "by": "rite.user",
- "codeHash": "cf3f1d58689f8965"
+ "codeHash": "ca67bac5a555e769"
 }
