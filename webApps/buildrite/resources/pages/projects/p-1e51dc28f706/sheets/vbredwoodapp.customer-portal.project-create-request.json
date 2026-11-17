@@ -1748,18 +1748,7 @@
   ]
  },
  "ai": null,
- "screenshots": [
-  {
-   "id": "s1",
-   "file": "projects/p-1e51dc28f706/screens/vbredwoodapp.customer-portal.project-create-request.1.jpg",
-   "at": "2026-11-17T10:12:06.086Z",
-   "by": "rite.user",
-   "source": "capture",
-   "caption": "",
-   "bytes": 75437,
-   "from": "workspace"
-  }
- ],
+ "screenshots": [],
  "stories": [],
  "at": "2026-11-17T10:21:15.188Z",
  "by": "rite.user",
