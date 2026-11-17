@@ -1,5 +1,5 @@
 {
-  "description": "Saved follow-ups: the follow-ups drafted on the Jira pages (Copy to follow-up → Save), kept in DuckDB on this PC (desktop/lib/followups.js). A list on the left; the chosen one on the right with its header (title, scope, recipients, when) and its stories, shown as the email that was composed. Copy it again or delete it. Runs only in the desktop app.",
+  "description": "Saved follow-ups: the follow-ups drafted on the Jira pages (Copy to follow-up → Save), kept in DuckDB on this PC (desktop/lib/followups.js). A list on the left; the chosen one on the right as the email that was composed. The Messages tab keeps the messages the Copy to follow-up dialog offers: yours, and your versions of the built-ins, in your order.",
   "navigation": { "embeddable": "enabled" },
   "variables": {
     "available": { "type": "boolean", "defaultValue": true, "description": "Follow-ups run only in the desktop app (DuckDB on this PC)." },
@@ -7,13 +7,25 @@
     "busy": { "type": "boolean", "defaultValue": false },
     "followups": { "type": "any[]", "defaultValue": [], "description": "The saved follow-ups (summaries), newest first." },
     "selId": { "type": "string", "defaultValue": "", "description": "The follow-up open on the right ('' when none)." },
-    "detail": { "type": "any", "defaultValue": null, "description": "The open follow-up with its header and lines." }
+    "detail": { "type": "any", "defaultValue": null, "description": "The open follow-up with its header and lines." },
+    "tab": { "type": "string", "defaultValue": "saved", "description": "'saved' (the saved follow-ups) or 'messages' (the messages the follow-up dialog offers)." },
+    "msgs": { "type": "any[]", "defaultValue": [], "description": "Every message the follow-up dialog can offer, hidden ones too (resources/js/followup.js merge)." },
+    "msgKey": { "type": "string", "defaultValue": "", "description": "The message open in the editor ('' for a new one)." },
+    "msgEdit": { "type": "any", "defaultValue": null, "description": "The message being edited: { key, label, subject, body, show, builtin, edited, mine, isNew, original }." },
+    "msgDirty": { "type": "boolean", "defaultValue": false, "description": "The editor has changes not saved yet." }
+  },
+  "events": {
+    "focusRequest": { "description": "Another screen opened Follow-ups on a tab (shellBus.focus('followups', { tab: 'messages' })).", "payloadType": "object" }
   },
   "eventListeners": {
     "vbEnter": { "chains": [ { "chain": "initChain" } ] },
     "onRefresh": { "chains": [ { "chain": "initChain", "parameters": { "refresh": true } } ] },
     "onSelect": { "chains": [ { "chain": "openChain", "parameters": { "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
-    "onAct": { "chains": [ { "chain": "actChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "id": "{{ $event.currentTarget.dataset.id || '' }}" } } ] }
+    "onAct": { "chains": [ { "chain": "actChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "id": "{{ $event.currentTarget.dataset.id || '' }}" } } ] },
+    "onMsg": { "chains": [ { "chain": "msgChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "key": "{{ $event.currentTarget.dataset.key || '' }}" } } ] },
+    "onMsgField": { "chains": [ { "chain": "msgChain", "parameters": { "act": "field", "field": "{{ $event.currentTarget.dataset.field }}", "value": "{{ $event.currentTarget.type === 'checkbox' ? $event.currentTarget.checked : $event.currentTarget.value }}" } } ] },
+    "onMsgImport": { "chains": [ { "chain": "msgChain", "parameters": { "act": "importFile" } } ] },
+    "focusRequest": { "chains": [ { "chain": "msgChain", "parameters": { "act": "focus" } } ] }
   },
   "imports": {
     "components": {

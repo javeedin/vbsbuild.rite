@@ -779,6 +779,14 @@ function createDevServer(o) {
           if (pathname === '/__followups/get' && req.method === 'GET') return jsonF(200, await fsStore.get(u.searchParams.get('id') || ''));
           if (pathname === '/__followups/save' && post) { try { return jsonF(200, await fsStore.save(b)); } catch (e) { return jsonF(200, { ok: false, error: e.message }); } }
           if (pathname === '/__followups/remove' && post) return jsonF(200, await fsStore.remove(b.id));
+          // the messages the Copy to follow-up dialog offers (Follow-ups › Messages): yours, and your versions of the built-ins
+          if (typeof fsStore.messages === 'function') {
+            const author = () => { try { const id = o.getIdentity && o.getIdentity(); return (id && (id.displayName || id.username)) || ''; } catch (e) { return ''; } };
+            if (pathname === '/__followups/messages' && req.method === 'GET') return jsonF(200, await fsStore.messages());
+            if (pathname === '/__followups/messages/save' && post) return jsonF(200, await fsStore.saveMessage(Object.assign({}, b.message || {}, { author: author() })));
+            if (pathname === '/__followups/messages/remove' && post) return jsonF(200, await fsStore.removeMessage(String(b.key || '')));
+            if (pathname === '/__followups/messages/order' && post) return jsonF(200, await fsStore.setMessageOrder(b.keys));
+          }
           return jsonF(404, { error: 'Not found' });
         })().catch((e) => jsonF(200, { ok: false, error: e.message }));
         return undefined;

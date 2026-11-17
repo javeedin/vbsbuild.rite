@@ -399,6 +399,7 @@ define([], function () {
     printHtml: printHtml,
     followupHtml: followupHtml,
     copyRich: copyRich,
+    download: download,
     fileName: fileName,
     run: run
   };

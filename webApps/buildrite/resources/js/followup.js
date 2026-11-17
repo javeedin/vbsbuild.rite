@@ -54,19 +54,88 @@ define(['resources/js/exportKit'], function (exportKit) {
       body: 'Please confirm whether the stories below are ready for testing. If a story is not ready, add what is pending and when it will be ready.' },
     { key: 'sprint', label: 'Sprint closing', subject: 'Sprint closing — please finish or hand over',
       body: 'We are closing the sprint. Please complete or hand over the stories below, and make sure the status on the board is correct.' },
+    { key: 'scripts', label: 'Provide test scripts', subject: 'Test scripts needed for these stories',
+      body: 'Please share the test scripts for the stories below. For each story, list the steps, the test data and the expected result, and attach them to the story in Jira (or reply with a link) so testing can start.' },
+    { key: 'proof', label: 'Provide proof of testing', subject: 'Proof of testing needed before we close these stories',
+      body: 'Before we can close the stories below, please attach proof of testing to each one: screenshots or a short recording, the test data used and the result you got. If you found defects, add their numbers and status.' },
+    { key: 'info', label: 'Need more info', subject: 'More information needed on these stories',
+      body: 'We need more information on the stories below before they can move forward. Please add the missing details to each story: what is needed, the acceptance criteria, and any examples or screens that help. Reply if a short call would be quicker.' },
+    { key: 'blocked', label: 'Any blockers?', subject: 'Is anything blocking these stories?',
+      body: 'The stories below have not moved for a while. Is anything blocking them? Please reply with the blocker, who can clear it and the date you expect to continue, so we can help.' },
+    { key: 'uat', label: 'UAT sign-off', subject: 'UAT sign-off needed for these stories',
+      body: 'The stories below are ready for user acceptance testing. Please test them and reply with your sign-off, or list what does not work as expected so we can fix it.' },
     { key: 'blank', label: 'Write my own', subject: 'Follow-up', body: '' },
   ];
 
+  // The messages kept in Follow-ups › Messages (desktop/lib/followups.js): yours, and your versions of the built-ins (a
+  // row with a built-in's key replaces it, or hides it), in the order you set. merge() makes the one list the dialog
+  // shows; use() keeps it for template() / list() (this module is loaded once, so every page sees the same list).
+  function merge(stored, order) {
+    var rows = (stored || []).filter(function (m) { return m && m.key; });
+    var byKey = {};
+    rows.forEach(function (m) { byKey[m.key] = m; });
+    var out = TEMPLATES.map(function (t) {
+      var m = byKey[t.key];
+      return {
+        key: t.key, label: (m && m.label) || t.label, subject: m ? m.subject : t.subject, body: m ? m.body : t.body,
+        hidden: !!(m && m.hidden), builtin: true, edited: !!m && (m.label !== t.label || m.subject !== t.subject || m.body !== t.body),
+        updatedAt: (m && m.updatedAt) || '', author: (m && m.author) || '',
+        original: { label: t.label, subject: t.subject, body: t.body },
+      };
+    });
+    rows.forEach(function (m) {
+      if (TEMPLATES.some(function (t) { return t.key === m.key; })) return;
+      out.push({ key: m.key, label: m.label || 'My message', subject: m.subject || '', body: m.body || '', hidden: !!m.hidden,
+        builtin: false, edited: false, mine: true, updatedAt: m.updatedAt || '', author: m.author || '' });
+    });
+    // the order you set first; the rest as they come (built-ins, then yours); "Write my own" always last
+    var ord = (order || []).filter(function (k, i, a) { return a.indexOf(k) === i; });
+    var pos = function (m) { var i = ord.indexOf(m.key); return i === -1 ? ord.length + out.indexOf(m) : i; };
+    var blank = out.filter(function (m) { return m.key === 'blank'; });
+    return out.filter(function (m) { return m.key !== 'blank'; }).sort(function (a, b) { return pos(a) - pos(b); }).concat(blank);
+  }
+  var active = merge([], []);
+  function use(stored, order) { active = merge(stored, order); return active; }
+  /** The messages the dialog offers (hidden ones left out unless all). */
+  function list(all) { return all ? active.slice() : active.filter(function (m) { return !m.hidden; }); }
+
   function template(key) {
-    for (var i = 0; i < TEMPLATES.length; i++) { if (TEMPLATES[i].key === key) return TEMPLATES[i]; }
-    return TEMPLATES[0];
+    for (var i = 0; i < active.length; i++) { if (active[i].key === key) return active[i]; }
+    for (var j = 0; j < TEMPLATES.length; j++) { if (TEMPLATES[j].key === key) return TEMPLATES[j]; }
+    return list()[0] || TEMPLATES[0];
+  }
+
+  // Words a message can carry, filled in from the stories when it is picked.
+  var WORDS = [
+    { word: '{names}', says: 'the assignees\u2019 first names (Priya and Sam)' },
+    { word: '{count}', says: 'how many stories (7 stories)' },
+    { word: '{sprint}', says: 'the stories\u2019 sprint' },
+    { word: '{due}', says: 'the earliest due date' },
+    { word: '{today}', says: 'today\u2019s date' },
+  ];
+  function fill(text, rows) {
+    var rs = rows || [];
+    var ns = names(rs);
+    var who = !ns.length ? 'everyone' : ns.length === 1 ? ns[0] : ns.slice(0, -1).join(', ') + ' and ' + ns[ns.length - 1];
+    var sprints = rs.map(function (r) { return r && r.sprint; }).filter(Boolean);
+    var dues = rs.map(function (r) { return r && r.due; }).filter(function (d) { return /^\d{4}-\d{2}-\d{2}/.test(String(d || '')); }).sort();
+    var today = new Date();
+    var iso = today.getFullYear() + '-' + ('0' + (today.getMonth() + 1)).slice(-2) + '-' + ('0' + today.getDate()).slice(-2);
+    return String(text || '')
+      .replace(/\{names\}/g, who)
+      .replace(/\{count\}/g, rs.length + (rs.length === 1 ? ' story' : ' stories'))
+      .replace(/\{sprint\}/g, sprints[0] || 'this sprint')
+      .replace(/\{due\}/g, dues[0] || 'the due date')
+      .replace(/\{today\}/g, iso);
   }
 
   // The message that fills the box when a template is picked: the greeting, a blank line, then the chosen body.
   function message(rows, key) {
-    var b = template(key).body;
+    var b = fill(template(key).body, rows);
     return greeting(rows) + (b ? '\n\n' + b : '\n\n');
   }
+  /** The picked message's subject, its words filled in. */
+  function subjectFor(rows, key) { return fill(template(key).subject, rows); }
 
   // The columns the follow-up table shows — short and email-friendly. 'sprint' leads with the item's sprint; 'stories'
   // carries the customer label instead.
@@ -170,6 +239,7 @@ define(['resources/js/exportKit'], function (exportKit) {
 
   return {
     firstName: firstName, names: names, greeting: greeting, TEMPLATES: TEMPLATES, template: template, message: message,
+    merge: merge, use: use, list: list, fill: fill, WORDS: WORDS, subjectFor: subjectFor,
     columns: columns, introHtml: introHtml, headerText: headerText, ascii: ascii, tableHtml: tableHtml, tableText: tableText,
     composeHtml: composeHtml, composeText: composeText, mailtoHref: mailtoHref, recips: recips, addRecip: addRecip, removeRecip: removeRecip,
   };

@@ -1,5 +1,6 @@
 <!-- Saved follow-ups: the follow-ups drafted on the Jira pages (Copy to follow-up -> Save), kept in DuckDB on this PC
-     (desktop/lib/followups.js). A list on the left; the chosen one on the right as the email that was composed. -->
+     (desktop/lib/followups.js). A list on the left; the chosen one on the right as the email that was composed.
+     Messages: the messages the Copy to follow-up dialog offers — yours, and your versions of the built-ins, in your order. -->
 <div class="nx-page nx-followups">
   <div class="nx-pagehead">
     <div>
@@ -18,6 +19,15 @@
   </oj-bind-if>
 
   <oj-bind-if test="[[ $variables.available ]]">
+    <div class="nx-sc-tabs nx-fl-tabs" role="tablist">
+      <button type="button" role="tab" id="flTabSaved" :aria-selected="[[ $variables.tab !== 'messages' ? 'true' : 'false' ]]" :class="[[ $functions.tabClass('saved', $variables.tab === 'messages' ? 'messages' : 'saved') ]]" data-act="tab" data-key="saved" on-click="[[ $listeners.onMsg ]]">
+        <oj-bind-text value="[[ 'Saved follow-ups (' + $variables.followups.length + ')' ]]"></oj-bind-text></button>
+      <button type="button" role="tab" id="flTabMessages" :aria-selected="[[ $variables.tab === 'messages' ? 'true' : 'false' ]]" :class="[[ $functions.tabClass('messages', $variables.tab) ]]" data-act="tab" data-key="messages" on-click="[[ $listeners.onMsg ]]">
+        <oj-bind-text value="[[ 'Messages (' + $variables.msgs.length + ')' ]]"></oj-bind-text></button>
+    </div>
+  </oj-bind-if>
+
+  <oj-bind-if test="[[ $variables.available && $variables.tab !== 'messages' ]]">
     <div class="nx-followups-two">
       <section class="nx-card nx-fl-listcard" aria-label="Saved follow-ups">
         <div class="nx-card-head"><h2>Saved</h2></div>
@@ -61,6 +71,96 @@
             <div><dt>Items</dt><dd><oj-bind-text value="[[ $functions.itemsText($variables.detail) ]]"></oj-bind-text></dd></div>
           </dl>
           <iframe class="nx-fl-preview" title="Follow-up email" id="flPreview" sandbox="" :srcdoc="[[ $functions.detailHtml($variables.detail) ]]"></iframe>
+        </oj-bind-if>
+      </section>
+    </div>
+  </oj-bind-if>
+
+  <!-- Messages: what the Copy to follow-up dialog offers (Jira stories, a sprint), in this order -->
+  <oj-bind-if test="[[ $variables.available && $variables.tab === 'messages' ]]">
+    <div class="nx-followups-two nx-fm">
+      <section class="nx-card nx-fm-listcard" aria-label="Messages">
+        <div class="nx-card-head">
+          <div><h2>Messages</h2><span class="nx-note" id="fmCount"><oj-bind-text value="[[ $functions.msgsCount($variables.msgs) ]]"></oj-bind-text></span></div>
+          <div class="nx-actions">
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="fmNew" data-act="new" on-click="[[ $listeners.onMsg ]]">+ New message</button>
+          </div>
+        </div>
+        <p class="nx-note nx-fm-help">The Copy to follow-up dialog on Jira stories and sprints offers these, in this order. Change a built-in one, hide it, or add your own.</p>
+        <div class="nx-fm-list" id="fmList" role="list">
+          <oj-bind-for-each data="[[ $variables.msgs ]]">
+            <template data-oj-as="m">
+              <div :class="[[ $functions.msgRowClass(m.data, $variables.msgKey) ]]" role="listitem" :data-key="[[ m.data.key ]]">
+                <button type="button" class="nx-fm-rowmain" data-act="pick" :data-key="[[ m.data.key ]]" on-click="[[ $listeners.onMsg ]]">
+                  <span class="nx-fm-rowlabel"><oj-bind-text value="[[ m.data.label ]]"></oj-bind-text></span>
+                  <span class="nx-fm-rowsub"><oj-bind-text value="[[ m.data.subject || (m.data.key === 'blank' ? 'an empty message to write yourself' : '') ]]"></oj-bind-text></span>
+                </button>
+                <span class="nx-fm-tags">
+                  <oj-bind-for-each data="[[ $functions.msgTags(m.data) ]]"><template data-oj-as="t">
+                    <span :class="[[ 'nx-fm-tag nx-fm-tag--' + t.data.cls ]]"><oj-bind-text value="[[ t.data.text ]]"></oj-bind-text></span>
+                  </template></oj-bind-for-each>
+                </span>
+                <oj-bind-if test="[[ m.data.key !== 'blank' ]]">
+                  <span class="nx-fm-move">
+                    <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-fm-up" data-act="up" :data-key="[[ m.data.key ]]" on-click="[[ $listeners.onMsg ]]" :disabled="[[ $functions.isFirst($variables.msgs, m.data.key) ]]" title="Earlier in the dialog" aria-label="Move up">↑</button>
+                    <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-fm-down" data-act="down" :data-key="[[ m.data.key ]]" on-click="[[ $listeners.onMsg ]]" :disabled="[[ $functions.isLast($variables.msgs, m.data.key) ]]" title="Later in the dialog" aria-label="Move down">↓</button>
+                  </span>
+                </oj-bind-if>
+              </div>
+            </template>
+          </oj-bind-for-each>
+        </div>
+        <div class="nx-fm-share">
+          <span class="nx-note">Share them with the team:</span>
+          <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="fmExport" data-act="export" on-click="[[ $listeners.onMsg ]]" title="Download your messages and the order as a file"><span class="oj-ux-ico-download" aria-hidden="true"></span>Export</button>
+          <label class="nx-btn nx-btn--sm nx-btn--plain nx-fm-import" title="Load a file exported on another PC"><span class="oj-ux-ico-upload" aria-hidden="true"></span>Import
+            <input type="file" id="fmImportFile" accept=".json,application/json" on-change="[[ $listeners.onMsgImport ]]"></label>
+        </div>
+      </section>
+
+      <section class="nx-card nx-fm-editcard" aria-label="Message" id="fmEdit">
+        <oj-bind-if test="[[ !$variables.msgEdit ]]">
+          <div class="nx-empty" id="fmNone">Pick a message on the left to change it, or add a <b>New message</b>.</div>
+        </oj-bind-if>
+        <oj-bind-if test="[[ !!$variables.msgEdit ]]">
+          <div class="nx-card-head">
+            <div>
+              <h2 id="fmTitle"><oj-bind-text value="[[ $variables.msgEdit.label || 'Message' ]]"></oj-bind-text></h2>
+              <span class="nx-note"><oj-bind-text value="[[ $variables.msgEdit.isNew ? 'New — not saved yet' : $variables.msgEdit.mine ? 'Yours' : $variables.msgEdit.edited ? 'Built in, changed by you' : 'Built in' ]]"></oj-bind-text>
+                <oj-bind-if test="[[ $variables.msgDirty && !$variables.msgEdit.isNew ]]"><b class="nx-fm-dirty"> · changes not saved</b></oj-bind-if></span>
+            </div>
+            <div class="nx-actions">
+              <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="fmSave" data-act="save" on-click="[[ $listeners.onMsg ]]" :disabled="[[ !$variables.msgDirty ]]">Save</button>
+              <oj-bind-if test="[[ !$variables.msgEdit.isNew ]]">
+                <button type="button" class="nx-btn nx-btn--sm" id="fmDup" data-act="dup" on-click="[[ $listeners.onMsg ]]" title="A new message of your own, starting from this one">Duplicate</button>
+              </oj-bind-if>
+              <oj-bind-if test="[[ $variables.msgEdit.builtin && ($variables.msgEdit.edited || !$variables.msgEdit.show) && !$variables.msgDirty ]]">
+                <button type="button" class="nx-btn nx-btn--sm" id="fmReset" data-act="reset" on-click="[[ $listeners.onMsg ]]" title="Its subject and message as built in, shown in the dialog">Put back as it came</button>
+              </oj-bind-if>
+              <oj-bind-if test="[[ $variables.msgEdit.mine && !$variables.msgEdit.isNew ]]">
+                <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="fmRemove" data-act="remove" on-click="[[ $listeners.onMsg ]]"><span class="oj-ux-ico-delete" aria-hidden="true"></span>Remove</button>
+              </oj-bind-if>
+            </div>
+          </div>
+          <div class="nx-fm-form">
+            <label class="nx-fm-field"><span>Name on the button</span>
+              <input class="nx-cm-input" id="fmLabel" data-field="label" maxlength="60" :value="[[ $variables.msgEdit.label ]]" on-input="[[ $listeners.onMsgField ]]"></label>
+            <label class="nx-fm-field"><span>Subject</span>
+              <input class="nx-cm-input" id="fmSubject" data-field="subject" maxlength="200" :value="[[ $variables.msgEdit.subject ]]" on-input="[[ $listeners.onMsgField ]]"></label>
+            <label class="nx-fm-field"><span>Message <em class="nx-note">(the greeting — "Dear Priya and Sam," — is added before it; the stories table and your sign-off after it)</em></span>
+              <textarea class="nx-cm-input nx-fm-body" id="fmBody" data-field="body" rows="7" maxlength="4000" :value="[[ $variables.msgEdit.body ]]" on-input="[[ $listeners.onMsgField ]]"></textarea></label>
+            <div class="nx-fm-words" id="fmWords"><span class="nx-note">Words filled in from the stories:</span>
+              <oj-bind-for-each data="[[ $functions.words() ]]"><template data-oj-as="w">
+                <button type="button" class="nx-fm-word" data-act="word" :data-key="[[ w.data.word ]]" on-click="[[ $listeners.onMsg ]]" :title="[[ w.data.says ]]"><oj-bind-text value="[[ w.data.word ]]"></oj-bind-text></button>
+              </template></oj-bind-for-each>
+            </div>
+            <label class="nx-cc-check nx-fm-show"><input type="checkbox" id="fmShow" data-field="show" :checked="[[ $variables.msgEdit.show ]]" on-change="[[ $listeners.onMsgField ]]"> Offer it in the follow-up dialog</label>
+            <oj-bind-if test="[[ $variables.msgEdit.edited && !!$variables.msgEdit.original ]]">
+              <p class="nx-note nx-fm-orig" id="fmOrig"><b>As it came:</b> <oj-bind-text value="[[ $functions.originalText($variables.msgEdit) ]]"></oj-bind-text></p>
+            </oj-bind-if>
+          </div>
+          <div class="nx-fm-prevhead"><b>Preview</b> <span class="nx-note">with two sample stories · Subject:</span> <span id="fmPrevSubject"><oj-bind-text value="[[ $functions.previewSubject($variables.msgEdit) ]]"></oj-bind-text></span></div>
+          <iframe class="nx-fl-preview nx-fm-preview" title="Message preview" id="fmPreview" sandbox="" :srcdoc="[[ $functions.previewHtml($variables.msgEdit) ]]"></iframe>
         </oj-bind-if>
       </section>
     </div>

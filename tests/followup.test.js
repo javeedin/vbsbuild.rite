@@ -45,6 +45,36 @@ T.section('templates');
 T.check('at least seven, each has a subject', F.TEMPLATES.length >= 7 && F.TEMPLATES.every((t) => !!t.subject && !!t.key));
 T.check('the sample "ask to close" template exists', F.TEMPLATES.some((t) => t.key === 'close' && /close the following stories/i.test(t.body)));
 T.check('a blank template to write your own', F.TEMPLATES.some((t) => t.key === 'blank' && t.body === ''));
+
+T.section('the messages you keep (Follow-ups › Messages) merged with the built-ins');
+const m0 = F.merge([], []);
+T.check('nothing kept: the built-ins, in their order, Write my own last', m0.map((m) => m.key).join() === F.TEMPLATES.map((t) => t.key).join() && m0.every((m) => m.builtin && !m.edited && !m.hidden));
+const kept = [
+  { key: 'close', label: 'Ask to close', subject: 'Please close these today', body: 'Kindly close {count} today, {names}.' },
+  { key: 'sprint', label: 'Sprint closing', subject: 'x', body: 'y', hidden: true },
+  { key: 'my-code-review-1a2b', label: 'Code review please', subject: 'Code review for {sprint}', body: 'Please review the code of these {count} by {due}.' },
+];
+const mm = F.merge(kept, ['my-code-review-1a2b', 'proof', 'blank', 'close']);
+T.check('yours added, a built-in changed (marked edited, its original kept), one hidden', mm.some((m) => m.key === 'my-code-review-1a2b' && m.mine && !m.builtin)
+  && mm.filter((m) => m.key === 'close')[0].edited && mm.filter((m) => m.key === 'close')[0].original.subject === 'Please close these stories' && mm.filter((m) => m.key === 'sprint')[0].hidden);
+T.check('…in the order you set (then the rest as they come); Write my own still last whatever the order says',
+  mm[0].key === 'my-code-review-1a2b' && mm[1].key === 'proof' && mm[2].key === 'close' && mm[mm.length - 1].key === 'blank', mm.map((m) => m.key).join());
+F.use(kept, ['my-code-review-1a2b']);
+T.check('use(): the dialog\'s list leaves out hidden ones (all = every one); template() finds yours', !F.list().some((m) => m.key === 'sprint') && F.list(true).some((m) => m.key === 'sprint')
+  && F.template('my-code-review-1a2b').label === 'Code review please' && F.list()[0].key === 'my-code-review-1a2b');
+const rowsW = [{ assignee: 'Priya Raman', sprint: '2026-07', due: '2026-08-31' }, { assignee: 'Sam Lee', sprint: '2026-07', due: '2026-08-15' }];
+T.check('words filled from the stories: {names} {count} {sprint} {due}', F.message(rowsW, 'close') === 'Dear Priya and Sam,\n\nKindly close 2 stories today, Priya and Sam.'
+  && F.subjectFor(rowsW, 'my-code-review-1a2b') === 'Code review for 2026-07' && /these 2 stories by 2026-08-15\.$/.test(F.message(rowsW, 'my-code-review-1a2b')), F.message(rowsW, 'my-code-review-1a2b'));
+T.check('…{today} is today; with no dates or sprint, plain words', /^\d{4}-\d{2}-\d{2}$/.test(F.fill('{today}', [])) && F.fill('{sprint} by {due}', [{}]) === 'this sprint by the due date' && F.WORDS.length >= 5);
+T.check('a key no longer kept: the first message offered', F.template('gone-key').key === F.list()[0].key);
+F.use([], []);
+T.check('testing follow-ups: provide test scripts, provide proof of testing, need more info (each with its own subject and body)',
+  ['scripts', 'proof', 'info'].every((k) => { const t = F.template(k); return t.key === k && !!t.subject && t.body.length > 40; })
+  && /test scripts/i.test(F.template('scripts').body) && /proof of testing/i.test(F.template('proof').body) && /more information/i.test(F.template('info').body)
+  && F.template('scripts').label === 'Provide test scripts' && F.template('proof').label === 'Provide proof of testing' && F.template('info').label === 'Need more info');
+T.check('…and blockers, UAT sign-off; every key once, Write my own still last', F.template('blocked').key === 'blocked' && F.template('uat').key === 'uat'
+  && new Set(F.TEMPLATES.map((t) => t.key)).size === F.TEMPLATES.length && F.TEMPLATES[F.TEMPLATES.length - 1].key === 'blank');
+T.check('…its message: the greeting, then the body', /^Dear .*,\n\nBefore we can close the stories below, please attach proof of testing/.test(F.message([{ assignee: 'Priya Raman' }], 'proof')), F.message([{ assignee: 'Priya Raman' }], 'proof').slice(0, 80));
 T.check('message() is greeting + the chosen body', F.message(ROWS, 'close').startsWith('Dear Priya and Omar,') && /kindly close/.test(F.message(ROWS, 'close')));
 
 T.section('columns');

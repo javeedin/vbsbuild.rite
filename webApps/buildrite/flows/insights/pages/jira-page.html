@@ -696,11 +696,12 @@
             <div class="nx-fu-field">
               <label>Pick a message</label>
               <div class="nx-fu-tpls" role="group" aria-label="Email templates">
-                <oj-bind-for-each data="[[ $functions.fuTemplates() ]]">
+                <oj-bind-for-each data="[[ $functions.fuTemplates($variables.fuTpls) ]]">
                   <template data-oj-as="tp">
                     <button type="button" :class="[[ $functions.fuTplClass(tp.data.key, $variables.fuTpl) ]]" :data-key="[[ tp.data.key ]]" on-click="[[ $listeners.onFuTemplate ]]"><oj-bind-text value="[[ tp.data.label ]]"></oj-bind-text></button>
                   </template>
                 </oj-bind-for-each>
+                <button type="button" class="nx-fu-tpl nx-fu-tpl--manage" data-key="__manage" on-click="[[ $listeners.onFuTemplate ]]" title="Add your own messages, change or hide these (Follow-ups › Messages)"><span class="oj-ux-ico-edit" aria-hidden="true"></span> Manage messages…</button>
               </div>
             </div>
             <div class="nx-fu-field nx-fu-recip">

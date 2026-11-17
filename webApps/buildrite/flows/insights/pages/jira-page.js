@@ -21,6 +21,8 @@ define(['resources/js/jiraBacklog', 'resources/js/exportKit', 'resources/js/test
       // Record: when a recording or screenshot is saved (from the bar or a shortcut, perhaps in another tab), the open
       // item's evidence is read again (evidenceChain).
       const helper = context && typeof context.getEventHelper === 'function' ? context.getEventHelper() : null;
+      // Follow-ups › Messages changed (another tab): the follow-up dialog's chips follow
+      try { if (bus && typeof bus.on === 'function') bus.on('followup-messages', 'jira-page', () => { if (helper) helper.fireCustomEvent('fuMessagesChanged', {}); }); } catch (e) { /* no shell */ }
       if (Recorder && typeof Recorder.onChange === 'function') Recorder.onChange('jira-page', () => { if (helper) helper.fireCustomEvent('evidenceChanged', {}); });
       // Escape closes the item's drawer (resources/js/jiraStoryPanel.js).
       Panel.closeOnEscape();
@@ -34,7 +36,7 @@ define(['resources/js/jiraBacklog', 'resources/js/exportKit', 'resources/js/test
     formats() { return exportKit.FORMATS; }
 
     /** The follow-up compose dialog: the body templates, the chosen chip, a live preview of the email. */
-    fuTemplates() { return F.TEMPLATES; }
+    fuTemplates(list) { return list && list.length ? list : F.list(); }
     fuTplClass(key, cur) { return 'nx-fu-tpl' + (key === cur ? ' nx-fu-tpl--on' : ''); }
     fuCountText(rows) { const n = (rows || []).length; return n + (n === 1 ? ' story' : ' stories') + ' will be added as a table'; }
     fuPreview(title, subtitle, when, message, signoff, rows) { return F.composeHtml({ title, subtitle, when, message, signoff, rows: rows || [], kind: 'stories' }); }

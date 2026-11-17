@@ -73,6 +73,31 @@ const SAMPLE = {
   const order = (await store.list()).followups.map((f) => f.title);
   T.check('the most recently saved is first', order[0] === 'B' && order[1] === 'A' && a.ok && b.ok);
 
+  T.section('messages for the follow-up dialog: yours, and your versions of the built-ins, with their order');
+  let ms = await store.messages();
+  T.check('none at first: no rows, no order (the dialog shows the built-ins)', ms.ok && ms.messages.length === 0 && ms.order.length === 0);
+  const mine = await store.saveMessage({ label: 'Code review please', subject: 'Code review needed', body: 'Please review the code for the stories below.\r\nThanks for the quick turn.', author: 'sam.lee' });
+  T.check('a new message: a key made from its label, cleaned (line ends), kept with who and when', mine.ok && /^my-code-review-please-[0-9a-f]{4}$/.test(mine.message.key)
+    && mine.message.body === 'Please review the code for the stories below.\nThanks for the quick turn.' && mine.message.author === 'sam.lee' && !!mine.message.updatedAt, JSON.stringify(mine.message));
+  const ed = await store.saveMessage({ key: 'close', label: 'Ask to close', subject: 'Please close these today', body: 'Kindly close these today.' });
+  await store.saveMessage({ key: 'sprint', label: 'Sprint closing', subject: 'x', body: 'y', hidden: true });
+  ms = await store.messages();
+  T.check('a built-in changed (key close) and one hidden (sprint): kept by their keys, in the order saved', ms.messages.map((m) => m.key + (m.hidden ? '*' : '')).join() === mine.message.key + ',close,sprint*'
+    && ms.messages[1].subject === 'Please close these today' && ed.ok, ms.messages.map((m) => m.key).join());
+  const again = await store.saveMessage(Object.assign({}, mine.message, { subject: 'Code review, please' }));
+  ms = await store.messages();
+  T.check('saved again by its key: changed in place (no duplicate, same place)', again.ok && ms.messages.length === 3 && ms.messages[0].subject === 'Code review, please');
+  T.check('a key that is not a key, an empty label: made safe', /^my-/.test((await store.saveMessage({ key: '../x y', label: '' })).message.key)
+    && (await store.saveMessage({ key: 'bad key!', label: '' })).message.label === 'My message');
+  const ord = await store.setMessageOrder([mine.message.key, 'scripts', 'close', 'close', '../nope', 'blank']);
+  T.check('the order: kept as given (repeats and bad keys dropped)', ord.ok && ord.order.join() === mine.message.key + ',scripts,close,blank' && (await store.messages()).order.join() === ord.order.join(), JSON.stringify(ord.order));
+  await store.removeMessage('close');
+  ms = await store.messages();
+  T.check('removed: a built-in\'s row gone (back to its default), the others stay', !ms.messages.some((m) => m.key === 'close') && ms.messages.some((m) => m.key === mine.message.key));
   if (store.close) await store.close();
+  const re = await FS.open({ file });
+  ms = await re.messages();
+  T.check('…all of it still there when the store is opened again', ms.messages.some((m) => m.key === mine.message.key && m.subject === 'Code review, please') && ms.order[0] === mine.message.key, JSON.stringify(ms.order));
+  if (re.close) await re.close();
   T.report();
 })().catch((e) => { console.error(e); process.exitCode = 1; });

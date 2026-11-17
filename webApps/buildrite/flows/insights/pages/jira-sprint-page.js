@@ -1,4 +1,4 @@
-define(['resources/js/exportKit', 'resources/js/jiraStoryPanel', 'resources/js/testRecorder', 'resources/js/followup'], (exportKit, Panel, Recorder, F) => {
+define(['resources/js/exportKit', 'resources/js/jiraStoryPanel', 'resources/js/testRecorder', 'resources/js/followup', 'resources/js/shellBus'], (exportKit, Panel, Recorder, F, bus) => {
   'use strict';
 
   // One Jira sprint, in its own tab: binding helpers. The report is resources/js/jiraBacklog.js sprintReport.
@@ -31,6 +31,8 @@ define(['resources/js/exportKit', 'resources/js/jiraStoryPanel', 'resources/js/t
       // Record (an item's drawer): when a recording or screenshot is saved, the open item's evidence is read again. One
       // listener per sprint tab; Escape closes the drawer (resources/js/jiraStoryPanel.js).
       const helper = context && typeof context.getEventHelper === 'function' ? context.getEventHelper() : null;
+      // Follow-ups › Messages changed (another tab): the follow-up dialog's chips follow
+      try { if (bus && typeof bus.on === 'function') bus.on('followup-messages', 'jira-sprint-page', () => { if (helper) helper.fireCustomEvent('fuMessagesChanged', {}); }); } catch (e) { /* no shell */ }
       tabs += 1;
       if (Recorder && typeof Recorder.onChange === 'function') Recorder.onChange('jira-sprint-page-' + tabs, () => { if (helper) helper.fireCustomEvent('evidenceChanged', {}); });
       Panel.closeOnEscape();
@@ -135,7 +137,7 @@ define(['resources/js/exportKit', 'resources/js/jiraStoryPanel', 'resources/js/t
     followLabel(selected) { const n = (selected || []).length; return n ? 'Copy ' + n + ' to follow-up' : 'Copy to follow-up'; }
 
     /** The follow-up compose dialog: the body templates, the chosen chip, a live preview of the email. */
-    fuTemplates() { return F.TEMPLATES; }
+    fuTemplates(list) { return list && list.length ? list : F.list(); }
     fuTplClass(key, cur) { return 'nx-fu-tpl' + (key === cur ? ' nx-fu-tpl--on' : ''); }
     fuCountText(rows) { const n = (rows || []).length; return n + (n === 1 ? ' story' : ' stories') + ' will be added as a table'; }
     fuPreview(title, subtitle, when, message, signoff, rows) { return F.composeHtml({ title, subtitle, when, message, signoff, rows: rows || [], kind: 'sprint' }); }

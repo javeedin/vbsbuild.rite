@@ -481,9 +481,15 @@
       "type": "boolean",
       "defaultValue": true,
       "description": "A transcription engine (local Whisper or OpenAI) is set up; when false on the desktop app, the header offers Set up transcription."
+    },
+    "fuTpls": {
+      "type": "any",
+      "defaultValue": [],
+      "description": "The messages the follow-up dialog offers (Follow-ups › Messages merged with the built-ins)."
     }
   },
   "eventListeners": {
+    "fuMessagesChanged": { "chains": [{ "chain": "followupChain", "parameters": { "act": "tpls" } }] },
     "onPages": {
       "chains": [
         {
@@ -993,6 +999,7 @@
     }
   },
   "events": {
+    "fuMessagesChanged": { "description": "Follow-ups › Messages changed the follow-up messages (shellBus topic followup-messages).", "payloadType": "object" },
     "focusRequest": {
       "description": "Build.Rite's Jira updates bell handed this screen a story to open (shellBus.focus('jira', { key })).",
       "payloadType": "object"

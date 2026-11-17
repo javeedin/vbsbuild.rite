@@ -38,5 +38,10 @@ define([], function () {
     get: function (id) { return call('get?id=' + encodeURIComponent(id || '')); },
     save: function (f) { return call('save', 'POST', f || {}); },
     remove: function (id) { return call('remove', 'POST', { id: id }); },
+    // the messages the Copy to follow-up dialog offers (Follow-ups › Messages)
+    messages: function () { return call('messages'); },
+    saveMessage: function (m) { return call('messages/save', 'POST', { message: m || {} }); },
+    removeMessage: function (key) { return call('messages/remove', 'POST', { key: key }); },
+    orderMessages: function (keys) { return call('messages/order', 'POST', { keys: keys || [] }); },
   };
 });

@@ -34,9 +34,13 @@ define([
         v.fuSubtitle = [v.jql, v.fLabel].filter(Boolean).join(' · ');
         v.fuWhen = new Date().toLocaleString();
         v.fuRows = picked;
-        v.fuTpl = 'close';
-        v.fuMessage = F.message(picked, 'close');
-        v.fuSubject = F.template('close').subject;
+        // the messages kept in Follow-ups › Messages (yours, your versions of the built-ins, their order)
+        try { const ms = await FC.messages(); if (ms.ok && ms.body && ms.body.ok !== false) F.use(ms.body.messages || [], ms.body.order || []); } catch (e) { /* the built-ins */ }
+        v.fuTpls = F.list();
+        const first = F.list().some((m) => m.key === 'close') ? 'close' : (F.list()[0] || {}).key || 'blank';
+        v.fuTpl = first;
+        v.fuMessage = F.message(picked, first);
+        v.fuSubject = F.subjectFor(picked, first);
         v.fuSignoff = v.fuSignoff || 'Thanks,';
         v.fuTo = v.fuTo || '';
         v.fuCc = v.fuCc || '';
@@ -46,10 +50,18 @@ define([
         v.fuOpen = true;
         return;
       }
+      // changed in Follow-ups › Messages (another tab): the dialog's chips follow
+      if (act === 'tpls') {
+        try { const ms = await FC.messages(); if (ms.ok && ms.body && ms.body.ok !== false) F.use(ms.body.messages || [], ms.body.order || []); } catch (e) { /* as they were */ }
+        v.fuTpls = F.list();
+        return;
+      }
       if (act === 'template') {
+        // the last chip: Follow-ups › Messages, to add or change the messages (this dialog stays open and follows)
+        if (key === '__manage') { bus.focus('followups', { tab: 'messages' }); return; }
         v.fuTpl = key;
         v.fuMessage = F.message(v.fuRows || [], key);
-        v.fuSubject = F.template(key).subject;
+        v.fuSubject = F.subjectFor(v.fuRows || [], key);
         return;
       }
       if (act === 'field') {

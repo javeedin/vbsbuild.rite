@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * Build.Rite as the desktop app serves it: its name, its menu (SQL last, after Flows explained), the Jira updates bell,
+ * Build.Rite as the desktop app serves it: its name, its menu (the tools last, after Flows explained), the Jira updates bell,
  * Issues first and pinned, no business actions of any app, your menu (who you are, your look — no versions of another
  * app), Application pages with no workspace set up, the pages' headers, and Flows explained (each flow step by step, and
  * played). Needs npm run build.
@@ -11,7 +11,7 @@ const H = require('../_harness');
 
 const T = H.makeAsserter();
 const text = (page, sel) => page.$eval(sel, (e) => e.textContent.replace(/\s+/g, ' ').trim()).catch(() => '');
-const BUILD_SCREENS = ['projects', 'run-console', 'issues', 'jira', 'minutes', 'followups', 'app-pages', 'fdd-library', 'flows', 'sql'];
+const BUILD_SCREENS = ['projects', 'run-console', 'issues', 'jira', 'minutes', 'followups', 'app-pages', 'api-scenarios', 'fdd-library', 'flows', 'sql', 'fusion-sql', 'ai'];
 
 (async () => {
   // Jira (the fake backend): one story changed lately — created, moved, assigned to me, commented — and one older story
@@ -43,7 +43,7 @@ const BUILD_SCREENS = ['projects', 'run-console', 'issues', 'jira', 'minutes', '
     const items = await page.$$eval('#nxNav [data-nav-id]', (b) => b.map((x) => x.getAttribute('data-nav-id')));
     T.check('no help foot of another app at the foot of the menu', !(await page.$('#nxNavHelp')));
     T.eq('its screens in the menu, in order', items.join(','), BUILD_SCREENS.join(','));
-    T.check('SQL last, after Flows explained (Tools)', items[items.length - 1] === 'sql' && items[items.length - 2] === 'flows', items.join(','));
+    T.check('the tools last, after Flows explained: SQL, Fusion SQL, AI settings', items.slice(-4).join(',') === 'flows,sql,fusion-sql,ai', items.join(','));
     await page.click('#nxNav [data-nav-id="sql"]');
     await page.waitForSelector('#sqlSub', { timeout: 15000 }).catch(() => {});
     T.check('…and opens the SQL worksheet', !!(await page.$('#sqlSub')) && !!(await page.$('.nx-tab[data-tab-id="sql"]')));

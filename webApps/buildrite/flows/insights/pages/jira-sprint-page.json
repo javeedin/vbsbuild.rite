@@ -92,6 +92,7 @@
     "fuToDraft": { "type": "string", "defaultValue": "", "description": "What is being typed in the To box before it becomes a chip." },
     "fuCcDraft": { "type": "string", "defaultValue": "", "description": "What is being typed in the Cc box before it becomes a chip." },
     "fuSugFor": { "type": "string", "defaultValue": "", "description": "Which recipient field the suggestions are for ('to' | 'cc')." },
+    "fuTpls": { "type": "any", "defaultValue": [], "description": "The messages the follow-up dialog offers (Follow-ups › Messages merged with the built-ins)." },
     "images": {
       "type": "object",
       "defaultValue": {},
@@ -119,6 +120,7 @@
     }
   },
   "eventListeners": {
+    "fuMessagesChanged": { "chains": [{ "chain": "followupChain", "parameters": { "act": "tpls" } }] },
     "onPages": { "chains": [ { "chain": "pagesChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "id": "{{ $event.currentTarget.dataset.id || '' }}" } } ] },
     "onPagesQ": { "chains": [ { "chain": "pagesChain", "parameters": { "act": "{{ 'q' }}", "id": "{{ $event.target.value }}" } } ] },
     "onAiOpen": { "chains": [ { "chain": "aiOpenChain", "parameters": { "key": "{{ $event.currentTarget.dataset.key }}" } } ] },
@@ -351,6 +353,7 @@
     }
   },
   "events": {
+    "fuMessagesChanged": { "description": "Follow-ups › Messages changed the follow-up messages (shellBus topic followup-messages).", "payloadType": "object" },
     "evidenceChanged": {
       "description": "From resources/js/testRecorder.js: a recording or screenshot was saved (or a recording began or ended).",
       "payloadType": "object"

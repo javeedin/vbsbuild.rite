@@ -520,11 +520,44 @@ const complete = (page, scope, tags) => page.evaluate((a) => a[1].map((t) => {
     await page.waitForSelector('#jiraGrid', { state: 'visible', timeout: 10000 });
     await settle(page, 400);
     T.eq('…and back on Jira stories, the items are that sprint\'s', (await texts(page, '#jiraGrid .nx-jira-row:not(.nx-jira-row--head) .nx-jira-key')).join(','), 'ABC-12');
+    // the messages kept in Follow-ups › Messages: one of yours, a built-in hidden
+    await fuStore.saveMessage({ key: 'my-release-notes', label: 'Release notes please', subject: 'Release notes for {count}', body: 'Please add release notes to these {count}.' });
+    await fuStore.saveMessage({ key: 'sprint', label: 'Sprint closing', subject: 'x', body: 'y', hidden: true });
     await page.click('#jiraFollowup');
     await page.waitForSelector('#jiraFuModal', { state: 'visible', timeout: 10000 });
     await settle(page, 300);
     T.check('Jira stories: the compose dialog opens with templates and a drafted message',
       (await page.$$('#jiraFuModal .nx-fu-tpl')).length >= 6 && (await page.getAttribute('#jiraFuPreview', 'srcdoc')).includes('Dear '));
+    let chips = await texts(page, '#jiraFuModal .nx-fu-tpl');
+    T.check('…its messages from Follow-ups › Messages: the testing ones, yours (Release notes please), not the hidden one; Manage messages… last',
+      ['Provide test scripts', 'Provide proof of testing', 'Need more info', 'Release notes please'].every((c) => chips.indexOf(c) !== -1) && chips.indexOf('Sprint closing') === -1
+      && /Manage messages/.test(chips[chips.length - 1]), chips.join(' | '));
+    await page.click('#jiraFuModal .nx-fu-tpl[data-key="my-release-notes"]');
+    await settle(page, 300);
+    T.check('…yours picked: its subject and message, the words filled from the stories shown ({count} → 1 story)', (await page.$eval('#jiraFuSubject', (e) => e.value)) === 'Release notes for 1 story'
+      && /Please add release notes to these 1 story\./.test(await page.$eval('#jiraFuMessage', (e) => e.value)), await page.$eval('#jiraFuSubject', (e) => e.value));
+    await page.click('#jiraFuModal .nx-fu-tpl[data-key="__manage"]');
+    await page.waitForSelector('#fmList .nx-fm-row', { state: 'visible', timeout: 15000 });
+    await settle(page, 300);
+    T.check('Manage messages…: Follow-ups opens on its Messages tab, yours there', /Follow-ups/.test(await text(page, '.nx-tab--on .nx-tab-title'))
+      && (await page.getAttribute('#flTabMessages', 'aria-selected')) === 'true' && (await texts(page, '#fmList .nx-fm-rowlabel')).indexOf('Release notes please') !== -1);
+    await page.click('#fmNew');
+    await page.waitForSelector('#fmLabel', { timeout: 5000 });
+    await page.fill('#fmLabel', 'Ask for a demo');
+    await page.fill('#fmBody', 'Please demo these {count} this week.');
+    await page.click('#fmSave');
+    await page.waitForFunction(() => Array.prototype.some.call(document.querySelectorAll('#fmList .nx-fm-rowlabel'), (x) => x.textContent.trim() === 'Ask for a demo'), null, { timeout: 10000 });
+    await page.locator('[role="tab"]').filter({ hasText: 'Jira stories' }).first().click();
+    await page.waitForSelector('#jiraFuModal', { state: 'visible', timeout: 10000 });
+    await page.waitForFunction(() => Array.prototype.some.call(document.querySelectorAll('#jiraFuModal .nx-fu-tpl'), (x) => x.textContent.trim() === 'Ask for a demo'), null, { timeout: 10000 }).catch(() => {});
+    chips = await texts(page, '#jiraFuModal .nx-fu-tpl');
+    T.check('…a message added there: the open dialog offers it at once (back on Jira stories)', chips.indexOf('Ask for a demo') !== -1, chips.join(' | '));
+    await page.click('.nx-tab[data-tab-id="followups"] .nx-tab-close').catch(() => {});
+    await settle(page, 300);
+    for (const m of (await fuStore.messages()).messages) await fuStore.removeMessage(m.key);
+    await fuStore.setMessageOrder([]);
+    await page.locator('[role="tab"]').filter({ hasText: 'Jira stories' }).first().click().catch(() => {});
+    await page.waitForSelector('#jiraFuModal', { state: 'visible', timeout: 10000 });
     await page.click('#jiraFuCopy');
     await settle(page, 300);
     const storiesFollow = await readClipHtml();

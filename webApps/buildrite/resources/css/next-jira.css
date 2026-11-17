@@ -245,7 +245,7 @@ html[data-nx-look="redwood"] .nx-jsp .nx-jsp-pickrow.nx-jsp-pick--on { box-shado
 .nx-fu-tpl { border: 1px solid var(--nx-line); background: var(--nx-surface); color: var(--nx-ink); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; cursor: pointer;
   transition: background .12s, border-color .12s, color .12s; }
 .nx-fu-tpl:hover { border-color: var(--nx-accent); color: var(--nx-accent); }
-.nx-fu-tpl--on { background: var(--nx-accent); border-color: var(--nx-accent); color: #fff; }
+.nx-fu-tpl--on, .nx-fu-tpl--on:hover { background: var(--nx-accent); border-color: var(--nx-accent); color: #fff; }
 .nx-fu-recip { position: relative; }
 .nx-fu-sug { position: absolute; z-index: 5; top: 100%; left: 0; right: 0; margin-top: 2px; background: var(--nx-surface, #fff); border: 1px solid var(--nx-line); border-radius: 8px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, .16); max-height: 220px; overflow: auto; }

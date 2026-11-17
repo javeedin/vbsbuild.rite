@@ -16,6 +16,15 @@
  *   get(id)          { ok, followup } | { ok:false }
  *   save(followup)   upsert (id + timestamps filled) → { ok, followup }
  *   remove(id)       { ok }
+ *
+ * The messages the Copy to follow-up dialog offers (Follow-ups › Messages): the ones you added, and your changes to the
+ * built-in ones (the built-ins themselves live in resources/js/followup.js; a row with a built-in's key is your version
+ * of it, or hides it). Real DuckDB table followup_messages (key, seq, label, subject, body, hidden, updated_at, author)
+ * and the order in followup_meta (k = 'message_order', v = JSON list of keys).
+ *   messages()             { ok, messages: [{ key, label, subject, body, hidden, updatedAt, author }], order: [key] }
+ *   saveMessage(m)         upsert by key (a key made from the label when there is none) → { ok, message }
+ *   removeMessage(key)     { ok } (a built-in's row gone = back to its default)
+ *   setMessageOrder(keys)  { ok, order }
  */
 const fs = require('fs');
 const path = require('path');
@@ -61,6 +70,26 @@ function cleanFollowup(f) {
     updatedAt: f.updatedAt || null,
   };
 }
+const MSG_KEY = /^[a-z0-9][a-z0-9_-]{0,39}$/i;
+function cleanMessage(m) {
+  m = m || {};
+  let key = str(m.key).trim();
+  if (!MSG_KEY.test(key)) {
+    const base = str(m.label).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'message';
+    key = 'my-' + base + '-' + crypto.randomBytes(2).toString('hex');
+  }
+  return {
+    key,
+    label: str(m.label).trim().slice(0, 60) || 'My message',
+    subject: str(m.subject).trim().slice(0, 200),
+    body: str(m.body).replace(/\r\n/g, '\n').slice(0, 4000),
+    hidden: !!m.hidden,
+    author: str(m.author).slice(0, 120),
+    updatedAt: m.updatedAt || null,
+  };
+}
+const cleanOrder = (keys) => (Array.isArray(keys) ? keys : []).map((k) => str(k).trim()).filter((k) => MSG_KEY.test(k)).filter((k, i, a) => a.indexOf(k) === i).slice(0, 200);
+
 function summaryOf(f) {
   return { id: f.id, createdAt: f.createdAt || null, updatedAt: f.updatedAt || null, kind: f.kind, title: f.title,
     subtitle: f.subtitle, subject: f.subject, to: f.to, sprintName: f.sprintName, source: f.source, author: f.author,
@@ -79,6 +108,11 @@ async function duckStore(file) {
 
   await con.run('CREATE TABLE IF NOT EXISTS followups (id VARCHAR PRIMARY KEY, created_at VARCHAR, updated_at VARCHAR, kind VARCHAR, title VARCHAR, subtitle VARCHAR, subject VARCHAR, to_addr VARCHAR, message VARCHAR, signoff VARCHAR, sprint_name VARCHAR, source VARCHAR, author VARCHAR)');
   await con.run('CREATE TABLE IF NOT EXISTS followup_lines (id VARCHAR PRIMARY KEY, followup_id VARCHAR, seq INTEGER, story_key VARCHAR, summary VARCHAR, status VARCHAR, assignee VARCHAR, sprint VARCHAR, due VARCHAR, overdue BOOLEAN, customer VARCHAR, url VARCHAR)');
+
+  await con.run('CREATE TABLE IF NOT EXISTS followup_messages (key VARCHAR PRIMARY KEY, seq INTEGER, label VARCHAR, subject VARCHAR, body VARCHAR, hidden BOOLEAN, updated_at VARCHAR, author VARCHAR)');
+  await con.run('CREATE TABLE IF NOT EXISTS followup_meta (k VARCHAR PRIMARY KEY, v VARCHAR)');
+  const msgOf = (r) => ({ key: str(r.key), label: str(r.label), subject: str(r.subject), body: str(r.body), hidden: !!r.hidden, updatedAt: r.updated_at || null, author: str(r.author) });
+  const orderNow = async () => { const r = await rows("SELECT v FROM followup_meta WHERE k = 'message_order'"); try { return r.length ? cleanOrder(JSON.parse(r[0].v)) : []; } catch (e) { return []; } };
 
   function lineToObj(r) {
     return { id: r.id, storyKey: str(r.story_key), summary: str(r.summary), status: str(r.status), assignee: str(r.assignee),
@@ -136,14 +170,35 @@ async function duckStore(file) {
       await con.run('DELETE FROM followups WHERE id = $1', [str(id)]);
       return { ok: true };
     }),
+    messages: () => serial(async () => {
+      const ms = await rows('SELECT * FROM followup_messages ORDER BY seq, updated_at');
+      return { ok: true, messages: ms.map(msgOf), order: await orderNow() };
+    }),
+    saveMessage: (m) => serial(async () => {
+      const c = cleanMessage(m);
+      c.updatedAt = new Date().toISOString();
+      const ex = await rows('SELECT seq FROM followup_messages WHERE key = $1', [c.key]);
+      const seq = ex.length ? Number(ex[0].seq) || 0 : Number(((await rows('SELECT COALESCE(MAX(seq), 0) + 1 AS n FROM followup_messages'))[0] || {}).n) || 1;
+      await con.run('INSERT OR REPLACE INTO followup_messages VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [c.key, seq, c.label, c.subject, c.body, c.hidden, c.updatedAt, c.author]);
+      return { ok: true, message: c };
+    }),
+    removeMessage: (key) => serial(async () => {
+      await con.run('DELETE FROM followup_messages WHERE key = $1', [str(key)]);
+      return { ok: true };
+    }),
+    setMessageOrder: (keys) => serial(async () => {
+      const order = cleanOrder(keys);
+      await con.run("INSERT OR REPLACE INTO followup_meta VALUES ('message_order', $1)", [JSON.stringify(order)]);
+      return { ok: true, order };
+    }),
     close: async () => { try { con.closeSync && con.closeSync(); } catch (e) { /* closing */ } try { instance.closeSync && instance.closeSync(); } catch (e) { /* closing */ } },
   };
 }
 
 /** The same store kept in a JSON file, used when DuckDB cannot load on this computer. */
 function jsonStore(file) {
-  let data = { followups: [] };
-  try { const parsed = JSON.parse(fs.readFileSync(file, 'utf8')); if (parsed && Array.isArray(parsed.followups)) data = parsed; } catch (e) { /* first run */ }
+  let data = { followups: [], messages: [], messageOrder: [] };
+  try { const parsed = JSON.parse(fs.readFileSync(file, 'utf8')); if (parsed && Array.isArray(parsed.followups)) data = Object.assign({ messages: [], messageOrder: [] }, parsed); } catch (e) { /* first run */ }
   function write() { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(data, null, 1), { mode: 0o600 }); }
   return {
     engine: 'json',
@@ -161,6 +216,17 @@ function jsonStore(file) {
       return { ok: true, followup: f };
     },
     async remove(id) { data.followups = data.followups.filter((x) => x.id !== id); write(); return { ok: true }; },
+    async messages() { return { ok: true, messages: data.messages.map((m) => Object.assign({}, m)), order: cleanOrder(data.messageOrder) }; },
+    async saveMessage(m) {
+      const c = cleanMessage(m);
+      c.updatedAt = new Date().toISOString();
+      const at = data.messages.findIndex((x) => x.key === c.key);
+      if (at === -1) data.messages.push(c); else data.messages[at] = c;
+      write();
+      return { ok: true, message: c };
+    },
+    async removeMessage(key) { data.messages = data.messages.filter((x) => x.key !== str(key)); write(); return { ok: true }; },
+    async setMessageOrder(keys) { data.messageOrder = cleanOrder(keys); write(); return { ok: true, order: data.messageOrder }; },
     async close() {},
   };
 }
