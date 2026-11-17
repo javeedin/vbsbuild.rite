@@ -57,6 +57,7 @@ const SYSTEM = [
   '- No oj-bind-for-each inside <table>, <tbody>, <tr> or <select>: use div grids (role="table"/"row"/"cell") or a custom dropdown.',
   '- Every $listeners.X used in the HTML is declared in the page JSON eventListeners; every chain a listener or chain calls exists in the chains folder; every oj- component used is in the JSON imports.components (when the page has imports).',
   '- Page-module functions used in bindings must not use `this`.',
+  '- Redwood page templates (oj-sp-general-overview-page, oj-sp-item-overview-page, oj-sp-smart-search-page …) draw only what is in their slots (slot="main", slot="search" …) and their own header. A button in the page header (beside Next, Save, Submit…) is NOT markup: it is the template\'s primary-action attribute (one action, handled by on-sp-primary-action) or an entry of its secondary-actions attribute — e.g. secondary-actions=\'[[ [{"id": "home", "label": "Home", "display": "on"}] ]]\' with on-sp-secondary-action="[[ $listeners.x ]]" (one listener for every secondary action: dispatch on $event.detail.id; secondary actions show before the primary one). An <oj-button> placed directly inside the template, outside a slot, is never drawn. Content goes inside slot="main" (or the template\'s other slots).',
   '- Keep the existing style, names and comments. Change as little as possible. Do not invent REST endpoints, services or variables: use what the facts and code show; if something is missing, say so under Questions.',
   '',
   'Answer in EXACTLY this format, in plain English a business analyst can follow:',
@@ -283,6 +284,33 @@ function htmlRules(html, json, chainNames) {
   }
   return out;
 }
+/**
+ * Elements placed directly inside a Redwood overview-page template (oj-sp-general-overview-page,
+ * oj-sp-item-overview-page) outside its slots: never drawn — the template shows only its slots and its own header (a
+ * button beside Next belongs in secondary-actions). oj-bind-if / oj-bind-for-each / template pass their children
+ * through; popups (dialogs, menus, drawers), style and script are drawn elsewhere and are not counted.
+ * → [{ tag, template, line }]
+ */
+function unslotted(html) {
+  const src = str(html).replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, ' '));
+  const VOID = /^(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/;
+  const PASS = /^(oj-bind-if|oj-bind-for-each|oj-defer|template)$/;
+  const ELSEWHERE = /^(oj-dialog|oj-popup|oj-drawer-popup|oj-drawer-layout|oj-menu|oj-sp-[a-z0-9-]*drawer[a-z0-9-]*|oj-sp-[a-z0-9-]*dialog[a-z0-9-]*|style|script|oj-bind-slot)$/;
+  const TPL = /^oj-sp-(general|item)-overview-page$/;
+  const re = /<(\/?)([a-zA-Z][\w-]*)((?:[^>"']|"[^"]*"|'[^']*')*?)(\/?)>/g;
+  const stack = [];
+  const bad = [];
+  let m;
+  while ((m = re.exec(src))) {
+    const tag = m[2].toLowerCase();
+    if (m[1]) { for (let i = stack.length - 1; i >= 0; i--) if (stack[i].tag === tag) { stack.length = i; break; } continue; }
+    const parent = stack[stack.length - 1];
+    const tpl = parent ? parent.tpl : '';
+    if (tpl && !PASS.test(tag) && !ELSEWHERE.test(tag) && !/(^|\s)slot\s*=/.test(m[3])) bad.push({ tag: tag, template: tpl, line: src.slice(0, m.index).split('\n').length });
+    if (!m[4] && !VOID.test(tag)) stack.push({ tag: tag, tpl: TPL.test(tag) ? tag : (tpl && PASS.test(tag) ? tpl : '') });
+  }
+  return bad;
+}
 function checksFor(folder, files) {
   const out = [];
   const textOf = (rel, which) => (files[rel] ? files[rel][which] : lf(readText(path.join(folder, rel))));
@@ -314,6 +342,16 @@ function checksFor(folder, files) {
     const now = htmlRules(htmlN, parse(textOf(base + '.json', 'neu')), onDisk.concat(added));
     const was = htmlO == null ? [] : htmlRules(htmlO, parse(textOf(base + '.json', 'old')), onDisk);
     now.forEach((r) => { const w = was.filter((x) => x.name === r.name)[0]; out.push(Object.assign({ file: base + '.html', already: !r.ok && !!w && !w.ok }, r)); });
+    // a Redwood overview page: what the change put directly inside the template, outside its slots, is never drawn
+    if (/<oj-sp-(general|item)-overview-page\b/.test(htmlN)) {
+      const had = {};
+      (htmlO == null ? [] : unslotted(htmlO)).forEach((x) => { had[x.tag] = (had[x.tag] || 0) + 1; });
+      const seen = {};
+      const fresh = unslotted(htmlN).filter((x) => { seen[x.tag] = (seen[x.tag] || 0) + 1; return seen[x.tag] > (had[x.tag] || 0); });
+      out.push({ file: base + '.html', already: false, name: 'markup inside the Redwood page template sits in one of its slots (it is drawn)', ok: !fresh.length,
+        detail: fresh.map((x) => '<' + x.tag + '> (line ' + x.line + ') is directly inside <' + x.template + '>, outside its slots, so it is never drawn').join('; ')
+          + (fresh.length ? ' — a button beside Next goes in the template\'s secondary-actions (with on-sp-secondary-action, dispatching on $event.detail.id); other content goes inside slot="main"' : '') });
+    }
   });
   return out;
 }
@@ -1246,4 +1284,4 @@ function open(opts) {
   };
 }
 
-module.exports = { open, failuresOf, parseAnswer, tryEdits, diffOf, checksFor, htmlRules, relatedTests, safeRel, SYSTEM, issueRules, verdictOf };
+module.exports = { open, failuresOf, parseAnswer, tryEdits, diffOf, checksFor, htmlRules, unslotted, relatedTests, safeRel, SYSTEM, issueRules, verdictOf };

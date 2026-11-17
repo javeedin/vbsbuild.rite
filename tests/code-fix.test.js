@@ -231,6 +231,25 @@ const copyDir = (from, to) => { fs.mkdirSync(to, { recursive: true }); fs.readdi
     T.check('…found by a word (a person, a page, a commit)', (await hs.history('dana')).changes.length === 1 && (await hs.history('abc1234')).changes[0].id === 'fxother1' && (await hs.history('dashboard bigger')).changes.length === 1);
     const og = hs.get('fxother1');
     T.check('a change from another PC opens read only (shared)', og.ok && og.fix.shared === true && og.fix.label === 'Customer Dashboard' && !(await hs.apply({ fix: 'fxother1' })).ok);
+
+    T.section('a Redwood page template draws only its slots: a button beside Next is a secondary action');
+    const RW = 'webApps/shop/flows/shop/pages/rw-page';
+    const page = (inside, attrs) => '<oj-sp-general-overview-page id="rw" primary-action=\'[[ {"label": "Next", "display": "on"} ]]\' on-sp-primary-action="[[ $listeners.next ]]"' + (attrs || '') + '>\n'
+      + inside + '\n  <div class="oj-flex" slot="main"><oj-bind-if test="[[ $variables.a > 1 ]]"><span>x</span></oj-bind-if></div>\n'
+      + '  <oj-dialog id="d"><div>a dialog: drawn in its own layer</div></oj-dialog>\n</oj-sp-general-overview-page>';
+    const listeners = { eventListeners: { next: { chains: [] }, home: { chains: [] } } };
+    const rwChecks = (oldHtml, newHtml) => CF.checksFor(tmp, { [RW + '.html']: { old: oldHtml, neu: newHtml }, [RW + '.json']: { old: JSON.stringify(listeners), neu: JSON.stringify(listeners) } })
+      .filter((c) => /Redwood page template/.test(c.name))[0];
+    const rwBefore = page('');
+    const asMarkup = rwChecks(rwBefore, page('  <!-- Build.Rite change: a Home button -->\n  <oj-button id="homeBtn" on-oj-action="[[ $listeners.home ]]">Home</oj-button>'));
+    T.check('a Home <oj-button> put directly inside oj-sp-general-overview-page (outside its slots): the check fails, saying it is never drawn and where it belongs',
+      asMarkup && !asMarkup.ok && /<oj-button> \(line 3\) is directly inside <oj-sp-general-overview-page>, outside its slots, so it is never drawn/.test(asMarkup.detail)
+      && /secondary-actions/.test(asMarkup.detail) && !asMarkup.already, JSON.stringify(asMarkup));
+    const asAction = rwChecks(rwBefore, page('', ' secondary-actions=\'[[ [{"id": "home", "label": "Home", "display": "on"}] ]]\' on-sp-secondary-action="[[ $listeners.home ]]"'));
+    T.check('…as a secondary action of the template (or content in slot="main"): passes; a dialog and oj-bind-if inside are fine', asAction && asAction.ok, JSON.stringify(asAction));
+    T.check('…a page that had such markup already is not blamed for it (only what the change adds)', rwChecks(page('  <oj-button>Old</oj-button>'), page('  <oj-button>Old</oj-button>')).ok);
+    T.check('…the AI is told so: header buttons are primary-action / secondary-actions, never markup outside a slot', /secondary-actions/.test(CF.SYSTEM) && /never drawn/.test(CF.SYSTEM) && /\$event\.detail\.id/.test(CF.SYSTEM));
+    T.check('…and a page without such a template gets no such check', !CF.checksFor(tmp, { [RW + '.html']: { old: '<div></div>', neu: '<div><oj-button>x</oj-button></div>' } }).some((c) => /Redwood page template/.test(c.name)));
   } catch (e) {
     T.check('no exception: ' + (e && e.stack), false);
   } finally {
