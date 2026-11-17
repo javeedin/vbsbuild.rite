@@ -1,0 +1,871 @@
+{
+ "id": "vbredwoodapp/customer-portal/request-cart",
+ "facts": {
+  "id": "vbredwoodapp/customer-portal/request-cart",
+  "app": "vbredwoodapp",
+  "appName": "vbredwoodapp",
+  "flow": "customer-portal",
+  "page": "request-cart",
+  "label": "Cart",
+  "description": "",
+  "route": {
+   "url": "/vp/shell/customer-portal/request-cart",
+   "menu": "",
+   "needs": ""
+  },
+  "files": [
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page.json",
+    "lines": 340
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page.html",
+    "lines": 636
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page.js",
+    "lines": 298
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CancelSaveTemplateChain.js",
+    "lines": 20
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CartCancelEditChain.js",
+    "lines": 21
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CartOpenMenuChain.js",
+    "lines": 26
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CartProbeTemplateOwnerChain.js",
+    "lines": 58
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CartRowMenuChain.js",
+    "lines": 68
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CartSaveNotesChain.js",
+    "lines": 37
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CartSaveQtyChain.js",
+    "lines": 126
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CompleteDetailsChain.js",
+    "lines": 30
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/GoToParentChain.js",
+    "lines": 18
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/InitCartChain.js",
+    "lines": 130
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/InitChain.js",
+    "lines": 14
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/NavigateBackChain.js",
+    "lines": 19
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/SaveTemplateChain.js",
+    "lines": 227
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/SecondaryActionChain.js",
+    "lines": 205
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/SubmitCheckoutChain.js",
+    "lines": 34
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/SubmitRequestChain.js",
+    "lines": 499
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/UpdateTotalsChain.js",
+    "lines": 14
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/onTermsAcceptedChain.js",
+    "lines": 24
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/onTermsCancelChain.js",
+    "lines": 21
+   }
+  ],
+  "codeHash": "c02d0219b3c65cc2",
+  "features": {
+   "sections": [
+    "Cart",
+    "Edit Line",
+    "Line Notes",
+    "Complete Request Details",
+    "Rental Terms and Conditions",
+    "Save as Template"
+   ],
+   "actions": [
+    {
+     "label": "Actions",
+     "listener": "onCartRowAction",
+     "chains": [
+      "CartOpenMenuChain"
+     ]
+    },
+    {
+     "label": "Browse Catalog",
+     "listener": "browseCatalog",
+     "chains": [
+      "NavigateBackChain"
+     ]
+    },
+    {
+     "label": "Cancel",
+     "listener": "onEditQtyCancel",
+     "chains": [
+      "CartCancelEditChain"
+     ]
+    },
+    {
+     "label": "Save",
+     "listener": "onEditQtySave",
+     "chains": [
+      "CartSaveQtyChain"
+     ]
+    },
+    {
+     "label": "Cancel",
+     "listener": "onNotesCancel",
+     "chains": [
+      "CartCancelEditChain"
+     ]
+    },
+    {
+     "label": "Save",
+     "listener": "onNotesSave",
+     "chains": [
+      "CartSaveNotesChain"
+     ]
+    },
+    {
+     "label": "Cancel",
+     "listener": "onCompleteDetailsCancel",
+     "chains": [
+      "CartCancelEditChain"
+     ]
+    },
+    {
+     "label": "Complete Details",
+     "listener": "onCompleteDetails",
+     "chains": [
+      "CompleteDetailsChain"
+     ]
+    },
+    {
+     "label": "Cancel",
+     "listener": "onTermsCancel",
+     "chains": [
+      "onTermsCancelChain"
+     ]
+    },
+    {
+     "label": "Submit Request",
+     "listener": "submitRequest",
+     "chains": [
+      "SubmitRequestChain"
+     ]
+    },
+    {
+     "label": "Cancel",
+     "listener": "onSaveTemplateCancel",
+     "chains": [
+      "CancelSaveTemplateChain"
+     ]
+    },
+    {
+     "label": "Save Template",
+     "listener": "onSaveTemplateConfirm",
+     "chains": [
+      "SaveTemplateChain"
+     ]
+    },
+    {
+     "label": "Cart: sp secondary action",
+     "listener": "secondaryActionDispatch",
+     "chains": [
+      "SecondaryActionChain"
+     ]
+    },
+    {
+     "label": "Cart: sp in flow back",
+     "listener": "onSpInFlowBack",
+     "chains": [
+      "GoToParentChain"
+     ]
+    },
+    {
+     "label": "oj-menu: oj menu action",
+     "listener": "onRowMenuAction",
+     "chains": [
+      "CartRowMenuChain"
+     ]
+    }
+   ],
+   "fields": [
+    "Quantity",
+    "Start Date",
+    "End Date",
+    "Hours",
+    "Notes",
+    "Insurance Policy",
+    "Issue Agency",
+    "Template Name",
+    "Description (optional)"
+   ],
+   "columns": [],
+   "components": [
+    "oj-button",
+    "oj-c-input-number",
+    "oj-data-grid",
+    "oj-dialog",
+    "oj-form-layout",
+    "oj-input-date",
+    "oj-input-number",
+    "oj-input-text",
+    "oj-menu",
+    "oj-option",
+    "oj-radioset",
+    "oj-sp-general-overview-page",
+    "oj-text-area"
+   ],
+   "inputs": [],
+   "lifecycle": [
+    {
+     "when": "when the page opens",
+     "chains": [
+      "InitCartChain"
+     ]
+    }
+   ]
+  },
+  "logic": {
+   "chains": [
+    {
+     "name": "CancelSaveTemplateChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CancelSaveTemplateChain.js",
+     "about": "",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onSaveTemplateCancel"
+     ],
+     "lines": 20
+    },
+    {
+     "name": "CartCancelEditChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CartCancelEditChain.js",
+     "about": "Cancel for the cart's small dialogs (Edit Line, Line Notes, Complete Request Details).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onEditQtyCancel",
+      "onNotesCancel",
+      "onCompleteDetailsCancel"
+     ],
+     "lines": 21
+    },
+    {
+     "name": "CartOpenMenuChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CartOpenMenuChain.js",
+     "about": "Read item id from the button's data attribute (set via data-item-id binding)",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onCartRowAction"
+     ],
+     "lines": 26
+    },
+    {
+     "name": "CartProbeTemplateOwnerChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CartProbeTemplateOwnerChain.js",
+     "about": "Can this backend store a template owner yet? Probed from the DATA -- one row is enough, and the PROPERTY is what counts, not its value: a row explicitly carrying null still proves the field is returned. That is what lets personal templates switch on the day the column lands, with no redeploy and no flag to remember to flip. This MUST run before the Save-as-Template dialog opens, not when Save is pressed. It used to run inside SaveTemplateChain, which meant the dialog rendered with the flag still false and the Visibility choice hidden -- so every template silently defaulted to Personal and a…",
+     "calls": [
+      "eqp-v1/getRequestTemplates"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/templateScope"
+     ],
+     "on": [],
+     "lines": 58
+    },
+    {
+     "name": "CartRowMenuChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CartRowMenuChain.js",
+     "about": "Same arguments as InitCartChain — dropping the last two flipped the RATE column from the PPM / quote text back to amounts.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/draftStorage"
+     ],
+     "on": [
+      "onRowMenuAction"
+     ],
+     "lines": 68
+    },
+    {
+     "name": "CartSaveNotesChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CartSaveNotesChain.js",
+     "about": "Saves the Line Notes dialog onto the cart item as `notes`. requestLineBody posts it as LINE_NOTES (VARCHAR2 2000) on submit / Save as Draft, and draftResume reads it back, so nothing else is needed downstream.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/draftStorage"
+     ],
+     "on": [
+      "onNotesSave"
+     ],
+     "lines": 37
+    },
+    {
+     "name": "CartSaveQtyChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CartSaveQtyChain.js",
+     "about": "Local calendar day as 'YYYY-MM-DD' — the format oj-input-date writes.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/draftStorage"
+     ],
+     "on": [
+      "onEditQtySave"
+     ],
+     "lines": 126
+    },
+    {
+     "name": "CompleteDetailsChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/CompleteDetailsChain.js",
+     "about": "\"Complete Details\" in the Complete Request Details popup: back to the create form so a soft reservation can fill what Submit needs. Uses the catalog back button's same-trip return (isReturningToCreate), so HydrateDraftChain keeps the form AND the cart; it also shows the completeForSubmitFields list as a notice. Next → catalog → cart → Submit.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [
+      "page project-create-request"
+     ],
+     "modules": [],
+     "on": [
+      "onCompleteDetails"
+     ],
+     "lines": 30
+    },
+    {
+     "name": "GoToParentChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/GoToParentChain.js",
+     "about": "",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [
+      "page request-catalog"
+     ],
+     "modules": [],
+     "on": [
+      "onSpInFlowBack"
+     ],
+     "lines": 18
+    },
+    {
+     "name": "InitCartChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/InitCartChain.js",
+     "about": "Hydrate from localStorage if a persisted draft exists (refresh / new tab). Always prefer the saved draft over VBCS default initialization, since request.* defaults would otherwise make the variable look populated and silently swallow user-typed fields like `location`.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/draftStorage"
+     ],
+     "on": [
+      "vbEnter"
+     ],
+     "lines": 130
+    },
+    {
+     "name": "InitChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/InitChain.js",
+     "about": "Stub — cart is populated via CartItemsArray flow variable",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 14
+    },
+    {
+     "name": "NavigateBackChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/NavigateBackChain.js",
+     "about": "Navigate back to the Equipment Catalog",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [
+      "page request-catalog"
+     ],
+     "modules": [],
+     "on": [
+      "browseCatalog"
+     ],
+     "lines": 19
+    },
+    {
+     "name": "SaveTemplateChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/SaveTemplateChain.js",
+     "about": "── Scope and ownership ────────────────────────────────────────── WHO is saving this, and MAY they publish it to everyone.",
+     "calls": [
+      "eqp-v1/createRequestTemplate",
+      "eqp-v1/createTemplateLine"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/currentUser",
+      "resources/js/templateScope"
+     ],
+     "on": [
+      "onSaveTemplateConfirm"
+     ],
+     "lines": 227
+    },
+    {
+     "name": "SecondaryActionChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/SecondaryActionChain.js",
+     "about": "──────────────────────────────────────────────────────────────── SAVE AS DRAFT ────────────────────────────────────────────────────────────────",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [
+      "flow main"
+     ],
+     "modules": [
+      "resources/js/requestModel",
+      "resources/js/currentUser",
+      "resources/js/requestLineBody",
+      "resources/js/requestHeaderBody",
+      "resources/js/draftStorage"
+     ],
+     "on": [
+      "secondaryActionDispatch"
+     ],
+     "lines": 205
+    },
+    {
+     "name": "SubmitCheckoutChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/SubmitCheckoutChain.js",
+     "about": "Simulate a network delay for submitting the cart",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [
+      "page customer-dashboard"
+     ],
+     "modules": [],
+     "on": [],
+     "lines": 34
+    },
+    {
+     "name": "SubmitRequestChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/SubmitRequestChain.js",
+     "about": "Wrapper: owns the in-flight flag so the \"Submitting your request…\" overlay can NEVER be left on. Before this, an unexpected error after the request was already saved left the spinner up forever, and the user's retry created a duplicate request (REQ-…731 / …732, 2026-10-12).",
+     "calls": [
+      "eqp-v1/patchEquipmentRequest",
+      "ProjectLOV/postFscmRestApiResources11_13_18_05Contracts"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [
+      "page customer-my-requests",
+      "flow main"
+     ],
+     "modules": [
+      "resources/js/draftStorage",
+      "resources/js/geocoder",
+      "resources/js/requestModel",
+      "resources/js/currentUser",
+      "resources/js/requestLineBody",
+      "resources/js/requestHeaderBody"
+     ],
+     "on": [
+      "submitRequest"
+     ],
+     "lines": 499
+    },
+    {
+     "name": "UpdateTotalsChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/UpdateTotalsChain.js",
+     "about": "Stub — totals are calculated inline in the data grid subtotal column",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 14
+    },
+    {
+     "name": "onTermsAcceptedChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/onTermsAcceptedChain.js",
+     "about": "Mark acceptance so SubmitRequestChain bypasses the dialog on re-entry.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onTermsAccepted"
+     ],
+     "lines": 24
+    },
+    {
+     "name": "onTermsCancelChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/request-cart-page-chains/onTermsCancelChain.js",
+     "about": "",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onTermsCancel"
+     ],
+     "lines": 21
+    }
+   ],
+   "modules": [
+    {
+     "name": "templateScope",
+     "file": "webApps/vbredwoodapp/resources/js/templateScope.js",
+     "about": "Who may SEE, EDIT and DELETE an equipment request template. Templates used to be one flat, anonymous, permanent list: SaveTemplateChain hard-coded isSharedFlag:'Y' on every save, so all of them were global, and nothing in the UI could ever change or remove one. This module owns the rules that give them a scope and an owner. TWO SCOPES, carried by a column that already existed: IS_SHARED_FLAG = 'Y' GLOBAL everyone sees it; only manager tier edits it IS_SHARED_FLAG = 'N' PERSONAL only its owner…",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 296
+    },
+    {
+     "name": "draftStorage",
+     "file": "webApps/vbredwoodapp/resources/js/draftStorage.js",
+     "about": "Returns true if localStorage has a non-empty draft for this key. On resume pages (catalog, cart) we always prefer the persisted draft over whatever VBCS initialized the flow variable to — otherwise default values on the variable (e.g. request.creditLimit) make the variable look \"non-empty\" and would silently block hydration, dropping user-typed fields like `location` after a refresh.",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 59
+    },
+    {
+     "name": "currentUser",
+     "file": "webApps/vbredwoodapp/resources/js/currentUser.js",
+     "about": "Who is the signed-in user? Resolved from BOTH identity sources, because the app is reached two ways and only one of them is populated in each: published inside Fusion -> ?jwt=... on the URL, decoded for its `sub` dev / Designer preview -> $application.user, populated by VB Neither alone is sufficient. $application.user comes back with empty `login` and `userName` in this environment even while VB logs \"User john.dunbar is authenticated\"; the JWT is absent on a direct nav, a bookmark or in…",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 239
+    },
+    {
+     "name": "requestModel",
+     "file": "webApps/vbredwoodapp/resources/js/requestModel.js",
+     "about": "Single source of truth for the in-flight `request` object shape used by the create-request flow ($flow.variables.request). Chains that build a fresh request, reset it, or hydrate it from a draft/agreement should call defaultRequest() instead of hand-writing the object literal, so the shape can never drift between call sites (add a field here once, not in 5 files). Consumed by HydrateDraftChain, ClearAgreementContextChain, SecondaryActionChain (post-submit reset) and CreateRequestNextChain.",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 112
+    },
+    {
+     "name": "requestLineBody",
+     "file": "webApps/vbredwoodapp/resources/js/requestLineBody.js",
+     "about": "ONE builder for the createRequestLine body, shared by the cart's Submit (SubmitRequestChain) and Save as Draft (SecondaryActionChain), so a draft line stores exactly what a submitted line stores. Only lineStatus differs: Save as Draft → DRAFT (INTERNAL and EXTERNAL) Submit, INTERNAL project → SUBMITTED (an approver still has to confirm) Submit, EXTERNAL customer→ IN_PROCESS (no customer-side approver) lineStatus is set ON CREATE. Submit used to create lines with no status and then PATCH every…",
+     "local": [],
+     "calls": [
+      "eqp-v1/createRequestLinesBatch",
+      "eqp-v1/deleteEquipmentRequest",
+      "eqp-v1/replaceRequestLinesBatch",
+      "eqp-v1/patchRequestLinesBatch"
+     ],
+     "reports": [],
+     "lines": 346
+    },
+    {
+     "name": "requestHeaderBody",
+     "file": "webApps/vbredwoodapp/resources/js/requestHeaderBody.js",
+     "about": "ONE builder for the createEquipmentRequest body, shared by the cart's Submit (SubmitRequestChain) and Save as Draft (SecondaryActionChain), so a draft stores everything a submitted request stores: customer, project contract, delivery mode/ids, default hours, dates, agreement. Before this, Save as Draft had its own hand-written body that dropped 11 of those fields — every draft on paasdev had no customer (2026-10-11). Both buttons create the header as DRAFT. Submit moves it to SUBMITTED /…",
+     "local": [],
+     "calls": [
+      "eqp-v1/patchEquipmentRequest",
+      "eqp-v1/createEquipmentRequest",
+      "eqp-v1/createShipToSite"
+     ],
+     "reports": [],
+     "lines": 469
+    },
+    {
+     "name": "geocoder",
+     "file": "webApps/vbredwoodapp/resources/js/geocoder.js",
+     "about": "Mapbox public geocoding token — the app's own token, identical to the one in equipment-schedule-page.js, line-detail-page.js and the two create-request pages. It's a \"pk.\" public token; safe in client code. WAS a leftover Bryntum DEMO token ('matsbryntse'), copied in with their sample map code. That token is not ours and Mapbox rejects it with 401 Unauthorized, so every lookup() silently returned null (the function is best-effort and swallows !resp.ok). Symptom: addresses resolved but…",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 60
+    },
+    {
+     "name": "requestNumberFormat",
+     "file": "webApps/vbredwoodapp/resources/js/requestNumberFormat.js",
+     "about": "THE request number format. One engine, used by the cart's Submit and Save as Draft (through requestHeaderBody.nextRequestNumber) and by the Configurations screen's live preview, so what an admin sees while typing a pattern is produced by the same code that stamps the real request. Before this, both chains hard-coded 'REQ-' + Date.now(). That is still the DEFAULT and still the exact output when nothing is configured -- see DEFAULTS below. An environment that never opens the new config card…",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 338
+    }
+   ],
+   "variables": 31
+  },
+  "integrations": {
+   "rest": [
+    {
+     "endpoint": "eqp-v1/getRequestTemplates",
+     "service": "eqp-v1",
+     "operation": "getRequestTemplates",
+     "method": "GET",
+     "path": "/equiprite/v1/request-templates",
+     "summary": "List request templates",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "CartProbeTemplateOwnerChain"
+     ],
+     "params": {
+      "page": "0",
+      "size": "1"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/createRequestTemplate",
+     "service": "eqp-v1",
+     "operation": "createRequestTemplate",
+     "method": "POST",
+     "path": "/equiprite/v1/request-templates",
+     "summary": "Create request template",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "SaveTemplateChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/createTemplateLine",
+     "service": "eqp-v1",
+     "operation": "createTemplateLine",
+     "method": "POST",
+     "path": "/equiprite/v1/template-lines",
+     "summary": "Create template line",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "SaveTemplateChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/patchEquipmentRequest",
+     "service": "eqp-v1",
+     "operation": "patchEquipmentRequest",
+     "method": "PATCH",
+     "path": "/equiprite/v1/equipment-requests/{id}",
+     "summary": "Partial update equipment request (status transitions)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "SubmitRequestChain",
+      "requestHeaderBody"
+     ],
+     "params": {
+      "id": "{{requestId}}"
+     }
+    },
+    {
+     "endpoint": "ProjectLOV/postFscmRestApiResources11_13_18_05Contracts",
+     "service": "ProjectLOV",
+     "operation": "postFscmRestApiResources11_13_18_05Contracts",
+     "method": "POST",
+     "path": "/fscmRestApi/resources/11.13.18.05/contracts",
+     "summary": "",
+     "backend": "fusion",
+     "backendLabel": "Oracle Fusion REST",
+     "usedBy": [
+      "SubmitRequestChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/createRequestLinesBatch",
+     "service": "eqp-v1",
+     "operation": "createRequestLinesBatch",
+     "method": "POST",
+     "path": "/equiprite/v1/equipment-requests/{requestId}/lines/batch",
+     "summary": "Create ALL of a request's lines in one call and one transaction",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "requestLineBody"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/deleteEquipmentRequest",
+     "service": "eqp-v1",
+     "operation": "deleteEquipmentRequest",
+     "method": "DELETE",
+     "path": "/equiprite/v1/equipment-requests/{id}",
+     "summary": "Delete a DRAFT equipment request",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "requestLineBody"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/replaceRequestLinesBatch",
+     "service": "eqp-v1",
+     "operation": "replaceRequestLinesBatch",
+     "method": "PUT",
+     "path": "/equiprite/v1/equipment-requests/{requestId}/lines/batch",
+     "summary": "Replace ALL lines of a DRAFT request in one transaction",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "requestLineBody"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/patchRequestLinesBatch",
+     "service": "eqp-v1",
+     "operation": "patchRequestLinesBatch",
+     "method": "PATCH",
+     "path": "/equiprite/v1/equipment-requests/{requestId}/lines/batch",
+     "summary": "Update many of a request's lines in one call and one transaction",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "requestLineBody"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/createEquipmentRequest",
+     "service": "eqp-v1",
+     "operation": "createEquipmentRequest",
+     "method": "POST",
+     "path": "/equiprite/v1/equipment-requests",
+     "summary": "Create equipment request",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "requestHeaderBody"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/createShipToSite",
+     "service": "eqp-v1",
+     "operation": "createShipToSite",
+     "method": "POST",
+     "path": "/equiprite/v1/ship-to-sites",
+     "summary": "Create ship-to site",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "requestHeaderBody"
+     ]
+    }
+   ],
+   "reports": [],
+   "local": [],
+   "backends": [
+    "eqpt",
+    "Oracle Fusion REST"
+   ],
+   "lovs": []
+  },
+  "links": [
+   "page project-create-request",
+   "page request-catalog",
+   "flow main",
+   "page customer-dashboard",
+   "page customer-my-requests"
+  ],
+  "next": [
+   {
+    "id": "vbredwoodapp/customer-portal/project-create-request",
+    "label": "Create Equipment Request",
+    "via": [
+     "CompleteDetailsChain"
+    ]
+   },
+   {
+    "id": "vbredwoodapp/customer-portal/request-catalog",
+    "label": "Request Catalog",
+    "via": [
+     "GoToParentChain",
+     "NavigateBackChain"
+    ]
+   },
+   {
+    "id": "vbredwoodapp/main/main-equiprite",
+    "label": "Main Equiprite",
+    "via": [
+     "SecondaryActionChain",
+     "SubmitRequestChain"
+    ]
+   },
+   {
+    "id": "vbredwoodapp/customer-portal/customer-dashboard",
+    "label": "Customer Dashboard",
+    "via": [
+     "SubmitCheckoutChain"
+    ]
+   },
+   {
+    "id": "vbredwoodapp/customer-portal/customer-my-requests",
+    "label": "My Requests",
+    "via": [
+     "SubmitRequestChain"
+    ]
+   }
+  ],
+  "unresolvedLinks": []
+ },
+ "ai": null,
+ "screenshots": [],
+ "stories": [],
+ "at": "2026-11-17T10:51:11.261Z",
+ "by": "rite.user",
+ "codeHash": "c02d0219b3c65cc2"
+}

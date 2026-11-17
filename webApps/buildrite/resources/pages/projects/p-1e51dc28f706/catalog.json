@@ -1,5 +1,5 @@
 {
- "scannedAt": "2026-11-17T10:21:15.275Z",
+ "scannedAt": "2026-11-17T10:51:11.334Z",
  "pages": [
   {
    "id": "vbredwoodapp//shell",
@@ -217,7 +217,15 @@
     "vbredwoodapp/customer-portal/customer-my-requests"
    ],
    "stories": [],
-   "sheet": null
+   "sheet": {
+    "at": "2026-11-17T10:51:11.261Z",
+    "by": "rite.user",
+    "codeHash": "c02d0219b3c65cc2",
+    "screenshots": 0,
+    "ai": false,
+    "rest": 11,
+    "chains": 19
+   }
   },
   {
    "id": "vbredwoodapp/customer-portal/request-catalog-detail",
