@@ -179,6 +179,29 @@ The messages to pick from include *Ask to close*, *Status update*, *Overdue — 
 testing?*, *Sprint closing*, *Provide test scripts*, *Provide proof of testing*, *Need more info*, *Any blockers?*,
 *UAT sign-off* and *Write my own*.
 
+**Recipients.** Typing in To or Cc suggests people as you type:
+
+1. The addresses you sent to before from this PC come first (marked *used before*).
+2. With Microsoft 365 connected: the people you work with, your saved contacts and, when turned on, the whole company
+   directory.
+3. Without it, or when it finds no one: Outlook on this PC.
+
+When no one is found, a line under the box says where it looked and what would help: connect Microsoft 365, connect
+again because the sign-in expired, or turn on the company directory. Its **Microsoft 365…** link opens the panel below.
+
+**Microsoft 365 in the top bar.** The **365** button shows whether Microsoft 365 is connected (green dot), whether the
+sign-in kept on this PC has expired (amber: Microsoft no longer renews it), or whether it is not connected (grey). Its
+panel offers:
+
+- **Connect** in a Microsoft sign-in window, or **Use a code instead** (sign in on Microsoft's page in your browser).
+- **Send a test email to me** and **Check now** (asks Microsoft, so an expired sign-in shows as expired).
+- **Search the whole company** in the suggestions. This needs an admin to approve User.ReadBasic.All for the app;
+  connect again after turning it on.
+- **Disconnect**.
+
+When no app is set up yet, it asks for the Tenant ID and the App (client) ID of the app registered in Microsoft Entra.
+**Change the app** edits them. Nothing but the session's tokens is kept, encrypted on this PC.
+
 **Follow-ups › Messages** is where you keep them. **Manage messages…**, the last chip in the dialog, opens it.
 
 - **+ New message** adds one of your own: the name on its button, a subject and the message. A built-in message can be

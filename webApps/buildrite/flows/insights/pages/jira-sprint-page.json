@@ -91,6 +91,7 @@
     "fuSug": { "type": "any[]", "defaultValue": [], "description": "Contact suggestions for the active recipient field (from the directory)." },
     "fuToDraft": { "type": "string", "defaultValue": "", "description": "What is being typed in the To box before it becomes a chip." },
     "fuCcDraft": { "type": "string", "defaultValue": "", "description": "What is being typed in the Cc box before it becomes a chip." },
+    "fuSugNote": { "type": "string", "defaultValue": "", "description": "The line under To / Cc after a search: why no one was found and where it looked (resources/js/followup.js sugNote)." },
     "fuSugFor": { "type": "string", "defaultValue": "", "description": "Which recipient field the suggestions are for ('to' | 'cc')." },
     "fuTpls": { "type": "any", "defaultValue": [], "description": "The messages the follow-up dialog offers (Follow-ups › Messages merged with the built-ins)." },
     "images": {

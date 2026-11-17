@@ -15,8 +15,8 @@ const H = require('./_harness');
 const T = H.makeAsserter();
 const JS = path.join(__dirname, '..', 'webApps', 'buildrite', 'resources', 'js');
 
-function load(name, deps) {
-  const sandbox = { console, Date, JSON, Math, Promise, Blob, URL, TextEncoder };
+function load(name, deps, extra) {
+  const sandbox = Object.assign({ console, Date, JSON, Math, Promise, Blob, URL, TextEncoder }, extra || {});
   let mod;
   sandbox.define = (names, factory) => { mod = factory(...names.map((n) => (deps && n in deps ? deps[n] : {}))); };
   vm.createContext(sandbox);
@@ -45,6 +45,26 @@ T.section('templates');
 T.check('at least seven, each has a subject', F.TEMPLATES.length >= 7 && F.TEMPLATES.every((t) => !!t.subject && !!t.key));
 T.check('the sample "ask to close" template exists', F.TEMPLATES.some((t) => t.key === 'close' && /close the following stories/i.test(t.body)));
 T.check('a blank template to write your own', F.TEMPLATES.some((t) => t.key === 'blank' && t.body === ''));
+
+T.section('recipient suggestions: why no one was found, the addresses used before');
+const reply = (o) => Object.assign({ contacts: [], sources: [{ id: 'people', label: 'people you work with', ok: true, n: 0 }, { id: 'contacts', label: 'your saved contacts', ok: true, n: 0 }, { id: 'directory', label: 'the company directory', ok: false, n: 0, off: true }], m365: { configured: true, signedIn: true, expired: false, directory: false } }, o || {});
+T.check('signed in, nothing matches: where it looked, that the company directory is not searched (and how to turn it on), type the address',
+  F.sugNote('tes', reply(), 0) === 'No one found for “tes” in people you work with and your saved contacts. The company directory is not searched: turn it on from the Microsoft 365 button in the top bar (an admin must approve it). Type the full address and press Enter.', F.sugNote('tes', reply(), 0));
+T.check('an expired sign-in: said, with where to connect again (even with suggestions from used-before)', /sign-in has expired.*Microsoft 365 button in the top bar/.test(F.sugNote('ga', reply({ m365: { signedIn: false, expired: true } }), 2)));
+T.check('not connected (Outlook on this PC searched): says to connect Microsoft 365 to search colleagues',
+  /No one found for “ga” in Outlook on this PC\. Connect Microsoft 365 \(top bar\)/.test(F.sugNote('ga', { sources: [{ id: 'outlook', label: 'Outlook on this PC', ok: true, n: 0 }], m365: { signedIn: false } }, 0)));
+T.check('a source that failed: its error shown', /People you work with: Access denied/.test(F.sugNote('ga', reply({ sources: [{ id: 'people', label: 'people you work with', ok: false, error: 'Access denied' }] }), 0)));
+T.check('suggestions on screen: no note', F.sugNote('ga', reply(), 3) === '');
+const mem = {};
+const ls = { getItem: (k) => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } };
+const FL = load('followup', { 'resources/js/exportKit': exportKit }, { localStorage: ls });
+FL.rememberRecips('Mira Lane <mira.lane@example.com>; sam.lee@example.com', 'pm@example.com; not-an-address');
+FL.rememberRecips('sam.lee@example.com', '');
+const ub = FL.usedBefore('');
+T.check('addresses that went out are kept on this PC, most used first (names kept, a word without @ left out)', ub[0].email === 'sam.lee@example.com' && ub.some((x) => x.email === 'mira.lane@example.com' && x.name === 'Mira Lane')
+  && !ub.some((x) => /not-an-address/.test(x.email)) && ub.every((x) => x.src === 'used before'), JSON.stringify(ub));
+T.check('…offered as you type (by name or address)', FL.usedBefore('mir').map((x) => x.email).join() === 'mira.lane@example.com' && FL.usedBefore('pm@').length === 1 && FL.usedBefore('zzz').length === 0);
+T.check('…first, then what Microsoft 365 found, each address once', FL.mergeSug(FL.usedBefore('mir'), [{ name: 'Mira L', email: 'MIRA.LANE@example.com' }, { name: 'Gary', email: 'gary@example.com' }]).map((x) => x.email + ':' + (x.src || '-')).join() === 'mira.lane@example.com:used before,gary@example.com:-');
 
 T.section('the messages you keep (Follow-ups › Messages) merged with the built-ins');
 const m0 = F.merge([], []);

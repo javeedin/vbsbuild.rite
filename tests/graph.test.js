@@ -72,12 +72,16 @@ const openExternal = (u) => opened.push(u);
   T.section('the whole directory: only when the option is on (/users merged in)');
   store.saveConfig({ directory: true });
   const ppl = await store.people('san');
-  T.check('with the directory option on, /me/people + /me/contacts + /users merge, deduped by email', ppl.ok
-    && ppl.contacts.some((c) => c.email === 'sandeep.reddy@rite.digital') && ppl.contacts.some((c) => c.email === 'omar.diaz@rite.digital')
+  T.check('with the directory option on, /me/people + /me/contacts + /users merge, deduped by email; saved contacts only when they match what was typed', ppl.ok
+    && ppl.contacts.some((c) => c.email === 'sandeep.reddy@rite.digital') && !ppl.contacts.some((c) => c.email === 'omar.diaz@rite.digital')
     && ppl.contacts.some((c) => c.email === 'tester.one@rite.digital')
     && ppl.contacts.filter((c) => c.email === 'sandeep.reddy@rite.digital').length === 1
     && calls.some((c) => /\/me\/people\?\$search=/.test(c.url)) && calls.some((c) => /\/users\?\$filter=/.test(c.url)));
   T.check('directory=true when /users could be read (User.ReadBasic.All granted)', ppl.directory === true);
+  T.check('…the sources it searched, each with what it found (people you work with, your saved contacts, the company directory)',
+    (ppl.sources || []).map((x) => x.id).join() === 'people,contacts,directory' && ppl.sources.every((x) => x.ok), JSON.stringify(ppl.sources));
+  const om = await store.people('omar');
+  T.check('a saved contact found by its name ("omar")', om.contacts.some((c) => c.email === 'omar.diaz@rite.digital'));
 
   T.section('sending via /me/sendMail');
   const sent = await store.sendMail({ to: 'a@x.com; b@y.com', cc: 'c@z.com', subject: 'Minutes', html: '<b>hi</b>' });
@@ -213,5 +217,30 @@ const openExternal = (u) => opened.push(u);
   T.check('sign out clears the session', store2.signOut().signedIn === false);
 
   try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) { /* temp */ }
+
+  T.section('a stored sign-in Microsoft will not renew: expired, not "signed in" — and said why');
+  const dirX = fs.mkdtempSync(path.join(os.tmpdir(), 'br-graph-x-'));
+  const expFile = path.join(dirX, 'graph-expired.json');
+  fs.writeFileSync(expFile, JSON.stringify({ tenantId: 't', clientId: 'c', account: 'me@x', tokens: { access: 'enc:' + Buffer.from('AX').toString('base64'), refresh: 'enc:' + Buffer.from('RTX').toString('base64'), expiresAt: Date.now() - 1000 } }));
+  const refuse = (url, init) => {
+    if (/\/token$/.test(url) && /grant_type=refresh_token/.test((init && init.body) || '')) {
+      return Promise.resolve({ status: 400, text: async () => JSON.stringify({ error: 'invalid_grant', error_description: 'AADSTS700082: The refresh token has expired due to inactivity.' }) });
+    }
+    return fakeFetch(url, init);
+  };
+  const storeX = G.open({ file: expFile, encrypt: enc, decrypt: dec, fetch: refuse, openExternal });
+  T.check('before anything asks Microsoft: a stored refresh token counts as signed in', storeX.status().signedIn === true && storeX.status().expired === false);
+  const px = await storeX.people('mira');
+  T.check('a search finds Microsoft refusing the renewal: no contacts, needs a sign-in, said it expired', px.ok === false && px.needsSignIn === true && px.expired === true
+    && /sign-in has expired: connect again/.test(px.error), px.error);
+  const sx = storeX.status();
+  T.check('…from then on not signed in but expired, with Microsoft\'s reason; the dead tokens gone from the file', sx.signedIn === false && sx.expired === true && /refresh token has expired|AADSTS700082|sign/i.test(sx.lastError)
+    && JSON.parse(fs.readFileSync(expFile, 'utf8')).tokens === null, JSON.stringify(sx));
+  T.check('…signing out clears the expired mark', storeX.signOut().expired === false);
+  const netErr = G.open({ file: path.join(dirX, 'graph-net.json'), encrypt: enc, decrypt: dec, fetch: () => Promise.reject(new Error('getaddrinfo ENOTFOUND')), openExternal });
+  fs.writeFileSync(path.join(dirX, 'graph-net.json'), JSON.stringify({ tenantId: 't', clientId: 'c', tokens: { access: null, refresh: 'enc:' + Buffer.from('RTN').toString('base64'), expiresAt: 0 } }));
+  const netStore = G.open({ file: path.join(dirX, 'graph-net.json'), encrypt: enc, decrypt: dec, fetch: () => Promise.reject(new Error('getaddrinfo ENOTFOUND')), openExternal });
+  const pn = await netStore.people('x');
+  T.check('a network error is not an expired sign-in: said so, the session kept', pn.ok === false && /could not be reached/.test(pn.error) && netStore.status().signedIn === true && !!netErr, pn.error);
   T.report();
 })();

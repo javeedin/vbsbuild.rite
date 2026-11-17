@@ -10,6 +10,9 @@ define(['resources/js/shellBus', 'resources/js/theme', 'resources/js/look', 'res
   const JICON = { new: 'oj-ux-ico-plus-circle', status: 'oj-ux-ico-arrow-right', assign: 'oj-ux-ico-contact', comment: 'oj-ux-ico-chat', priority: 'oj-ux-ico-flag', sprint: 'oj-ux-ico-calendar', attach: 'oj-ux-ico-attach', edit: 'oj-ux-ico-edit' };
   let jiraKept = { k: '', v: [] };
 
+  // Microsoft 365's state for the top bar: connected · expired · off (set up but not connected) · none (no app set up)
+  function m365State(m) { return !m ? 'none' : m.signedIn ? 'on' : m.expired ? 'expired' : m.configured ? 'off' : 'none'; }
+
   class PageModule {
     // ── The Jira updates bell (resources/js/jiraFeed.js) ──
     jiraGroups(events, kind) {
@@ -68,6 +71,10 @@ define(['resources/js/shellBus', 'resources/js/theme', 'resources/js/look', 'res
         }, true);
         setInterval(() => fire('refreshAlerts'), JIRA_EVERY_MS);
       }
+      // Microsoft 365: a screen asks for the top bar's panel (the follow-up dialog's "Microsoft 365…"), or a quiet check
+      // found the stored sign-in expired (m365Chain)
+      bus.on('m365-open', 'shell', () => fire('m365Request', { act: 'open' }));
+      bus.on('m365-expired', 'shell', () => fire('m365Request', { act: 'status' }));
     }
 
 
@@ -88,6 +95,21 @@ define(['resources/js/shellBus', 'resources/js/theme', 'resources/js/look', 'res
 
     /** The looks in your menu: Redwood, Current (resources/js/look.js). */
     looks() { return look.LOOKS; }
+
+    // ── Microsoft 365 (the top bar's 365 button and its panel; m365Chain) ──
+    /** connected · expired · off (set up but not connected) · none (no app set up) */
+    m365State(m) { return m365State(m); }
+    m365Class(m) { return 'nx-m365btn nx-m365btn--' + m365State(m); }
+    m365Title(m) {
+      const st = m365State(m);
+      return st === 'on' ? 'Microsoft 365: connected' + (m.account ? ' as ' + m.account : '') + ' — recipient suggestions and Send via Microsoft 365'
+        : st === 'expired' ? 'Microsoft 365: your sign-in has expired — click to connect again'
+          : st === 'off' ? 'Microsoft 365: not connected — click to connect' : 'Connect Microsoft 365: recipient suggestions and sending from Build.Rite';
+    }
+    m365Headline(m) {
+      const st = m365State(m);
+      return st === 'on' ? 'Connected' + (m.account ? ' as ' + m.account : '') : st === 'expired' ? 'Your sign-in has expired' : st === 'off' ? 'Not connected' : 'Not set up yet';
+    }
   }
 
   return PageModule;

@@ -131,7 +131,12 @@ const complete = (page, scope, tags) => page.evaluate((a) => a[1].map((t) => {
   const minutesStore = await require('../../desktop/lib/minutes').open({ file: path.join(dir, 'minutes.duckdb'), graph: {
     status: () => ({ configured: true, signedIn: true, account: 'sam@rite.digital', tenantId: 't', clientId: 'c', pending: false, userCode: '', verificationUri: '', error: '' }),
     sendMail: async (b) => { graphSent.push(b); return { ok: true }; },
-    people: async () => ({ ok: true, available: true, contacts: [{ name: 'Omar Diaz', email: 'omar.diaz@rite.digital' }] }), saveConfig: () => {}, beginSignIn: async () => ({ ok: true }), signOut: () => {},
+    people: async (q) => {
+      const all = [{ name: 'Omar Diaz', email: 'omar.diaz@rite.digital' }];
+      const t = String(q || '').toLowerCase();
+      const found = all.filter((c) => !t || (c.name + ' ' + c.email).toLowerCase().indexOf(t) !== -1);
+      return { ok: true, available: true, contacts: found, sources: [{ id: 'people', label: 'people you work with', ok: true, n: found.length }, { id: 'contacts', label: 'your saved contacts', ok: true, n: 0 }, { id: 'directory', label: 'the company directory', ok: false, n: 0, off: true }] };
+    }, saveConfig: () => {}, beginSignIn: async () => ({ ok: true }), signOut: () => {},
   } });
   // A shared Ask AI store (for "Analyze with AI") with a stub LLM, pre-set to OpenAI so analysis/chat run.
   const llmCalls = [];
@@ -456,8 +461,8 @@ const complete = (page, scope, tags) => page.evaluate((a) => a[1].map((t) => {
     await page.waitForSelector('#jspFuModal', { state: 'visible', timeout: 10000 });
     T.check('with Microsoft 365 signed in, the dialog offers "Send via Microsoft 365"', await page.isVisible('#jspFuSend'));
     // Contacts autocomplete in To (from the M365 directory), then pick one.
-    await page.locator('#jspFuTo input').fill('nab');
-    await settle(page, 400);
+    await page.locator('#jspFuTo input').fill('oma');
+    await page.waitForSelector('#jspFuSugTo .nx-fu-sugitem', { timeout: 10000 }).catch(() => {});
     T.check('typing a name shows directory contact suggestions', await page.isVisible('#jspFuSugTo .nx-fu-sugitem'));
     await page.click('#jspFuSugTo .nx-fu-sugitem');
     await settle(page, 200);
@@ -528,6 +533,25 @@ const complete = (page, scope, tags) => page.evaluate((a) => a[1].map((t) => {
     await settle(page, 300);
     T.check('Jira stories: the compose dialog opens with templates and a drafted message',
       (await page.$$('#jiraFuModal .nx-fu-tpl')).length >= 6 && (await page.getAttribute('#jiraFuPreview', 'srcdoc')).includes('Dear '));
+    // the recipients: why no one was found, the addresses used before (the sprint's email went to Omar, Cc Priya)
+    await page.locator('#jiraFuToInput').fill('zzz');
+    await page.waitForFunction(() => /No one found/.test((document.getElementById('jiraFuNoteTo') || {}).textContent || ''), null, { timeout: 10000 }).catch(() => {});
+    T.check('To: a name no one has — says so, where it looked, that the company directory is off, and to type the address',
+      /No one found for \u201czzz\u201d in people you work with and your saved contacts\. The company directory is not searched/.test(await text(page, '#jiraFuNoteTo'))
+      && /Type the full address and press Enter/.test(await text(page, '#jiraFuNoteTo')) && !(await page.$('#jiraFuSugTo')), await text(page, '#jiraFuNoteTo'));
+    await page.locator('#jiraFuToInput').fill('pri');
+    await page.waitForSelector('#jiraFuSugTo .nx-fu-sugitem', { timeout: 10000 }).catch(() => {});
+    T.check('…an address used before (the sprint follow-up\'s Cc) offered at once, marked "used before"', /priya@company\.com/.test(await text(page, '#jiraFuSugTo')) && /used before/.test(await text(page, '#jiraFuSugTo .nx-fu-sugsrc')), await text(page, '#jiraFuSugTo'));
+    await page.locator('#jiraFuToInput').fill('zzz');
+    await page.waitForSelector('#jiraFuNoteTo .nx-fu-signotebtn', { timeout: 10000 }).catch(() => {});
+    await page.locator('#jiraFuNoteTo .nx-fu-signotebtn').dispatchEvent('mousedown');
+    await page.waitForSelector('#nxM365Panel', { state: 'visible', timeout: 10000 }).catch(() => {});
+    T.check('…its "Microsoft 365…" opens the top bar\'s Microsoft 365 panel (connected as the account)', /Connected as sam@rite\.digital/.test(await text(page, '#nxM365Panel')), await text(page, '#nxM365Panel'));
+    await page.click('#nxM365Panel [data-act="close"]', { timeout: 5000 });
+    await settle(page, 300);
+    T.check('…the panel sits above the dialog: its × closes it, the follow-up dialog stays open under it', !(await page.$('#nxM365Panel')) && await page.isVisible('#jiraFuModal') && !(await page.$('#nxM365Backdrop')));
+    await page.locator('#jiraFuToInput').fill('');
+    await settle(page, 300);
     let chips = await texts(page, '#jiraFuModal .nx-fu-tpl');
     T.check('…its messages from Follow-ups › Messages: the testing ones, yours (Release notes please), not the hidden one; Manage messages… last',
       ['Provide test scripts', 'Provide proof of testing', 'Need more info', 'Release notes please'].every((c) => chips.indexOf(c) !== -1) && chips.indexOf('Sprint closing') === -1

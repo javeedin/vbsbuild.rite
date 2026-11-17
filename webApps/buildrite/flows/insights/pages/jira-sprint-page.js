@@ -33,6 +33,7 @@ define(['resources/js/exportKit', 'resources/js/jiraStoryPanel', 'resources/js/t
       const helper = context && typeof context.getEventHelper === 'function' ? context.getEventHelper() : null;
       // Follow-ups › Messages changed (another tab): the follow-up dialog's chips follow
       try { if (bus && typeof bus.on === 'function') bus.on('followup-messages', 'jira-sprint-page', () => { if (helper) helper.fireCustomEvent('fuMessagesChanged', {}); }); } catch (e) { /* no shell */ }
+      try { if (bus && typeof bus.on === 'function') bus.on('m365-changed', 'jira-sprint-page', () => { if (helper) helper.fireCustomEvent('fuMessagesChanged', {}); }); } catch (e) { /* no shell */ }
       tabs += 1;
       if (Recorder && typeof Recorder.onChange === 'function') Recorder.onChange('jira-sprint-page-' + tabs, () => { if (helper) helper.fireCustomEvent('evidenceChanged', {}); });
       Panel.closeOnEscape();

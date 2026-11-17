@@ -216,6 +216,78 @@ define(['resources/js/exportKit'], function (exportKit) {
       + 'subject=' + encodeURIComponent(ascii(o.subject || '')) + '&body=' + encodeURIComponent(ascii(body));
   }
 
+  // ── Recipient suggestions: the addresses you used before (this PC), then Microsoft 365 / Outlook ──
+  var RECENT_KEY = 'br.fu.recips';
+  function recentList() {
+    try { var a = JSON.parse((typeof localStorage !== 'undefined' && localStorage.getItem(RECENT_KEY)) || '[]'); return Array.isArray(a) ? a.filter(function (x) { return x && x.email; }) : []; }
+    catch (e) { return []; }
+  }
+  /** Keep the To / Cc of an email that went out (copied, opened in Outlook, sent, saved): offered first next time. */
+  function rememberRecips(to, cc) {
+    var list = recentList();
+    var now = Date.now();
+    recips(to).concat(recips(cc)).forEach(function (r) {
+      if (!/@/.test(r.value)) return;
+      var k = r.value.toLowerCase();
+      var hit = null;
+      for (var i = 0; i < list.length; i++) { if (String(list[i].email).toLowerCase() === k) { hit = list[i]; break; } }
+      if (hit) { hit.n = (hit.n || 0) + 1; hit.at = now; if (r.label && r.label !== r.value) hit.name = r.label; }
+      else list.push({ name: r.label !== r.value ? r.label : '', email: r.value, n: 1, at: now });
+    });
+    list.sort(function (a, b) { return (b.n || 0) - (a.n || 0) || (b.at || 0) - (a.at || 0); });
+    try { if (typeof localStorage !== 'undefined') localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, 200))); } catch (e) { /* not kept */ }
+    return list.length;
+  }
+  /** The addresses used before that match what is typed (name or address), most used first: [{ name, email, src }]. */
+  function usedBefore(term, extra) {
+    var t = String(term || '').trim().toLowerCase();
+    var seen = {};
+    var out = [];
+    recentList().concat(extra || []).forEach(function (x) {
+      var email = String(x.email || '').trim();
+      var k = email.toLowerCase();
+      if (!email || seen[k]) return;
+      if (t && (String(x.name || '') + ' ' + email).toLowerCase().indexOf(t) === -1) return;
+      seen[k] = true;
+      out.push({ name: x.name || email, email: email, src: 'used before' });
+    });
+    return out;
+  }
+  /** Used-before first, then what Microsoft 365 / Outlook found, each address once. */
+  function mergeSug(first, more) {
+    var seen = {};
+    var out = [];
+    (first || []).concat(more || []).forEach(function (c) {
+      var k = String((c && c.email) || '').toLowerCase();
+      if (!k || seen[k]) return;
+      seen[k] = true;
+      out.push({ name: c.name || c.email, email: c.email, src: c.src || '' });
+    });
+    return out;
+  }
+  /**
+   * The line under To / Cc after a search: why no one was found and where it looked, what to do about it (connect
+   * Microsoft 365, it expired, the company directory is off), or '' when there are suggestions. reply = the contacts
+   * answer ({ contacts, sources, error, needsSignIn, m365 }); shown = how many suggestions are on screen.
+   */
+  function sugNote(term, reply, shown) {
+    var r = reply || {};
+    var m = r.m365 || null;
+    var t = String(term || '').trim();
+    var typeIt = ' Type the full address and press Enter.';
+    if (m && m.expired) return 'Your Microsoft 365 sign-in has expired, so your colleagues cannot be searched. Connect again from the Microsoft 365 button in the top bar.' + typeIt;
+    if (shown > 0) return '';
+    var looked = (r.sources || []).filter(function (x) { return x && !x.off; });
+    var failed = looked.filter(function (x) { return !x.ok && x.error; });
+    var where = looked.filter(function (x) { return x.ok; }).map(function (x) { return x.label; });
+    var msg = 'No one found for “' + t + '”' + (where.length ? ' in ' + (where.length > 1 ? where.slice(0, -1).join(', ') + ' and ' + where[where.length - 1] : where[0]) : '') + '.';
+    if (failed.length) msg += ' ' + failed.map(function (x) { return x.label.charAt(0).toUpperCase() + x.label.slice(1) + ': ' + x.error; }).join(' ');
+    if (!m || !m.signedIn) msg += ' Connect Microsoft 365 (top bar) to search your colleagues.';
+    else if (!m.directory) msg += ' The company directory is not searched: turn it on from the Microsoft 365 button in the top bar (an admin must approve it).';
+    else if (r.error && !failed.length) msg += ' ' + r.error;
+    return msg + typeIt;
+  }
+
   /** The recipients in a "a@x; b@y" string, as chips: [{ label, value }] (label is the name part if "Name <email>"). */
   function recips(str) {
     return String(str || '').split(/[;,]/).map(function (s) { return s.trim(); }).filter(Boolean).map(function (v) {
@@ -240,6 +312,7 @@ define(['resources/js/exportKit'], function (exportKit) {
   return {
     firstName: firstName, names: names, greeting: greeting, TEMPLATES: TEMPLATES, template: template, message: message,
     merge: merge, use: use, list: list, fill: fill, WORDS: WORDS, subjectFor: subjectFor,
+    rememberRecips: rememberRecips, usedBefore: usedBefore, mergeSug: mergeSug, sugNote: sugNote,
     columns: columns, introHtml: introHtml, headerText: headerText, ascii: ascii, tableHtml: tableHtml, tableText: tableText,
     composeHtml: composeHtml, composeText: composeText, mailtoHref: mailtoHref, recips: recips, addRecip: addRecip, removeRecip: removeRecip,
   };

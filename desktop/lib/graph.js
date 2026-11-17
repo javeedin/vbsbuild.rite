@@ -87,6 +87,14 @@ function open(o) {
 
   function storeTokens(tok) {
     data.tokens = { access: seal(tok.access_token), refresh: seal(tok.refresh_token), expiresAt: Date.now() + (Number(tok.expires_in || 3600) - 60) * 1000 };
+    data.expired = false; data.lastError = '';
+    write();
+  }
+  // Microsoft refused to renew the stored session (expired, revoked, password changed, a policy): it is over — the tokens
+  // go, the app shows "expired" (not "signed in") and asks to connect again. A network error is not this.
+  function sessionOver(body) {
+    data.tokens = null; data.expired = true;
+    data.lastError = friendlyAuthError(body, 'Microsoft 365 did not renew your sign-in.');
     write();
   }
 
@@ -103,6 +111,7 @@ function open(o) {
     // rejected — fall back to the base scopes so the session keeps working.
     if (!ok(res)) res = await httpForm(url, { grant_type: 'refresh_token', client_id: data.clientId, refresh_token: refresh, scope: BASE_SCOPE });
     if (ok(res)) { storeTokens(res.body); return res.body.access_token; }
+    if (res.status === 400 || res.status === 401) sessionOver(res.body);
     return '';
   }
 
@@ -111,6 +120,7 @@ function open(o) {
     // sign-in that returned no refresh token (offline_access withheld) still counts while the access token is valid.
     const signedIn = !!(data.tokens && (data.tokens.refresh || (data.tokens.access && data.tokens.expiresAt > Date.now())));
     return { configured: !!(data.tenantId && data.clientId), signedIn: signedIn, account: data.account || '', directory: !!data.directory,
+      expired: !signedIn && !!data.expired, lastError: signedIn ? '' : (data.lastError || ''),
       tenantId: data.tenantId || '', clientId: data.clientId || '', pending: !!(pending && !pending.done),
       userCode: pending ? pending.userCode : '', verificationUri: pending ? pending.verificationUri : '', error: pending ? pending.error || '' : '',
       // Diagnostics so the UI can explain "signed in on the web but not here": whether a token was stored, whether it
@@ -129,7 +139,13 @@ function open(o) {
       write();
       return status();
     },
-    signOut() { data.tokens = null; data.account = ''; pending = null; write(); return status(); },
+    signOut() { data.tokens = null; data.account = ''; data.expired = false; data.lastError = ''; pending = null; write(); return status(); },
+    /** Asks Microsoft now (renews the session when its access has run out), so an expired sign-in shows as expired. */
+    async check() {
+      if (!data.tokens) return Object.assign(status(), { reachable: true });
+      try { await token(); } catch (e) { return Object.assign(status(), { reachable: false, checkError: 'Microsoft 365 could not be reached: ' + String((e && e.message) || e) }); }
+      return Object.assign(status(), { reachable: true });
+    },
     async beginSignIn() {
       if (!data.tenantId || !data.clientId) return { ok: false, error: 'Enter your Microsoft 365 Tenant ID and Client ID first.' };
       if (!doFetch) return { ok: false, error: 'Sign-in is not available in this app.' };
@@ -205,12 +221,19 @@ function open(o) {
       return { ok: true, status: status() };
     },
     async people(q) {
-      const t = await token();
-      if (!t) return { ok: false, available: !!(data.tenantId && data.clientId), contacts: [], error: 'Not signed in to Microsoft 365.' };
+      let t = '';
+      try { t = await token(); } catch (e) { return { ok: false, available: true, contacts: [], sources: [], error: 'Microsoft 365 could not be reached: ' + String((e && e.message) || e) }; }
+      if (!t) {
+        const st = status();
+        return { ok: false, available: !!(data.tenantId && data.clientId), needsSignIn: true, expired: !!st.expired, contacts: [], sources: [],
+          error: st.expired ? 'Your Microsoft 365 sign-in has expired: connect again.' + (st.lastError ? ' (' + st.lastError + ')' : '') : 'Not signed in to Microsoft 365.' };
+      }
       const term = String(q || '').trim();
+      const low = term.toLowerCase();
       const out = [];
       const seen = {};
-      const add = (name, email) => { const k = String(email || '').toLowerCase(); if (email && !seen[k]) { seen[k] = true; out.push({ name: name || email, email: email }); } };
+      const sources = [];
+      const add = (name, email) => { const k = String(email || '').toLowerCase(); if (email && !seen[k]) { seen[k] = true; out.push({ name: name || email, email: email }); return true; } return false; };
       let err = '';
       let directory = false; // whether the org-wide directory (/users) could be read — needs User.ReadBasic.All
       // Relevant people (like Outlook's suggested contacts): the people this user works with.
@@ -218,14 +241,31 @@ function open(o) {
         const r = term
           ? await graph('GET', '/me/people?$search=' + encodeURIComponent('"' + term + '"') + '&$top=15&$select=displayName,scoredEmailAddresses,userPrincipalName', t)
           : await graph('GET', '/me/people?$top=25&$select=displayName,scoredEmailAddresses,userPrincipalName', t);
-        if (r.status < 400) { err = ''; ((r.body && r.body.value) || []).forEach((p) => add(p.displayName, (p.scoredEmailAddresses && p.scoredEmailAddresses[0] && p.scoredEmailAddresses[0].address) || p.userPrincipalName)); }
-        else err = (r.body && r.body.error && r.body.error.message) || ('Graph HTTP ' + r.status);
-      } catch (e) { err = String((e && e.message) || e); }
+        if (r.status < 400) {
+          err = '';
+          let n = 0;
+          ((r.body && r.body.value) || []).forEach((p) => { if (add(p.displayName, (p.scoredEmailAddresses && p.scoredEmailAddresses[0] && p.scoredEmailAddresses[0].address) || p.userPrincipalName)) n++; });
+          sources.push({ id: 'people', label: 'people you work with', ok: true, n });
+        } else {
+          err = (r.body && r.body.error && r.body.error.message) || ('Graph HTTP ' + r.status);
+          sources.push({ id: 'people', label: 'people you work with', ok: false, n: 0, error: err });
+        }
+      } catch (e) { err = String((e && e.message) || e); sources.push({ id: 'people', label: 'people you work with', ok: false, n: 0, error: err }); }
       // The user's own saved contacts (Contacts.Read — granted with the base scopes, no admin consent needed).
       try {
-        const r3 = await graph('GET', '/me/contacts?$top=100&$select=displayName,emailAddresses', t);
-        if (r3.status < 400) { err = ''; ((r3.body && r3.body.value) || []).forEach((c) => add(c.displayName, (c.emailAddresses && c.emailAddresses[0] && c.emailAddresses[0].address) || '')); }
-      } catch (e) { /* contacts optional */ }
+        // only the contacts that match what was typed (before: the first 100 whatever was typed)
+        const r3 = await graph('GET', '/me/contacts?$top=500&$select=displayName,emailAddresses', t);
+        if (r3.status < 400) {
+          err = '';
+          let n = 0;
+          ((r3.body && r3.body.value) || []).forEach((c) => {
+            const email = (c.emailAddresses && c.emailAddresses[0] && c.emailAddresses[0].address) || '';
+            if (low && (String(c.displayName || '') + ' ' + email).toLowerCase().indexOf(low) === -1) return;
+            if (add(c.displayName, email)) n++;
+          });
+          sources.push({ id: 'contacts', label: 'your saved contacts', ok: true, n });
+        } else sources.push({ id: 'contacts', label: 'your saved contacts', ok: false, n: 0, error: (r3.body && r3.body.error && r3.body.error.message) || ('Graph HTTP ' + r3.status) });
+      } catch (e) { sources.push({ id: 'contacts', label: 'your saved contacts', ok: false, n: 0, error: String((e && e.message) || e) }); }
       // The whole organisation directory (needs User.ReadBasic.All with admin consent). Only when the option is on, so we
       // never force the admin-approval prompt on a plain sign-in.
       if (data.directory) {
@@ -235,11 +275,16 @@ function open(o) {
             ? "/users?$filter=" + encodeURIComponent("startswith(displayName,'" + esc + "') or startswith(mail,'" + esc + "') or startswith(userPrincipalName,'" + esc + "')") + "&$top=15&$select=displayName,mail,userPrincipalName"
             : '/users?$top=25&$select=displayName,mail,userPrincipalName';
           const r2 = await graph('GET', dir, t);
-          if (r2.status < 400) { directory = true; ((r2.body && r2.body.value) || []).forEach((p) => add(p.displayName, p.mail || p.userPrincipalName)); }
-        } catch (e) { /* no directory permission — relevant people + contacts only */ }
-      }
-      if (!out.length && err) return { ok: false, available: true, directory: directory, contacts: [], error: err };
-      return { ok: true, available: true, directory: directory, contacts: out };
+          if (r2.status < 400) {
+            directory = true;
+            let n = 0;
+            ((r2.body && r2.body.value) || []).forEach((p) => { if (add(p.displayName, p.mail || p.userPrincipalName)) n++; });
+            sources.push({ id: 'directory', label: 'the company directory', ok: true, n });
+          } else sources.push({ id: 'directory', label: 'the company directory', ok: false, n: 0, error: (r2.body && r2.body.error && r2.body.error.message) || ('Graph HTTP ' + r2.status) });
+        } catch (e) { sources.push({ id: 'directory', label: 'the company directory', ok: false, n: 0, error: String((e && e.message) || e) }); }
+      } else sources.push({ id: 'directory', label: 'the company directory', ok: false, n: 0, off: true });
+      if (!out.length && err) return { ok: false, available: true, directory: directory, contacts: [], sources, error: err };
+      return { ok: true, available: true, directory: directory, contacts: out, sources };
     },
     async sendMail(b) {
       const t = await token();

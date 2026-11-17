@@ -888,3 +888,40 @@ html[data-nx-look="redwood"] .nx-rec-edit-qty input { border-radius: 4px; }
 .nx-brand-dot { color: #7c5cff; }
 .nx-badge--build { background: #efeaff; color: #4b2fb8; }
 .nx-version--build .nx-version-name { color: #4b2fb8; }
+
+/* The top bar's Microsoft 365 button: connected (green dot), sign-in expired (amber), not connected (grey) */
+.nx-m365btn { position: relative; display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 11px 0 9px; border: 1px solid var(--nx-line); border-radius: 999px;
+  background: var(--nx-surface, #fff); color: var(--nx-ink); font: 700 12px/1 inherit; letter-spacing: .02em; cursor: pointer; white-space: nowrap; }
+.nx-m365btn:hover { border-color: var(--nx-accent); color: var(--nx-accent); }
+.nx-m365btn [class^="oj-ux-ico-"] { font-size: 16px; }
+.nx-m365btn-dot { width: 8px; height: 8px; border-radius: 50%; background: #b9c3cf; box-shadow: 0 0 0 2px var(--nx-surface, #fff); }
+.nx-m365btn--on .nx-m365btn-dot { background: #2f9e5b; }
+.nx-m365btn--expired { border-color: #e0a526; }
+.nx-m365btn--expired .nx-m365btn-dot { background: #e0a526; animation: nx-m365-pulse 1.6s ease-in-out infinite; }
+@keyframes nx-m365-pulse { 50% { box-shadow: 0 0 0 4px rgba(224, 165, 38, .25); } }
+.nx-m365-panel { top: calc(var(--nx-top-h) - 4px); right: 12px; width: min(380px, calc(100vw - 24px)); display: flex; flex-direction: column; }
+.nx-m365-badge { display: inline-flex; width: 32px; height: 32px; border-radius: 9px; align-items: center; justify-content: center; background: #eef1f5; color: #4a5865; font-size: 17px; flex: none; }
+.nx-m365-badge--on { background: #e6f4ec; color: #1f7a45; }
+.nx-m365-badge--expired { background: #fff3d6; color: #8a5a00; }
+.nx-m365-titles { display: grid; gap: 1px; min-width: 0; }
+.nx-m365-titles h2 { margin: 0; font-size: 15px; }
+.nx-m365-state { font-size: 12px; color: var(--nx-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-m365-body { display: grid; gap: 10px; padding: 12px 16px; }
+.nx-m365-use { margin: 0; font-size: 12.5px; color: var(--nx-muted); line-height: 1.45; }
+.nx-m365-setup { display: grid; gap: 8px; padding: 10px; border-radius: 10px; background: var(--nx-surface-2, #f5f7fa); }
+.nx-m365-field { display: grid; gap: 3px; font-size: 12px; font-weight: 600; }
+.nx-m365-note { margin: 0; font-size: 11.5px; color: var(--nx-faint, #7a8796); font-weight: 400; }
+.nx-m365-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.nx-m365-dir { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; line-height: 1.4; cursor: pointer; }
+.nx-m365-dir input { margin-top: 2px; }
+.nx-m365-warn { margin: 0; padding: 8px 10px; border-radius: 8px; background: #fff3d6; color: #6b4600; font-size: 12.5px; line-height: 1.45; }
+.nx-m365-code { display: grid; gap: 6px; padding: 10px; border: 1px dashed #9db4d6; border-radius: 10px; font-size: 12.5px; }
+.nx-m365-coderow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.nx-m365-codeval { font: 700 18px/1.2 ui-monospace, Consolas, monospace; letter-spacing: .08em; }
+.nx-m365-foot { display: flex; align-items: center; gap: 8px; padding: 8px 16px 12px; border-top: 1px solid var(--nx-line); }
+.nx-m365-link { border: 0; background: none; padding: 0; font: inherit; font-size: 12px; color: #1d4f91; cursor: pointer; text-decoration: underline; }
+.nx-m365-link--danger { color: #a3271b; }
+@media (max-width: 760px) { .nx-m365btn-text { display: none; } }
+/* above the dialogs in the tabs (.nx-modal is 80): opened from one, it must be clickable, and closing it keeps the dialog */
+.nx-backdrop.nx-backdrop--top { z-index: 85; }
+.nx-panel.nx-m365-panel { z-index: 90; }

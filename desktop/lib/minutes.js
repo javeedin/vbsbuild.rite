@@ -300,14 +300,31 @@ async function open(o) {
     return { ok: true, available: true, contacts: list.slice(0, 100) };
   }
 
-  // Attendee suggestions: from Microsoft 365 (Graph: relevant people + the directory) whenever signed in — being signed
-  // in means the user wants it, so we don't depend on the provider toggle — else from local Outlook.
+  // Attendee / recipient suggestions: from Microsoft 365 (Graph: people you work with, your saved contacts, the company
+  // directory when allowed) whenever signed in — being signed in means the user wants it, so we don't depend on the
+  // provider toggle — and from Outlook on this PC when Microsoft 365 is not connected or finds no one. The answer says
+  // which sources were searched and how Microsoft 365 stands (signed in, expired), so the screen can say why no one
+  // was found.
   store.contacts = async (q) => {
+    const m365 = () => { if (!graph) return null; const s = graph.status(); return { configured: !!s.configured, signedIn: !!s.signedIn, expired: !!s.expired, directory: !!s.directory, account: s.account || '', lastError: s.lastError || '' }; };
+    let contacts = [];
+    let sources = [];
+    let error = '';
+    let needsSignIn = false;
     if (graph && graph.status().signedIn) {
       const r = await graph.people(q);
-      return { ok: !!(r && r.ok), available: true, contacts: (r && r.contacts) || [], error: r && r.error };
+      contacts = (r && r.contacts) || [];
+      sources = (r && r.sources) || [];
+      if (r && !r.ok) { error = r.error || ''; needsSignIn = !!r.needsSignIn; }
     }
-    return localContacts(q);
+    if (!contacts.length && contactsReader) {
+      const l = await localContacts(q);
+      if (l && l.available !== false) {
+        sources = sources.concat([{ id: 'outlook', label: 'Outlook on this PC', ok: !!l.ok, n: (l.contacts || []).length, error: l.ok ? '' : (l.error || '') }]);
+        if (l.ok) contacts = l.contacts || [];
+      }
+    }
+    return { ok: !error || contacts.length > 0, available: true, contacts, sources, error, needsSignIn, m365: m365() };
   };
   // Open the minutes in a pre-filled Outlook message (local provider).
   store.sendOutlook = async (b) => {
@@ -340,6 +357,7 @@ async function open(o) {
   };
   // Microsoft 365 account management (lib/graph.js).
   store.graphStatus = () => (graph ? graph.status() : { configured: false, signedIn: false, available: false });
+  store.graphCheck = async () => (graph && graph.check ? graph.check() : store.graphStatus());
   store.graphPoll = async () => (graph && graph.graphPoll ? graph.graphPoll() : store.graphStatus());
   store.graphConfig = async (b) => { if (graph) graph.saveConfig(b || {}); return { ok: true, status: store.graphStatus() }; };
   store.graphBegin = async () => (graph ? graph.beginSignIn() : { ok: false, error: 'Microsoft 365 is not available in this app.' });

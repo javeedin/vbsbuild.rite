@@ -23,6 +23,7 @@ define(['resources/js/jiraBacklog', 'resources/js/exportKit', 'resources/js/test
       const helper = context && typeof context.getEventHelper === 'function' ? context.getEventHelper() : null;
       // Follow-ups › Messages changed (another tab): the follow-up dialog's chips follow
       try { if (bus && typeof bus.on === 'function') bus.on('followup-messages', 'jira-page', () => { if (helper) helper.fireCustomEvent('fuMessagesChanged', {}); }); } catch (e) { /* no shell */ }
+      try { if (bus && typeof bus.on === 'function') bus.on('m365-changed', 'jira-page', () => { if (helper) helper.fireCustomEvent('fuMessagesChanged', {}); }); } catch (e) { /* no shell */ }
       if (Recorder && typeof Recorder.onChange === 'function') Recorder.onChange('jira-page', () => { if (helper) helper.fireCustomEvent('evidenceChanged', {}); });
       // Escape closes the item's drawer (resources/js/jiraStoryPanel.js).
       Panel.closeOnEscape();

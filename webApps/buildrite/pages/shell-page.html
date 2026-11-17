@@ -114,6 +114,11 @@
 
 
     <div class="nx-top-end">
+      <!-- Microsoft 365: connected (green) / sign-in expired (amber) / not connected (grey); its panel connects it (m365Chain) -->
+      <button type="button" :class="[[ $functions.m365Class($variables.m365) ]]" id="nxM365" data-act="toggle" on-click="[[ $listeners.onM365 ]]" aria-controls="nxM365Panel"
+        :aria-expanded="[[ $variables.m365Open ? 'true' : 'false' ]]" :aria-label="[[ $functions.m365Title($variables.m365) ]]" :title="[[ $functions.m365Title($variables.m365) ]]">
+        <span class="oj-ux-ico-email" aria-hidden="true"></span><span class="nx-m365btn-text">365</span><span class="nx-m365btn-dot" aria-hidden="true"></span>
+      </button>
       <!-- Build.Rite: what changed in Jira lately (resources/js/jiraFeed.js) -->
       <button type="button" class="nx-iconbtn nx-bell nx-jbell" id="nxJiraBell" data-act="toggle" on-click="[[ $listeners.onJira ]]" aria-controls="nxJiraPanel"
         :aria-expanded="[[ $variables.jiraOpen ? 'true' : 'false' ]]" :aria-label="[[ 'Jira updates' + ($variables.jiraNew ? ', ' + $variables.jiraNew + ' new' : '') ]]"
@@ -293,6 +298,87 @@
     </aside>
   </oj-bind-if>
 
+
+
+  <!-- Microsoft 365: connect it (a sign-in window, or a code), check it, a test email, the company directory, disconnect.
+       It can be opened from a dialog in a tab (the follow-up dialog's "Microsoft 365…"), so it and its own backdrop sit
+       above the dialogs: a click outside closes only this panel, never the dialog under it. -->
+  <oj-bind-if test="[[ $variables.m365Open ]]">
+    <button type="button" class="nx-backdrop nx-backdrop--top" id="nxM365Backdrop" data-act="close" on-click="[[ $listeners.onM365 ]]" aria-label="Close" tabindex="-1"></button>
+    <aside class="nx-panel nx-m365-panel" id="nxM365Panel" role="dialog" aria-labelledby="nxM365Title">
+      <div class="nx-panel-head">
+        <span :class="[[ 'nx-m365-badge nx-m365-badge--' + $functions.m365State($variables.m365) ]]" aria-hidden="true"><span class="oj-ux-ico-email"></span></span>
+        <div class="nx-m365-titles">
+          <h2 id="nxM365Title">Microsoft 365</h2>
+          <span class="nx-m365-state" id="nxM365State"><oj-bind-text value="[[ $functions.m365Headline($variables.m365) ]]"></oj-bind-text></span>
+        </div>
+        <span class="nx-min-flex"></span>
+        <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="close" on-click="[[ $listeners.onM365 ]]" aria-label="Close"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+      </div>
+      <div class="nx-m365-body">
+        <p class="nx-m365-use">Used for the recipient suggestions and <b>Send via Microsoft 365</b> in the follow-up dialog and Standup minutes.</p>
+
+        <!-- the app: Tenant ID + App (client) ID, asked for when none is set up (or to change it) -->
+        <oj-bind-if test="[[ $variables.m365Form.editing ]]">
+          <div class="nx-m365-setup" id="nxM365Setup">
+            <label class="nx-m365-field"><span>Tenant ID</span>
+              <input class="nx-cm-input" id="nxM365Tenant" data-field="tenantId" :value="[[ $variables.m365Form.tenantId ]]" on-input="[[ $listeners.onM365Field ]]" placeholder="your organisation's directory (tenant) ID" autocomplete="off" spellcheck="false"></label>
+            <label class="nx-m365-field"><span>App (client) ID</span>
+              <input class="nx-cm-input" id="nxM365Client" data-field="clientId" :value="[[ $variables.m365Form.clientId ]]" on-input="[[ $listeners.onM365Field ]]" placeholder="the app registered for Build.Rite" autocomplete="off" spellcheck="false"></label>
+            <p class="nx-m365-note">From the app registration in Microsoft Entra (your admin has them). Kept on this PC; no password is stored.</p>
+          </div>
+        </oj-bind-if>
+
+        <oj-bind-if test="[[ $variables.m365.signedIn ]]">
+          <div class="nx-m365-actions">
+            <button type="button" class="nx-btn nx-btn--sm" id="nxM365Test" data-act="test" on-click="[[ $listeners.onM365 ]]" :disabled="[[ $variables.m365Busy ]]"><span class="oj-ux-ico-email" aria-hidden="true"></span>Send a test email to me</button>
+            <button type="button" class="nx-btn nx-btn--sm" id="nxM365Check" data-act="check" on-click="[[ $listeners.onM365 ]]" :disabled="[[ $variables.m365Busy ]]"><span class="oj-ux-ico-refresh" aria-hidden="true"></span>Check now</button>
+            <oj-bind-if test="[[ $variables.m365Form.editing ]]">
+              <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="nxM365Resave" data-act="connect" on-click="[[ $listeners.onM365 ]]" :disabled="[[ $variables.m365Busy ]]">Save and connect again</button>
+            </oj-bind-if>
+          </div>
+          <label class="nx-m365-dir"><input type="checkbox" id="nxM365Dir" data-act="directory" :checked="[[ $variables.m365.directory ]]" on-change="[[ $listeners.onM365 ]]">
+            <span><b>Search the whole company</b> in the suggestions <span class="nx-m365-note">(an admin must approve User.ReadBasic.All for the app; connect again after turning it on)</span></span></label>
+        </oj-bind-if>
+
+        <oj-bind-if test="[[ !$variables.m365.signedIn ]]">
+          <oj-bind-if test="[[ $variables.m365.expired ]]">
+            <p class="nx-m365-warn" id="nxM365Expired">Microsoft stopped accepting the sign-in kept on this PC<oj-bind-text value="[[ $variables.m365.lastError ? ': ' + $variables.m365.lastError : '.' ]]"></oj-bind-text> Connect again to search your colleagues and send.</p>
+          </oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.m365.pending ]]">
+            <div class="nx-m365-code" id="nxM365Code">
+              <span>Type this code on the Microsoft page:</span>
+              <div class="nx-m365-coderow">
+                <b class="nx-m365-codeval" id="nxM365CodeVal"><oj-bind-text value="[[ $variables.m365.userCode ]]"></oj-bind-text></b>
+                <button type="button" class="nx-btn nx-btn--sm" data-act="copyCode" on-click="[[ $listeners.onM365 ]]"><span class="oj-ux-ico-copy-to-clipboard" aria-hidden="true"></span>Copy</button>
+                <a class="nx-btn nx-btn--sm" :href="[[ $variables.m365.verificationUri ]]" target="_blank" rel="noopener"><span class="oj-ux-ico-external-link" aria-hidden="true"></span>Open the page</a>
+              </div>
+              <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="nxM365Recheck" data-act="recheck" on-click="[[ $listeners.onM365 ]]">I've signed in — check now</button>
+            </div>
+          </oj-bind-if>
+          <oj-bind-if test="[[ !$variables.m365.pending ]]">
+            <div class="nx-m365-actions">
+              <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="nxM365Connect" data-act="connect" on-click="[[ $listeners.onM365 ]]" :disabled="[[ $variables.m365Busy ]]">
+                <oj-bind-text value="[[ $variables.m365.expired ? 'Connect again' : 'Connect Microsoft 365' ]]"></oj-bind-text></button>
+              <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="nxM365CodeBtn" data-act="code" on-click="[[ $listeners.onM365 ]]" :disabled="[[ $variables.m365Busy ]]" title="When the sign-in window cannot open: sign in on Microsoft's page in your browser with a code">Use a code instead</button>
+            </div>
+            <p class="nx-m365-note">A Microsoft sign-in window opens inside Build.Rite.</p>
+          </oj-bind-if>
+        </oj-bind-if>
+
+        <oj-bind-if test="[[ !!$variables.m365.error ]]"><p class="nx-m365-warn" id="nxM365Err"><oj-bind-text value="[[ $variables.m365.error ]]"></oj-bind-text></p></oj-bind-if>
+      </div>
+      <div class="nx-m365-foot">
+        <oj-bind-if test="[[ $variables.m365.configured && !$variables.m365Form.editing ]]">
+          <button type="button" class="nx-m365-link" id="nxM365Change" data-act="setup" on-click="[[ $listeners.onM365 ]]">Change the app (Tenant / Client ID)</button>
+        </oj-bind-if>
+        <span class="nx-min-flex"></span>
+        <oj-bind-if test="[[ $variables.m365.signedIn || $variables.m365.expired ]]">
+          <button type="button" class="nx-m365-link nx-m365-link--danger" id="nxM365Out" data-act="signout" on-click="[[ $listeners.onM365 ]]">Disconnect</button>
+        </oj-bind-if>
+      </div>
+    </aside>
+  </oj-bind-if>
 
   <oj-bind-if test="[[ $variables.jiraOpen ]]">
     <aside class="nx-panel nx-bell-panel nx-jfeed" id="nxJiraPanel" role="dialog" aria-labelledby="nxJiraTitle">

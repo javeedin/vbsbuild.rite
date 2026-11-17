@@ -716,12 +716,13 @@
                     <div class="nx-fu-sug" id="jiraFuSugTo" role="listbox">
                       <oj-bind-for-each data="[[ $variables.fuSug ]]"><template data-oj-as="c">
                         <button type="button" class="nx-fu-sugitem" :data-email="[[ c.data.email ]]" data-field="to" on-mousedown="[[ $listeners.onFuRecipPick ]]" role="option">
-                          <span class="nx-fu-sugname"><oj-bind-text value="[[ c.data.name ]]"></oj-bind-text></span><span class="nx-fu-sugemail"><oj-bind-text value="[[ c.data.email ]]"></oj-bind-text></span></button>
+                          <span class="nx-fu-sugname"><oj-bind-text value="[[ c.data.name ]]"></oj-bind-text></span><span class="nx-fu-sugemail"><oj-bind-text value="[[ c.data.email ]]"></oj-bind-text></span><oj-bind-if test="[[ !!c.data.src ]]"><span class="nx-fu-sugsrc"><oj-bind-text value="[[ c.data.src ]]"></oj-bind-text></span></oj-bind-if></button>
                       </template></oj-bind-for-each>
                     </div>
                   </oj-bind-if>
                 </div>
               </div>
+              <oj-bind-if test="[[ $variables.fuSugFor === 'to' && !!$variables.fuSugNote ]]"><p class="nx-fu-signote" id="jiraFuNoteTo" aria-live="polite"><oj-bind-text value="[[ $variables.fuSugNote ]]"></oj-bind-text><oj-bind-if test="[[ $variables.fuSugNote.indexOf('Microsoft 365') !== -1 ]]"> <button type="button" class="nx-fu-signotebtn" data-key="__m365" on-mousedown="[[ $listeners.onFuTemplate ]]">Microsoft 365…</button></oj-bind-if></p></oj-bind-if>
             </div>
             <div class="nx-fu-field nx-fu-recip">
               <label for="jiraFuCcInput">Cc (optional)</label>
@@ -735,12 +736,13 @@
                     <div class="nx-fu-sug" id="jiraFuSugCc" role="listbox">
                       <oj-bind-for-each data="[[ $variables.fuSug ]]"><template data-oj-as="c">
                         <button type="button" class="nx-fu-sugitem" :data-email="[[ c.data.email ]]" data-field="cc" on-mousedown="[[ $listeners.onFuRecipPick ]]" role="option">
-                          <span class="nx-fu-sugname"><oj-bind-text value="[[ c.data.name ]]"></oj-bind-text></span><span class="nx-fu-sugemail"><oj-bind-text value="[[ c.data.email ]]"></oj-bind-text></span></button>
+                          <span class="nx-fu-sugname"><oj-bind-text value="[[ c.data.name ]]"></oj-bind-text></span><span class="nx-fu-sugemail"><oj-bind-text value="[[ c.data.email ]]"></oj-bind-text></span><oj-bind-if test="[[ !!c.data.src ]]"><span class="nx-fu-sugsrc"><oj-bind-text value="[[ c.data.src ]]"></oj-bind-text></span></oj-bind-if></button>
                       </template></oj-bind-for-each>
                     </div>
                   </oj-bind-if>
                 </div>
               </div>
+              <oj-bind-if test="[[ $variables.fuSugFor === 'cc' && !!$variables.fuSugNote ]]"><p class="nx-fu-signote" id="jiraFuNoteCc" aria-live="polite"><oj-bind-text value="[[ $variables.fuSugNote ]]"></oj-bind-text><oj-bind-if test="[[ $variables.fuSugNote.indexOf('Microsoft 365') !== -1 ]]"> <button type="button" class="nx-fu-signotebtn" data-key="__m365" on-mousedown="[[ $listeners.onFuTemplate ]]">Microsoft 365…</button></oj-bind-if></p></oj-bind-if>
             </div>
             <div class="nx-fu-field">
               <label for="jiraFuSubject">Subject</label>

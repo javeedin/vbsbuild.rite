@@ -140,6 +140,26 @@
       "defaultValue": false,
       "description": "The menu under your name: who you are, and your look."
     },
+    "m365": {
+      "type": "any",
+      "defaultValue": { "configured": false, "signedIn": false, "expired": false, "account": "", "directory": false },
+      "description": "Microsoft 365 on this PC (desktop/lib/graph.js status): configured, signedIn, expired, account, directory, pending + userCode while a code sign-in waits, error."
+    },
+    "m365Open": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "The Microsoft 365 panel under the top bar's 365 button."
+    },
+    "m365Form": {
+      "type": "any",
+      "defaultValue": { "tenantId": "", "clientId": "", "directory": false, "editing": false },
+      "description": "The Microsoft 365 app being set up in the panel (Tenant ID, App (client) ID, the company directory); editing = the fields shown."
+    },
+    "m365Busy": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "The panel is asking Microsoft (connect, check, test email)."
+    },
     "tabMenuOpen": {
       "type": "boolean",
       "defaultValue": false
@@ -217,6 +237,10 @@
     "searchAway": {
       "description": "From the page module: a click outside the search box and its list, which closes the list.",
       "payloadType": "object"
+    },
+    "m365Request": {
+      "description": "From the page module (shellBus topics m365-open, m365-expired): open the Microsoft 365 panel, or read its status again.",
+      "payloadType": { "act": "string" }
     }
   },
   "eventListeners": {
@@ -237,6 +261,45 @@
         },
         {
           "chain": "shellEnterChain"
+        },
+        {
+          "chain": "m365Chain",
+          "parameters": {
+            "act": "{{ 'status' }}"
+          }
+        }
+      ]
+    },
+    "onM365": {
+      "chains": [
+        {
+          "chain": "m365Chain",
+          "parameters": {
+            "act": "{{ $event.currentTarget.dataset.act }}",
+            "value": "{{ $event.currentTarget.type === 'checkbox' ? $event.currentTarget.checked : '' }}"
+          }
+        }
+      ]
+    },
+    "onM365Field": {
+      "chains": [
+        {
+          "chain": "m365Chain",
+          "parameters": {
+            "act": "{{ 'field' }}",
+            "field": "{{ $event.currentTarget.dataset.field }}",
+            "value": "{{ $event.currentTarget.type === 'checkbox' ? $event.currentTarget.checked : $event.currentTarget.value }}"
+          }
+        }
+      ]
+    },
+    "m365Request": {
+      "chains": [
+        {
+          "chain": "m365Chain",
+          "parameters": {
+            "act": "{{ $event.act || 'open' }}"
+          }
         }
       ]
     },
