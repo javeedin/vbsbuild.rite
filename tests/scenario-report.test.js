@@ -100,4 +100,19 @@ T.check('a passed run: PASSED in green', /class="verdict ok">PASSED</.test(R.htm
 T.check('the file name: its ID, test results, the day', R.fileName(m, 'pdf', new Date('2026-11-17T12:00:00Z')) === 'SC-0007-test-results-2026-11-17.pdf'
   && R.fileName(R.model({ name: 'x' }, RUN, { fmt }), 'xlsx', new Date('2026-11-17T12:00:00Z')) === 'scenario-test-results-2026-11-17.xlsx');
 
+T.section('no run: the test script');
+const sp = R.model(SC, null, { fmt, now: '2026-11-17T10:00:00.000Z' });
+T.check('the test script: NOT RUN, its file name, every step in order with its request, values sent, hands on, checks to make and why', sp.plan && sp.verdict === 'NOT RUN' && sp.file === 'SC-0007-test-script'
+  && sp.steps.length === 3 && sp.steps[0].url === 'GET shopApi/getCustomers' && sp.steps[2].method === 'POST' && /changes data/.test(sp.steps[2].note) && sp.steps[1].page === 'Order'
+  && sp.steps.every((x) => x.result === 'Not run yet'), JSON.stringify(sp.steps.map((x) => [x.n, x.url, x.note])));
+const sp2 = R.model({ code: 'SC-1', name: 'x', page: 'a/b', steps: [{ id: 'a', name: 'List', endpoint: 'p/list', api: { method: 'GET', base: 'http://h', path: '/list' }, lov: { field: 'Customer', target: 'customer' },
+  extract: [{ var: 'customer', from: 'items[0].id' }], expect: { status: '2xx', maxMs: 900, sameShape: true, fields: [{ path: 'items[0].id', equals: null }] } },
+  { id: 'b', name: 'Create', endpoint: 'p/create', writes: true, api: { method: 'POST', base: 'http://h', path: '/c' }, params: { id: '{{customer}}', note: '' } }] }, null, { fmt });
+T.check('…the request with its base and path; values sent (a missing one as ?); hands on; the checks it will make, in words', sp2.steps[0].url === 'GET http://h/list' && sp2.steps[1].sent === 'id = {{customer}}; note = ?'
+  && sp2.steps[0].handed === 'customer = items[0].id' && sp2.checks.filter((c) => c.n === 1).map((c) => c.check).join(' | ') === 'status 2XX | within 900 ms | same shape as its example | items[0].id is there | the list has values (Customer)'
+  && sp2.checks.every((c) => c.result === 'To check'), JSON.stringify(sp2.checks));
+T.check('…sheets Summary, Test script, Checks (no evidence); the document says test script, NOT RUN, no run facts', R.sheets(sp).map((x) => x.name).join() === 'Summary,Test script,Checks'
+  && /API test script/.test(R.html(sp)) && /class="verdict plan">NOT RUN</.test(R.html(sp)) && /Steps, in the order they run/.test(R.html(sp)) && !/Evidence/.test(R.html(sp)) && !/Run by/.test(R.html(sp)));
+T.check('…a run\'s steps say what they sent too', m.steps[0].sent === '' && R.model(SC, RUN, { fmt }).steps[1].sent === '');
+
 T.report();

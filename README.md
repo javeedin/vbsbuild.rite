@@ -130,7 +130,10 @@ shows them all again). When you come back from your app's window, the list says 
 - **The page's APIs.** The list icon beside *Page it tests* opens the APIs the page uses: how many REST calls, BI
   Publisher reports, lists of values and calls that change data it has, which of them are steps of this scenario (in the
   order they run, with how each went), and every API in the order the page makes them, with **+ Add** for the others.
-- **Test report: PDF and Excel.** **Test report › PDF / Excel** on a run's results (or **Report** on a run in Runs)
+- **Test report: PDF and Excel.** **Test report › PDF / Excel** in the scenario's header (beside Save), on a run's results, or
+  **Report** on a run in Runs. Before any run it is the **test script**: the steps in the order they run, each with its
+  API and request, the values it sends, what it hands on and the checks it will make (NOT RUN). After a run, *Last run's
+  results* or *Test script* chooses what it shows. It
   opens a preview of that run's report:
   - **PDF**: the report as it prints (A4 landscape): the verdict, what ran, when and by whom, the counts, the
     scenario's facts, each step with its page, API, result, HTTP status, time and rows, every check with what came

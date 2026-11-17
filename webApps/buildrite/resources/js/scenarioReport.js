@@ -6,7 +6,8 @@ define([], function () {
   // Excel workbook (Summary, Steps, Checks, Evidence; written by exportKit.xlsxBook) and their preview.
   //
   // model(scenario, run, { pages, fmt, answers, madeBy, now }): the scenario as it is (its ID, name, type, page, flow) and
-  // one of its runs (desktop/lib/apiScenarios.js run: rows of steps, each with its checks, request and answer).
+  // one of its runs (desktop/lib/apiScenarios.js run: rows of steps, each with its checks, request and answer). With no
+  // run it is the test script: the steps in order, what each sends, hands on and will check — nothing run yet.
 
   var KINDS = { happy: 'Happy path', edge: 'Edge case', role: 'Role', data: 'Data-driven' };
   var RESULT = { ok: 'Passed', fail: 'Failed', skip: 'Not run' };
@@ -23,6 +24,26 @@ define([], function () {
     } catch (e) { return str(iso); }
   }
   function seconds(ms) { return Math.round((Number(ms) || 0) / 100) / 10; }
+  /** What a step sends: 'name = value; …' (a value not given yet: ?). */
+  function sentOf(st) { return Object.keys((st && st.params) || {}).map(function (k) { var v = st.params[k]; return k + ' = ' + (v === '' || v === null || v === undefined ? '?' : v); }).join('; '); }
+  /** The checks a step will make on its answer, in words. */
+  function plannedChecks(st) {
+    var ex = (st && st.expect) || {};
+    var out = ['status ' + String(ex.status || '2xx').toUpperCase()];
+    if (ex.minRows !== null && ex.minRows !== undefined && ex.minRows !== '') out.push('at least ' + ex.minRows + ' row(s)');
+    if (ex.maxRows !== null && ex.maxRows !== undefined && ex.maxRows !== '') out.push('at most ' + ex.maxRows + ' row(s)');
+    if (ex.maxMs !== null && ex.maxMs !== undefined && ex.maxMs !== '') out.push('within ' + ex.maxMs + ' ms');
+    if (ex.sameShape) out.push('same shape as its example');
+    (ex.fields || []).forEach(function (f) { out.push(f.path + (f.equals === null || f.equals === undefined ? ' is there' : ' = ' + f.equals)); });
+    if (st && st.lov) out.push('the list has values (' + st.lov.field + ')');
+    return out;
+  }
+  /** A step's request as it will go, without the values (the test script): METHOD base + path, or the report's path. */
+  function requestOf(st) {
+    if (st.report) return 'REPORT ' + str(st.report.path);
+    var a = st.api || {};
+    return (a.method ? str(a.method) + ' ' : '') + (a.path ? str(a.base) + str(a.path) : str(st.endpoint));
+  }
 
   function model(sc, run, opts) {
     var o = opts || {};
@@ -36,11 +57,28 @@ define([], function () {
     var label = function (id) { return labels[id] || lastPart(id); };
     var byStep = {};
     (s.steps || []).forEach(function (st, i) { byStep[st.id] = { n: i + 1, st: st }; });
+    var plan = !run;
     var rows = r.rows || [];
     var multi = rows.length > 1;
     var steps = [];
     var checks = [];
     var evidence = [];
+    if (plan) {
+      // the test script: every step in the order it runs, nothing run yet
+      (s.steps || []).forEach(function (st, i) {
+        var page = st.page || s.page || '';
+        var pc = plannedChecks(st);
+        var notes = [];
+        if (st.writes) notes.push('changes data: runs only when writes are allowed');
+        if (st.when) notes.push('only when the page shows it: ' + str(st.when).slice(0, 160));
+        if (st.lov) notes.push('list of values: pick ' + st.lov.field + ', handed on as {{' + st.lov.target + '}}');
+        steps.push({ row: 1, rowText: '', n: i + 1, page: label(page), pagePath: page, name: str(st.name), method: st.report ? 'REPORT' : str((st.api && st.api.method) || (st.writes ? 'POST' : 'GET')),
+          call: st.report ? 'report ' + str(st.report.path) : str(st.endpoint), url: requestOf(st), state: 'plan', result: 'Not run yet', status: '', ms: '', rows: '',
+          checks: pc.length + (pc.length === 1 ? ' check' : ' checks'), checksOk: 0, checksTotal: pc.length, sent: sentOf(st),
+          handed: (st.extract || []).map(function (e) { return e.var + ' = ' + e.from; }).join(', '), note: notes.join(' · ') });
+        pc.forEach(function (c) { checks.push({ row: 1, rowText: '', n: i + 1, step: str(st.name), check: c, ok: false, result: 'To check', detail: '' }); });
+      });
+    }
     rows.forEach(function (row, ri) {
       var rowText = multi ? 'Row ' + (ri + 1) + (row.vars && Object.keys(row.vars).length ? ': ' + Object.keys(row.vars).map(function (k) { return k + '=' + row.vars[k]; }).join(', ') : '') : '';
       (row.steps || []).forEach(function (x) {
@@ -54,7 +92,7 @@ define([], function () {
         steps.push({ row: base.row, rowText: rowText, n: base.n, page: label(page), pagePath: page, name: base.step, method: method, call: str(x.call),
           url: x.request ? str(x.request.url) : '', state: x.state || 'skip', result: RESULT[x.state] || 'Not run',
           status: x.status ? Number(x.status) : '', ms: x.state === 'skip' && !x.status ? '' : (Number(x.ms) || 0), rows: x.rows === null || x.rows === undefined ? '' : Number(x.rows),
-          checks: cs.length ? okN + ' of ' + cs.length : '', checksOk: okN, checksTotal: cs.length,
+          checks: cs.length ? okN + ' of ' + cs.length : '', checksOk: okN, checksTotal: cs.length, sent: sentOf(st),
           handed: Object.keys(x.extracted || {}).map(function (k) { return k + ' = ' + x.extracted[k]; }).join(', '), note: str(x.note) });
         cs.forEach(function (c) {
           checks.push({ row: base.row, rowText: rowText, n: base.n, step: base.step, check: str(c.name), ok: !!c.ok, result: c.ok ? 'Passed' : 'Failed', detail: str(c.detail) });
@@ -68,13 +106,28 @@ define([], function () {
     });
     var checksOk = checks.filter(function (c) { return c.ok; }).length;
     var flow = (s.journey || []).map(function (j) { return label(j.page); });
-    var scope = r.scope === 'main' ? 'Main page' : 'Whole flow';
-    var verdict = r.ok ? 'PASSED' : 'FAILED';
+    var scope = plan ? 'Not run yet' : r.scope === 'main' ? 'Main page' : 'Whole flow';
+    var verdict = plan ? 'NOT RUN' : r.ok ? 'PASSED' : 'FAILED';
+    var pagesIn = steps.map(function (x) { return x.pagePath; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).length;
     var code = str(s.code);
     var name = str(s.name || r.name);
     var pageId = str(s.page || r.page);
     var made = fmt(o.now || new Date().toISOString());
-    var summary = [
+    var summary = plan ? [
+      ['Scenario ID', code || '—'],
+      ['Scenario', name],
+      ['Type', KINDS[s.kind] || KINDS.happy],
+      ['Page tested', label(pageId) + ' — ' + pageId],
+      ['Flow', flow.length > 1 ? flow.join(' → ') : 'The page alone'],
+      ['Document', 'Test script — the steps in the order they run; not run yet'],
+      ['Steps', steps.length + ' on ' + (pagesIn || 1) + ' page(s)'],
+      ['Checks to make', String(checks.length)],
+      ['Lists of values', String(steps.filter(function (x) { return /list of values/.test(x.note); }).length)],
+      ['Calls that change data', String(steps.filter(function (x) { return /changes data/.test(x.note); }).length) + (s.allowWrites ? ' (writes allowed)' : ' (held back unless writes are allowed)')],
+      ['Made', fmt(s.createdAt) + (s.by ? ' by ' + s.by : '')],
+      ['Notes', str(s.notes)],
+      ['Report made', made + (o.madeBy ? ' by ' + o.madeBy : '')]
+    ].map(function (p) { return { field: p[0], value: p[1] }; }) : [
       ['Scenario ID', code || '—'],
       ['Scenario', name],
       ['Type', KINDS[s.kind] || KINDS.happy],
@@ -94,23 +147,35 @@ define([], function () {
     ].map(function (p) { return { field: p[0], value: p[1] }; });
     return {
       title: (code ? code + ' · ' : '') + name,
-      file: (code || 'scenario') + '-test-results',
-      verdict: verdict, ok: !!r.ok, scope: scope, runAt: fmt(r.at), runBy: str(r.by), made: made,
+      file: (code || 'scenario') + (plan ? '-test-script' : '-test-results'),
+      plan: plan, doc: plan ? 'Test script' : 'Test results',
+      verdict: verdict, ok: !!r.ok, scope: scope, runAt: plan ? '' : fmt(r.at), runBy: plan ? '' : str(r.by), made: made, pagesIn: pagesIn || 1,
       page: { id: pageId, label: label(pageId) }, flow: flow, kind: KINDS[s.kind] || KINDS.happy, code: code, name: name, notes: str(s.notes),
       counts: { passed: r.passed || 0, failed: r.failed || 0, skipped: r.skipped || 0, checksOk: checksOk, checksFailed: checks.length - checksOk, seconds: seconds(r.ms), rows: rows.length || 1 },
-      multi: multi, summary: summary, steps: steps, checks: checks, evidence: evidence, answers: answers
+      multi: multi, summary: summary, steps: steps, checks: checks, evidence: evidence, answers: answers && !plan
     };
   }
 
   // ── Excel: the sheets (rows + columns, as exportKit.xlsxBook takes them) ─────────────────────────────────────────
   function sheets(m) {
     var rowCol = m.multi ? [{ key: 'rowText', label: 'Data row' }] : [];
+    if (m.plan) {
+      return [
+        { name: 'Summary', rows: m.summary, columns: [{ key: 'field', label: 'Field' }, { key: 'value', label: 'Value' }] },
+        { name: 'Test script', rows: m.steps, columns: [
+          { key: 'n', label: 'Step', type: 'number' }, { key: 'page', label: 'Page' }, { key: 'name', label: 'Step name' }, { key: 'method', label: 'Method' },
+          { key: 'call', label: 'API' }, { key: 'url', label: 'Request' }, { key: 'sent', label: 'Values sent' }, { key: 'handed', label: 'Hands on' },
+          { key: 'checks', label: 'Checks' }, { key: 'note', label: 'Note' }, { key: 'result', label: 'Result' }] },
+        { name: 'Checks', rows: m.checks, columns: [
+          { key: 'n', label: 'Step', type: 'number' }, { key: 'step', label: 'Step name' }, { key: 'check', label: 'Check' }, { key: 'result', label: 'Result' }] }
+      ];
+    }
     var out = [
       { name: 'Summary', rows: m.summary, columns: [{ key: 'field', label: 'Field' }, { key: 'value', label: 'Value' }] },
       { name: 'Steps', rows: m.steps, columns: rowCol.concat([
         { key: 'n', label: 'Step', type: 'number' }, { key: 'page', label: 'Page' }, { key: 'name', label: 'Step name' }, { key: 'method', label: 'Method' },
         { key: 'call', label: 'API' }, { key: 'result', label: 'Result' }, { key: 'status', label: 'HTTP status', type: 'number' }, { key: 'ms', label: 'Time (ms)', type: 'number' },
-        { key: 'rows', label: 'Rows', type: 'number' }, { key: 'checks', label: 'Checks passed' }, { key: 'handed', label: 'Values handed on' }, { key: 'note', label: 'Note' },
+        { key: 'rows', label: 'Rows', type: 'number' }, { key: 'checks', label: 'Checks passed' }, { key: 'sent', label: 'Values sent' }, { key: 'handed', label: 'Values handed on' }, { key: 'note', label: 'Note' },
         { key: 'url', label: 'Request' }]) },
       { name: 'Checks', rows: m.checks, columns: rowCol.concat([
         { key: 'n', label: 'Step', type: 'number' }, { key: 'step', label: 'Step name' }, { key: 'check', label: 'Check' }, { key: 'result', label: 'Result' }, { key: 'detail', label: 'Got' }]) }
@@ -126,7 +191,7 @@ define([], function () {
   /** The sheets as a preview shows them: head and body cells, a result cell marked passed / failed / not run. */
   function preview(m, maxRows) {
     var cap = maxRows || 200;
-    var cls = function (v) { return v === 'Passed' || v === 'PASSED' ? 'ok' : v === 'Failed' || v === 'FAILED' ? 'bad' : v === 'Not run' ? 'skip' : ''; };
+    var cls = function (v) { return v === 'Passed' || v === 'PASSED' ? 'ok' : v === 'Failed' || v === 'FAILED' ? 'bad' : v === 'Not run' || v === 'Not run yet' || v === 'NOT RUN' ? 'skip' : ''; };
     return sheets(m).map(function (sh) {
       var body = (sh.rows || []).slice(0, cap).map(function (r, i) {
         return { n: String(i + 2), cells: sh.columns.map(function (c) {
@@ -152,9 +217,17 @@ define([], function () {
   function html(m, opts) {
     var o = opts || {};
     var stateCls = function (st) { return st === 'ok' ? 'ok' : st === 'fail' ? 'bad' : 'skip'; };
+    var vcls = m.plan ? 'plan' : m.ok ? 'ok' : 'bad';
     var kpi = function (n, what, cls) { return '<div class="kpi ' + (cls || '') + '"><b>' + esc(n) + '</b><span>' + esc(what) + '</span></div>'; };
     var rowCol = m.multi;
-    var stepsHtml = !m.steps.length ? '<p class="none">No step ran.</p>'
+    var stepsHtml = m.plan ? (!m.steps.length ? '<p class="none">No step yet: Draft from the page first.</p>'
+      : '<table class="t steps"><thead><tr><th class="n">#</th><th>Page</th><th>Step</th><th>API · request</th><th>Values sent</th><th>Hands on</th><th>Checks</th><th>Note</th></tr></thead><tbody>'
+        + m.steps.map(function (s) {
+          return '<tr><td class="n">' + esc(s.n) + '</td><td>' + esc(s.page) + '</td><td><b>' + esc(s.name) + '</b></td>'
+            + '<td><span class="m">' + esc(s.method) + '</span> <code>' + esc(s.call) + '</code><br><span class="small">' + esc(s.url) + '</span></td>'
+            + '<td class="small"><code>' + esc(s.sent || '—') + '</code></td><td class="small"><code>' + esc(s.handed || '—') + '</code></td><td>' + esc(s.checks) + '</td><td class="small">' + esc(s.note) + '</td></tr>';
+        }).join('') + '</tbody></table>')
+      : !m.steps.length ? '<p class="none">No step ran.</p>'
       : '<table class="t steps"><thead><tr>' + (rowCol ? '<th>Data row</th>' : '') + '<th class="n">#</th><th>Page</th><th>Step</th><th>API</th><th>Result</th><th class="n">HTTP</th><th class="n">ms</th><th class="n">Rows</th><th>Checks</th><th>Note · values handed on</th></tr></thead><tbody>'
         + m.steps.map(function (s) {
           return '<tr>' + (rowCol ? '<td>' + esc(s.rowText) + '</td>' : '') + '<td class="n">' + esc(s.n) + '</td><td>' + esc(s.page) + '</td><td><b>' + esc(s.name) + '</b></td>'
@@ -162,7 +235,10 @@ define([], function () {
             + '<td><span class="pill ' + stateCls(s.state) + '">' + esc(s.result) + '</span></td><td class="n">' + esc(s.status) + '</td><td class="n">' + esc(s.ms) + '</td><td class="n">' + esc(s.rows) + '</td>'
             + '<td>' + esc(s.checks) + '</td><td class="small">' + esc(s.note) + (s.note && s.handed ? '<br>' : '') + (s.handed ? 'hands on: ' + esc(s.handed) : '') + '</td></tr>';
         }).join('') + '</tbody></table>';
-    var checksHtml = !m.checks.length ? '<p class="none">No check ran.</p>'
+    var checksHtml = m.plan ? (!m.checks.length ? '<p class="none">No check yet.</p>'
+      : '<table class="t checks"><thead><tr><th class="n">#</th><th>Step</th><th>Check</th><th>Result</th></tr></thead><tbody>'
+        + m.checks.map(function (c) { return '<tr><td class="n">' + esc(c.n) + '</td><td>' + esc(c.step) + '</td><td>' + esc(c.check) + '</td><td><span class="pill skip">To check</span></td></tr>'; }).join('') + '</tbody></table>')
+      : !m.checks.length ? '<p class="none">No check ran.</p>'
       : '<table class="t checks"><thead><tr>' + (rowCol ? '<th>Data row</th>' : '') + '<th class="n">#</th><th>Step</th><th>Check</th><th>Result</th><th>Got</th></tr></thead><tbody>'
         + m.checks.map(function (c) {
           return '<tr' + (c.ok ? '' : ' class="badrow"') + '>' + (rowCol ? '<td>' + esc(c.rowText) + '</td>' : '') + '<td class="n">' + esc(c.n) + '</td><td>' + esc(c.step) + '</td><td>' + esc(c.check) + '</td>'
@@ -177,7 +253,12 @@ define([], function () {
     var facts = m.summary.filter(function (f) { return f.field !== 'Notes' || f.value; }).map(function (f) {
       return '<tr><th>' + esc(f.field) + '</th><td>' + (f.field === 'Result' ? '<span class="pill ' + (m.ok ? 'ok' : 'bad') + '">' + esc(f.value) + '</span>' : esc(f.value)) + '</td></tr>';
     }).join('');
-    return '<!doctype html><html><head><meta charset="utf-8"><title>' + esc('Test results — ' + m.title) + '</title><style>'
+    var kpis = m.plan
+      ? kpi(m.steps.length, m.steps.length === 1 ? 'step' : 'steps', '') + kpi(m.pagesIn, m.pagesIn === 1 ? 'page' : 'pages', '') + kpi(m.checks.length, 'checks to make', '')
+        + kpi(m.steps.filter(function (x) { return /list of values/.test(x.note); }).length, 'lists of values', '') + kpi(m.steps.filter(function (x) { return /changes data/.test(x.note); }).length, 'change data', '')
+      : kpi(m.counts.passed, 'steps passed', 'ok') + kpi(m.counts.failed, 'steps failed', m.counts.failed ? 'bad' : '') + kpi(m.counts.skipped, 'not run', m.counts.skipped ? 'skip' : '')
+        + kpi(m.counts.checksOk + ' / ' + (m.counts.checksOk + m.counts.checksFailed), 'checks passed', m.counts.checksFailed ? 'bad' : 'ok') + kpi(m.counts.seconds + ' s', 'time');
+    return '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(m.doc + ' — ' + m.title) + '</title><style>'
       + '@page { size: A4 landscape; margin: 11mm; }'
       + '* { box-sizing: border-box; }'
       + 'body { margin: 0; font: 9.5pt/1.4 "Oracle Sans", "Segoe UI", Arial, sans-serif; color: #111827; }'
@@ -188,6 +269,7 @@ define([], function () {
       + 'h1 { font-size: 17pt; margin: 2px 0 2px; } .sub { color: #475569; }'
       + '.verdict { margin-left: auto; font-size: 15pt; font-weight: 800; padding: 6px 16px; border-radius: 6px; letter-spacing: .04em; }'
       + '.verdict.ok { background: #e3f5ea; color: #136c3a; border: 2px solid #2f9e5b; } .verdict.bad { background: #fde8e8; color: #9b1c1c; border: 2px solid #d64545; }'
+      + '.verdict.plan { background: #eef2f6; color: #475569; border: 2px solid #94a3b8; }'
       + '.kpis { display: flex; gap: 8px; margin: 0 0 12px; } .kpi { flex: 1; border: 1px solid #dfe3ea; border-radius: 6px; padding: 7px 10px; }'
       + '.kpi b { display: block; font-size: 15pt; } .kpi span { color: #5b6876; font-size: 8.5pt; } .kpi.ok b { color: #136c3a; } .kpi.bad b { color: #b42318; } .kpi.skip b { color: #8a5a00; }'
       + 'h2 { font-size: 11.5pt; margin: 16px 0 6px; color: #1f3a5f; }'
@@ -203,14 +285,13 @@ define([], function () {
       + 'pre { margin: 0; background: #f6f8fa; border: 1px solid #e5e9ef; border-radius: 4px; padding: 6px 8px; font: 8pt/1.35 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-all; max-height: none; }'
       + '.foot { margin-top: 18px; padding-top: 6px; border-top: 1px solid #e2e6ec; color: #64748b; font-size: 8pt; }'
       + '</style></head><body><div class="doc">'
-      + '<div class="band"><div><div class="k">API test results' + (m.code ? ' · ' + esc(m.code) : '') + '</div><h1>' + esc(m.name) + '</h1>'
-      + '<div class="sub">' + esc(m.page.label) + ' · <code>' + esc(m.page.id) + '</code> · ' + esc(m.scope) + ' · run ' + esc(m.runAt) + (m.runBy ? ' by ' + esc(m.runBy) : '') + '</div></div>'
-      + '<div class="verdict ' + (m.ok ? 'ok' : 'bad') + '">' + esc(m.verdict) + '</div></div>'
-      + '<div class="kpis">' + kpi(m.counts.passed, 'steps passed', 'ok') + kpi(m.counts.failed, 'steps failed', m.counts.failed ? 'bad' : '') + kpi(m.counts.skipped, 'not run', m.counts.skipped ? 'skip' : '')
-      + kpi(m.counts.checksOk + ' / ' + (m.counts.checksOk + m.counts.checksFailed), 'checks passed', m.counts.checksFailed ? 'bad' : 'ok') + kpi(m.counts.seconds + ' s', 'time') + '</div>'
-      + '<h2>The scenario and the run</h2><table class="facts">' + facts + '</table>'
-      + '<h2>Steps</h2>' + stepsHtml
-      + '<h2>Checks on the answers</h2>' + checksHtml
+      + '<div class="band"><div><div class="k">API ' + (m.plan ? 'test script' : 'test results') + (m.code ? ' · ' + esc(m.code) : '') + '</div><h1>' + esc(m.name) + '</h1>'
+      + '<div class="sub">' + esc(m.page.label) + ' · <code>' + esc(m.page.id) + '</code> · ' + (m.plan ? 'the steps in the order they run · not run yet' : esc(m.scope) + ' · run ' + esc(m.runAt) + (m.runBy ? ' by ' + esc(m.runBy) : '')) + '</div></div>'
+      + '<div class="verdict ' + vcls + '">' + esc(m.verdict) + '</div></div>'
+      + '<div class="kpis">' + kpis + '</div>'
+      + '<h2>' + (m.plan ? 'The scenario' : 'The scenario and the run') + '</h2><table class="facts">' + facts + '</table>'
+      + '<h2>' + (m.plan ? 'Steps, in the order they run' : 'Steps') + '</h2>' + stepsHtml
+      + '<h2>' + (m.plan ? 'Checks to make on the answers' : 'Checks on the answers') + '</h2>' + checksHtml
       + evidenceHtml
       + '<div class="foot">Made with Build.Rite · API Scenarios · ' + esc(m.made) + (o.madeBy ? ' · ' + esc(o.madeBy) : '') + '. The calls went through the app\'s own backends with the app\'s login; calls that change data run only when writes are allowed.</div>'
       + '</div></body></html>';

@@ -190,16 +190,18 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
         return;
       }
       // ── the test results report of the run shown: a PDF (previewed as it prints) and an Excel workbook ──
+      // no run yet: the test script (the steps in order, what each sends and will check); with a run, its results
       if (act === 'report') {
-        if (!v.run) { say({ ok: false, body: { error: 'Run the scenario first: the report is of a run.' } }); return; }
-        v.report = { tab: key === 'excel' ? 'excel' : 'pdf', sheet: '0', answers: !(v.report && v.report.answers === false), busy: false };
+        if (!v.sc || !steps().length) { say({ ok: false, body: { error: 'No step yet: Draft from the page first.' } }); return; }
+        v.report = { tab: key === 'excel' ? 'excel' : 'pdf', sheet: '0', answers: !(v.report && v.report.answers === false), busy: false, plan: !v.run };
         return;
       }
+      if (act === 'reportPlan') { if (v.report) v.report = Object.assign({}, v.report, { plan: key === '1' || !v.run, sheet: '0' }); return; }
       if (act === 'runReport') {
         const r = await SC.runOf(v.sc ? v.sc.page : v.page, key);
         if (!r.ok) { say(r); return; }
         v.run = r.body.run;
-        v.report = { tab: 'pdf', sheet: '0', answers: true, busy: false };
+        v.report = { tab: 'pdf', sheet: '0', answers: true, busy: false, plan: false };
         return;
       }
       if (act === 'reportClose') { v.report = null; return; }
@@ -207,12 +209,12 @@ define(['vb/action/actionChain', 'resources/js/scenarioClient', 'resources/js/pa
       if (act === 'reportSheet') { if (v.report) v.report = Object.assign({}, v.report, { sheet: String(key || '0') }); return; }
       if (act === 'reportAnswers') { if (v.report) v.report = Object.assign({}, v.report, { answers: !v.report.answers, sheet: '0' }); return; }
       if (act === 'reportPrint' || act === 'reportPdf' || act === 'reportXlsx') {
-        if (!v.report || !v.run || !v.sc) return;
-        const m = Report.model(copy(v.sc), copy(v.run), { pages: v.pages || [], answers: !!v.report.answers });
+        if (!v.report || !v.sc) return;
+        const m = Report.model(copy(v.sc), v.report.plan || !v.run ? null : copy(v.run), { pages: v.pages || [], answers: !!v.report.answers });
         if (act === 'reportXlsx') {
           const name = Report.fileName(m, 'xlsx');
           exportKit.download(name, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', exportKit.xlsxBook(Report.sheets(m)));
-          say({ ok: true }, 'Saved ' + name + ': ' + m.steps.length + ' step(s), ' + m.checks.length + ' check(s)' + (m.answers ? ', ' + m.evidence.length + ' answer(s)' : '') + '.');
+          say({ ok: true }, 'Saved ' + name + ': ' + (m.plan ? 'the test script, ' : '') + m.steps.length + ' step(s), ' + m.checks.length + ' check(s)' + (m.answers ? ', ' + m.evidence.length + ' answer(s)' : '') + '.');
           return;
         }
         const html = Report.html(m);

@@ -75,7 +75,7 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     handle: (r, res) => {
       if (r.path === '/shop/v1/orders' && r.method === 'GET') return res.json(EXAMPLE);
       if (/^\/shop\/v1\/orders\/41$/.test(r.path)) return res.json(EXAMPLE.data[0]);
-      if (r.path === '/shop/v1/customers' && r.method === 'GET') return res.json({ items: [{ id: 7, name: 'Acme Tools' }, { id: 8, name: 'Blue River' }] });
+      if (r.path === '/shop/v1/customers' && r.method === 'GET') return res.json({ items: [{ id: 7, name: 'Acme Tools', ref: 'ACME-' + 'X'.repeat(400) }, { id: 8, name: 'Blue River', ref: 'BLUE-' + 'Y'.repeat(400) }] });
       if (r.path.endsWith('/ExternalReportWSSService') && /CUST_LOV_RP/.test(r.body)) {
         const q = (/<pub:name>P_SEARCH<\/pub:name><pub:values><pub:item>([^<]*)</.exec(r.body) || [])[1] || '';
         searches.push(q);
@@ -162,6 +162,27 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     const lockedAdd = await page.$eval('#scFlowCols .nx-sc-fnode[data-page="' + DETAIL + '"] .nx-sc-fpath', (b) => b.disabled).catch(() => null);
     T.check('…the pages it leads to shown (Order), Add to the flow waiting for the main page', lockedAdd === true, String(lockedAdd));
     await tab('Main');
+    // not run yet: the header's PDF / Excel give the test script — the steps in order, what each sends and will check
+    await page.click('#scHeadPdf');
+    await page.waitForSelector('#scReport #scRepFrame', { timeout: 10000 });
+    await page.waitForTimeout(400);
+    const plan = page.frameLocator('#scRepFrame');
+    const planRows = await plan.locator('table.steps tbody tr').evaluateAll((a) => a.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    const reportBefore = /^Test script$/.test(await text(page, '#scRepKicker')) && /NOT RUN$/.test(await text(page, '#scRepTitle'))
+      && /^The steps in the order they run · 1 step\(s\) on 1 page\(s\) · \d+ check\(s\) to make · not run yet$/.test(await text(page, '#scRepSub'))
+      && (await plan.locator('.verdict').textContent()) === 'NOT RUN' && planRows.length === 1 && /The orders/.test(planRows[0]) && /shopApi\/getOrders/.test(planRows[0])
+      && /Checks to make on the answers/.test(await plan.locator('body').textContent()) && !(await page.$('#scRepAnswers')) && !(await page.$('#scRepShowRun'));
+    await env.shot('api-scenarios-test-script.png');
+    await page.click('#scRepTabExcel');
+    await page.waitForSelector('#scRepGrid', { timeout: 10000 });
+    const planSheets = await page.$$eval('#scRepSheets .nx-sc-xlsheet', (a) => a.map((x) => x.textContent.trim()));
+    T.check('not run yet: PDF in the header gives the test script — NOT RUN, the steps in the order they run (API, values sent, checks to make); Excel: Summary, Test script, Checks',
+      reportBefore && /^Summary \(\d+\)$/.test(planSheets[0]) && /^Test script \(1\)$/.test(planSheets[1]) && /^Checks \(\d+\)$/.test(planSheets[2]) && planSheets.length === 3,
+      await text(page, '#scRepTitle') + ' / ' + await text(page, '#scRepSub') + ' / ' + planSheets.join(' | '));
+    const [planDl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('#scRepXlsx')]);
+    T.check('…downloaded as SC-0001-test-script-<day>.xlsx', /^SC-0001-test-script-\d{4}-\d{2}-\d{2}\.xlsx$/.test(planDl.suggestedFilename()), planDl.suggestedFilename());
+    await page.click('#scReport .nx-dialog-head .nx-iconbtn');
+    await page.waitForTimeout(300);
     await saveRun();
     let res = await results();
     T.check('Save & run: the main page\'s API run alone, passed (2xx, time, the example\'s shape)', res.length === 1 && res[0].state === 'ok' && /The main page passed/.test(await result())
@@ -169,6 +190,16 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     T.check('…the header: Passed (main page), last tested now · the main page, by you', /Passed \(main page\)/.test(await text(page, '#scStatus')) && /the main page/.test(await text(page, '#scTested')) && (await text(page, '#scTestedBy')) === 'priya.raman'
       && /Runs \(1\)/.test(await text(page, '#scTabRuns')), await text(page, '#scHeader'));
     await env.shot('api-scenarios.png');
+    await page.click('#scHeadXls');
+    await page.waitForSelector('#scReport #scRepGrid', { timeout: 10000 });
+    const sheetsRun = await page.$$eval('#scRepSheets .nx-sc-xlsheet', (a) => a.map((x) => x.textContent.trim()));
+    T.check('after the run: Excel in the header opens the last run\'s results (PASSED; Summary, Steps, Checks, Evidence)', /nx-sc-tab--on/.test(await page.$eval('#scRepTabExcel', (b) => b.className))
+      && /^SC-0001 · .*PASSED$/.test(await text(page, '#scRepTitle')) && /^Steps \(1\)$/.test(sheetsRun[1] || '') && /nx-sc-chip--on/.test(await page.$eval('#scRepShowRun', (b) => b.className)), sheetsRun.join(' | '));
+    await page.click('#scRepShowPlan');
+    await page.waitForTimeout(300);
+    T.check('…"Test script" switches the same dialog to the steps alone (NOT RUN)', /NOT RUN$/.test(await text(page, '#scRepTitle')) && /^Test script \(1\)$/.test((await page.$$eval('#scRepSheets .nx-sc-xlsheet', (a) => a.map((x) => x.textContent.trim())))[1] || ''));
+    await page.click('#scReport .nx-dialog-head .nx-iconbtn');
+    await page.waitForTimeout(300);
 
     T.section('Flow: opened once the main page\'s APIs have all run');
     await tab('Flow');
@@ -509,6 +540,17 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     T.check('Save & run: the value picked handed on and sent (P_CUSTOMER_ID = 8)', reportBodies.length > before && /P_CUSTOMER_ID[\s\S]{0,200}>8</.test(reportBodies[reportBodies.length - 1])
       && /customer = 8/.test(await text(page, '#scRun .nx-sc-handed')), (reportBodies[reportBodies.length - 1] || '').slice(0, 200));
     await env.shot('api-scenarios-lov.png');
+    // a very long line in an answer (400 characters, no space) never pushes the cards past the page: ▶ Run stays in view
+    await page.click(s1 + ' .nx-sc-tried .nx-sc-answer > summary');
+    await page.waitForTimeout(300);
+    const fit = await page.evaluate(() => {
+      const vis = (q) => Array.prototype.slice.call(document.querySelectorAll(q)).filter((x) => x.offsetParent !== null);
+      const box = vis('#scEdit')[0].getBoundingClientRect();
+      const pg = vis('.nx-sc .nx-sc-main')[0].parentElement.getBoundingClientRect();
+      const runs = vis('#scSteps .nx-sc-trybtn').map((b) => b.getBoundingClientRect());
+      return { edit: Math.round(box.right), page: Math.round(pg.right), win: window.innerWidth, left: Math.round(pg.left), run: Math.round(Math.max.apply(null, runs.map((r) => r.right))), n: runs.length };
+    });
+    T.check('a 400-character line in an answer: the page stays in the window (nothing cut on the left or right), every ▶ Run inside its card', fit.n === 3 && fit.run <= fit.edit && fit.edit <= fit.page && fit.page <= fit.win && fit.left >= 0, JSON.stringify(fit));
 
     T.section('another page for the same scenario (asked first), then a search as you type');
     asked = '';

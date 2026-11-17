@@ -85,6 +85,13 @@
           <input class="nx-cm-input nx-sc-name" id="scName" data-field="name" :value="[[ $variables.sc.name ]]" on-change="[[ $listeners.onField ]]" aria-label="The scenario's name">
           <span :class="[[ 'nx-sc-status nx-sc-status--' + $functions.headFacts($variables.sc, $variables.runs).statusKey ]]" id="scStatus"><oj-bind-text value="[[ $functions.headFacts($variables.sc, $variables.runs).statusText ]]"></oj-bind-text></span>
           <span class="nx-min-flex"></span>
+          <span class="nx-sc-headrep" id="scHeadRep">
+            <span class="nx-note">Test report</span>
+            <button type="button" class="nx-btn nx-btn--sm" id="scHeadPdf" data-act="report" data-key="pdf" on-click="[[ $listeners.onAct ]]" :disabled="[[ !($variables.sc.steps && $variables.sc.steps.length) ]]"
+              :title="[[ !($variables.sc.steps && $variables.sc.steps.length) ? 'No step yet: Draft from the page first' : $variables.run ? 'As a PDF: the last run\'s results, or the test script' : 'As a PDF: the test script — the steps in order, not run yet' ]]"><span class="oj-ux-ico-file-pdf" aria-hidden="true"></span> PDF</button>
+            <button type="button" class="nx-btn nx-btn--sm" id="scHeadXls" data-act="report" data-key="excel" on-click="[[ $listeners.onAct ]]" :disabled="[[ !($variables.sc.steps && $variables.sc.steps.length) ]]"
+              :title="[[ !($variables.sc.steps && $variables.sc.steps.length) ? 'No step yet: Draft from the page first' : $variables.run ? 'As an Excel workbook: the last run\'s results, or the test script' : 'As an Excel workbook: the test script — the steps in order, not run yet' ]]"><span class="oj-ux-ico-file-excel" aria-hidden="true"></span> Excel</button>
+          </span>
           <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="scSave" data-act="save" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy || !$variables.sc.page ]]">Save</button>
           <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="scDelete" data-act="delete" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy || !$variables.sc.id ]]">Delete</button>
         </div>
@@ -630,16 +637,16 @@
     </div>
   </oj-bind-if>
   <!-- ── the test results report of the run shown: previewed as the PDF prints and as the Excel workbook ── -->
-  <oj-bind-if test="[[ !!$variables.report && !!$variables.run && !!$variables.sc ]]">
+  <oj-bind-if test="[[ !!$variables.report && !!$variables.sc ]]">
     <div class="nx-modal" id="scReport">
       <button type="button" class="nx-modal-scrim" aria-label="Close" data-act="reportClose" on-click="[[ $listeners.onAct ]]"></button>
       <div class="nx-dialog nx-sc-repdlg" role="dialog" aria-modal="true" aria-label="Test results report">
         <div class="nx-dialog-head">
           <div class="nx-dialog-titles">
-            <div class="nx-kicker">Test results report</div>
-            <h2 class="nx-dialog-title" id="scRepTitle"><oj-bind-text value="[[ $functions.reportHead($variables.sc, $variables.run, $variables.pages).title ]]"></oj-bind-text>
-              <span :class="[[ 'nx-sc-repverdict nx-sc-repverdict--' + ($functions.reportHead($variables.sc, $variables.run, $variables.pages).ok ? 'ok' : 'bad') ]]" id="scRepVerdict"><oj-bind-text value="[[ $functions.reportHead($variables.sc, $variables.run, $variables.pages).verdict ]]"></oj-bind-text></span></h2>
-            <div class="nx-sub" id="scRepSub"><oj-bind-text value="[[ $functions.reportHead($variables.sc, $variables.run, $variables.pages).sub ]]"></oj-bind-text></div>
+            <div class="nx-kicker" id="scRepKicker"><oj-bind-text value="[[ $functions.reportHead($variables.sc, $variables.run, $variables.pages, $variables.report.plan).kicker ]]"></oj-bind-text></div>
+            <h2 class="nx-dialog-title" id="scRepTitle"><oj-bind-text value="[[ $functions.reportHead($variables.sc, $variables.run, $variables.pages, $variables.report.plan).title ]]"></oj-bind-text>
+              <span :class="[[ 'nx-sc-repverdict nx-sc-repverdict--' + $functions.reportHead($variables.sc, $variables.run, $variables.pages, $variables.report.plan).cls ]]" id="scRepVerdict"><oj-bind-text value="[[ $functions.reportHead($variables.sc, $variables.run, $variables.pages, $variables.report.plan).verdict ]]"></oj-bind-text></span></h2>
+            <div class="nx-sub" id="scRepSub"><oj-bind-text value="[[ $functions.reportHead($variables.sc, $variables.run, $variables.pages, $variables.report.plan).sub ]]"></oj-bind-text></div>
           </div>
           <button type="button" class="nx-iconbtn" aria-label="Close" data-act="reportClose" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
         </div>
@@ -648,7 +655,15 @@
             <button type="button" role="tab" id="scRepTabPdf" :aria-selected="[[ $variables.report.tab !== 'excel' ? 'true' : 'false' ]]" :class="[[ $functions.reportTabClass('pdf', $variables.report.tab) ]]" data-act="reportTab" data-key="pdf" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-file-pdf" aria-hidden="true"></span> PDF</button>
             <button type="button" role="tab" id="scRepTabExcel" :aria-selected="[[ $variables.report.tab === 'excel' ? 'true' : 'false' ]]" :class="[[ $functions.reportTabClass('excel', $variables.report.tab) ]]" data-act="reportTab" data-key="excel" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-file-excel" aria-hidden="true"></span> Excel</button>
           </div>
-          <label class="nx-cc-check nx-sc-repans"><input type="checkbox" id="scRepAnswers" data-act="reportAnswers" on-click="[[ $listeners.onAct ]]" :checked="[[ !!$variables.report.answers ]]"> Include each request and its answer (evidence)</label>
+          <oj-bind-if test="[[ !!$variables.run ]]">
+            <span class="nx-sc-repshow" role="radiogroup" aria-label="What the report shows">
+              <button type="button" role="radio" id="scRepShowRun" :aria-checked="[[ $variables.report.plan ? 'false' : 'true' ]]" :class="[[ 'nx-sc-chip' + ($variables.report.plan ? '' : ' nx-sc-chip--on') ]]" data-act="reportPlan" data-key="0" on-click="[[ $listeners.onAct ]]">Last run's results</button>
+              <button type="button" role="radio" id="scRepShowPlan" :aria-checked="[[ $variables.report.plan ? 'true' : 'false' ]]" :class="[[ 'nx-sc-chip' + ($variables.report.plan ? ' nx-sc-chip--on' : '') ]]" data-act="reportPlan" data-key="1" on-click="[[ $listeners.onAct ]]">Test script</button>
+            </span>
+          </oj-bind-if>
+          <oj-bind-if test="[[ !$variables.report.plan && !!$variables.run ]]">
+            <label class="nx-cc-check nx-sc-repans"><input type="checkbox" id="scRepAnswers" data-act="reportAnswers" on-click="[[ $listeners.onAct ]]" :checked="[[ !!$variables.report.answers ]]"> Include each request and its answer (evidence)</label>
+          </oj-bind-if>
           <span class="nx-min-flex"></span>
           <oj-bind-if test="[[ $variables.report.tab !== 'excel' ]]">
             <button type="button" class="nx-btn nx-btn--sm" id="scRepPrint" data-act="reportPrint" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-print" aria-hidden="true"></span> Print</button>
@@ -660,16 +675,16 @@
         </div>
         <div class="nx-dialog-body nx-sc-repbody">
           <oj-bind-if test="[[ $variables.report.tab !== 'excel' ]]">
-            <iframe class="nx-sc-repframe" id="scRepFrame" title="The test results as the PDF prints them" sandbox="" :srcdoc="[[ $functions.reportHtml($variables.sc, $variables.run, $variables.pages, $variables.report.answers) ]]"></iframe>
+            <iframe class="nx-sc-repframe" id="scRepFrame" title="The report as the PDF prints it" sandbox="" :srcdoc="[[ $functions.reportHtml($variables.sc, $variables.run, $variables.pages, $variables.report.answers, $variables.report.plan) ]]"></iframe>
           </oj-bind-if>
           <oj-bind-if test="[[ $variables.report.tab === 'excel' ]]">
             <div class="nx-sc-xlwrap">
               <div class="nx-sc-xlsheets" id="scRepSheets" role="tablist" aria-label="Sheets">
-                <oj-bind-for-each data="[[ $functions.reportSheets($variables.sc, $variables.run, $variables.pages, $variables.report.answers) ]]"><template data-oj-as="sh">
+                <oj-bind-for-each data="[[ $functions.reportSheets($variables.sc, $variables.run, $variables.pages, $variables.report.answers, $variables.report.plan) ]]"><template data-oj-as="sh">
                   <button type="button" role="tab" :class="[[ 'nx-sc-xlsheet' + (sh.data.idx === ($variables.report.sheet || '0') ? ' nx-sc-xlsheet--on' : '') ]]" :data-key="[[ sh.data.idx ]]" data-act="reportSheet" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ sh.data.name + ' (' + sh.data.count + ')' ]]"></oj-bind-text></button>
                 </template></oj-bind-for-each>
               </div>
-              <oj-bind-for-each data="[[ $functions.reportSheetOne($functions.reportSheets($variables.sc, $variables.run, $variables.pages, $variables.report.answers), $variables.report.sheet) ]]"><template data-oj-as="g">
+              <oj-bind-for-each data="[[ $functions.reportSheetOne($functions.reportSheets($variables.sc, $variables.run, $variables.pages, $variables.report.answers, $variables.report.plan), $variables.report.sheet) ]]"><template data-oj-as="g">
                 <div class="nx-sc-xlscroll">
                   <div class="nx-sc-xl" id="scRepGrid" role="table" :aria-label="[[ g.data.name ]]" :style="[[ g.data.style ]]">
                     <div class="nx-sc-xlrow" role="row"><span class="nx-sc-xlc nx-sc-xlcorner"></span>

@@ -465,15 +465,18 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient', 'resources/js/sc
           handed: Object.keys(s.extracted || {}).map((k) => k + ' = ' + s.extracted[k]).join(', '), answer: s.answer || '', url: s.request ? s.request.method + ' ' + s.request.url : 'Its answer' })) }));
     }
     // ── the test results report of the run shown (resources/js/scenarioReport.js): as the PDF prints, as the Excel sheets ──
-    reportModel(sc, run, pages, answers) { return sc && run ? Report.model(sc, run, { pages: pages || [], answers: answers !== false }) : null; }
-    reportHead(sc, run, pages) {
-      const m = this.reportModel(sc, run, pages, false);
-      return m ? { title: m.title, ok: m.ok, verdict: m.verdict,
-        sub: m.scope + ' · run ' + m.runAt + (m.runBy ? ' by ' + m.runBy : '') + ' · ' + m.counts.passed + ' passed, ' + m.counts.failed + ' failed, ' + m.counts.skipped + ' not run' } : { title: '', ok: false, verdict: '', sub: '' };
+    // plan (or no run): the test script — the steps in order, what each sends, hands on and will check, nothing run yet
+    reportModel(sc, run, pages, answers, plan) { return sc ? Report.model(sc, plan || !run ? null : run, { pages: pages || [], answers: answers !== false }) : null; }
+    reportHead(sc, run, pages, plan) {
+      const m = this.reportModel(sc, run, pages, false, plan);
+      if (!m) return { title: '', ok: false, verdict: '', sub: '', cls: '', kicker: '' };
+      return { title: m.title, ok: m.ok, verdict: m.verdict, cls: m.plan ? 'plan' : m.ok ? 'ok' : 'bad', kicker: m.plan ? 'Test script' : 'Test results report',
+        sub: m.plan ? 'The steps in the order they run · ' + m.steps.length + ' step(s) on ' + m.pagesIn + ' page(s) · ' + m.checks.length + ' check(s) to make · not run yet'
+          : m.scope + ' · run ' + m.runAt + (m.runBy ? ' by ' + m.runBy : '') + ' · ' + m.counts.passed + ' passed, ' + m.counts.failed + ' failed, ' + m.counts.skipped + ' not run' };
     }
-    reportHtml(sc, run, pages, answers) { const m = this.reportModel(sc, run, pages, answers); return m ? Report.html(m) : ''; }
-    reportSheets(sc, run, pages, answers) {
-      const m = this.reportModel(sc, run, pages, answers);
+    reportHtml(sc, run, pages, answers, plan) { const m = this.reportModel(sc, run, pages, answers, plan); return m ? Report.html(m) : ''; }
+    reportSheets(sc, run, pages, answers, plan) {
+      const m = this.reportModel(sc, run, pages, answers, plan);
       return m ? Report.preview(m).map((s, i) => Object.assign(s, { idx: String(i), style: { gridTemplateColumns: '44px ' + s.head.map(() => 'auto').join(' ') } })) : [];
     }
     /** The sheet shown in the Excel preview, as a list of one (a for-each over it gives the grid its own scope). */

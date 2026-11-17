@@ -628,3 +628,16 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-sc-checkrow { display: flex; gap: 8px; flex-wrap: wrap; }
 .nx-sc-checkrow label { display: inline-flex; align-items: center; gap: 4px; }
 @media (max-width: 900px) { .nx-sc-step .nx-sc-picker { grid-template-columns: 1fr; } .nx-sc-apiline .nx-sc-api { display: none; } }
+/* API Scenarios: the cards always fit the page — a long answer line or URL scrolls or is cut inside its card, it never
+   widens the column (a grid track of `auto` grew to the longest unbreakable line and pushed ▶ Run off the right edge) */
+.nx-sc-main, .nx-sc-steps, .nx-sc-results { grid-template-columns: minmax(0, 1fr); }
+.nx-sc-main > *, .nx-sc-steps > *, .nx-sc-results > *, .nx-sc-step, .nx-sc-res, .nx-sc-tried, .nx-sc-sec { min-width: 0; max-width: 100%; }
+.nx-sc-step pre, .nx-sc-sec pre { max-width: 100%; overflow: auto; }
+.nx-sc-step .nx-sc-stephead { min-width: 0; }
+.nx-sc-step .nx-sc-stephead .nx-sc-stepname { flex: 1 1 auto; min-width: 0; width: 0; }
+.nx-sc-step .nx-sc-stephead .nx-sc-trybtn, .nx-sc-step .nx-sc-stephead .nx-sc-stepmove { flex: none; }
+.nx-sc-reshead, .nx-sc-checklist li, .nx-sc-resnote, .nx-sc-handed, .nx-sc-resvalues { overflow-wrap: anywhere; min-width: 0; }
+.nx-sc-step .nx-sc-picker > * { min-width: 0; }
+.nx-sc-headrep { display: inline-flex; gap: 6px; align-items: center; margin-right: 10px; padding-right: 12px; border-right: 1px solid var(--nx-line, #dde3ea); }
+.nx-sc-repverdict--plan { background: #eef2f6; color: #475569; border: 1px solid #94a3b8; }
+.nx-sc-repshow { display: inline-flex; gap: 4px; }
