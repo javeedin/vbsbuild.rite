@@ -1,4 +1,4 @@
-define(['resources/js/pagesClient', 'resources/js/storyAnalysis', 'resources/js/shellBus', 'resources/js/pageMap', 'resources/js/codeFixClient', 'resources/js/codeView', 'resources/js/appNames'], (PC, SA, bus, PM, FX, CV, AN) => {
+define(['resources/js/pagesClient', 'resources/js/storyAnalysis', 'resources/js/shellBus', 'resources/js/pageMap', 'resources/js/codeFixClient', 'resources/js/codeView', 'resources/js/appNames', 'resources/js/codeFixView'], (PC, SA, bus, PM, FX, CV, AN, CFV) => {
   'use strict';
 
   // Application pages: binding helpers. The facts come from desktop/lib/pageScan.js (via the catalog, resources/pages);
@@ -84,8 +84,7 @@ define(['resources/js/pagesClient', 'resources/js/storyAnalysis', 'resources/js/
     // ── Code Fix (desktop/lib/codeFix.js) ──
     fixKinds() { return [{ id: 'fix', label: 'Fix a bug' }, { id: 'enhance', label: 'Enhance' }, { id: 'change', label: 'Change' }]; }
     fixStatus(s) {
-      return { proposed: 'Proposed — waiting for your approval', 'needs-redo': 'Not usable as it is (see below): ask again', questions: 'The AI has questions first', applied: 'Applied — not committed yet',
-        committed: 'Committed', undone: 'Undone', discarded: 'Discarded', stale: 'Out of date: the code changed' }[s] || s;
+      return CFV.status(s);
     }
     fixStatusClass(s) { return 'nx-fx-st nx-fx-st--' + (s || 'none'); }
     fixFolder(i) {
@@ -98,21 +97,14 @@ define(['resources/js/pagesClient', 'resources/js/storyAnalysis', 'resources/js/
     // the Jira story and the issue the change is for; the change notes written into the code with it
     fixRefsText(f) { const r = (f && f.refs) || {}, i = (f && f.issue) || {}; const jira = i.jira || r.jira, iss = i.number || r.issue; return [jira ? 'Jira story ' + jira : '', iss ? 'Issue ' + iss : ''].filter(Boolean).join(' · '); }
     fixNotesText(f) { const n = (f && f.applied && f.applied.notes) || 0; return n + ' change note' + (n === 1 ? '' : 's') + ' written in the code beside the change: what was asked, who asked and who changed it, when, the Jira story and the issue (see The change above).'; }
-    fixApproveText(f, i) {
-      const n = f ? f.files.length : 0;
-      const note = ' A note goes into the code beside the change: who asked, who changed it, when, the Jira story and the issue.';
-      if (f && f.workspace) return 'Writes the ' + n + ' file(s) in your workspace\'s working folder (' + f.workspace + ') and checks them. Nothing is pulled, committed or pushed: Save in working commits it here; Apply to main, then Push, in the project\'s tab, send it to VB Studio.' + note;
-      return 'Pulls ' + (i ? i.branch : 'the branch') + ' first, runs the related tests, writes the ' + n + ' file(s), and tests again. Nothing is committed until you click Commit.' + note;
-    }
-    fixAppliedText(f) {
-      const a = (f && f.applied) || {};
-      return 'Applied ' + when(a.at) + (f && f.workspace ? ' in your workspace\'s working folder (' + a.branch + ')' : ' on ' + a.branch);
-    }
-    fixCommittedText(f) {
-      const c = (f && f.commit) || {};
-      if (f && f.workspace) return 'Saved in working: commit ' + c.sha + ' on ' + c.branch + ', on this PC only. ' + (c.next || '');
-      return 'Committed ' + c.sha + ' on ' + c.branch + (c.pushed ? ', pushed to ' + c.upstream : ' (not pushed)');
-    }
+    fixApproveText(f, i) { return CFV.approveText(f, i); }
+    // once applied (and saved): where it is, then what now — try it, send it on, or undo
+    fixAppliedSub(f) { return CFV.appliedSub(f); }
+    fixTryText(f, route, canRun) { return CFV.tryText(f, route, canRun); }
+    fixKeepText(f, i) { return CFV.keepText(f, i); }
+    fixTestsCount(t) { return CFV.testsCount(t); }
+    fixAppliedText(f) { return CFV.appliedText(f); }
+    fixCommittedText(f) { return CFV.committedText(f); }
     fixWhen(at) { return when(at); }
     fixMeta(f) { return !f ? '' : (f.provider || 'AI') + (f.model ? ' (' + f.model + ')' : '') + ' · ' + when(f.at) + (f.by ? ' · asked by ' + f.by : '') + (f.ms ? ' · ' + Math.round(f.ms / 1000) + ' s' : '') + (f.retried ? ' · asked twice' : ''); }
     fixSent(f) { return !f || !f.sent ? '' : 'The AI read ' + f.sent.files.length + ' files of this page (' + Math.round(f.sent.chars / 1000) + 'k characters)' + (f.sent.skipped.length ? '; too large to send: ' + f.sent.skipped.join(', ') : '') + '.'; }
@@ -155,7 +147,7 @@ define(['resources/js/pagesClient', 'resources/js/storyAnalysis', 'resources/js/
     }
     histStatus(st) { return { proposed: 'waiting for approval', applied: 'applied', committed: 'committed', undone: 'undone', discarded: 'discarded', 'needs-redo': 'not usable', questions: 'questions', stale: 'out of date' }[st] || st; }
     stepText(e) { return (e.by ? e.by + ' · ' : '') + when(e.at); }
-    fixListText(x) { return (x.status ? ({ proposed: 'proposed', applied: 'applied', committed: 'committed', undone: 'undone', discarded: 'discarded', 'needs-redo': 'not usable', questions: 'questions', stale: 'out of date' }[x.status] || x.status) : '') + ' · ' + when(x.at) + (x.by ? ' · ' + x.by : ''); }
+    fixListText(x) { return CFV.listText(x); }
     // ── the navigation maps (resources/js/pageMap.js) ──
     /** One page's map: Comes from → This page → Goes to → Then. */
     pageMap(pages, id, sheet) {

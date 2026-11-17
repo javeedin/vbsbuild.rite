@@ -114,10 +114,11 @@ define(['vb/action/actionChain', 'vb/action/actions', 'resources/js/codeFixClien
         }
         // a change to your workspace: written in its working folder and checked — nothing pulled, nothing pushed
         if ((act === 'apply' || act === 'applyNoPull') && v.fix.workspace) {
-          if (!ask('Write this change into ' + v.fix.files.length + ' file(s) in your workspace\'s working folder?\n\n' + v.fix.folder + '\n\nNothing is pulled, committed or pushed. Undo puts the files back; Save in working commits it on this PC.')) return;
-          v.fixProgress = 'Writing the files in your working folder and checking them…';
-          const r = await FX.apply(fid, true);
-          show(r, r.ok ? 'Written in your workspace\'s working folder: ' + r.body.fix.files.length + ' file(s). Try it, then Save in working (or Undo).' : '');
+          if (!ask('Write this change into ' + v.fix.files.length + ' file(s) in your workspace\'s working folder and save it there?\n\n' + v.fix.folder + '\n\nIt is checked first: if something breaks it is written but not saved. Nothing is pulled or pushed. Undo takes it out again.')) return;
+          v.fixProgress = 'Writing the files in your working folder, checking them and saving them…';
+          const r = await FX.apply(fid, true, true);
+          const sv = r.ok && r.body.fix.status === 'committed';
+          show(r, r.ok ? (sv ? 'Applied and saved in your working folder (commit ' + r.body.fix.commit.sha + ', on this PC only). Try it on this page.' : 'Applied, but something broke, so it is not saved: look at the checks, then Save anyway or Undo.') : '');
           await list();
           return;
         }
@@ -125,9 +126,10 @@ define(['vb/action/actionChain', 'vb/action/actions', 'resources/js/codeFixClien
           const pull = act === 'apply';
           if (!ask('Apply this change to ' + v.fix.files.length + ' file(s) in ' + ((v.fixInfo && v.fixInfo.folder) || 'the code folder') + ' (branch ' + branch + ')?\n\n'
             + (pull ? 'It pulls ' + branch + ' first. ' : 'It does NOT pull first. ') + 'Then it runs the related tests, writes the files and tests again. Nothing is committed until you click Commit.')) return;
-          v.fixProgress = (pull ? 'Pulling ' + branch + ', running' : 'Running') + ' the related tests on the code as it is, writing the files, testing again…';
-          const r = await FX.apply(fid, !pull);
-          show(r, r.ok ? 'Applied to ' + r.body.fix.files.length + ' file(s). ' + ((r.body.fix.applied && r.body.fix.applied.pull && r.body.fix.applied.pull.text) || '')
+          v.fixProgress = (pull ? 'Pulling ' + branch + ', running' : 'Running') + ' the related tests on the code as it is, writing the files, testing again, committing…';
+          const r = await FX.apply(fid, !pull, true);
+          const sv = r.ok && r.body.fix.status === 'committed';
+          show(r, r.ok ? (sv ? 'Applied and committed (' + r.body.fix.commit.sha + ', not pushed). ' : 'Applied, but something broke, so it is not committed. ') + ((r.body.fix.applied && r.body.fix.applied.pull && r.body.fix.applied.pull.text) || '')
             + (r.body.fix.applied && r.body.fix.applied.live ? ' Reload the page to see it in this app.' : '') : '');
           await list();
           return;
@@ -135,7 +137,8 @@ define(['vb/action/actionChain', 'vb/action/actions', 'resources/js/codeFixClien
         if (act === 'test') { v.fixProgress = 'Running the checks and the related tests…'; show(await FX.test(fid), 'Tested again.'); return; }
         if (act === 'e2e') { v.fixProgress = 'Running the browser tests (this takes several minutes)…'; show(await FX.e2e(fid)); return; }
         if (act === 'undo' || act === 'undoForce') {
-          if (!ask(act === 'undoForce' ? 'The files changed after the fix. Put them back as they were before the fix anyway (those later changes are lost)?' : 'Put the files back as they were before the fix?')) return;
+          if (!ask(act === 'undoForce' ? 'The files changed after the fix. Put them back as they were before the fix anyway (those later changes are lost)?'
+            : v.fix.status === 'committed' ? 'Take this change out again? Its commit (' + ((v.fix.commit && v.fix.commit.sha) || '') + ') is reverted: a new commit that puts the files back.' : 'Put the files back as they were before the fix?')) return;
           const r = await FX.undo(fid, act === 'undoForce');
           show(r, r.ok ? 'Undone: the files are as they were before the fix.' : '');
           await list();
@@ -145,6 +148,7 @@ define(['vb/action/actionChain', 'vb/action/actions', 'resources/js/codeFixClien
           v.fixProgress = act === 'push' ? 'Committing and pushing…' : 'Committing…';
           const r = await FX.commit(fid, act === 'push');
           const c = r.ok && r.body.fix.commit;
+          if (c && act === 'push' && v.fix && v.fix.status === 'committed') { show(r, c.pushed ? 'Pushed to ' + c.upstream + '.' : 'The push failed: ' + (c.pushError || 'see the history')); await list(); return; }
           if (c && r.body.fix.workspace) { show(r, 'Saved in working: commit ' + c.sha + ' on ' + c.branch + ' (on this PC). Apply to main, then Push, in the project\'s tab, send it to VB Studio.'); await list(); return; }
           show(r, c ? 'Committed ' + c.sha + ' on ' + c.branch + (c.pushed ? ', pushed to ' + c.upstream + '.' : c.pushError ? ' — the push failed: ' + c.pushError : ' (not pushed).') : '');
           await list();

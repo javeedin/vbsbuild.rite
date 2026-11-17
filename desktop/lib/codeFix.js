@@ -14,10 +14,13 @@
  *                app serves for a moment (the project's files untouched), then that copy put back.
  *   3. apply     (after approval) the files must have no uncommitted changes; git pull --ff-only (unless skipped); the
  *                edits tried again on the code as it is now; the related tests run on the code as it was (baseline);
- *                the files written (line endings kept), and the built copy, so a reload shows the change.
+ *                the files written (line endings kept), and the built copy, so a reload shows the change. With save
+ *                (what the screens ask): when nothing broke it is committed at once (never pushed) — approving means
+ *                applied and saved; when something broke it stays applied, not saved, for the person to look first.
  *   4. test      the checks, and the related unit tests (tests/*.test.js that name the page) compared with the
  *                baseline: a failure that was there before is not the fix's. Browser tests (tests/e2e) on request.
- *   5. commit (and push), or undo (the files as they were; only if nobody changed them since).
+ *   5. commit (and push; a commit not pushed yet: push only), or undo (the files as they were, only if nobody changed
+ *      them since; a change saved and not pushed: its commit reverted).
  *
  * Edits stay inside the chosen code folder, under webApps/. The folder is the project the app runs from unless the
  * person picks another (a git checkout with webApps/). Every fix is kept (code-fixes.json): what was asked, the
@@ -804,6 +807,20 @@ function open(opts) {
     ev(fix, 'approved and applied', b.by, (inWs(fix) ? 'in ' + f + ' (' + g.branch + ')' : 'on ' + g.branch) + ' · ' + pull.text + (notes ? ' · ' + notes + ' change note(s) written in the code' : ''));
     put(fix);
     const t = await test({ fix: fix.id, by: b.by });
+    // approved means applied and saved: committed at once when nothing broke (never pushed); held when something broke
+    if (b.save && t.ok) {
+      const cur = byId(fix.id); // as the test left it (its results)
+      if (cur.tests && cur.tests.ok) {
+        const c = await commit({ fix: fix.id, by: b.by, auto: true });
+        if (c.ok) return c;
+        const cf = byId(fix.id);
+        cf.saveError = c.error; put(cf);
+        return ok(slim(cf));
+      }
+      cur.saveHeld = 'Something broke (see the checks), so it is applied but not saved: look first, then Save anyway or Undo.';
+      put(cur);
+      return ok(slim(cur));
+    }
     return ok(t.fix || slim(fix));
   }
 
@@ -850,7 +867,24 @@ function open(opts) {
     b = b || {};
     const fix = byId(b.fix);
     if (!fix) return no('No such fix.');
-    if (fix.status !== 'applied') return no(fix.status === 'committed' ? 'It is committed (' + (fix.commit && fix.commit.sha) + '): undo it with git revert ' + (fix.commit && fix.commit.sha) + '.' : 'Nothing to undo.');
+    // saved (committed) and not pushed: its commit reverted — a new commit that takes the change out again
+    if (fix.status === 'committed' && fix.commit && fix.commit.sha) {
+      if (fix.commit.pushed) return no('It is pushed to ' + (fix.commit.upstream || 'its remote') + ' already: undo it there (git revert ' + fix.commit.sha + ').');
+      const f = fix.folder;
+      const rv = await git(f, ['revert', '--no-edit', fix.commit.sha]);
+      if (rv.code !== 0) {
+        await git(f, ['revert', '--abort']);
+        return no('Its commit could not be reverted (later changes touch the same lines): ' + (rv.stderr || rv.stdout).trim().slice(0, 300));
+      }
+      const back = (await git(f, ['rev-parse', '--short', 'HEAD'])).stdout.trim();
+      Object.keys(backupOf(fix.id) || {}).forEach((rel) => { const bf = builtFile(fix.app, rel); if (bf) { try { fs.writeFileSync(bf, fs.readFileSync(path.join(f, rel))); } catch (e) { /* the next build */ } } });
+      fix.status = 'undone'; fix.undone = { at: now().toISOString(), by: str(b.by), revert: back };
+      ev(fix, 'undone', b.by, 'its commit ' + fix.commit.sha + ' reverted (commit ' + back + ')' + (inWs(fix) ? ' in your workspace\'s working folder' : ''));
+      put(fix);
+      publish(fix);
+      return ok(slim(fix));
+    }
+    if (fix.status !== 'applied') return no('Nothing to undo.');
     const backup = backupOf(fix.id);
     if (!backup) return no('The copy of the files before the fix is missing.');
     const changed = Object.keys(backup).filter((rel) => sha(lf(readText(path.join(fix.folder, rel)))) !== (fix.written || {})[rel]);
@@ -872,6 +906,13 @@ function open(opts) {
     b = b || {};
     const fix = byId(b.fix);
     if (!fix) return no('No such fix.');
+    // saved already (approving saves it), not pushed yet: Push sends that commit
+    if (fix.status === 'committed' && b.push && !inWs(fix) && fix.commit && !fix.commit.pushed) {
+      await pushFix(fix, b.by);
+      put(fix);
+      publish(fix);
+      return ok(slim(fix));
+    }
     if (fix.status !== 'applied') return no(fix.status === 'committed' ? 'It is committed already.' : 'Apply it first.');
     const f = fix.folder;
     const rf = fix.refs || {};
@@ -888,17 +929,22 @@ function open(opts) {
     const shaC = (await git(f, ['rev-parse', '--short', 'HEAD'])).stdout.trim();
     fix.commit = { sha: shaC, at: now().toISOString(), pushed: false, branch: (await gitState(f)).branch, by: str(b.by), folder: f };
     fix.status = 'committed';
+    fix.commit.auto = !!b.auto; // saved on approval
+    delete fix.saveHeld; delete fix.saveError;
     if (inWs(fix)) fix.commit.next = WS_NEXT;
-    ev(fix, 'committed', b.by, shaC + ' on ' + fix.commit.branch + (inWs(fix) ? ' in your workspace\'s working folder (not pushed)' : ''));
-    if (b.push && !inWs(fix)) {
-      const g = await gitState(f);
-      const p = g.upstream ? await git(f, ['push']) : await git(f, ['push', '-u', 'origin', 'HEAD']);
-      if (p.code === 0) { fix.commit.pushed = true; fix.commit.upstream = g.upstream || 'origin/' + g.branch; ev(fix, 'pushed', b.by, 'to ' + fix.commit.upstream); }
-      else { fix.commit.pushError = (p.stderr || p.stdout).trim().slice(0, 400); ev(fix, 'push failed', b.by, fix.commit.pushError); }
-    }
+    ev(fix, b.auto ? 'saved on approval' : 'committed', b.by, shaC + ' on ' + fix.commit.branch + (inWs(fix) ? ' in your workspace\'s working folder (not pushed)' : ' (not pushed)'));
+    if (b.push && !inWs(fix)) await pushFix(fix, b.by);
     put(fix);
     publish(fix);
     return ok(slim(fix));
+  }
+  /** Its commit pushed to the branch's remote (set up the first time). */
+  async function pushFix(fix, by) {
+    const f = fix.folder;
+    const g = await gitState(f);
+    const p = g.upstream ? await git(f, ['push']) : await git(f, ['push', '-u', 'origin', 'HEAD']);
+    if (p.code === 0) { fix.commit.pushed = true; fix.commit.upstream = g.upstream || 'origin/' + g.branch; delete fix.commit.pushError; ev(fix, 'pushed', by, 'to ' + fix.commit.upstream); }
+    else { fix.commit.pushError = (p.stderr || p.stdout).trim().slice(0, 400); ev(fix, 'push failed', by, fix.commit.pushError); }
   }
 
   /**

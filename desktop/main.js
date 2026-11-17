@@ -345,6 +345,7 @@ async function buildRiteOptions() {
     // The API tester: a page's REST calls and reports, tried against the real backend
     apiStore: apiStore(),
     scenarioStore: scenarioStore(),
+    crStore: crStore(), // Change requests: a change asked of a page, made with Code Fix
     htmlToPdf: htmlToPdf, // Create the functional design: the document printed to PDF
     fusionSqlStore: fusionSqlStore(), // Fusion SQL: read-only SQL on a Fusion pod through its BI Publisher runner
     appWindow: () => (runWin && !runWin.isDestroyed() ? { url: runWin.webContents.getURL(), title: runWin.getTitle() } : null), // the page your app's window shows (API Scenarios follows it)
@@ -739,6 +740,13 @@ function scenarioStore() {
   if (!scenarioStoreInst) scenarioStoreInst = require('./lib/apiScenarios').open({ api: apiStore(),
     dir: () => { const c = currentWorkspace(); return c ? path.join(app.getPath('userData'), 'api-scenarios', spaceOf(c)) : ''; } });
   return scenarioStoreInst;
+}
+// Change requests (Application → Change requests, lib/changeRequests.js): kept per VB Studio project on this PC, beside
+// the API scenarios; their Code Fix attempts are Code Fix's own (code-fixes.json, the change history)
+let crStoreInst = null;
+function crStore() {
+  if (!crStoreInst) crStoreInst = require('./lib/changeRequests').open({ dir: () => { const c = currentWorkspace(); return c ? path.join(app.getPath('userData'), 'change-requests', spaceOf(c)) : ''; } });
+  return crStoreInst;
 }
 let analysisStoreInst = null;
 function analysisStore() {

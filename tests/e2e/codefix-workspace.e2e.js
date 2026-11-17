@@ -77,8 +77,8 @@ const opened = [];
     await page.fill('#fxRequest', 'Show overdue invoices first');
     await page.click('#fxAnalyze');
     await page.waitForSelector('#fxProposal', { timeout: 20000 });
-    T.check('proposed; approving says: written in the working folder, nothing pulled, committed or pushed', /Proposed/.test(await text(page, '#fxStatus'))
-      && /in your workspace's working folder \(Shop App ▸ Dev_One\)/.test(await text(page, '#fxApproveText')) && /Nothing is pulled, committed or pushed/.test(await text(page, '#fxApproveText')) && /A note goes into the code beside the change/.test(await text(page, '#fxApproveText')), await text(page, '#fxApproveText'));
+    T.check('proposed; approving says: written in the working folder, checked and saved there, nothing pulled or pushed', /Proposed/.test(await text(page, '#fxStatus'))
+      && /in your workspace's working folder \(Shop App ▸ Dev_One\), checks them and saves them there/.test(await text(page, '#fxApproveText')) && /Nothing is pulled or pushed/.test(await text(page, '#fxApproveText')) && /A note goes into the code beside the change/.test(await text(page, '#fxApproveText')), await text(page, '#fxApproveText'));
     T.check('…the proposal names its Jira story and issue', (await text(page, '#fxRefs')) === 'Jira story ABC-123 · Issue ISS-12', await text(page, '#fxRefs'));
 
     T.section('approved: written in the working folder only');
@@ -86,9 +86,12 @@ const opened = [];
     page.once('dialog', (d) => { asked = d.message(); d.accept(); });
     await page.click('#fxApply');
     await page.waitForSelector('#fxApplied', { timeout: 30000 }).catch(() => {});
-    T.check('the question names the working folder; nothing pulled', asked.indexOf(path.resolve(working)) !== -1 && /Nothing is pulled, committed or pushed/.test(asked), asked);
-    T.check('applied in your workspace\'s working folder (buildrite-working) · nothing pulled; checked', /Applied .* in your workspace's working folder \(buildrite-working\)/.test(await text(page, '#fxAppliedText'))
-      && /nothing pulled/.test(await text(page, '#fxApplied')) && /Nothing broke/.test(await text(page, '#fxTests')), await text(page, '#fxApplied'));
+    T.check('the question names the working folder, says it is saved there; nothing pulled or pushed', asked.indexOf(path.resolve(working)) !== -1 && /and save it there\?/.test(asked) && /Nothing is pulled or pushed/.test(asked), asked);
+    T.check('applied AND saved in your workspace\'s working folder (buildrite-working), checked; on this PC only', /^✓ Applied and saved .* in your workspace's working folder \(buildrite-working\) — commit [0-9a-f]+ · /.test(await text(page, '#fxAppliedText'))
+      && /on this PC only: nothing pulled or pushed/.test(await text(page, '#fxApplied')) && /Nothing broke/.test(await text(page, '#fxTests')) && /^Saved$/.test(await text(page, '#fxStatus'))
+      && /Applied and saved in your working folder \(commit [0-9a-f]+, on this PC only\)/.test(await text(page, '#fxResult')), [await text(page, '#fxAppliedText'), await text(page, '#fxResult')].join(' | '));
+    T.check('…the commit is on buildrite-working; origin unchanged, no buildrite-working there', git(working, 'log', '-1', '--format=%s').indexOf('Code fix: My Billing') === 0
+      && pg.gitRemote('rev-parse', 'pages/test') === remoteHead && pg.gitRemote('branch', '--list', 'buildrite-working') === '');
     T.check('…the file changed in the working folder; the checkout (main) and its origin as they were', /Overdue invoices first \(workspace fix\)/.test(fs.readFileSync(path.join(working, BILL + '.html'), 'utf8'))
       && fs.readFileSync(path.join(pg.root, BILL + '.html'), 'utf8') === mainHtml && pg.gitRemote('rev-parse', 'pages/test') === remoteHead);
     const wrote = fs.readFileSync(path.join(working, BILL + '.html'), 'utf8');
@@ -98,18 +101,10 @@ const opened = [];
     await page.click('#fxTry');
     await page.waitForFunction(() => /Opened in a window/.test((document.getElementById('pgResult') || {}).textContent || ''), null, { timeout: 10000 }).catch(() => {});
     T.check('…clicked: that page opened from your working copy (the Run window)', opened.some((x) => x === 'run shop /vp/shell/customers/customer-billing') && /your workspace's working folder/.test(await text(page, '#pgResult')), opened.join(' | '));
-    T.check('…"Save in working" — no Commit & push', !!(await page.$('#fxSaveWork')) && !(await page.$('#fxPush')) && !(await page.$('#fxCommit')));
+    T.check('…What now? step 2 says how it reaches VB Studio (Apply to main, then Push) with its one button; no Save / Commit / Push here', /2\s*Send it on[\s\S]*Apply to main, then Push, in its project's tab/.test(await text(page, '#fxKeepRow'))
+      && /Open its project \(Apply to main → Push\)/.test(await text(page, '#fxOpenProject')) && !(await page.$('#fxSaveWork')) && !(await page.$('#fxPush')) && !(await page.$('#fxCommit')), await text(page, '#fxKeepRow'));
+    T.check('…Undo says it reverts the saved commit', /Undo reverts its commit/.test(await text(page, '#fxNext')) && !!(await page.$('#fxUndo')));
     await env.shot('codefix-workspace-applied.png');
-
-    T.section('Save in working: committed there, never pushed');
-    await page.click('#fxSaveWork');
-    await page.waitForSelector('#fxCommitted', { timeout: 20000 }).catch(() => {});
-    T.check('saved: a commit on buildrite-working, on this PC only; what is next said', /Saved in working: commit [0-9a-f]+ on buildrite-working \(on this PC\)/.test(await text(page, '#fxResult'))
-      && /Saved in working: commit [0-9a-f]+ on buildrite-working, on this PC only/.test(await text(page, '#fxCommitted')) && /To send it to VB Studio: Apply to main, then Push/.test(await text(page, '#fxCommitted')), await text(page, '#fxCommitted'));
-    T.check('…in the working folder\'s branch; origin unchanged, no buildrite-working there', git(working, 'log', '-1', '--format=%s').indexOf('Code fix: My Billing') === 0
-      && pg.gitRemote('rev-parse', 'pages/test') === remoteHead && pg.gitRemote('branch', '--list', 'buildrite-working') === '');
-    T.check('…a way to its project\'s tab (Apply to main → Push)', /Open its project \(Apply to main → Push\)/.test(await text(page, '#fxOpenProject')));
-    await env.shot('codefix-workspace-saved.png');
 
     T.section('Page code: what changed, marked (against VB Studio)');
     await page.click('#pgTabCode');

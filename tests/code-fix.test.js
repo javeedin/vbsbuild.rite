@@ -145,7 +145,33 @@ const copyDir = (from, to) => { fs.mkdirSync(to, { recursive: true }); fs.readdi
     const cm = await store.commit({ fix: c1.id, push: true });
     T.check('commit and push: only the fix\'s files, its request in the message, on origin', cm.ok && cm.fix.status === 'committed' && cm.fix.commit.pushed && /^Code fix: My Billing — The final note/.test(git(remote, 'log', '-1', '--format=%s', 'main'))
       && git(A, 'show', '--name-only', '--format=', 'HEAD') === PAGE + '.html' && git(A, 'status', '--porcelain') === '', JSON.stringify([cm.error, cm.fix && cm.fix.commit]));
-    T.check('a committed fix is not undone here (git revert says how)', !(await store.undo({ fix: c1.id })).ok);
+    const cu = await store.undo({ fix: c1.id });
+    T.check('a pushed fix is not undone here (git revert, there, says how)', !cu.ok && /pushed to origin\/main already/.test(cu.error), cu.error);
+
+    T.section('approving means applied and saved: committed at once when nothing broke; undo reverts it; push later');
+    const headBefore = git(remote, 'rev-parse', 'main');
+    replies.push(answer(anchor, anchor + '\n  Code fix: saved on approval.'));
+    const e1 = (await store.analyze({ id: ID, request: 'Saved on approval' })).fix;
+    const e2 = await store.apply({ fix: e1.id, by: 'Asha', skipPull: true, save: true });
+    T.check('approved with save: applied, tested and committed in one go (not pushed)', e2.ok && e2.fix.status === 'committed' && e2.fix.commit.auto && !e2.fix.commit.pushed
+      && /^Code fix: My Billing — Saved on approval/.test(git(A, 'log', '-1', '--format=%s')) && git(A, 'status', '--porcelain') === '' && git(remote, 'rev-parse', 'main') === headBefore, JSON.stringify([e2.error, e2.fix && e2.fix.status, e2.fix && e2.fix.commit]));
+    T.check('…its history says "saved on approval"', store.get(e1.id).fix.events.some((x) => x.what === 'saved on approval'), JSON.stringify(store.get(e1.id).fix.events.map((x) => x.what)));
+    const e3 = await store.undo({ fix: e1.id, by: 'Asha' });
+    const html3 = fs.readFileSync(path.join(A, PAGE + '.html'), 'utf8');
+    T.check('undo of a saved change: its commit reverted (a new commit), the line gone, "undone"', e3.ok && e3.fix.status === 'undone' && !!e3.fix.undone.revert && !/saved on approval/.test(html3)
+      && /^Revert "Code fix: My Billing — Saved on approval/.test(git(A, 'log', '-1', '--format=%s')) && git(A, 'status', '--porcelain') === '', JSON.stringify([e3.error, e3.fix && e3.fix.undone]));
+    replies.push(answer(anchor, anchor + '\n  Code fix: pushed later.'));
+    const g1 = (await store.analyze({ id: ID, request: 'Pushed later' })).fix;
+    await store.apply({ fix: g1.id, by: 'Asha', skipPull: true, save: true });
+    const g2 = await store.commit({ fix: g1.id, by: 'Asha', push: true });
+    T.check('Push on a saved change: that commit pushed, nothing committed twice', g2.ok && g2.fix.status === 'committed' && g2.fix.commit.pushed && /^Code fix: My Billing — Pushed later/.test(git(remote, 'log', '-1', '--format=%s', 'main'))
+      && git(A, 'log', '-2', '--format=%s').split('\n')[1].indexOf('Revert') === 0, JSON.stringify([g2.error, g2.fix && g2.fix.commit]));
+    replies.push(answer(anchor, anchor + '\n  BROKEN on purpose.'));
+    const k1 = (await store.analyze({ id: ID, request: "Break it, then save" })).fix;
+    const k2 = await store.apply({ fix: k1.id, skipPull: true, save: true });
+    T.check('approved with save but something broke: applied, NOT committed, held for a look', k2.ok && k2.fix.status === "applied" && !k2.fix.tests.ok && /not saved/.test(k2.fix.saveHeld || '')
+      && /customer-billing-page\.html/.test(git(A, 'status', '--porcelain')), JSON.stringify([k2.error, k2.fix && k2.fix.status, k2.fix && k2.fix.saveHeld]));
+    await store.undo({ fix: k1.id });
 
     T.section('the code moved on: out of date; branches that both moved');
     replies.push(answer('  Code fix: the final note.', '  Code fix: the final note, changed.'));

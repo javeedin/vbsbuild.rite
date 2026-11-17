@@ -1839,3 +1839,20 @@ html[data-nx-product="buildrite"] .nx-pagehead .nx-vbs-fsearch::placeholder, htm
 .nx-fu-sugsrc { align-self: flex-start; margin-top: 2px; font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: #eef4fc; color: #1d4f91; white-space: nowrap; }
 .nx-fu-signote { margin: 4px 0 0; font-size: 12px; line-height: 1.45; color: #8a5a00; }
 .nx-fu-signotebtn { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: #1d4f91; text-decoration: underline; cursor: pointer; }
+
+/* Code Fix, once approved (applied and saved): what now — numbered steps, each with its one button; the checks folded */
+.nx-fx-next { display: flex; flex-direction: column; gap: 0; border: 1px solid #dbe6ec; border-radius: 10px; background: #fff; overflow: hidden; }
+.nx-fx-nexthead { padding: 8px 12px; font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #4a5b69; background: #f4f8fa; border-bottom: 1px solid #e4ecf1; }
+.nx-fx-step { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid #eef2f5; min-width: 0; }
+.nx-fx-step:last-child { border-bottom: 0; }
+.nx-fx-step--alt { background: #fcfcfd; }
+.nx-fx-stepn { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #e3f0f6; color: #00688c; font-weight: 800; font-size: 12px; }
+.nx-fx-step--alt .nx-fx-stepn { background: #f1f2f4; color: #6b7785; font-size: 10.5px; }
+.nx-fx-stepbody { flex: 1 1 auto; min-width: 0; line-height: 1.45; }
+.nx-fx-step > button, .nx-fx-step > oj-bind-if { flex: none; }
+.nx-fx-step .nx-pg-coderun { margin-left: 0; }
+details.nx-fx-tests > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+details.nx-fx-tests > summary::-webkit-details-marker { display: none; }
+details.nx-fx-tests > summary::before { content: '▸'; color: #6b7785; font-size: 11px; }
+details.nx-fx-tests[open] > summary::before { content: '▾'; }
+@media (max-width: 720px) { .nx-fx-step { flex-wrap: wrap; } .nx-fx-stepbody { flex-basis: calc(100% - 40px); } }

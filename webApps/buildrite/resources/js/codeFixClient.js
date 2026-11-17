@@ -55,6 +55,13 @@ define([], function () {
 
   return {
     info: function () { return call('info'); },
+    // Change requests (desktop/lib/changeRequests.js): the list, one, saved, removed; a Code Fix attempt linked; an event
+    crList: function (q) { return call('cr-list?q=' + encodeURIComponent(q || '')); },
+    crGet: function (id) { return call('cr-get?id=' + encodeURIComponent(id || '')); },
+    crSave: function (request) { return post('cr-save', { request: request }); },
+    crRemove: function (id) { return post('cr-remove', { id: id }); },
+    crLink: function (id, fix, what) { return post('cr-link', { id: id, fix: fix, what: what || '' }); },
+    crEvent: function (id, what, note) { return post('cr-event', { id: id, what: what, note: note || '' }); },
     list: function (page) { return call('list?page=' + encodeURIComponent(page || '')); },
     history: function (q) { return call('history?q=' + encodeURIComponent(q || '')); },
     get: function (id) { return call('get?id=' + encodeURIComponent(id || '')); },
@@ -64,7 +71,8 @@ define([], function () {
     pick: function () { return post('pick'); },
     analyze: function (b) { return post('analyze', b); },
     preview: function (fix) { return post('preview', { fix: fix }); },
-    apply: function (fix, skipPull) { return post('apply', { fix: fix, skipPull: !!skipPull }); },
+    // save: approving means applied and saved — committed at once when nothing broke (never pushed)
+    apply: function (fix, skipPull, save) { return post('apply', { fix: fix, skipPull: !!skipPull, save: !!save }); },
     test: function (fix) { return post('test', { fix: fix }); },
     e2e: function (fix) { return post('e2e', { fix: fix }); },
     undo: function (fix, force) { return post('undo', { fix: fix, force: !!force }); },

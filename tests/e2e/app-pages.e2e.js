@@ -253,14 +253,20 @@ const ID = 'shop/orders/order-list';
     page.once('dialog', (d) => d.accept());
     await page.click('#fxApply');
     await page.waitForSelector('#fxApplied', { timeout: 30000 }).catch(() => {});
-    T.check('approved: pulled first, written, tested — nothing broke, not committed yet', /Applied — not committed yet/.test(await text(page, '#fxStatus')) && /Pulled origin\/pages\/test: already up to date/.test(await text(page, '#fxApplied'))
-      && /Nothing broke/.test(await text(page, '#fxTests')) && /Overdue invoices are shown first \(code fix\)/.test(fs.readFileSync(path.join(pg.root, BILL + '.html'), 'utf8')), await text(page, '#fxApplied'));
+    const remoteBefore = pg.gitRemote('rev-parse', 'pages/test');
+    T.check('approved = applied and saved: pulled first, written, tested — nothing broke, so committed at once (not pushed)', /^Saved$/.test(await text(page, '#fxStatus')) && /Pulled origin\/pages\/test: already up to date/.test(await text(page, '#fxApplied'))
+      && /^✓ Applied and saved .* on pages\/test — commit [0-9a-f]+ · /.test(await text(page, '#fxAppliedText')) && /Applied and committed \([0-9a-f]+, not pushed\)/.test(await text(page, '#fxResult'))
+      && /Nothing broke/.test(await text(page, '#fxTests')) && /Overdue invoices are shown first \(code fix\)/.test(fs.readFileSync(path.join(pg.root, BILL + '.html'), 'utf8'))
+      && pg.gitRemote('rev-parse', 'pages/test') === remoteBefore, [await text(page, '#fxStatus'), await text(page, '#fxAppliedText'), await text(page, '#fxResult')].join(' | '));
+    T.check('…What now?: 1 Try it, 2 Send it on (Push), or Undo — no Commit, no Test again, no Save buttons', /What now\?[\s\S]*1\s*Try it[\s\S]*2\s*Send it on[\s\S]*Push sends it to its remote[\s\S]*or\s*Take it out/.test(await text(page, '#fxNext'))
+      && !!(await page.$('#fxPush')) && !!(await page.$('#fxUndo')) && !(await page.$('#fxCommit')) && !(await page.$('#fxSaveWork')) && !(await page.isVisible('#fxTest')), await text(page, '#fxNext'));
+    T.check('…the checks folded under one line (closed when nothing broke)', /^✓ Nothing broke — tested .*\d+ of \d+ checks/.test(await text(page, '#fxTests summary')) && !(await page.$eval('#fxTests', (d) => d.open)), await text(page, '#fxTests summary'));
     await env.shot('app-pages-codefix-applied.png');
     await page.click('#fxPush');
     await page.waitForSelector('#fxCommitted', { timeout: 20000 }).catch(() => {});
-    T.check('Commit & push: committed with its request, pushed to the branch', /Committed [0-9a-f]+ on pages\/test, pushed to origin\/pages\/test/.test(await text(page, '#fxResult'))
-      && /^Code fix: My Billing — Show overdue invoices first/.test(pg.gitRemote('log', '-1', '--format=%s', 'pages/test')) && /Committed/.test(await text(page, '#fxStatus')));
-    T.check('the fixes asked for on the page are listed', /committed[\s\S]*Show overdue invoices first/.test(await text(page, '#fxList')) && /Code fix\s*1/.test(await text(page, '#pgTabFix')));
+    T.check('Push: that commit, with its request, pushed to the branch; What now? gone', /Pushed to origin\/pages\/test/.test(await text(page, '#fxResult')) && /Committed [0-9a-f]+ on pages\/test, pushed to origin\/pages\/test/.test(await text(page, '#fxCommitted'))
+      && /^Code fix: My Billing — Show overdue invoices first/.test(pg.gitRemote('log', '-1', '--format=%s', 'pages/test')) && /Saved/.test(await text(page, '#fxStatus')) && !(await page.$('#fxNext')), await text(page, '#fxResult'));
+    T.check('the fixes asked for on the page are listed', /saved[\s\S]*Show overdue invoices first/.test(await text(page, '#fxList')) && /Code fix\s*1/.test(await text(page, '#pgTabFix')));
     await page.click('#fxScopeAll');
     await page.waitForSelector('#fxHistRows .nx-fx-hrow', { timeout: 10000 }).catch(() => {});
     T.check('Change history (all pages): the change, its page, who asked and who approved, the tests, its commit', /committed[\s\S]*My Billing[\s\S]*Show overdue invoices first/.test(await text(page, '#fxHistRows'))
@@ -272,7 +278,7 @@ const ID = 'shop/orders/order-list';
     await page.click('#fxHistRows .nx-fx-hrow');
     await page.waitForSelector('#fxTimeline', { timeout: 10000 }).catch(() => {});
     T.check('a change opened: its page, and its history step by step (asked, proposed, approved and applied, tested, committed, pushed)', await page.isVisible('#fxRequest') && /History of this change · \d+ steps · approved by priya\.raman/.test(await text(page, '#fxTimeline summary'))
-      && /asked[\s\S]*proposed[\s\S]*approved and applied[\s\S]*tested[\s\S]*committed[\s\S]*pushed/.test(await page.$eval('#fxTimeline', (d) => d.textContent)), await text(page, '#fxTimeline summary'));
+      && /asked[\s\S]*proposed[\s\S]*approved and applied[\s\S]*tested[\s\S]*saved on approval[\s\S]*pushed/.test(await page.$eval('#fxTimeline', (d) => d.textContent)), await text(page, '#fxTimeline summary'));
     await env.shot('app-pages-history.png');
 
     T.section('Page code: the page\'s files, read only');

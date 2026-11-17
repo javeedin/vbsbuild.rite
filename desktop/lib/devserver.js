@@ -271,6 +271,7 @@ function time() {
  *                                        their sign-in kept on this PC: /__vbs/* to this PC only, behind the X-Build-Rite-Vbs header
  * @param {Function} [o.vbsFind]          (url) => opens VB Studio in a window of the desktop app, read as its pages load (Find in VB Studio)
  * @param {object}   [o.fixStore]         Code Fix (lib/codeFix.js): AI-proposed changes to a page, written to the code only when approved (/__fix/*)
+ * @param {object}   [o.crStore]          Change requests (lib/changeRequests.js): a change asked of a page, made with Code Fix (/__fix/cr-*)
  * @param {object}   [o.pagesStore]       The Application pages catalog (lib/pages.js): every VB page's technical sheet and the Jira stories
  *                                        mapped to it, saved into the project (git): /__pages/* to this PC only, behind X-Build-Rite-Pages
  * @param {object}   [o.fddStore]         The FDD library (lib/fdd.js): FDDs saved into the project (git) for Build.Rite's FDD library
@@ -912,6 +913,20 @@ function createDevServer(o) {
         (async () => {
           const b = post ? JSON.parse((await bodyOf()) || '{}') : {};
           const q = (k) => u.searchParams.get(k) || '';
+          // Change requests (lib/changeRequests.js, Application → Change requests): a change asked of a page, with who
+          // asked, the customer, the Jira story and the issue; made with Code Fix, its status following its fix
+          if (pathname.startsWith('/__fix/cr-')) {
+            const cr = o.crStore;
+            if (!cr) return jsonF(200, { ok: false, error: 'Change requests need the desktop app.' });
+            const fixOf = (id) => { try { const g = fx.get(id); return g && g.ok ? g.fix : null; } catch (e) { return null; } };
+            if (pathname === '/__fix/cr-list' && !post) return jsonF(200, cr.list(q('q'), fixOf));
+            if (pathname === '/__fix/cr-get' && !post) return jsonF(200, cr.get(q('id'), fixOf));
+            if (pathname === '/__fix/cr-save' && post) { const r = cr.save(b.request, who(), fixOf); if (r.ok) log(`Change request ${r.request.code} saved`); return jsonF(200, r); }
+            if (pathname === '/__fix/cr-remove' && post) return jsonF(200, cr.remove(b.id));
+            if (pathname === '/__fix/cr-link' && post) return jsonF(200, cr.link(b.id, b.fix, who(), b.what, fixOf));
+            if (pathname === '/__fix/cr-event' && post) return jsonF(200, cr.event(b.id, b.what, who(), b.note, fixOf));
+            return jsonF(404, { ok: false, error: 'Not found' });
+          }
           if (pathname === '/__fix/img' && !post) {
             const s = fx.img(q('id'), q('n'));
             if (!s.ok) return send(res, 404, 'text/plain; charset=utf-8', 'Not found');
