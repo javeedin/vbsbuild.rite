@@ -863,7 +863,18 @@
   "unresolvedLinks": []
  },
  "ai": null,
- "screenshots": [],
+ "screenshots": [
+  {
+   "id": "s1",
+   "file": "projects/p-1e51dc28f706/screens/vbredwoodapp.customer-portal.request-cart.1.jpg",
+   "at": "2026-11-17T10:52:19.766Z",
+   "by": "rite.user",
+   "source": "capture",
+   "caption": "",
+   "bytes": 43307,
+   "from": "workspace"
+  }
+ ],
  "stories": [],
  "at": "2026-11-17T10:51:11.261Z",
  "by": "rite.user",
