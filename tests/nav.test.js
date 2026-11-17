@@ -22,7 +22,7 @@ T.section('the groups and their screens');
 T.eq('four groups, in order', N.GROUPS.map((g) => g.label).join(' | '), 'Workspace | Work | Application | Tools');
 T.eq('Workspace', N.GROUPS[0].items.map((i) => i.label).join(', '), 'Organizations & projects, Run console');
 T.eq('Work', N.GROUPS[1].items.map((i) => i.label).join(', '), 'Issues, Jira stories, Standup minutes, Follow-ups');
-T.eq('Application', N.GROUPS[2].items.map((i) => i.label).join(', '), 'Application pages, API Scenarios, FDD library, Flows explained');
+T.eq('Application', N.GROUPS[2].items.map((i) => i.label).join(', '), 'Application pages, API Scenarios, Change requests, FDD library, Flows explained');
 T.eq('Tools', N.GROUPS[3].items.map((i) => i.label).join(', '), 'SQL, Fusion SQL, AI settings');
 const items = N.GROUPS.reduce((a, g) => a.concat(g.items), []);
 T.check('every item: an id, an icon, keywords, and a page that exists in its flow', items.every((i) => i.id && /^oj-ux-ico-/.test(i.icon) && i.keywords && exists(i.route)),
@@ -36,13 +36,14 @@ T.check('a screen\'s tab opens its page (routeOf); no other app to link to', JSO
 T.section('records: screens opened from another, in a tab of their own');
 const R = N.RECORDS;
 T.check('each record opens a page that exists, under a menu item', Object.keys(R).every((k) => exists(R[k]) && !!N.item(R[k].navId)), Object.keys(R).filter((k) => !exists(R[k])).join());
-T.eq('the records', Object.keys(R).sort().join(), 'api-scenario,api-scenarios-page,jira-analysis,jira-analysis-set,jira-progress,jira-sprint,vbs-project,vbs-setup');
+T.eq('the records', Object.keys(R).sort().join(), 'api-scenario,api-scenarios-page,change-request,jira-analysis,jira-analysis-set,jira-progress,jira-sprint,vbs-project,vbs-setup');
 T.eq('a sprint: keyed by its id, titled by its name', R['jira-sprint'].key({ id: 6, name: '2026-07' }) + ' / ' + R['jira-sprint'].title({ id: 6, name: '2026-07' }), '6 / Sprint 2026-07');
 T.eq('a set of stories: the same set (any order, any case) is the same tab', R['jira-analysis-set'].key({ keys: 'abc-36, ABC-23' }), 'ABC-23,ABC-36');
 T.eq('…titled by its keys, or how many', [R['jira-analysis-set'].title({ keys: 'ABC-1,ABC-2' }), R['jira-analysis-set'].title({ keys: 'ABC-1,ABC-2,ABC-3' })].join(' / '), 'AI · ABC-1, ABC-2 / AI · 3 stories');
 T.check('one set-up wizard tab, one daily progress tab', R['vbs-setup'].key({}) === 'setup' && R['jira-progress'].key({}) === 'daily');
 T.eq('a VB Studio project: keyed by host/org/project, titled by its name', R['vbs-project'].key({ key: 'h/o/p' }) + ' / ' + R['vbs-project'].title({ key: 'h/o/shop-app' }), 'h/o/p / shop-app');
 T.eq('one API scenario: keyed by its id, titled as given (else Scenario)', R['api-scenario'].key({ scId: 'sc123' }) + ' / ' + R['api-scenario'].title({ scId: 'sc123', title: 'SC-0003 · Closed orders' }) + ' / ' + R['api-scenario'].title({ scId: 'new-1' }), 'sc123 / SC-0003 · Closed orders / Scenario');
+T.eq('one change request: keyed by its id, titled as given (else Change request), under Change requests', R['change-request'].key({ crId: 'cr1' }) + ' / ' + R['change-request'].title({ crId: 'cr1', title: 'CR-0002 · Home button' }) + ' / ' + R['change-request'].title({}) + ' / ' + R['change-request'].navId, 'cr1 / CR-0002 · Home button / Change request / change-requests');
 T.eq('a journey\'s page in API Scenarios: keyed by the page, titled API · its label (or its last part)', R['api-scenarios-page'].key({ page: 'shop/orders/order-detail' }) + ' / ' + R['api-scenarios-page'].title({ page: 'shop/orders/order-detail', label: 'Order' }) + ' / ' + R['api-scenarios-page'].title({ page: 'shop/orders/order-detail' }) + ' / ' + R['api-scenarios-page'].navId, 'shop/orders/order-detail / API · Order / API · order-detail / api-scenarios');
 
 T.section('the search box');
@@ -50,5 +51,5 @@ const s1 = N.search('jira');
 T.check('a word: the screens it names first, then those whose keywords hold it', s1[0].id === 'jira' && s1.some((x) => x.id === 'issues') && s1[0].group === 'Work', JSON.stringify(s1.map((x) => x.id)));
 T.check('…by its group too (SQL is in Tools), and case does not matter', N.search('TOOLS').map((x) => x.id).indexOf('sql') !== -1 && N.search('Standup')[0].id === 'minutes');
 T.check('a word in no screen: none; nothing typed: none', N.search('zzzz').length === 0 && N.search('  ').length === 0);
-T.check('only Build.Rite\'s own screens: nothing of a business app', ['requests', 'fleet', 'yard', 'equipment', 'billing'].every((w) => N.search(w).length === 0));
+T.check('only Build.Rite\'s own screens: nothing of a business app', ['rental', 'fleet', 'yard', 'equipment', 'billing'].every((w) => N.search(w).length === 0));
 T.report();

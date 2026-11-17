@@ -125,7 +125,7 @@ define(['vb/action/actionChain', 'vb/action/actions', 'resources/js/codeFixClien
         if (act === 'apply' || act === 'applyNoPull') {
           const pull = act === 'apply';
           if (!ask('Apply this change to ' + v.fix.files.length + ' file(s) in ' + ((v.fixInfo && v.fixInfo.folder) || 'the code folder') + ' (branch ' + branch + ')?\n\n'
-            + (pull ? 'It pulls ' + branch + ' first. ' : 'It does NOT pull first. ') + 'Then it runs the related tests, writes the files and tests again. Nothing is committed until you click Commit.')) return;
+            + (pull ? 'It pulls ' + branch + ' first. ' : 'It does NOT pull first. ') + 'Then it runs the related tests, writes the files, tests again and commits them when nothing broke (not pushed: Push sends it). Undo takes it out again.')) return;
           v.fixProgress = (pull ? 'Pulling ' + branch + ', running' : 'Running') + ' the related tests on the code as it is, writing the files, testing again, committing…';
           const r = await FX.apply(fid, !pull, true);
           const sv = r.ok && r.body.fix.status === 'committed';

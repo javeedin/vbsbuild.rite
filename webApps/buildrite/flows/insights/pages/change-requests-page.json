@@ -1,0 +1,125 @@
+{
+  "description": "Change requests: a change asked of one page of your workspace's app — what, who asked, the customer, the Jira story and the issue, the priority, when it is due — made with Code Fix (the AI's proposal, approved = applied and saved in the working folder, tried, sent on) and followed until it is fixed (desktop/lib/changeRequests.js, /__fix/cr-*).",
+  "navigation": {
+    "embeddable": "enabled"
+  },
+  "variables": {
+    "pages": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "The workspace app's pages (the Application pages catalog)."
+    },
+    "crId": {
+      "type": "string",
+      "defaultValue": "",
+      "input": "fromCaller",
+      "description": "The change request open in this tab (its id; 'new-…' for a new one). Empty: the list."
+    },
+    "page": {
+      "type": "string",
+      "defaultValue": "",
+      "input": "fromCaller",
+      "description": "A new change request's page (app/flow/page), when opened from a page."
+    },
+    "all": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "Every change request (the list)."
+    },
+    "listQ": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "listStatus": {
+      "type": "string",
+      "defaultValue": "all",
+      "description": "The list's filter chip: all | open | progress | fixed | hold | closed."
+    },
+    "cr": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The change request open (a copy being edited)."
+    },
+    "crTab": {
+      "type": "string",
+      "defaultValue": "request",
+      "description": "request | fix | history"
+    },
+    "fix": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "Its Code Fix shown (the latest attempt, or one picked)."
+    },
+    "fixInfo": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "Where Code Fix writes (the workspace's working folder) and the AI it uses (/__fix/info)."
+    },
+    "attempts": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "Its Code Fix attempts, newest first: [{ id, status, at, by }]."
+    },
+    "refine": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "What to change in the proposal (Ask again)."
+    },
+    "busy": {
+      "type": "boolean",
+      "defaultValue": false
+    },
+    "fixBusy": {
+      "type": "boolean",
+      "defaultValue": false
+    },
+    "fixProgress": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "result": {
+      "type": "any",
+      "defaultValue": null
+    },
+    "fixResult": {
+      "type": "any",
+      "defaultValue": null
+    }
+  },
+  "events": {
+    "crChanged": {
+      "description": "A change request was saved or removed in another tab: the list reads them again (shellBus topic change-requests-changed).",
+      "payloadType": "object"
+    }
+  },
+  "eventListeners": {
+    "vbEnter": {
+      "chains": [{ "chain": "crChain", "parameters": { "act": "load", "key": "", "value": "" } }]
+    },
+    "crChanged": {
+      "chains": [{ "chain": "crChain", "parameters": { "act": "list", "key": "", "value": "" } }]
+    },
+    "onAct": {
+      "chains": [{ "chain": "crChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "key": "{{ $event.currentTarget.dataset.key || '' }}", "value": "" } }]
+    },
+    "onField": {
+      "chains": [{ "chain": "crChain", "parameters": { "act": "field", "key": "{{ $event.currentTarget.dataset.field }}", "value": "{{ $event.currentTarget.value }}" } }]
+    },
+    "onListField": {
+      "chains": [{ "chain": "crChain", "parameters": { "act": "listField", "key": "{{ $event.currentTarget.dataset.field }}", "value": "{{ $event.currentTarget.value }}" } }]
+    }
+  },
+  "imports": {
+    "components": {
+      "oj-bind-for-each": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-bind-if": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-bind-text": {
+        "path": "ojs/ojknockout"
+      }
+    }
+  }
+}

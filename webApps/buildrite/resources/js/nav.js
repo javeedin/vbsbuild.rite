@@ -50,6 +50,10 @@ define([], function () {
       // next, each answer checked, every run kept on this PC (flows/insights api-scenarios; desktop/lib/apiScenarios.js)
       { id: 'api-scenarios', label: 'API Scenarios', icon: 'oj-ux-ico-check-circle', route: { flow: 'insights', page: 'api-scenarios' },
         keywords: 'api scenarios test tests rest calls web services sequence order run record results regression bip report check' },
+      // Change requests: a change asked of a page — who asked, the customer, the Jira story, the issue — made with Code
+      // Fix and followed until it is fixed (flows/insights change-requests; desktop/lib/changeRequests.js)
+      { id: 'change-requests', label: 'Change requests', icon: 'oj-ux-ico-edit', route: { flow: 'insights', page: 'change-requests' },
+        keywords: 'change requests cr enhancement fix bug request customer jira issue code fix page approve applied saved fixed due priority' },
       // The FDD documents "Analyze with AI" reads (flows/fdd library): uploaded into the project's data and pushed to
       // git, so every user has them; one is the latest.
       { id: 'fdd-library', label: 'FDD library', icon: 'oj-ux-ico-upload', route: { flow: 'fdd', page: 'library' },
@@ -86,6 +90,11 @@ define([], function () {
     'api-scenario': { flow: 'insights', page: 'api-scenarios', icon: 'oj-ux-ico-check-circle', navId: 'api-scenarios',
       key: function (p) { return p ? String(p.scId || '') : ''; },
       title: function (p) { return (p && p.title) || 'Scenario'; } },
+    // One change request ({ crId, page, title }) — a row of the list, or + New change request ('new-…'): its header and its
+    // Request / Code fix / History, in a tab of its own (flows/insights change-requests).
+    'change-request': { flow: 'insights', page: 'change-requests', icon: 'oj-ux-ico-edit', navId: 'change-requests',
+      key: function (p) { return p ? String(p.crId || '') : ''; },
+      title: function (p) { return (p && p.title) || 'Change request'; } },
     'api-scenarios-page': { flow: 'insights', page: 'api-scenarios', icon: 'oj-ux-ico-check-circle', navId: 'api-scenarios',
       key: function (p) { return p ? String(p.page || '') : ''; },
       title: function (p) { return 'API · ' + ((p && p.label) || String((p && p.page) || '').split('/').pop() || 'page'); } },

@@ -75,6 +75,8 @@ function clean(c, by, old, now) {
     dueOn: has('dueOn') ? day(c.dueOn) : str(o.dueOn),
     fixedOn: has('fixedOn') ? day(c.fixedOn) : str(o.fixedOn),
     fixedBy: pick('fixedBy', 120),
+    // fixed on / by set by its change being saved (not typed): cleared again if that change is undone
+    fixedAuto: !!o.fixedAuto && (!has('fixedOn') || day(c.fixedOn) === str(o.fixedOn)) && (!has('fixedBy') || cut(c.fixedBy, 120) === str(o.fixedBy)),
     state: STATES[has('state') ? str(c.state) : str(o.state)] ? (has('state') ? str(c.state) : str(o.state)) : 'open',
     notes: has('notes') ? str(c.notes).trim().slice(0, 8000) : str(o.notes),
     fixes: Array.isArray(o.fixes) ? o.fixes.slice() : [],
@@ -188,10 +190,12 @@ function open(opts) {
       if (!str(what).trim()) return no('What happened?');
       ev(cr, cut(what, 60), by, note);
       // its change saved: when, by whom (unless set by hand)
-      if (/^(saved in working|committed|pushed)$/.test(str(what))) {
-        if (!cr.fixedOn) cr.fixedOn = now().toISOString().slice(0, 10);
-        if (!cr.fixedBy) cr.fixedBy = str(by);
+      if (/^(saved in working|saved on approval|committed|pushed)$/.test(str(what))) {
+        if (!cr.fixedOn) { cr.fixedOn = now().toISOString().slice(0, 10); cr.fixedAuto = true; }
+        if (!cr.fixedBy) { cr.fixedBy = str(by); cr.fixedAuto = cr.fixedAuto !== false; }
       }
+      // its change taken out again: the fixed date it set goes too (one typed by hand stays)
+      if (str(what) === 'undone' && cr.fixedAuto) { cr.fixedOn = ''; cr.fixedBy = ''; cr.fixedAuto = false; }
       cr.updatedAt = now().toISOString(); cr.updatedBy = str(by);
       write(cr);
       return { ok: true, request: view(cr, fixOf) };

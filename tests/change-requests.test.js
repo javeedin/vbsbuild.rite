@@ -50,7 +50,14 @@ try {
   T.check('its change saved: Fixed, fixed on the commit\'s day, by who applied it', r.request.status === 'fixed' && r.request.fixedOnShown === '2026-11-18' && r.request.fixedByShown === 'dana', JSON.stringify([r.request.fixedOnShown, r.request.fixedByShown]));
   r = store.event(a.request.id, 'saved in working', 'dana', 'commit abc1234', fixOf);
   T.check('…"saved in working" in its history fixes the date and who (kept)', r.request.fixedOn === '2026-11-17' && r.request.fixedBy === 'dana' && r.request.events.slice(-1)[0].note === 'commit abc1234', JSON.stringify([r.request.fixedOn, r.request.fixedBy]));
+  T.check('…kept when the page saves the request again unchanged', store.save(Object.assign({}, r.request, { notes: 'n' }), 'dana', fixOf).request.fixedAuto === true);
   fixes.fx2.status = 'undone';
+  r = store.event(a.request.id, 'undone', 'dana', 'reverted', fixOf);
+  T.check('its change undone: the fixed date and who it set are cleared', r.request.fixedOn === '' && r.request.fixedBy === '' && r.request.fixedOnShown === '', JSON.stringify([r.request.fixedOn, r.request.fixedBy]));
+  store.save({ id: a.request.id, fixedOn: '2026-11-20', fixedBy: 'sam' }, 'sam', fixOf);
+  r = store.event(a.request.id, 'undone', 'dana', '', fixOf);
+  T.check('…a fixed date typed by hand stays', r.request.fixedOn === '2026-11-20' && r.request.fixedBy === 'sam');
+  store.save({ id: a.request.id, fixedOn: '', fixedBy: '' }, 'sam', fixOf);
   T.check('undone: Undone (the state set by hand still wins: rejected)', store.get(a.request.id, fixOf).request.statusText === 'Undone'
     && store.save({ id: a.request.id, state: 'rejected' }, 'dana', fixOf).request.statusText === 'Rejected');
   store.save({ id: a.request.id, state: 'open' }, 'dana', fixOf);

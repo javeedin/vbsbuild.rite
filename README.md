@@ -14,7 +14,7 @@ It is an independent app: it works with any VB Studio project and keeps its own 
 |---|---|
 | **Workspace** | **Organizations & projects**: your VB Studio organizations (the sign-in is kept encrypted on this PC) and their projects and workspaces. **Set up your workspace**: a wizard that clones a workspace into `main` and `working` (a worktree on its own branch). **▶ Run** and the **Run console**: your workspace's app built from its working folder and run in a window of its own, with the build, its requests and its console shown live, and commands typed as in an editor's terminal. **Run as**: the user and roles the app runs as; the roles offered are the ones found in the app's own code. |
 | **Work** | **Issues**: an issue is logged against a page, then written up and analysed by the AI against the page's code and the FDD. Once approved, the agent applies it on a branch with a pull request, and Jira is kept up to date. **Jira stories**, sprints, daily progress and AI analyses of one story or several; under a story's analysis, **Create the functional design** writes its design document as a PDF (see below). **Standup minutes** and **Follow-ups**, with the messages you keep for them (see below). |
-| **Application** | **Application pages**: every VB page of your workspace's app, with its technical sheet, screenshots, navigation maps, page code (lines changed since VB Studio are highlighted) and **Code fix**. Code fix writes a change into your working folder only after you approve it, and marks each change in the code with who asked for it, when, and its issue or Jira story. **API Scenarios**: a page's web services put in order and tested through the APIs alone, with no need to open the page (see below). **FDD library**: the FDDs that Analyze with AI reads. **Flows explained**: how Build.Rite's own flows work. |
+| **Application** | **Application pages**: every VB page of your workspace's app, with its technical sheet, screenshots, navigation maps, page code (lines changed since VB Studio are highlighted) and **Code fix**. Code fix writes a change into your working folder only after you approve it — approving applies it, checks it and saves it there (a commit on this PC, never pushed) — and marks each change in the code with who asked for it, when, and its issue or Jira story. **Change requests**: a change asked of a page, with who asked, the customer, the Jira story and the issue, made with Code fix and followed until it is fixed (see below). **API Scenarios**: a page's web services put in order and tested through the APIs alone, with no need to open the page (see below). **FDD library**: the FDDs that Analyze with AI reads. **Flows explained**: how Build.Rite's own flows work. |
 | **Tools** | **SQL**: a worksheet against an Oracle database, with Ask AI. **Fusion SQL**: read-only SQL on your Oracle Fusion Cloud pod through one BI Publisher report, with a schema browser, saved queries and Ask AI (see below). **AI settings**: which AI Build.Rite asks, either **Claude Code** on your Claude subscription (no API key, no per-call cost) or an **API key** paid per use (Anthropic, OpenAI, Gemini, OCI Generative AI, or any OpenAI-compatible service). You pick one default for everything, and can give a feature its own: Code fix, Issues, Analyze with AI, Application pages, Standup minutes or SQL. **Try it** checks each one; Code fix also has a quick switch on its own tab. |
 
 ## Start
@@ -191,6 +191,30 @@ shows them all again). When you come back from your app's window, the list says 
 
 Calls go out the same way as from the API tester: through the app's own backends, with the app's login.
 
+## Change requests: a change asked of a page, made with Code fix
+
+**Application → Change requests** lists every change asked of a page of your app: its number (CR-0001…), title, kind
+and priority, the page, the customer, who asked and when, its Jira story and issue, its status and when it was fixed
+or is due. The chips filter it (New, In progress, Fixed, On hold, Closed) and Find searches every field.
+
+**+ New change request** (or a row) opens one in a tab of its own:
+
+- **The header**: the page it is for (and a button to its sheet in Application pages), kind (fix a bug, enhance,
+  change), priority, customer, requested by and on, Jira story, issue, due on, fixed on and by, and its state (open, on
+  hold, closed, rejected). Save gives it its number.
+- **Request**: what should change, said as you would to a developer, and notes. **Save & ask the AI to make it** opens
+  Code fix with the AI's proposal for that page.
+- **Code fix**: the same as Application pages → Code fix. The AI's analysis, the exact change and the checks on it;
+  ask again with what to change; **Approve and apply** writes it into your workspace's working folder, checks it and
+  saves it there. Then **What now?**: 1 **Try it** opens the page from your working copy, 2 **Send it on** (Apply to
+  main, then Push, in its project's tab), or **Undo**, which reverts the saved commit. If a check fails, the change is
+  written but not saved, so you can look first (**Save anyway** or **Undo**). Every attempt is kept with the request.
+- **History**: every step (created, asked the AI, saved in working, undone, state changed), when and by whom.
+
+Its status follows its Code fix — New, Proposed, Applied, **Fixed** once its change is saved (fixed on and by fill in
+by themselves), Undone — unless you set it On hold, Closed or Rejected. A request kept past its due date and not fixed
+says *overdue*. Change requests are kept on this PC per VB Studio project.
+
 ## Follow-ups: chase stories by email, with your own messages
 
 On **Jira stories** or a sprint, tick some stories and choose **Copy to follow-up**. The dialog drafts the email: a
@@ -326,7 +350,7 @@ Options:
 | Path | What |
 |---|---|
 | `webApps/buildrite/` | Build.Rite's screens: a Visual Builder app (`app-flow.*`, `pages/shell-page*`, `flows/insights`, `flows/fdd`, `resources/js`, `resources/css`) |
-| `desktop/` | the Electron desktop app: `main.js` (the window, the stores, ▶ Run, the Run console), `lib/` (the engines: `vbs.js` VB Studio and your workspace, `workPreview.js` building it, `codeFix.js` and `changeNote.js`, `issues.js`, `pages.js`, `pageScan.js`, `devserver.js` the local server, `appRoles.js` the roles in your app's code, …) |
+| `desktop/` | the Electron desktop app: `main.js` (the window, the stores, ▶ Run, the Run console), `lib/` (the engines: `vbs.js` VB Studio and your workspace, `workPreview.js` building it, `codeFix.js` and `changeNote.js`, `changeRequests.js`, `issues.js`, `pages.js`, `pageScan.js`, `devserver.js` the local server, `appRoles.js` the roles in your app's code, …) |
 | `services/jira/` | the Jira service connection the Jira screens read through (read only) |
 | `tools/` | `run-vb-app.js` (run a VB app from its folder), `check-tools.js` (build preflight), `get-electron.js`, `fdd.js` (the FDD library from a terminal) |
 | `tests/` | dependency-free `node` test suites (`npm test`), and browser tests in `tests/e2e` (Playwright) |
