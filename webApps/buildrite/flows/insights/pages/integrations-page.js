@@ -1,4 +1,4 @@
-define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D, R) => {
+define(['resources/js/integrationDiagram', 'resources/js/integrationReport', 'resources/js/flowModel', 'resources/js/shellBus'], (D, R, FM, bus) => {
   'use strict';
 
   // Integrations: binding helpers (intChain does the work through resources/js/pagesClient.js). No function uses `this`.
@@ -13,7 +13,7 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
     if (!m || !m.ok) return null;
     if (kind === 'systems') return D.systemFlow(m);
     if (kind === 'pages') return D.pages(m);
-    if (kind === 'pageflow') return D.pageFlow(m, page || ((m.pageFlows || [])[0] || {}).page);
+    if (kind === 'pageflow' || kind === 'pageflow-plain') return D.pageFlow(m, page || ((m.pageFlows || [])[0] || {}).page, { plain: kind === 'pageflow-plain' });
     if (kind === 'journeys') return D.journeys(m);
     if (kind === 'system') return D.system(m, sys || (m.systems[0] && m.systems[0].id));
     if (kind === 'page') return D.page(m, page || ((m.pages.filter((p) => p.calls)[0] || {}).id));
@@ -21,6 +21,13 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
   }
 
   class PageModule {
+    constructor(context) {
+      // every tab of this screen hears a saved flow saved or removed elsewhere (Saved flows reads them again)
+      const helper = context && typeof context.getEventHelper === 'function' ? context.getEventHelper() : null;
+      const me = 'integrations-' + (++PageModule.seq);
+      try { bus.on('saved-flows-changed', me, () => { if (helper) helper.fireCustomEvent('flowsChanged', {}); }); } catch (e) { /* no shell */ }
+    }
+
     // ── the scan in figures ──
     when(m) { return m && m.at ? R.when(m.at) + (m.by ? ' by ' + m.by : '') : ''; }
     kpis(m) {
@@ -134,8 +141,9 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
     }
     pageViewChips(cur) { return PageModule.prototype.viewChips(cur || 'flow', [['flow', 'One page — flow'], ['one', 'One page — details'], ['all', 'All pages → the systems']]); }
     /** The diagram of the page view: its flow (swimlanes) or its details. */
-    pageDiaKind(view) { return view === 'one' ? 'page' : 'pageflow'; }
-    pageDiaNote(view) {
+    pageDiaKind(view, plain) { return view === 'one' ? 'page' : plain ? 'pageflow-plain' : 'pageflow'; }
+    pageDiaNote(view, plain) {
+      if (view !== 'one' && plain) return 'In plain English: each step says what happens and where, and each action when it happens — the way a business user would put it. Switch Plain English off for the technical view.';
       return view === 'one' ? 'Details: the page → what sets each call off → its calls, numbered in the order its code makes them → the systems.'
         : 'Flow: a lane for the page and one per system. Each action starts at what sets it off and goes down call by call, each call in the lane of the system it calls; a dark arrow is where it moves on to another system.';
     }
@@ -159,6 +167,45 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
       return out;
     }
 
+    /** Its calls in order, in plain English: [{ key, act, when (on the first call of an action), n, says, system, kind, first }]. */
+    plainCalls(m, sel) {
+      const p = ((m && m.pageFlows) || []).filter((x) => x.page === PageModule.prototype.pageCur(m, sel))[0];
+      if (!p) return [];
+      const out = [];
+      p.steps.forEach((st, si) => st.calls.forEach((c, ci) => out.push({ key: si + '.' + ci, act: ci === 0 ? String(si + 1) : '', when: ci === 0 ? D.plainTrigger(st.trigger) : '', first: ci === 0, n: String(ci + 1),
+        says: D.plainStep(c).sentence, system: c.systemName, kind: c.kind })));
+      return out;
+    }
+
+    // ── saved flows ──
+    savedAll(flows, q, status) {
+      const w = words(q);
+      return (flows || []).filter((f) => (!status || status === 'all' || f.status === status) && (!w.length || hit(q, [f.id, f.name, f.purpose, f.area, f.owner, f.story, (f.tags || []).join(' '),
+        f.source && f.source.pageLabel, (f.lanes || []).map((l) => l.name).join(' '), f.statusText])));
+    }
+    savedRows(flows, q, status, checks) {
+      return PageModule.prototype.savedAll(flows, q, status).map((f) => {
+        const ck = checks && checks[f.id];
+        return { id: f.id, name: f.name, purpose: f.purpose ? String(f.purpose).split('\n')[0].slice(0, 120) : '', from: f.source && f.source.pageLabel ? f.source.pageLabel : 'Drawn by hand',
+          systems: (f.lanes || []).map((l) => ({ name: l.name, color: kindColor(D.KINDS[l.kind] ? l.kind : 'rest') })), steps: n(f.steps || 0, 'step') + ' · ' + n(f.actionCount || 0, 'action'),
+          statusText: f.statusText || FM.statusText(f.status), statusCls: 'nx-int-fst nx-int-fst--' + (f.status || 'draft'), owner: f.owner || '—', version: 'v' + (f.version || 1),
+          updated: (R.when(f.updated) || '') + (f.updatedBy ? ' · ' + f.updatedBy : ''), comments: f.openComments ? n(f.openComments, 'open comment') : '',
+          check: ck ? { text: ck.skipped ? 'drawn by hand' : ck.ok ? '✓ matches the app' : ck.pageGone ? 'the page makes no call now' : ck.text, cls: 'nx-int-ck ' + (ck.ok ? 'nx-int-ck--ok' : 'nx-int-ck--bad') } : { text: '', cls: 'nx-int-ck' } };
+      });
+    }
+    savedChips(flows, cur) {
+      const list = flows || [];
+      return [['all', 'All']].concat(FM.STATUSES).map((c) => ({ key: c[0], text: c[1] + ' ' + (c[0] === 'all' ? list.length : list.filter((f) => f.status === c[0]).length), cls: 'nx-sc-chip' + ((cur || 'all') === c[0] ? ' nx-sc-chip--on' : '') }));
+    }
+    statusOptions(cur) { return FM.STATUSES.map((s) => ({ id: s[0], text: s[1], on: (cur || 'draft') === s[0] })); }
+    saveTitle(form) { return form && form.mode === 'blank' ? 'New flow — drawn by hand' : 'Save this page\'s flow'; }
+    saveFrom(form, m) {
+      if (!form) return '';
+      if (form.mode === 'blank') return 'An empty flow: you add its systems and steps on the next page.';
+      const p = ((m && m.pageFlows) || []).filter((x) => x.page === form.page)[0];
+      return p ? 'From the page ' + p.pageLabel + ' (' + p.page + ') — ' + n(p.calls, 'call') + ', ' + n(p.steps.length, 'action') + ', ' + n(p.systems.length, 'system') + '. You can reword every step, add steps and notes on the next page.' : '';
+    }
+
     // ── diagrams ──
     diaChips(cur) { return [['landscape', 'Landscape'], ['systems', 'Between systems'], ['journeys', 'Cross-system flows'], ['pages', 'All pages'], ['system', 'A system'], ['pageflow', 'A page — flow'], ['page', 'A page — details']].map((c) => ({ key: c[0], text: c[1], cls: 'nx-sc-chip' + (cur === c[0] ? ' nx-sc-chip--on' : '') })); }
     pageOptions(m, sel) {
@@ -179,5 +226,6 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
           : kind === 'journeys' ? 'Cross-system flows: each action that calls two or more systems, in the order its code calls them' : 'The app\'s flows (the source) and the systems they call (the target)';
     }
   }
+  PageModule.seq = 0;
   return PageModule;
 });

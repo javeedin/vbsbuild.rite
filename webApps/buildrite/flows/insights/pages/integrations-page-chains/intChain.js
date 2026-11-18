@@ -1,5 +1,5 @@
-define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shellBus', 'resources/js/integrationDiagram', 'resources/js/integrationReport', 'resources/js/exportKit'],
-  (ActionChain, PC, bus, D, R, exportKit) => {
+define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shellBus', 'resources/js/integrationDiagram', 'resources/js/integrationReport', 'resources/js/exportKit', 'resources/js/flowModel'],
+  (ActionChain, PC, bus, D, R, exportKit, FM) => {
     'use strict';
 
     // Integrations: scan the app (load | rescan | app (key)), the tabs (tab), the data sheet's filters (field q / fSystem /
@@ -20,12 +20,25 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
             return r.ok && b.ok;
           } finally { v.busy = false; }
         };
-        if (act === 'load') { await scan(''); return; }
+        // saved flows: the list (Saved flows), read again when one is saved or removed in any tab
+        const loadFlows = async () => {
+          const r = await PC.flowsList('');
+          const b = r.body || {};
+          v.flows = r.ok && b.ok ? b.flows || [] : [];
+          v.flowsErr = r.ok && b.ok ? '' : (b.error || 'The saved flows could not be read.');
+        };
+        const flowsChanged = () => { try { bus.emit('saved-flows-changed', { at: Date.now() }); } catch (e) { /* no listeners */ } };
+        const openFlow = (f) => bus.open({ record: 'saved-flow', params: { flowId: f.id, title: f.id + ' · ' + f.name } });
+        if (act === 'flowsLoad') { await loadFlows(); return; }
+        if (act === 'load') { await scan(''); await loadFlows(); return; }
         if (act === 'rescan') { if (await scan('')) say({ ok: true }, 'Scanned: ' + v.m.totals.systems + ' systems, ' + v.m.totals.endpoints + ' endpoints, ' + v.m.totals.calls + ' calls.'); return; }
         if (act === 'tab') { v.tab = String(key || 'overview'); return; }
         if (act === 'field') {
           const val = String(value == null ? '' : value);
           if (key === 'app') { await scan(val); return; }
+          // Save as flow: its fields (sf.name, sf.purpose …)
+          if (String(key).indexOf('sf.') === 0) { const f = String(key).slice(3); v.saveForm = Object.assign({}, v.saveForm || {}, { [f]: val }); if (f === 'name' && val.trim()) v.saveErr = ''; return; }
+          if (key === 'flowsQ') { v.flowsQ = val; return; }
           // a page chosen, or a search that leaves the page shown out: the first page it finds
           if (key === 'pgId') { v.pgId = val; if (v.pgView === 'all') v.pgView = 'flow'; return; }
           if (key === 'pgQ') {
@@ -54,6 +67,63 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
           return;
         }
         if (act === 'pdfPages') { v.pdfPages = !v.pdfPages; return; }
+        if (act === 'plain') { v.plain = !v.plain; return; }
+        // Save as flow: the page shown (or an empty flow) under a name and its details, then opened to edit
+        if (act === 'saveOpen') {
+          const blank = key === 'blank';
+          const pg = ((v.m && v.m.pageFlows) || []).filter((p) => p.page === (v.pgId || ((v.m.pageFlows || [])[0] || {}).page))[0];
+          if (!blank && !pg) { bus.toast('Pick a page with integrations first.', 'info'); return; }
+          v.saveForm = { mode: blank ? 'blank' : 'page', page: pg ? pg.page : '', name: blank ? '' : pg.pageLabel + ' flow', purpose: '', area: blank ? '' : pg.flow, owner: (v.m && v.m.by) || '', status: 'draft', story: '', tags: '' };
+          v.saveErr = '';
+          v.saveDlg = true;
+          return;
+        }
+        if (act === 'saveCancel') { v.saveDlg = false; return; }
+        if (act === 'saveFlow') {
+          const f0 = v.saveForm || {};
+          if (!String(f0.name || '').trim()) { v.saveErr = 'Give the flow a name.'; return; }
+          const flow = f0.mode === 'blank' ? FM.blank(f0) : FM.fromPage(v.m, f0.page, f0);
+          if (!flow) { v.saveErr = 'That page makes no call now — scan again.'; return; }
+          v.saveBusy = true;
+          try {
+            const r = await PC.flowSave(flow, f0.mode === 'blank' ? 'drawn by hand' : 'saved from Page flows');
+            const b = r.body || {};
+            if (!r.ok || !b.ok) { v.saveErr = b.error || 'It could not be saved.'; return; }
+            v.saveDlg = false;
+            await loadFlows();
+            flowsChanged();
+            bus.toast('Saved ' + b.flow.id + ' · ' + b.flow.name + '. Edit it, comment on it, check it against the app.', 'success');
+            openFlow(b.flow);
+          } finally { v.saveBusy = false; }
+          return;
+        }
+        // Saved flows: open, copy, remove; check every one against the app now
+        if (act === 'flowStatus') { v.flowsStatus = String(key || 'all'); return; }
+        if (act === 'flowOpen') { const f = (v.flows || []).filter((x) => x.id === key)[0]; if (f) openFlow(f); return; }
+        if (act === 'flowCopy') {
+          const g = await PC.flowGet(key);
+          const f = g.body && g.body.flow;
+          if (!f) { bus.toast('It could not be read.', 'error'); return; }
+          const r = await PC.flowSave(Object.assign({}, f, { name: 'Copy of ' + f.name, status: 'draft' }), 'a copy of ' + f.id, true);
+          if (r.ok && r.body && r.body.ok) { await loadFlows(); flowsChanged(); bus.toast('Copied to ' + r.body.flow.id + '.', 'success'); openFlow(r.body.flow); } else bus.toast((r.body && r.body.error) || 'It could not be copied.', 'error');
+          return;
+        }
+        if (act === 'flowDelete') {
+          const f = (v.flows || []).filter((x) => x.id === key)[0];
+          if (!f || !window.confirm('Remove ' + f.id + ' · ' + f.name + '? Its versions and comments go too.')) return;
+          const r = await PC.flowRemove(key);
+          if (r.ok && r.body && r.body.ok) { await loadFlows(); flowsChanged(); try { bus.close('saved-flow:' + key); } catch (e) { /* not open */ } bus.toast('Removed ' + key + '.', 'success'); } else bus.toast((r.body && r.body.error) || 'It could not be removed.', 'error');
+          return;
+        }
+        if (act === 'flowsCheck') {
+          if (!v.m || !v.m.ok) return;
+          const out = {};
+          (v.flows || []).forEach((f) => { out[f.id] = FM.check(f, v.m); });
+          v.flowChecks = out;
+          const bad = Object.keys(out).filter((k) => !out[k].ok && !out[k].skipped).length;
+          bus.toast(bad ? bad + ' of ' + Object.keys(out).length + ' flows no longer match the app.' : 'Every saved flow matches the app.', bad ? 'info' : 'success');
+          return;
+        }
         if (act === 'more') { v.limit = (v.limit || 200) + 300; return; }
         // a system's or a page's diagram (from the systems, the data sheet, the overview)
         if (act === 'dia') { v.dia = String(key || 'landscape'); return; }
@@ -75,7 +145,7 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
           const kind = String(key || v.dia).split(':')[0];
           const one = String(key || '').split(':')[1] || '';
           const d = kind === 'system' ? D.system(v.m, one || v.diaSystem || v.m.systems[0].id) : kind === 'page' ? D.page(v.m, one || v.diaPage || ((v.m.pages.filter((p) => p.calls)[0] || {}).id))
-            : kind === 'pageflow' ? D.pageFlow(v.m, one || v.diaPage || ((v.m.pageFlows || [])[0] || {}).page)
+            : kind === 'pageflow' || kind === 'pageflow-plain' ? D.pageFlow(v.m, one || v.diaPage || ((v.m.pageFlows || [])[0] || {}).page, { plain: kind === 'pageflow-plain' })
               : kind === 'systems' ? D.systemFlow(v.m) : kind === 'journeys' ? D.journeys(v.m) : kind === 'pages' ? D.pages(v.m) : D.landscape(v.m);
           const name = 'integrations-' + v.m.app + '-' + (kind === 'landscape' ? 'landscape' : String(d.title || kind).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')) + '.svg';
           exportKit.download(name, 'image/svg+xml', d.svg);

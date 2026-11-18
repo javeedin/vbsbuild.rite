@@ -273,6 +273,7 @@ function time() {
  * @param {Function} [o.vbsFind]          (url) => opens VB Studio in a window of the desktop app, read as its pages load (Find in VB Studio)
  * @param {object}   [o.fixStore]         Code Fix (lib/codeFix.js): AI-proposed changes to a page, written to the code only when approved (/__fix/*)
  * @param {object}   [o.crStore]          Change requests (lib/changeRequests.js): a change asked of a page, made with Code Fix (/__fix/cr-*)
+ * @param {object}   [o.flowStore]        Saved flows (lib/savedFlows.js): integration flows saved, edited, commented on (/__pages/flows*)
  * @param {object}   [o.pagesStore]       The Application pages catalog (lib/pages.js): every VB page's technical sheet and the Jira stories
  *                                        mapped to it, saved into the project (git): /__pages/* to this PC only, behind X-Build-Rite-Pages
  * @param {object}   [o.fddStore]         The FDD library (lib/fdd.js): FDDs saved into the project (git) for Build.Rite's FDD library
@@ -863,6 +864,20 @@ function createDevServer(o) {
             const r = INT.scan(ps.rootNow ? ps.rootNow() : repoRoot, { app: u.searchParams.get('app') || '' });
             if (r.ok) { r.by = by; delete r.root; log(`Integrations scanned: ${r.app} — ${r.totals.systems} systems, ${r.totals.endpoints} endpoints, ${r.totals.calls} calls`); }
             return jsonP(200, r);
+          }
+          // Saved flows (lib/savedFlows.js, Integrations → Saved flows): a flow saved under a name, edited, commented on
+          if (pathname === '/__pages/flows' || pathname.startsWith('/__pages/flows/')) {
+            const fl = o.flowStore;
+            if (!fl) return jsonP(200, { ok: false, error: 'Saved flows need the desktop app.' });
+            const q = (k) => u.searchParams.get(k) || '';
+            if (pathname === '/__pages/flows' && !post) return jsonP(200, fl.list(q('q')));
+            if (pathname === '/__pages/flows/get' && !post) return jsonP(200, fl.get(q('id')));
+            if (pathname === '/__pages/flows/save' && post) { const r = fl.save(b.flow, by, { note: b.note, copy: !!b.copy }); if (r.ok) log(`Saved flow ${r.flow.id} v${r.flow.version}: ${r.flow.name}`); return jsonP(200, r); }
+            if (pathname === '/__pages/flows/remove' && post) { const r = fl.remove(b.id); if (r.ok) log(`Saved flow ${b.id} removed`); return jsonP(200, r); }
+            if (pathname === '/__pages/flows/comment' && post) return jsonP(200, fl.comment(b.id, { text: b.text, step: b.step }, by));
+            if (pathname === '/__pages/flows/resolve' && post) return jsonP(200, fl.resolve(b.id, b.comment, !!b.resolved, by));
+            if (pathname === '/__pages/flows/uncomment' && post) return jsonP(200, fl.uncomment(b.id, b.comment, by));
+            return jsonP(404, { ok: false, error: 'Not found' });
           }
           if (pathname === '/__pages/integrations/pdf' && post) {
             if (typeof o.htmlToPdf !== 'function') return jsonP(200, { ok: false, noPdf: true, error: 'Saving a PDF needs the desktop app: use Print and choose Save as PDF.' });

@@ -892,3 +892,73 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-int .nx-sc-head .nx-int-pagesel { flex: 0 1 360px; }
 .nx-int .nx-int-pgpick #intPgQ { flex: 0 1 220px; }
 .nx-int-pgdianote { margin: -4px 0 8px; font-size: 11.5px; }
+
+/* Integrations › Plain English, Save as flow, Saved flows */
+.nx-int-switch { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #26323e; cursor: pointer; padding: 4px 10px; border: 1px solid #d5dde5; border-radius: 999px; background: #fff; }
+.nx-int-switch input { accent-color: #2e6fd8; }
+.nx-int-plaingrid { display: grid; grid-template-columns: 64px minmax(200px, 1.3fr) minmax(280px, 2.2fr) minmax(150px, 1fr); border-top: 1px solid #e4e9ef; }
+.nx-int-plaingrid .nx-int-row > span { font-size: 13px; }
+.nx-int-sfgrid { display: grid; grid-template-columns: 76px minmax(170px, 1.6fr) minmax(90px, .8fr) minmax(130px, 1.1fr) 92px 90px minmax(80px, .7fr) minmax(110px, .9fr) minmax(110px, .9fr) 118px; border-top: 1px solid #e4e9ef; }
+.nx-int-sysl { flex-direction: row !important; flex-wrap: wrap; gap: 4px 10px !important; justify-content: flex-start !important; align-items: center; }
+.nx-int-acts { flex-direction: row !important; align-items: center; justify-content: flex-start !important; gap: 4px !important; }
+.nx-int-fst { display: inline-flex; align-self: flex-start; padding: 1px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: #eef1f4; color: #3b4a58; }
+.nx-int-fst--review { background: #fff3d6; color: #8a5a00; } .nx-int-fst--approved { background: #e3f6ef; color: #11704b; } .nx-int-fst--retired { background: #f1f1f1; color: #6b7889; text-decoration: line-through; }
+.nx-int-ck { font-size: 12px; } .nx-int-ck--ok { color: #11704b; font-weight: 600; } .nx-int-ck--bad { color: #a3271b; font-weight: 600; }
+.nx-int-cmt { color: #1d4f91 !important; }
+.nx-int-empty { padding: 18px; border: 1px dashed #c9d6e0; border-radius: 10px; background: #fbfcfd; color: #3b4a58; }
+.nx-int-dlgback { position: fixed; inset: 0; background: rgba(16, 28, 40, .38); display: flex; align-items: center; justify-content: center; z-index: 60; padding: 20px; }
+.nx-int-dlg { width: min(720px, 100%); max-height: calc(100vh - 40px); overflow: auto; padding: 20px 22px; }
+.nx-int-dlg h2 { margin: 0 0 4px; }
+.nx-int-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; margin-top: 12px; }
+.nx-int-fld { display: grid; gap: 4px; font-size: 12.5px; color: #3b4a58; font-weight: 600; min-width: 0; }
+.nx-int-fld .nx-cm-input { width: 100%; font-weight: 400; }
+.nx-int-fld--wide { grid-column: 1 / -1; }
+.nx-int-ta { height: 72px; padding-top: 8px; resize: vertical; font: inherit; font-weight: 400; }
+.nx-int-req { color: #a3271b; }
+.nx-int-err { color: #a3271b; font-weight: 600; margin: 10px 0 0; }
+.nx-int-dlgacts { margin-top: 16px; gap: 8px; }
+
+/* A saved flow (flows/insights saved-flow) */
+.nx-sfp-bar .nx-sc-head { gap: 8px; }
+.nx-sfp-status { width: auto !important; flex: 0 0 140px !important; }
+.nx-sfp-dirty { color: #8a5a00; font-weight: 700; font-size: 12.5px; }
+.nx-sfp-note { flex: 0 1 260px !important; width: auto !important; }
+.nx-sfp-purpose { margin: 0 0 10px; font-size: 13.5px; color: #26323e; max-width: 980px; }
+.nx-sfp-stepgrid { display: grid; grid-template-columns: 60px minmax(180px, 1.2fr) minmax(260px, 2.2fr) minmax(130px, 1fr) minmax(160px, 1.3fr) 110px; border-top: 1px solid #e4e9ef; }
+.nx-sfp-notecell { color: #8a5a00; }
+.nx-sfp-lanes { display: grid; gap: 8px; }
+.nx-sfp-lane { display: grid; grid-template-columns: minmax(200px, 1.4fr) minmax(170px, 1fr) auto; gap: 8px; align-items: center; padding: 6px 8px 6px 10px; border: 1px solid #e1e7ee; border-left: 5px solid #8a97a5; border-radius: 8px; background: #fff; }
+.nx-sfp-lane .nx-cm-input { width: 100%; }
+.nx-sfp-lane--new { border-style: dashed; border-left: 5px dashed #c9d6e0; background: #fbfcfd; }
+.nx-sfp-action { margin-top: 12px; }
+.nx-sfp-ahead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; gap: 8px; align-items: center; }
+.nx-sfp-anum { color: #00506c; white-space: nowrap; }
+.nx-sfp-atitle { width: 100%; font-weight: 600; }
+.nx-sfp-atrig { margin: 4px 0 6px; font-size: 11.5px; overflow-wrap: anywhere; }
+.nx-sfp-anote { width: 100%; margin-bottom: 8px; font-size: 12.5px; }
+.nx-sfp-steps { display: grid; gap: 6px; }
+.nx-sfp-step { display: grid; grid-template-columns: 44px minmax(140px, 180px) minmax(260px, 1fr) auto minmax(160px, .7fr) auto; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid #e1e7ee; border-left: 5px solid #8a97a5; border-radius: 8px; background: #fff; }
+.nx-sfp-step .nx-cm-input { width: 100%; }
+.nx-sfp-swords { display: grid; gap: 2px; min-width: 0; }
+.nx-sfp-swords small { color: #6b7889; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-sfp-sdir { width: 104px !important; }
+.nx-sfp-sbtns { display: inline-flex; gap: 2px; }
+.nx-sfp-addstep { margin-top: 6px; }
+#sfpAddAction { margin-top: 12px; }
+.nx-sfp-cform { display: grid; gap: 8px; margin-bottom: 12px; }
+.nx-sfp-cstep { max-width: 520px; }
+.nx-sfp-clist { display: grid; gap: 8px; }
+.nx-sfp-cm { border: 1px solid #e1e7ee; border-radius: 10px; padding: 8px 12px; background: #fff; }
+.nx-sfp-cm p { margin: 4px 0 0; white-space: pre-wrap; }
+.nx-sfp-cm--done { background: #f7f9fb; color: #5b6876; }
+.nx-sfp-cmhead { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12.5px; }
+.nx-sfp-cmon { color: #1d4f91; font-size: 12px; }
+.nx-sfp-vgrid { display: grid; grid-template-columns: 90px minmax(130px, 1fr) minmax(110px, .8fr) minmax(200px, 2fr) 90px 170px; border-top: 1px solid #e4e9ef; }
+.nx-sfp-h2 { margin-top: 18px; }
+.nx-sfp-hist { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 12.5px; }
+.nx-sfp-check { padding: 12px 14px; border-radius: 10px; border: 1px solid #e1e7ee; background: #fbfcfd; font-weight: 600; margin-bottom: 8px; }
+.nx-sfp-check--ok { border-color: #bfe9d8; background: #f2fbf7; color: #11704b; }
+.nx-sfp-check--bad { border-color: #f1c4bf; background: #fff8f7; color: #a3271b; }
+.nx-sfp-ck { margin: 4px 0 10px; padding-left: 18px; display: grid; gap: 4px; font-size: 12.5px; }
+@media (max-width: 1000px) { .nx-sfp-step { grid-template-columns: 40px 1fr; } }
+.nx-int-sfgrid .nx-int-id { white-space: nowrap; }

@@ -36,7 +36,7 @@ T.check('a screen\'s tab opens its page (routeOf); no other app to link to', JSO
 T.section('records: screens opened from another, in a tab of their own');
 const R = N.RECORDS;
 T.check('each record opens a page that exists, under a menu item', Object.keys(R).every((k) => exists(R[k]) && !!N.item(R[k].navId)), Object.keys(R).filter((k) => !exists(R[k])).join());
-T.eq('the records', Object.keys(R).sort().join(), 'api-scenario,api-scenarios-page,change-request,jira-analysis,jira-analysis-set,jira-progress,jira-sprint,vbs-project,vbs-setup');
+T.eq('the records', Object.keys(R).sort().join(), 'api-scenario,api-scenarios-page,change-request,jira-analysis,jira-analysis-set,jira-progress,jira-sprint,saved-flow,vbs-project,vbs-setup');
 T.eq('a sprint: keyed by its id, titled by its name', R['jira-sprint'].key({ id: 6, name: '2026-07' }) + ' / ' + R['jira-sprint'].title({ id: 6, name: '2026-07' }), '6 / Sprint 2026-07');
 T.eq('a set of stories: the same set (any order, any case) is the same tab', R['jira-analysis-set'].key({ keys: 'abc-36, ABC-23' }), 'ABC-23,ABC-36');
 T.eq('…titled by its keys, or how many', [R['jira-analysis-set'].title({ keys: 'ABC-1,ABC-2' }), R['jira-analysis-set'].title({ keys: 'ABC-1,ABC-2,ABC-3' })].join(' / '), 'AI · ABC-1, ABC-2 / AI · 3 stories');

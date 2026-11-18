@@ -20,7 +20,7 @@
     "tab": {
       "type": "string",
       "defaultValue": "overview",
-      "description": "overview | flows | pages | sheet | endpoints | systems | diagrams"
+      "description": "overview | flows | pages | saved | sheet | endpoints | systems | diagrams"
     },
     "q": {
       "type": "string",
@@ -112,6 +112,50 @@
       "type": "boolean",
       "defaultValue": true,
       "description": "The PDF holds every page's integration flow (Page by page)."
+    },
+    "plain": {
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "Page flows in plain English (a sentence per call, what sets it off in words) — for a business reader."
+    },
+    "flows": {
+      "type": "any[]",
+      "defaultValue": [],
+      "description": "The saved flows (desktop/lib/savedFlows.js)."
+    },
+    "flowsErr": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "flowsQ": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "flowsStatus": {
+      "type": "string",
+      "defaultValue": "all"
+    },
+    "flowChecks": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "Check all against the app: { flowId: { ok, text, … } } (resources/js/flowModel.js check)."
+    },
+    "saveDlg": {
+      "type": "boolean",
+      "defaultValue": false
+    },
+    "saveForm": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "Save as flow: { mode page | blank, page, name, purpose, area, owner, status, story, tags }."
+    },
+    "saveErr": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "saveBusy": {
+      "type": "boolean",
+      "defaultValue": false
     }
   },
   "eventListeners": {
@@ -150,6 +194,18 @@
           }
         }
       ]
+    },
+    "flowsChanged": {
+      "chains": [
+        {
+          "chain": "intChain",
+          "parameters": {
+            "act": "flowsLoad",
+            "key": "",
+            "value": ""
+          }
+        }
+      ]
     }
   },
   "imports": {
@@ -163,6 +219,12 @@
       "oj-bind-text": {
         "path": "ojs/ojknockout"
       }
+    }
+  },
+  "events": {
+    "flowsChanged": {
+      "description": "A saved flow was saved or removed in another tab: the list reads them again (shellBus topic saved-flows-changed).",
+      "payloadType": "object"
     }
   }
 }

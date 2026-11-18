@@ -42,6 +42,7 @@
         <button type="button" role="tab" id="intTabOverview" :aria-selected="[[ $variables.tab === 'overview' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'overview' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="overview" on-click="[[ $listeners.onAct ]]">Overview</button>
         <button type="button" role="tab" id="intTabFlows" :aria-selected="[[ $variables.tab === 'flows' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'flows' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="flows" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'System flows (' + ($variables.m.totals.interfaces || 0) + ')' ]]"></oj-bind-text></button>
         <button type="button" role="tab" id="intTabPages" :aria-selected="[[ $variables.tab === 'pages' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'pages' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="pages" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'Page flows (' + ($variables.m.pageFlows || []).length + ')' ]]"></oj-bind-text></button>
+        <button type="button" role="tab" id="intTabSaved" :aria-selected="[[ $variables.tab === 'saved' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'saved' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="saved" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'Saved flows (' + $variables.flows.length + ')' ]]"></oj-bind-text></button>
         <button type="button" role="tab" id="intTabSheet" :aria-selected="[[ $variables.tab === 'sheet' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'sheet' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="sheet" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'Data sheet (' + $variables.m.totals.calls + ')' ]]"></oj-bind-text></button>
         <button type="button" role="tab" id="intTabEndpoints" :aria-selected="[[ $variables.tab === 'endpoints' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'endpoints' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="endpoints" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'Endpoints (' + $variables.m.totals.endpoints + ')' ]]"></oj-bind-text></button>
         <button type="button" role="tab" id="intTabSystems" :aria-selected="[[ $variables.tab === 'systems' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'systems' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="systems" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'Systems (' + $variables.m.totals.systems + ')' ]]"></oj-bind-text></button>
@@ -189,15 +190,31 @@
                 <span class="nx-min-flex"></span>
                 <button type="button" class="nx-btn nx-btn--sm" id="intPgPrev" data-act="pgStep" data-key="-1" on-click="[[ $listeners.onAct ]]" title="The previous page">‹ Previous</button>
                 <button type="button" class="nx-btn nx-btn--sm" id="intPgNext" data-act="pgStep" data-key="1" on-click="[[ $listeners.onAct ]]" title="The next page">Next ›</button>
-                <button type="button" class="nx-btn nx-btn--sm" id="intPgSvg" data-act="svg" :data-key="[[ $functions.pageDiaKind($variables.pgView) + ':' + $functions.pageCur($variables.m, $variables.pgId) ]]" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> Save SVG</button>
+                <label class="nx-int-switch" title="Say every step in plain English, for a business reader"><input type="checkbox" id="intPlain" data-act="plain" :checked="[[ $variables.plain ]]" on-click="[[ $listeners.onAct ]]"><span>Plain English</span></label>
+                <button type="button" class="nx-btn nx-btn--sm" id="intPgSvg" data-act="svg" :data-key="[[ $functions.pageDiaKind($variables.pgView, $variables.plain) + ':' + $functions.pageCur($variables.m, $variables.pgId) ]]" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> Save SVG</button>
+                <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="intPgSaveFlow" data-act="saveOpen" on-click="[[ $listeners.onAct ]]" title="Save this page's flow under a name, then edit it, comment on it, check it"><span class="oj-ux-ico-save" aria-hidden="true"></span> Edit &amp; save as flow…</button>
                 <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="openPage" :data-key="[[ $functions.pageCur($variables.m, $variables.pgId) ]]" on-click="[[ $listeners.onAct ]]" title="Its technical sheet in Application pages">Its page sheet</button>
               </div>
               <div class="nx-note" id="intPgNote"><oj-bind-text value="[[ $functions.pageListNote($variables.m, $variables.pgQ) ]]"></oj-bind-text></div>
               <h2 id="intPgTitle" class="nx-int-pgtitle"><oj-bind-text value="[[ $functions.pageTitle($variables.m, $variables.pgId) ]]"></oj-bind-text></h2>
               <p class="nx-note" id="intPgSummary"><oj-bind-text value="[[ $functions.pageSummary($variables.m, $variables.pgId) ]]"></oj-bind-text></p>
-              <p class="nx-note nx-int-pgdianote" id="intPgDiaNote"><oj-bind-text value="[[ $functions.pageDiaNote($variables.pgView) ]]"></oj-bind-text></p>
-              <iframe class="nx-int-frame" id="intPgDia" title="The page's integration flow" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.m, $functions.pageDiaKind($variables.pgView), '', $functions.pageCur($variables.m, $variables.pgId)) ]]" :srcdoc="[[ $functions.diaDoc($variables.m, $functions.pageDiaKind($variables.pgView), '', $functions.pageCur($variables.m, $variables.pgId)) ]]"></iframe>
-              <h3 class="nx-int-h3">Its calls, in order</h3>
+              <p class="nx-note nx-int-pgdianote" id="intPgDiaNote"><oj-bind-text value="[[ $functions.pageDiaNote($variables.pgView, $variables.plain) ]]"></oj-bind-text></p>
+              <iframe class="nx-int-frame" id="intPgDia" title="The page's integration flow" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.m, $functions.pageDiaKind($variables.pgView, $variables.plain), '', $functions.pageCur($variables.m, $variables.pgId)) ]]" :srcdoc="[[ $functions.diaDoc($variables.m, $functions.pageDiaKind($variables.pgView, $variables.plain), '', $functions.pageCur($variables.m, $variables.pgId)) ]]"></iframe>
+              <h3 class="nx-int-h3"><oj-bind-text value="[[ $variables.plain ? 'What happens, step by step' : 'Its calls, in order' ]]"></oj-bind-text></h3>
+              <oj-bind-if test="[[ $variables.plain ]]">
+              <div class="nx-int-plaingrid" id="intPgPlain" role="table" aria-label="What happens, step by step">
+                <div class="nx-int-row nx-int-row--head" role="row"><span>Step</span><span>When</span><span>What happens</span><span>System</span></div>
+                <oj-bind-for-each data="[[ $functions.plainCalls($variables.m, $variables.pgId) ]]"><template data-oj-as="c">
+                  <div :class="[[ 'nx-int-row' + (c.data.first ? ' nx-int-row--first' : '') ]]" role="row" :data-key="[[ c.data.key ]]">
+                    <span class="nx-int-id"><oj-bind-text value="[[ c.data.act ? c.data.act + '.' + c.data.n : '  .' + c.data.n ]]"></oj-bind-text></span>
+                    <span><b><oj-bind-text value="[[ c.data.when ]]"></oj-bind-text></b></span>
+                    <span><oj-bind-text value="[[ c.data.says ]]"></oj-bind-text></span>
+                    <span><span class="nx-int-sys"><span class="nx-int-dot" :style="[[ $functions.dotStyle(c.data.kind) ]]"></span><oj-bind-text value="[[ c.data.system ]]"></oj-bind-text></span></span>
+                  </div>
+                </template></oj-bind-for-each>
+              </div>
+              </oj-bind-if>
+              <oj-bind-if test="[[ !$variables.plain ]]">
               <div class="nx-int-pcgrid" id="intPgCalls" role="table" aria-label="The page's calls in order">
                 <div class="nx-int-row nx-int-row--head" role="row"><span>Action</span><span>Set off by</span><span>#</span><span>Method</span><span>Endpoint</span><span>Business object</span><span>System</span><span>Direction</span><span>Row</span></div>
                 <oj-bind-for-each data="[[ $functions.pageCalls($variables.m, $variables.pgId) ]]"><template data-oj-as="c">
@@ -214,7 +231,76 @@
                   </div>
                 </template></oj-bind-for-each>
               </div>
+              </oj-bind-if>
             </oj-bind-if>
+        </div>
+      </oj-bind-if>
+
+      <!-- saved flows: every flow saved under a name — open one to edit it, comment, check it against the app -->
+      <oj-bind-if test="[[ $variables.tab === 'saved' ]]">
+        <div class="nx-card nx-sc-sec" id="intSaved">
+          <div class="nx-sc-head">
+            <div><h2>Saved flows</h2><span class="nx-note">Integration flows saved under a name — from Page flows (Edit &amp; save as flow) or drawn by hand. Open one to reword its steps, add steps and notes, comment, set its status and check it against the app.</span></div>
+            <span class="nx-min-flex"></span>
+            <input type="search" class="nx-cm-input nx-int-q" id="intFlowsQ" placeholder="Find a flow: name, system, page, owner…" data-field="flowsQ" :value="[[ $variables.flowsQ ]]" on-input="[[ $listeners.onField ]]">
+            <button type="button" class="nx-btn nx-btn--sm" id="intFlowsCheck" data-act="flowsCheck" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.flows.length === 0 ]]" title="Compare every saved flow with the app's code now"><span class="oj-ux-ico-check-circle" aria-hidden="true"></span> Check all against the app</button>
+            <button type="button" class="nx-btn nx-btn--sm" id="intFlowNew" data-act="saveOpen" data-key="blank" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span> New flow (blank)</button>
+          </div>
+          <div class="nx-sc-listbar" id="intFlowChips">
+            <oj-bind-for-each data="[[ $functions.savedChips($variables.flows, $variables.flowsStatus) ]]"><template data-oj-as="c"><button type="button" :class="[[ c.data.cls ]]" data-act="flowStatus" :data-key="[[ c.data.key ]]" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ c.data.text ]]"></oj-bind-text></button></template></oj-bind-for-each>
+          </div>
+          <oj-bind-if test="[[ !!$variables.flowsErr ]]"><p class="nx-note" id="intFlowsErr"><oj-bind-text value="[[ $variables.flowsErr ]]"></oj-bind-text></p></oj-bind-if>
+          <oj-bind-if test="[[ !$variables.flowsErr && $variables.flows.length === 0 ]]">
+            <div class="nx-int-empty" id="intFlowsNone"><b>No saved flow yet.</b> Open <button type="button" class="nx-linkbtn" data-act="tab" data-key="pages" on-click="[[ $listeners.onAct ]]">Page flows</button>, choose a page and press <b>Edit &amp; save as flow…</b> — or start a <button type="button" class="nx-linkbtn" data-act="saveOpen" data-key="blank" on-click="[[ $listeners.onAct ]]">new flow</button> and draw it by hand.</div>
+          </oj-bind-if>
+          <oj-bind-if test="[[ $variables.flows.length > 0 ]]">
+          <div class="nx-int-sfgrid" id="intFlowsGrid" role="table" aria-label="Saved flows">
+            <div class="nx-int-row nx-int-row--head" role="row"><span>ID</span><span>Flow</span><span>From</span><span>Systems</span><span>Steps</span><span>Status</span><span>Owner</span><span>Updated</span><span>Matches the app?</span><span></span></div>
+            <oj-bind-for-each data="[[ $functions.savedRows($variables.flows, $variables.flowsQ, $variables.flowsStatus, $variables.flowChecks) ]]"><template data-oj-as="f">
+              <div class="nx-int-row" role="row" :data-id="[[ f.data.id ]]">
+                <span class="nx-int-id"><oj-bind-text value="[[ f.data.id ]]"></oj-bind-text></span>
+                <span><button type="button" class="nx-linkbtn nx-int-page" data-act="flowOpen" :data-key="[[ f.data.id ]]" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ f.data.name ]]"></oj-bind-text></button><small><oj-bind-text value="[[ f.data.purpose ]]"></oj-bind-text></small><oj-bind-if test="[[ !!f.data.comments ]]"><small class="nx-int-cmt"><oj-bind-text value="[[ f.data.comments ]]"></oj-bind-text></small></oj-bind-if></span>
+                <span class="nx-note"><oj-bind-text value="[[ f.data.from ]]"></oj-bind-text></span>
+                <span class="nx-int-sysl"><oj-bind-for-each data="[[ f.data.systems ]]"><template data-oj-as="s"><span class="nx-int-sys"><span class="nx-int-dot" :style="[[ { background: s.data.color } ]]"></span><oj-bind-text value="[[ s.data.name ]]"></oj-bind-text></span></template></oj-bind-for-each></span>
+                <span class="nx-note"><oj-bind-text value="[[ f.data.steps ]]"></oj-bind-text></span>
+                <span><span :class="[[ f.data.statusCls ]]"><oj-bind-text value="[[ f.data.statusText ]]"></oj-bind-text></span><small><oj-bind-text value="[[ f.data.version ]]"></oj-bind-text></small></span>
+                <span class="nx-note"><oj-bind-text value="[[ f.data.owner ]]"></oj-bind-text></span>
+                <span class="nx-note"><oj-bind-text value="[[ f.data.updated ]]"></oj-bind-text></span>
+                <span><span :class="[[ f.data.check.cls ]]"><oj-bind-text value="[[ f.data.check.text ]]"></oj-bind-text></span></span>
+                <span class="nx-int-acts">
+                  <button type="button" class="nx-btn nx-btn--sm" data-act="flowOpen" :data-key="[[ f.data.id ]]" on-click="[[ $listeners.onAct ]]">Open</button>
+                  <button type="button" class="nx-iconbtn" data-act="flowCopy" :data-key="[[ f.data.id ]]" on-click="[[ $listeners.onAct ]]" title="Save as a copy" aria-label="Save as a copy"><span class="oj-ux-ico-copy" aria-hidden="true"></span></button>
+                  <button type="button" class="nx-iconbtn" data-act="flowDelete" :data-key="[[ f.data.id ]]" on-click="[[ $listeners.onAct ]]" title="Remove" aria-label="Remove"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+                </span>
+              </div>
+            </template></oj-bind-for-each>
+          </div>
+          </oj-bind-if>
+        </div>
+      </oj-bind-if>
+
+      <!-- Save as flow: its name and details, then it opens to edit -->
+      <oj-bind-if test="[[ $variables.saveDlg ]]">
+        <div class="nx-int-dlgback" id="intSaveDlg" role="dialog" aria-modal="true" aria-labelledby="intSaveTitle">
+          <div class="nx-card nx-int-dlg">
+            <h2 id="intSaveTitle"><oj-bind-text value="[[ $functions.saveTitle($variables.saveForm) ]]"></oj-bind-text></h2>
+            <p class="nx-note" id="intSaveFrom"><oj-bind-text value="[[ $functions.saveFrom($variables.saveForm, $variables.m) ]]"></oj-bind-text></p>
+            <div class="nx-int-form">
+              <label class="nx-int-fld nx-int-fld--wide"><span>Flow name <b class="nx-int-req">*</b></span><input class="nx-cm-input" id="intSfName" data-field="sf.name" :value="[[ $variables.saveForm.name ]]" on-input="[[ $listeners.onField ]]" placeholder="e.g. Equipment import from Oracle Fusion"></label>
+              <label class="nx-int-fld nx-int-fld--wide"><span>Purpose — what the flow is for</span><textarea class="nx-cm-input nx-int-ta" id="intSfPurpose" data-field="sf.purpose" :value="[[ $variables.saveForm.purpose ]]" on-change="[[ $listeners.onField ]]" placeholder="In a sentence or two, for someone who has never seen it"></textarea></label>
+              <label class="nx-int-fld"><span>Business area / process</span><input class="nx-cm-input" id="intSfArea" data-field="sf.area" :value="[[ $variables.saveForm.area ]]" on-change="[[ $listeners.onField ]]" placeholder="e.g. Order to cash"></label>
+              <label class="nx-int-fld"><span>Owner</span><input class="nx-cm-input" id="intSfOwner" data-field="sf.owner" :value="[[ $variables.saveForm.owner ]]" on-change="[[ $listeners.onField ]]" placeholder="Who answers for it"></label>
+              <label class="nx-int-fld"><span>Status</span><select class="nx-cm-input" id="intSfStatus" data-field="sf.status" on-change="[[ $listeners.onField ]]"><oj-bind-for-each data="[[ $functions.statusOptions($variables.saveForm.status) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each></select></label>
+              <label class="nx-int-fld"><span>Jira story</span><input class="nx-cm-input" id="intSfStory" data-field="sf.story" :value="[[ $variables.saveForm.story ]]" on-change="[[ $listeners.onField ]]" placeholder="e.g. ABC-123"></label>
+              <label class="nx-int-fld nx-int-fld--wide"><span>Tags (comma between)</span><input class="nx-cm-input" id="intSfTags" data-field="sf.tags" :value="[[ $variables.saveForm.tags ]]" on-change="[[ $listeners.onField ]]" placeholder="e.g. fusion, nightly, finance"></label>
+            </div>
+            <oj-bind-if test="[[ !!$variables.saveErr ]]"><p class="nx-int-err" id="intSaveErr" role="alert"><oj-bind-text value="[[ $variables.saveErr ]]"></oj-bind-text></p></oj-bind-if>
+            <div class="nx-fx-row nx-int-dlgacts">
+              <span class="nx-min-flex"></span>
+              <button type="button" class="nx-btn" id="intSaveCancel" data-act="saveCancel" on-click="[[ $listeners.onAct ]]">Cancel</button>
+              <button type="button" class="nx-btn nx-btn--primary" id="intSaveGo" data-act="saveFlow" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.saveBusy ]]"><oj-bind-text value="[[ $variables.saveBusy ? 'Saving…' : 'Save and open' ]]"></oj-bind-text></button>
+            </div>
+          </div>
         </div>
       </oj-bind-if>
 

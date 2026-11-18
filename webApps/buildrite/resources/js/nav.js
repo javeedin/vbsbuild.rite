@@ -99,6 +99,11 @@ define([], function () {
     'change-request': { flow: 'insights', page: 'change-requests', icon: 'oj-ux-ico-edit', navId: 'change-requests',
       key: function (p) { return p ? String(p.crId || '') : ''; },
       title: function (p) { return (p && p.title) || 'Change request'; } },
+    // One saved flow ({ flowId: FL-0001, title }) — from Integrations → Saved flows, or just saved from Page flows: its
+    // diagram (plain English or technical), editor, comments, versions and a check against the app (flows/insights saved-flow).
+    'saved-flow': { flow: 'insights', page: 'saved-flow', icon: 'oj-ux-ico-link', navId: 'integrations',
+      key: function (p) { return p ? String(p.flowId || '') : ''; },
+      title: function (p) { return (p && p.title) || 'Saved flow'; } },
     'api-scenarios-page': { flow: 'insights', page: 'api-scenarios', icon: 'oj-ux-ico-check-circle', navId: 'api-scenarios',
       key: function (p) { return p ? String(p.page || '') : ''; },
       title: function (p) { return 'API · ' + ((p && p.label) || String((p && p.page) || '').split('/').pop() || 'page'); } },

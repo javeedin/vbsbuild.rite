@@ -312,6 +312,45 @@ Diagrams is then added). In the desktop app it is a real PDF; in a browser, Prin
 writes the same as a workbook: Summary, Interfaces, Cross-system flows, Page flows (each page's actions and their calls
 in order), System to system, Systems, Integrations, Endpoints, Flows x systems.
 
+### Plain English and saved flows
+
+**Plain English** (the switch on Page flows, and on a saved flow) says every step the way a business user would: each
+call as a sentence — *Reads the list of projects from Oracle Fusion*, *Starts the Project integration in Oracle
+Integration Cloud*, *Promotes the equipment import in your backend* — and each action as when it happens — *When the
+page opens*, *When the user clicks "Fetch"*, *When the user selects a row*, *When the user changes the project*. No
+paths, methods or chain names. The steps table under the diagram becomes *What happens, step by step* (step, when, what
+happens, system).
+
+**Edit & save as flow…** (Page flows) saves the page's flow under a name. It asks for the **flow name** (required),
+its **purpose**, the **business area / process**, the **owner**, the **status** (Draft, In review, Approved, Retired),
+the **Jira story** and **tags**, then opens the saved flow in a tab of its own (FL-0001…). **New flow (blank)** on
+Saved flows starts an empty one to draw by hand.
+
+**Saved flows** (a tab of Integrations) lists every saved flow: its ID, name and purpose, the page it came from, its
+systems, steps and actions, status and version, owner, when and by whom it was saved, open comments. Find, filter by
+status, open, save as a copy, remove; **Check all against the app** compares each with the app's code now and says
+whether it still matches.
+
+A **saved flow** has:
+
+- **Flow** — its diagram in swimlanes (plain English or technical), its purpose, and its steps one by one with their
+  notes and comments.
+- **Edit steps** — its systems (lanes: rename them, set their kind, add one for a step outside the app such as e-mail,
+  a file or a person); each action with when it happens in your words (the plain-English wording as a placeholder),
+  where it comes from in the app and a note; each step's system, its words (empty keeps the plain sentence), a note,
+  moved up or down (into the next or previous action at the ends), removed; **Add a step** (by hand: reads or writes),
+  **Add an action**.
+- **Details** — name, purpose, area, owner, Jira story, tags, where it came from.
+- **Comments** — on the whole flow or one step (shown with its words), resolved and reopened, removed; kept at once.
+- **History** — every version (who, when, what changed): view an earlier one, or restore it into the editor; and what
+  was done to the flow, step by step.
+- **Check against the app** — its steps that came from the app compared with what the page's code does now: steps the
+  page no longer makes, calls it makes that the flow does not have (**Add them to the flow**).
+
+**Save** keeps a new version (with *what changed*, if you say) and the one before in History; **Discard** puts back
+the version saved; **Save as copy** asks for a name; **SVG** and **PDF** (its details, the diagram, its steps, its open
+comments) export it. Saved flows are kept on this PC per VB Studio project.
+
 ## Follow-ups: chase stories by email, with your own messages
 
 On **Jira stories** or a sprint, tick some stories and choose **Copy to follow-up**. The dialog drafts the email: a

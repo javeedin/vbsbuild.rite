@@ -23,7 +23,8 @@
     "ai": { "path": "pages/ai-page" },
     "api-scenarios": { "path": "pages/api-scenarios-page" },
     "change-requests": { "path": "pages/change-requests-page" },
-    "integrations": { "path": "pages/integrations-page" }
+    "integrations": { "path": "pages/integrations-page" },
+    "saved-flow": { "path": "pages/saved-flow-page" }
   },
   "chains": {}, "services": {}, "types": {}, "variables": {}
 }

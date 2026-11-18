@@ -1,0 +1,109 @@
+{
+  "description": "One saved flow (Integrations → Saved flows): its details, its diagram (plain English or technical), an editor (reword steps, notes, steps and actions added, moved, removed, systems as lanes), comments, its versions (view, restore) and a check against the app; Save (a new version), Save as copy, PDF, SVG, Remove (desktop/lib/savedFlows.js, resources/js/flowModel.js).",
+  "navigation": {
+    "embeddable": "enabled"
+  },
+  "variables": {
+    "flowId": {
+      "type": "string",
+      "defaultValue": "",
+      "input": "fromCaller",
+      "description": "The saved flow open in this tab (FL-0001…)."
+    },
+    "flow": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The flow as edited (unsaved changes included)."
+    },
+    "saved": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The flow as last saved (to tell unsaved changes)."
+    },
+    "busy": {
+      "type": "boolean",
+      "defaultValue": false
+    },
+    "result": {
+      "type": "any",
+      "defaultValue": null
+    },
+    "tab": {
+      "type": "string",
+      "defaultValue": "flow",
+      "description": "flow | edit | details | comments | history | check"
+    },
+    "plain": {
+      "type": "boolean",
+      "defaultValue": true,
+      "description": "The flow in plain English (a sentence per step) — for a business reader."
+    },
+    "note": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "What changed (kept with the new version)."
+    },
+    "newLane": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "newLaneKind": {
+      "type": "string",
+      "defaultValue": "other"
+    },
+    "cText": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "cStep": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "showResolved": {
+      "type": "boolean",
+      "defaultValue": false
+    },
+    "viewV": {
+      "type": "number",
+      "defaultValue": 0,
+      "description": "History: the earlier version shown (0: none)."
+    },
+    "m": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The app's scan (lib/integrations.js), read for Check against the app."
+    },
+    "check": {
+      "type": "any",
+      "defaultValue": null
+    },
+    "pdfBusy": {
+      "type": "boolean",
+      "defaultValue": false
+    }
+  },
+  "eventListeners": {
+    "vbEnter": {
+      "chains": [{ "chain": "sfChain", "parameters": { "act": "load", "key": "", "value": "" } }]
+    },
+    "onAct": {
+      "chains": [{ "chain": "sfChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "key": "{{ $event.currentTarget.dataset.key || '' }}", "value": "{{ $event.currentTarget.dataset.value || '' }}" } }]
+    },
+    "onField": {
+      "chains": [{ "chain": "sfChain", "parameters": { "act": "field", "key": "{{ $event.currentTarget.dataset.field }}", "value": "{{ $event.currentTarget.value }}" } }]
+    }
+  },
+  "imports": {
+    "components": {
+      "oj-bind-for-each": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-bind-if": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-bind-text": {
+        "path": "ojs/ojknockout"
+      }
+    }
+  }
+}

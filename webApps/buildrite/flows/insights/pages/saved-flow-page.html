@@ -1,0 +1,238 @@
+<!-- One saved flow (Integrations → Saved flows): its details, its diagram (plain English or technical), the editor, comments,
+     its versions and a check against the app (sfChain; desktop/lib/savedFlows.js, resources/js/flowModel.js). -->
+<div class="nx-page nx-int nx-sfp">
+  <div class="nx-pagehead">
+    <div>
+      <div class="nx-kicker">Build.Rite · Integrations · Saved flow</div>
+      <h1 id="sfpTitle"><oj-bind-text value="[[ $functions.title($variables.flow) ]]"></oj-bind-text></h1>
+      <div class="nx-sub" id="sfpSub"><oj-bind-text value="[[ $functions.sub($variables.flow) ]]"></oj-bind-text></div>
+    </div>
+  </div>
+
+  <oj-bind-if test="[[ !!$variables.result && !$variables.result.ok ]]"><div class="nx-flib-result nx-flib-result--err" id="sfpResult"><oj-bind-text value="[[ $variables.result.text ]]"></oj-bind-text></div></oj-bind-if>
+  <oj-bind-if test="[[ !$variables.flow && $variables.busy ]]"><p class="nx-note">Reading the flow…</p></oj-bind-if>
+
+  <oj-bind-if test="[[ !!$variables.flow ]]">
+  <section class="nx-sc-main">
+    <div class="nx-card nx-sc-sec nx-sfp-bar" id="sfpBar">
+      <div class="nx-sc-head">
+        <span :class="[[ $functions.statusCls($variables.flow) ]]" id="sfpStatusBadge"><oj-bind-text value="[[ $variables.flow.status === 'review' ? 'In review' : $variables.flow.status === 'approved' ? 'Approved' : $variables.flow.status === 'retired' ? 'Retired' : 'Draft' ]]"></oj-bind-text></span>
+        <select class="nx-cm-input nx-sfp-status" id="sfpStatus" data-field="flow.status" on-change="[[ $listeners.onField ]]" aria-label="Status">
+          <oj-bind-for-each data="[[ $functions.statusOptions($variables.flow.status) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+        </select>
+        <label class="nx-int-switch" title="Say every step in plain English, for a business reader"><input type="checkbox" id="sfpPlain" data-act="plain" :checked="[[ $variables.plain ]]" on-click="[[ $listeners.onAct ]]"><span>Plain English</span></label>
+        <span class="nx-min-flex"></span>
+        <oj-bind-if test="[[ $functions.isDirty($variables.flow, $variables.saved) ]]"><span class="nx-sfp-dirty" id="sfpDirty">Unsaved changes</span>
+          <input class="nx-cm-input nx-sfp-note" id="sfpNote" data-field="note" :value="[[ $variables.note ]]" on-change="[[ $listeners.onField ]]" placeholder="What changed? (kept with the version)">
+          <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="sfpRevert" data-act="revert" on-click="[[ $listeners.onAct ]]">Discard</button></oj-bind-if>
+        <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="sfpSave" data-act="save" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.busy || !$functions.isDirty($variables.flow, $variables.saved) ]]"><span class="oj-ux-ico-save" aria-hidden="true"></span> <oj-bind-text value="[[ $functions.saveText($variables.flow, $variables.saved, $variables.busy) ]]"></oj-bind-text></button>
+        <button type="button" class="nx-btn nx-btn--sm" id="sfpCopy" data-act="saveCopy" on-click="[[ $listeners.onAct ]]">Save as copy</button>
+        <button type="button" class="nx-btn nx-btn--sm" id="sfpCheckBtn" data-act="check" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-check-circle" aria-hidden="true"></span> Check against the app</button>
+        <button type="button" class="nx-btn nx-btn--sm" id="sfpSvg" data-act="svg" on-click="[[ $listeners.onAct ]]">SVG</button>
+        <button type="button" class="nx-btn nx-btn--sm" id="sfpPdf" data-act="pdf" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.pdfBusy ]]"><span class="oj-ux-ico-file-pdf" aria-hidden="true"></span> <oj-bind-text value="[[ $variables.pdfBusy ? 'Making…' : 'PDF' ]]"></oj-bind-text></button>
+        <button type="button" class="nx-iconbtn" id="sfpRemove" data-act="remove" on-click="[[ $listeners.onAct ]]" title="Remove this flow" aria-label="Remove this flow"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+      </div>
+    </div>
+
+    <div class="nx-sc-tabs" role="tablist" id="sfpTabs">
+      <button type="button" role="tab" id="sfpTabFlow" :aria-selected="[[ $functions.tabSel($variables.tab, 'flow') ]]" :class="[[ $functions.tabCls($variables.tab, 'flow') ]]" data-act="tab" data-key="flow" on-click="[[ $listeners.onAct ]]">Flow</button>
+      <button type="button" role="tab" id="sfpTabEdit" :aria-selected="[[ $functions.tabSel($variables.tab, 'edit') ]]" :class="[[ $functions.tabCls($variables.tab, 'edit') ]]" data-act="tab" data-key="edit" on-click="[[ $listeners.onAct ]]">Edit steps</button>
+      <button type="button" role="tab" id="sfpTabDetails" :aria-selected="[[ $functions.tabSel($variables.tab, 'details') ]]" :class="[[ $functions.tabCls($variables.tab, 'details') ]]" data-act="tab" data-key="details" on-click="[[ $listeners.onAct ]]">Details</button>
+      <button type="button" role="tab" id="sfpTabComments" :aria-selected="[[ $functions.tabSel($variables.tab, 'comments') ]]" :class="[[ $functions.tabCls($variables.tab, 'comments') ]]" data-act="tab" data-key="comments" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'Comments (' + $functions.openComments($variables.flow) + ')' ]]"></oj-bind-text></button>
+      <button type="button" role="tab" id="sfpTabHistory" :aria-selected="[[ $functions.tabSel($variables.tab, 'history') ]]" :class="[[ $functions.tabCls($variables.tab, 'history') ]]" data-act="tab" data-key="history" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'History (' + (($variables.flow.versions || []).length + 1) + ' versions)' ]]"></oj-bind-text></button>
+      <button type="button" role="tab" id="sfpTabCheck" :aria-selected="[[ $functions.tabSel($variables.tab, 'check') ]]" :class="[[ $functions.tabCls($variables.tab, 'check') ]]" data-act="tab" data-key="check" on-click="[[ $listeners.onAct ]]">Check against the app</button>
+    </div>
+
+    <!-- the flow: the diagram and its steps -->
+    <oj-bind-if test="[[ $variables.tab === 'flow' ]]">
+      <div class="nx-card nx-sc-sec" id="sfpFlow">
+        <oj-bind-if test="[[ !!$variables.flow.purpose ]]"><p class="nx-sfp-purpose" id="sfpPurposeShow"><oj-bind-text value="[[ $variables.flow.purpose ]]"></oj-bind-text></p></oj-bind-if>
+        <iframe class="nx-int-frame" id="sfpDia" title="The flow" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.flow, $variables.plain) ]]" :srcdoc="[[ $functions.diaDoc($variables.flow, $variables.plain) ]]"></iframe>
+        <h3 class="nx-int-h3">Step by step</h3>
+        <div class="nx-sfp-stepgrid" id="sfpSteps" role="table" aria-label="The flow step by step">
+          <div class="nx-int-row nx-int-row--head" role="row"><span>Step</span><span>When</span><span>What happens</span><span>System</span><span>Note</span><span></span></div>
+          <oj-bind-for-each data="[[ $functions.stepRows($variables.flow, $variables.plain) ]]"><template data-oj-as="r">
+            <div :class="[[ 'nx-int-row' + (r.data.first ? ' nx-int-row--first' : '') ]]" role="row" :data-key="[[ r.data.key ]]">
+              <span class="nx-int-id"><oj-bind-text value="[[ r.data.num ]]"></oj-bind-text></span>
+              <span><b><oj-bind-text value="[[ r.data.first ? r.data.when : '' ]]"></oj-bind-text></b></span>
+              <span><oj-bind-text value="[[ r.data.says ]]"></oj-bind-text><oj-bind-if test="[[ !!r.data.tech ]]"><small class="nx-int-mono"><oj-bind-text value="[[ r.data.tech ]]"></oj-bind-text></small></oj-bind-if></span>
+              <span><oj-bind-text value="[[ r.data.system ]]"></oj-bind-text></span>
+              <span class="nx-sfp-notecell"><oj-bind-text value="[[ r.data.note ]]"></oj-bind-text></span>
+              <span><oj-bind-if test="[[ !!r.data.comments ]]"><button type="button" class="nx-linkbtn" data-act="tab" data-key="comments" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ r.data.comments ]]"></oj-bind-text></button></oj-bind-if></span>
+            </div>
+          </template></oj-bind-for-each>
+        </div>
+      </div>
+    </oj-bind-if>
+
+    <!-- the editor: its systems (lanes), its actions and their steps -->
+    <oj-bind-if test="[[ $variables.tab === 'edit' ]]">
+      <div class="nx-card nx-sc-sec" id="sfpLanes">
+        <h2>Systems (lanes)</h2>
+        <p class="nx-note">Each system is a lane of the diagram. Rename them for a business reader; add one for a step outside the app (e-mail, a file, a person).</p>
+        <div class="nx-sfp-lanes">
+          <oj-bind-for-each data="[[ $functions.laneRows($variables.flow) ]]"><template data-oj-as="l">
+            <div class="nx-sfp-lane" :data-id="[[ l.data.id ]]" :style="[[ { borderLeftColor: l.data.color } ]]">
+              <input class="nx-cm-input" :data-field="[[ 'l.' + l.data.id + '.name' ]]" :value="[[ l.data.name ]]" on-change="[[ $listeners.onField ]]" aria-label="The system's name">
+              <select class="nx-cm-input" :data-field="[[ 'l.' + l.data.id + '.kind' ]]" on-change="[[ $listeners.onField ]]" aria-label="Its kind">
+                <oj-bind-for-each data="[[ $functions.kindOptions(l.data.kind) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+              </select>
+              <button type="button" class="nx-iconbtn" data-act="removeLane" :data-key="[[ l.data.id ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ l.data.used ]]" :title="[[ l.data.used ? 'It has steps — move or remove them first' : 'Remove this system' ]]" aria-label="Remove this system"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+            </div>
+          </template></oj-bind-for-each>
+          <div class="nx-sfp-lane nx-sfp-lane--new">
+            <input class="nx-cm-input" id="sfpNewLane" data-field="newLane" :value="[[ $variables.newLane ]]" on-input="[[ $listeners.onField ]]" placeholder="A new system, e.g. E-mail">
+            <select class="nx-cm-input" id="sfpNewLaneKind" data-field="newLaneKind" on-change="[[ $listeners.onField ]]" aria-label="Its kind">
+              <oj-bind-for-each data="[[ $functions.kindOptions($variables.newLaneKind) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+            </select>
+            <button type="button" class="nx-btn nx-btn--sm" id="sfpAddLane" data-act="addLane" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span> Add</button>
+          </div>
+        </div>
+      </div>
+      <div id="sfpActions">
+        <oj-bind-for-each data="[[ $functions.actionRows($variables.flow) ]]"><template data-oj-as="a">
+          <div class="nx-card nx-sc-sec nx-sfp-action" :data-id="[[ a.data.id ]]">
+            <div class="nx-sfp-ahead">
+              <b class="nx-sfp-anum"><oj-bind-text value="[[ 'Action ' + a.data.n ]]"></oj-bind-text></b>
+              <input class="nx-cm-input nx-sfp-atitle" :data-field="[[ 'a.' + a.data.id + '.title' ]]" :value="[[ a.data.title ]]" :placeholder="[[ a.data.ph ]]" on-change="[[ $listeners.onField ]]" aria-label="When it happens">
+              <button type="button" class="nx-iconbtn" data-act="moveAction" :data-key="[[ a.data.id ]]" data-value="-1" on-click="[[ $listeners.onAct ]]" :disabled="[[ a.data.first ]]" title="Move up" aria-label="Move up"><span class="oj-ux-ico-arrow-up" aria-hidden="true"></span></button>
+              <button type="button" class="nx-iconbtn" data-act="moveAction" :data-key="[[ a.data.id ]]" data-value="1" on-click="[[ $listeners.onAct ]]" :disabled="[[ a.data.last ]]" title="Move down" aria-label="Move down"><span class="oj-ux-ico-arrow-down" aria-hidden="true"></span></button>
+              <button type="button" class="nx-iconbtn" data-act="removeAction" :data-key="[[ a.data.id ]]" on-click="[[ $listeners.onAct ]]" title="Remove this action" aria-label="Remove this action"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+            </div>
+            <div class="nx-note nx-sfp-atrig"><oj-bind-text value="[[ a.data.trigger ]]"></oj-bind-text></div>
+            <input class="nx-cm-input nx-sfp-anote" :data-field="[[ 'a.' + a.data.id + '.note' ]]" :value="[[ a.data.note ]]" placeholder="A note on this action (optional)" on-change="[[ $listeners.onField ]]" aria-label="A note on this action">
+            <div class="nx-sfp-steps">
+              <oj-bind-for-each data="[[ a.data.steps ]]"><template data-oj-as="s">
+                <div class="nx-sfp-step" :data-id="[[ s.data.id ]]" :style="[[ { borderLeftColor: s.data.color } ]]">
+                  <span class="nx-int-id nx-sfp-snum"><oj-bind-text value="[[ s.data.n ]]"></oj-bind-text></span>
+                  <select class="nx-cm-input nx-sfp-slane" :data-field="[[ 's.' + s.data.id + '.system' ]]" on-change="[[ $listeners.onField ]]" aria-label="Its system">
+                    <oj-bind-for-each data="[[ s.data.lanes ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+                  </select>
+                  <div class="nx-sfp-swords">
+                    <input class="nx-cm-input" :data-field="[[ 's.' + s.data.id + '.text' ]]" :value="[[ s.data.text ]]" :placeholder="[[ s.data.ph ]]" on-change="[[ $listeners.onField ]]" aria-label="What happens, in your words">
+                    <small class="nx-int-mono"><oj-bind-text value="[[ s.data.tech ]]"></oj-bind-text></small>
+                  </div>
+                  <oj-bind-if test="[[ s.data.manual ]]">
+                    <select class="nx-cm-input nx-sfp-sdir" :data-field="[[ 's.' + s.data.id + '.direction' ]]" on-change="[[ $listeners.onField ]]" aria-label="Reads or writes">
+                      <oj-bind-for-each data="[[ s.data.dirs ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+                    </select>
+                  </oj-bind-if>
+                  <input class="nx-cm-input nx-sfp-snote" :data-field="[[ 's.' + s.data.id + '.note' ]]" :value="[[ s.data.note ]]" placeholder="A note (optional)" on-change="[[ $listeners.onField ]]" aria-label="A note on this step">
+                  <span class="nx-sfp-sbtns">
+                    <button type="button" class="nx-iconbtn" data-act="moveStep" :data-key="[[ s.data.id ]]" data-value="-1" on-click="[[ $listeners.onAct ]]" :disabled="[[ s.data.first ]]" title="Move up" aria-label="Move up"><span class="oj-ux-ico-arrow-up" aria-hidden="true"></span></button>
+                    <button type="button" class="nx-iconbtn" data-act="moveStep" :data-key="[[ s.data.id ]]" data-value="1" on-click="[[ $listeners.onAct ]]" :disabled="[[ s.data.last ]]" title="Move down" aria-label="Move down"><span class="oj-ux-ico-arrow-down" aria-hidden="true"></span></button>
+                    <button type="button" class="nx-iconbtn" data-act="removeStep" :data-key="[[ s.data.id ]]" on-click="[[ $listeners.onAct ]]" title="Remove this step" aria-label="Remove this step"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+                  </span>
+                </div>
+              </template></oj-bind-for-each>
+            </div>
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-sfp-addstep" data-act="addStep" :data-key="[[ a.data.id ]]" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span> Add a step</button>
+          </div>
+        </template></oj-bind-for-each>
+        <button type="button" class="nx-btn nx-btn--sm" id="sfpAddAction" data-act="addAction" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span> Add an action</button>
+        <p class="nx-note">Leave a step's words empty to keep the plain-English sentence shown in grey. Changes are kept when you press Save (a new version; the one before stays in History).</p>
+      </div>
+    </oj-bind-if>
+
+    <!-- the details: name, purpose, area, owner, story, tags -->
+    <oj-bind-if test="[[ $variables.tab === 'details' ]]">
+      <div class="nx-card nx-sc-sec" id="sfpDetails">
+        <div class="nx-int-form">
+          <label class="nx-int-fld nx-int-fld--wide"><span>Flow name <b class="nx-int-req">*</b></span><input class="nx-cm-input" id="sfpName" data-field="flow.name" :value="[[ $variables.flow.name ]]" on-change="[[ $listeners.onField ]]"></label>
+          <label class="nx-int-fld nx-int-fld--wide"><span>Purpose — what the flow is for</span><textarea class="nx-cm-input nx-int-ta" id="sfpPurpose" data-field="flow.purpose" :value="[[ $variables.flow.purpose ]]" on-change="[[ $listeners.onField ]]"></textarea></label>
+          <label class="nx-int-fld"><span>Business area / process</span><input class="nx-cm-input" id="sfpArea" data-field="flow.area" :value="[[ $variables.flow.area ]]" on-change="[[ $listeners.onField ]]"></label>
+          <label class="nx-int-fld"><span>Owner</span><input class="nx-cm-input" id="sfpOwner" data-field="flow.owner" :value="[[ $variables.flow.owner ]]" on-change="[[ $listeners.onField ]]"></label>
+          <label class="nx-int-fld"><span>Jira story</span><input class="nx-cm-input" id="sfpStory" data-field="flow.story" :value="[[ $variables.flow.story ]]" on-change="[[ $listeners.onField ]]"></label>
+          <label class="nx-int-fld"><span>Tags (comma between)</span><input class="nx-cm-input" id="sfpTags" data-field="flow.tags" :value="[[ $functions.tags($variables.flow) ]]" on-change="[[ $listeners.onField ]]"></label>
+        </div>
+        <p class="nx-note" id="sfpSource"><oj-bind-text value="[[ $functions.sourceText($variables.flow) ]]"></oj-bind-text>
+          <oj-bind-if test="[[ !!$variables.flow.source && $variables.flow.source.kind === 'page' ]]"> <button type="button" class="nx-linkbtn" data-act="openPage" on-click="[[ $listeners.onAct ]]">Its page sheet</button></oj-bind-if></p>
+      </div>
+    </oj-bind-if>
+
+    <!-- comments: on the flow or a step; resolved, removed -->
+    <oj-bind-if test="[[ $variables.tab === 'comments' ]]">
+      <div class="nx-card nx-sc-sec" id="sfpComments">
+        <div class="nx-sc-head"><div><h2>Comments</h2><span class="nx-note" id="sfpCommentCount"><oj-bind-text value="[[ $functions.commentCount($variables.flow) ]]"></oj-bind-text></span></div>
+          <span class="nx-min-flex"></span>
+          <label class="nx-int-pdfopt"><input type="checkbox" id="sfpShowResolved" data-act="showResolved" :checked="[[ $variables.showResolved ]]" on-click="[[ $listeners.onAct ]]"> show resolved</label></div>
+        <div class="nx-sfp-cform">
+          <textarea class="nx-cm-input nx-int-ta" id="sfpCText" data-field="cText" :value="[[ $variables.cText ]]" on-input="[[ $listeners.onField ]]" placeholder="A question, a decision, something to check…"></textarea>
+          <div class="nx-fx-row">
+            <select class="nx-cm-input nx-sfp-cstep" id="sfpCStep" data-field="cStep" on-change="[[ $listeners.onField ]]" aria-label="On">
+              <oj-bind-for-each data="[[ $functions.stepOptions($variables.flow, $variables.cStep) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+            </select>
+            <span class="nx-min-flex"></span>
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="sfpAddComment" data-act="comment" on-click="[[ $listeners.onAct ]]">Add comment</button>
+          </div>
+        </div>
+        <div class="nx-sfp-clist" id="sfpCList">
+          <oj-bind-for-each data="[[ $functions.commentRows($variables.flow, $variables.showResolved) ]]"><template data-oj-as="c">
+            <div :class="[[ c.data.cls ]]" :data-id="[[ c.data.id ]]">
+              <div class="nx-sfp-cmhead"><b><oj-bind-text value="[[ c.data.by ]]"></oj-bind-text></b><span class="nx-note"><oj-bind-text value="[[ c.data.at ]]"></oj-bind-text></span><span class="nx-sfp-cmon"><oj-bind-text value="[[ c.data.on ]]"></oj-bind-text></span>
+                <span class="nx-min-flex"></span>
+                <oj-bind-if test="[[ c.data.resolved ]]"><span class="nx-int-ck nx-int-ck--ok"><oj-bind-text value="[[ c.data.resolvedText ]]"></oj-bind-text></span>
+                  <button type="button" class="nx-linkbtn" data-act="resolve" :data-key="[[ c.data.id ]]" data-value="0" on-click="[[ $listeners.onAct ]]">Reopen</button></oj-bind-if>
+                <oj-bind-if test="[[ !c.data.resolved ]]"><button type="button" class="nx-btn nx-btn--sm" data-act="resolve" :data-key="[[ c.data.id ]]" data-value="1" on-click="[[ $listeners.onAct ]]">Resolve</button></oj-bind-if>
+                <button type="button" class="nx-iconbtn" data-act="uncomment" :data-key="[[ c.data.id ]]" on-click="[[ $listeners.onAct ]]" title="Remove" aria-label="Remove the comment"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button></div>
+              <p><oj-bind-text value="[[ c.data.text ]]"></oj-bind-text></p>
+            </div>
+          </template></oj-bind-for-each>
+          <oj-bind-if test="[[ $functions.commentRows($variables.flow, $variables.showResolved).length === 0 ]]"><p class="nx-note" id="sfpNoComments">No comment yet.</p></oj-bind-if>
+        </div>
+      </div>
+    </oj-bind-if>
+
+    <!-- history: its versions (view, restore) and what was done -->
+    <oj-bind-if test="[[ $variables.tab === 'history' ]]">
+      <div class="nx-card nx-sc-sec" id="sfpHistory">
+        <h2>Versions</h2>
+        <div class="nx-sfp-vgrid" id="sfpVersions" role="table" aria-label="Versions">
+          <div class="nx-int-row nx-int-row--head" role="row"><span>Version</span><span>Saved</span><span>By</span><span>What changed</span><span>Steps</span><span></span></div>
+          <oj-bind-for-each data="[[ $functions.versionRows($variables.flow, $variables.viewV) ]]"><template data-oj-as="x">
+            <div class="nx-int-row" role="row" :data-v="[[ x.data.v ]]">
+              <span><b><oj-bind-text value="[[ 'v' + x.data.v ]]"></oj-bind-text></b><oj-bind-if test="[[ x.data.current ]]"><small>current</small></oj-bind-if></span>
+              <span class="nx-note"><oj-bind-text value="[[ x.data.at ]]"></oj-bind-text></span>
+              <span class="nx-note"><oj-bind-text value="[[ x.data.by ]]"></oj-bind-text></span>
+              <span><oj-bind-text value="[[ x.data.note ]]"></oj-bind-text></span>
+              <span class="nx-note"><oj-bind-text value="[[ x.data.steps ]]"></oj-bind-text></span>
+              <span class="nx-int-acts"><oj-bind-if test="[[ !x.data.current ]]">
+                <button type="button" class="nx-btn nx-btn--sm" data-act="viewVersion" :data-key="[[ x.data.v ]]" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ x.data.on ? 'Hide' : 'View' ]]"></oj-bind-text></button>
+                <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="restoreVersion" :data-key="[[ x.data.v ]]" on-click="[[ $listeners.onAct ]]">Restore</button></oj-bind-if></span>
+            </div>
+          </template></oj-bind-for-each>
+        </div>
+        <oj-bind-if test="[[ $variables.viewV > 0 ]]">
+          <h3 class="nx-int-h3"><oj-bind-text value="[[ 'Version ' + $variables.viewV ]]"></oj-bind-text></h3>
+          <iframe class="nx-int-frame" id="sfpVDia" title="An earlier version" sandbox="allow-same-origin" :srcdoc="[[ $functions.versionDoc($variables.flow, $variables.viewV, $variables.plain) ]]" style="min-height: 320px"></iframe>
+        </oj-bind-if>
+        <h2 class="nx-sfp-h2">What was done</h2>
+        <ul class="nx-sfp-hist" id="sfpHist">
+          <oj-bind-for-each data="[[ $functions.historyRows($variables.flow) ]]"><template data-oj-as="h">
+            <li><span class="nx-note"><oj-bind-text value="[[ h.data.at ]]"></oj-bind-text></span> <b><oj-bind-text value="[[ h.data.by ]]"></oj-bind-text></b> <oj-bind-text value="[[ h.data.what ]]"></oj-bind-text><oj-bind-if test="[[ !!h.data.note ]]"> — <oj-bind-text value="[[ h.data.note ]]"></oj-bind-text></oj-bind-if></li>
+          </template></oj-bind-for-each>
+        </ul>
+      </div>
+    </oj-bind-if>
+
+    <!-- checked against the app: what changed in the code since the flow was saved -->
+    <oj-bind-if test="[[ $variables.tab === 'check' ]]">
+      <div class="nx-card nx-sc-sec" id="sfpCheck">
+        <div class="nx-sc-head"><div><h2>Check against the app</h2><span class="nx-note">The flow's steps that came from the app, compared with what the page's code does now.</span></div>
+          <span class="nx-min-flex"></span><button type="button" class="nx-btn nx-btn--sm" id="sfpCheckAgain" data-act="check" on-click="[[ $listeners.onAct ]]">Check again</button></div>
+        <div :class="[[ $functions.checkCls($variables.check) ]]" id="sfpCheckResult"><oj-bind-text value="[[ $functions.checkText($variables.check) ]]"></oj-bind-text></div>
+        <oj-bind-if test="[[ !!$variables.check && $variables.check.missing.length > 0 ]]">
+          <h3 class="nx-int-h3">Steps the page no longer makes</h3>
+          <ul class="nx-sfp-ck" id="sfpMissing"><oj-bind-for-each data="[[ $variables.check.missing ]]"><template data-oj-as="x"><li><code><oj-bind-text value="[[ x.data.label ]]"></oj-bind-text></code> <oj-bind-text value="[[ x.data.object ]]"></oj-bind-text></li></template></oj-bind-for-each></ul>
+          <p class="nx-note">Remove them in Edit steps if the flow should follow the app.</p>
+        </oj-bind-if>
+        <oj-bind-if test="[[ !!$variables.check && $variables.check.added.length > 0 ]]">
+          <h3 class="nx-int-h3">Calls the page makes that the flow does not have</h3>
+          <ul class="nx-sfp-ck" id="sfpAdded"><oj-bind-for-each data="[[ $variables.check.added ]]"><template data-oj-as="x"><li><code><oj-bind-text value="[[ x.data.label ]]"></oj-bind-text></code> <oj-bind-text value="[[ x.data.object + ' — ' + x.data.system ]]"></oj-bind-text></li></template></oj-bind-for-each></ul>
+          <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="sfpAddFromApp" data-act="addFromApp" on-click="[[ $listeners.onAct ]]">Add them to the flow</button>
+        </oj-bind-if>
+      </div>
+    </oj-bind-if>
+  </section>
+  </oj-bind-if>
+</div>

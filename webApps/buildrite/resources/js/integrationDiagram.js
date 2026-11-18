@@ -10,9 +10,13 @@ define([], function () {
   //                     → what it calls, in the order its code calls it → the systems (pageBasic: the plain version,
   //                     for a scan without pageFlows)
   //   pages(m)          every page with calls → the systems it calls (grouped by flow); a line's thickness = calls
-  //   pageFlow(m, id)   one page's flow in swimlanes: a lane for the page and one per system; each action starts at what
+  //   pageFlow(m, id, { plain })  one page's flow in swimlanes (flowSwim(pageModel(m, id))): a lane for the page and one per system; each action starts at what
   //                     sets it off and goes down step by step, each call in the lane of the system it calls (Oracle
-  //                     Fusion · GET Items → the app's backend · POST Items); a darker arrow = it moves on to another system
+  //                     Fusion · GET Items → the app's backend · POST Items); a darker arrow = it moves on to another system;
+  //                     plain: every call as a sentence ("Reads the list of projects from Oracle Fusion"), what sets it
+  //                     off in words ("When the user clicks "Fetch"") — for a business reader
+  //   flowSwim(model, { plain })  the same drawing for any flow model (a saved, edited flow: steps added by hand, notes)
+  //   plainStep(call) / plainTrigger(text) / objectPhrase(object)  the plain-English wording
   //   systemFlow(m)     between systems, not page by page: the app ⇄ each system — what the app sends it (writes),
   //                     what it returns (reads) and the reports it runs, by business object
   //   journeys(m)       cross-system flows: each action that calls two or more systems, its systems in order
@@ -463,34 +467,135 @@ define([], function () {
     return { svg: wrap(W, H, out.join(''), p.label), w: W, h: H, title: p.label };
   }
 
-  /** One page's flow in swimlanes: the page's lane (what sets each action off) and a lane per system; each action goes
-   *  down step by step, every call in the lane of its system; a darker arrow where it moves on to another system. */
-  function pageFlow(m, id) {
+  // ── Plain English: a call and what sets it off, said for a business reader ──────────────────────────────────────
+  var ACR = /^(bu|po|so|lov|uom|gl|id|inv|oic|api|ar|ap|om|le|hr|sku|lpn|asn|rma|vat|url|pdf)$/i;
+  /** "Equipment requests › lines" → "lines of equipment requests"; "Projects LOV" → "list of projects"; acronyms kept. */
+  function objectPhrase(o) {
+    var t = String(o || '').replace(/\s*\((integration|[A-Z0-9_]{3,})\)\s*$/, '').trim();
+    var parts = t.split(/\s*›\s*/);
+    var words = function (x) { return String(x).split(/\s+/).map(function (w) { return ACR.test(w) ? w.toUpperCase() : w.toLowerCase(); }).join(' '); };
+    var lov = function (x) { var m = /^(.*?)\s+LOV$/i.exec(x); return m ? 'list of ' + words(m[1]) : words(x); };
+    return parts.length > 1 ? lov(parts[parts.length - 1]) + ' of ' + lov(parts.slice(0, -1).join(' ')) : lov(t);
+  }
+  var third = function (w) { w = String(w || '').toLowerCase(); return /(s|sh|ch|x|z)$/.test(w) ? w + 'es' : /[^aeiou]y$/.test(w) ? w.slice(0, -1) + 'ies' : w + 's'; };
+  var cap = function (t) { t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); };
+  /** A call as a sentence: { verb, text, where, sentence } — "Reads the BU org mappings" "from the backend". */
+  function plainStep(c) {
+    var obj = String(c.object || '');
+    var sys = c.systemName || c.system || 'the system';
+    var verb, text;
+    if (c.direction === 'Report' || c.kind === 'bip') {
+      var rep = (/\(([A-Z0-9_]+)\)\s*$/.exec(obj) || [])[1];
+      verb = 'Runs'; text = 'the ' + objectPhrase(obj).replace(/ report$/, '') + ' report';
+      return { verb: verb, text: text, where: 'in ' + sys, sentence: verb + ' ' + text + ' in ' + sys + (rep ? ' (' + rep + ')' : '') };
+    }
+    if (/\(integration\)\s*$/.test(obj)) {
+      verb = c.direction === 'Read' ? 'Asks' : 'Starts';
+      text = 'the ' + obj.replace(/\s*\(integration\)\s*$/, '') + ' integration';
+      return { verb: verb, text: text, where: 'in ' + sys, sentence: verb + ' ' + text + ' in ' + sys };
+    }
+    var op = String(c.action || '').trim();
+    if (op) {
+      var ow = op.split(/\s+/), first = ow[0].toLowerCase();
+      var SPECIAL = { batch: ['Saves', 'a batch of'], bulk: ['Loads', 'in bulk:'], content: ['Downloads', 'the content of'], access: ['Gets', 'a link to'], count: ['Counts', 'the'], summary: ['Sums up', 'the'], preview: ['Previews', 'the'] };
+      if (SPECIAL[first]) { verb = SPECIAL[first][0]; text = SPECIAL[first][1] + ' ' + (first === 'bulk' ? ow.slice(1).join(' ') + ' ' : '') + objectPhrase(obj); }
+      else { verb = cap(third(first)); text = (ow.length > 1 ? ow.slice(1).join(' ') + ' for ' : '') + 'the ' + objectPhrase(obj); }
+    } else {
+      var M = String(c.method || '').toUpperCase();
+      verb = M === 'GET' || M === 'HEAD' ? 'Reads' : M === 'POST' ? 'Creates' : M === 'PUT' || M === 'PATCH' ? 'Updates' : M === 'DELETE' ? 'Deletes' : 'Calls';
+      text = 'the ' + objectPhrase(obj || c.endpoint || 'data');
+    }
+    var where = (verb === 'Reads' || verb === 'Deletes' || verb === 'Downloads' || verb === 'Gets' || verb === 'Counts') ? 'from ' + sys : 'in ' + sys;
+    return { verb: verb, text: text.replace(/\s+/g, ' ').trim(), where: where, sentence: verb + ' ' + text.replace(/\s+/g, ' ').trim() + ' ' + where };
+  }
+  /** What sets an action off, for a business reader: "When the user clicks "Fetch"", "When the page opens"… */
+  function plainTrigger(t) {
+    var parts = String(t || '').split(/;\s*/).filter(Boolean);
+    var one = function (x) {
+      if (/^when the page opens/i.test(x)) return 'When the page opens';
+      if (/page.s data/i.test(x)) return 'When the page\'s list loads';
+      var b = /^"([\s\S]*)" \(button\)$/.exec(x);
+      if (b) {
+        var l = b[1];
+        if (/selected row|row (changed|selection)|select(ed|ion) changed/i.test(l)) return 'When the user selects a row';
+        if (/row action/i.test(l)) return 'When the user picks an action on a row';
+        if (/filter criterion changed/i.test(l)) return 'When the user changes a filter';
+        if (/value( item)? (changed|action)/i.test(l)) {
+          var f = /label:\s*([^:"]+?)\s*(value|$)/i.exec(l) || /^([^:]{1,30}):\s*value/i.exec(l);
+          var fld = f && f[1] ? f[1].trim() : '';
+          return 'When the user changes ' + (fld && !/^(oj|label)/i.test(fld) ? 'the ' + fld.toLowerCase() : 'a value');
+        }
+        if (/primary action/i.test(l)) return 'When the user clicks the main button';
+        if (/secondary action/i.test(l)) return 'When the user clicks a toolbar button';
+        var clean = l.replace(/<!--[\s\S]*?-->|-->|<[^>]+>/g, ' ').replace(/^[^:]{0,24}:\s*/, function (m) { return /^oj|^label/i.test(m) ? '' : m; }).replace(/\s+/g, ' ').trim();
+        return 'When the user clicks "' + (clean.length > 40 ? clean.slice(0, 39) + '…' : clean || 'a button') + '"';
+      }
+      var r = /^run by\s+([A-Za-z0-9_]+)/i.exec(x);
+      if (r) return 'When the page runs "' + cap(r[1].replace(/Chain$/, '').replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase()) + '"';
+      if (/module/i.test(x)) return 'From the page\'s own code';
+      return cap(x);
+    };
+    var said = parts.map(one).filter(function (x, i, a) { return a.indexOf(x) === i; });
+    // several clicks said once: When the user clicks "Edit", "Submit" or "Delete"
+    var clicks = [], other = [];
+    said.forEach(function (x) { var c = /^When the user clicks ("[^"]*")$/.exec(x); if (c) clicks.push(c[1]); else other.push(x); });
+    if (clicks.length) other.unshift('When the user clicks ' + (clicks.length > 1 ? clicks.slice(0, -1).join(', ') + ' or ' + clicks[clicks.length - 1] : clicks[0]));
+    var low = function (x, i) { return i ? x.replace(/^When/, 'when').replace(/^From/, 'from') : x; };
+    other = other.map(low);
+    return other.length > 1 ? other.slice(0, -1).join(', ') + ' or ' + other[other.length - 1] : (other[0] || 'When the page runs it');
+  }
+  /** Text in lines of about `px`, at most `max` lines (the last cut with an ellipsis). */
+  function wrapLines(t, px, size, max) {
+    var per = (size || 12) * 0.56, cap0 = Math.max(6, Math.floor(px / per)), out = [], line = '';
+    String(t || '').split(/\s+/).filter(Boolean).forEach(function (w) {
+      if ((line ? line + ' ' + w : w).length > cap0) { if (line) out.push(line); line = w; } else line = line ? line + ' ' + w : w;
+    });
+    if (line) out.push(line);
+    if (out.length > max) { out = out.slice(0, max); out[max - 1] = fit(out[max - 1] + ' …', px, size); }
+    return out.map(function (l) { return fit(l, px, size); });
+  }
+
+  /** A page's flow as a model: { id, label, sub, lanes: [systems], actions: [{ trigger, chain, chains, calls }] }. */
+  function pageModel(m, id) {
     var pf = (m.pageFlows || []).filter(function (x) { return x.page === id; })[0];
     var p = (m.pages || []).filter(function (x) { return x.id === id; })[0] || { id: id, label: pf ? pf.pageLabel : id };
-    if (!pf) return { svg: wrap(1100, 90, text(24, 50, 'This page calls no web service.', { size: 13, fill: '#6b7889' }), p.label), w: 1100, h: 90, title: p.label };
-    var systems = pf.systems.map(function (sid) { return (m.systems || []).filter(function (s) { return s.id === sid; })[0]; }).filter(Boolean);
+    if (!pf) return null;
+    return { id: p.id, label: p.label, sub: pf.flow + ' · ' + pf.steps.length + ' action' + (pf.steps.length === 1 ? '' : 's'),
+      lanes: pf.systems.map(function (sid) { return (m.systems || []).filter(function (s) { return s.id === sid; })[0]; }).filter(Boolean),
+      actions: pf.steps.map(function (st) { return { trigger: st.trigger, chain: st.chain, chains: st.chains || [], calls: st.calls }; }) };
+  }
+
+  /** A flow in swimlanes (a page's, or one saved and edited): the page's lane (what sets each action off) and a lane
+   *  per system; each action goes down step by step, every call in the lane of its system; a darker arrow where it
+   *  moves on to another system. opts.plain: in plain English (a sentence per call, what sets it off in words, no
+   *  paths or chains); a step's or an action's note is shown under it. */
+  function flowSwim(model, opts) {
+    var o = opts || {};
+    var plain = !!o.plain;
+    var systems = model.lanes || [];
     var X0 = 24, PW = 220, LW = Math.max(230, Math.floor((1100 - 2 * X0 - PW) / Math.max(1, systems.length)));
     var W = 2 * X0 + PW + LW * systems.length;
     var laneX = {};
     systems.forEach(function (s, i) { laneX[s.id] = X0 + PW + i * LW; });
     var BX = 18, BW = LW - 2 * BX, SH = 48, SG = 22, HEAD = 64, top = HEAD + 14;
-    var pre = commonPrefix([].concat.apply([], pf.steps.map(function (st) { return st.calls.map(function (c) { return c.path; }); })));
+    var pre = commonPrefix([].concat.apply([], (model.actions || []).map(function (st) { return st.calls.map(function (c) { return c.path; }); })));
     // layout: each action a band; its steps one under the other (cut at MAX_CALLS calls)
     var bands = [], y = top, left = MAX_CALLS, more = 0;
-    pf.steps.forEach(function (st) {
+    (model.actions || []).forEach(function (st) {
       if (left <= 0) { more += st.calls.length; return; }
-      var calls = st.calls.slice(0, left);
+      var calls = st.calls.filter(function (c) { return laneX[c.system] != null; }).slice(0, left);
       more += st.calls.length - calls.length;
       left -= calls.length;
-      var lines = triggerLines(st.trigger, PW - 44);
-      var pillH = Math.max(SH, lines.length * 16 + (st.chain ? 16 : 0) + 14);
-      var stepsH = calls.length * (SH + SG) - SG;
+      var lines = plain ? wrapLines(st.title || plainTrigger(st.trigger), PW - 44, 12, 3) : triggerLines(st.trigger, PW - 44);
+      var noteLines = st.note ? wrapLines(st.note, PW - 44, 10.5, 2) : [];
+      var chainLine = !plain && st.chain;
+      var pillH = Math.max(SH, lines.length * 16 + (chainLine ? 16 : 0) + noteLines.length * 14 + 14);
+      var stepsH = Math.max(SH, calls.length * (SH + SG) - SG);
       var h = Math.max(pillH, stepsH) + 24;
-      bands.push({ st: st, calls: calls, lines: lines, y: y, h: h, pillH: pillH });
+      bands.push({ st: st, calls: calls, lines: lines, noteLines: noteLines, chainLine: chainLine, y: y, h: h, pillH: pillH });
       y += h;
     });
-    var H0 = y - top + (more ? 26 : 0);
+    var H0 = Math.max(60, y - top + (more ? 26 : 0));
     var colors = systems.map(function (s) { return kindOf(s.kind).color; });
     var out = [arrowDefs(['#b3bdc7', '#3b4a58'])];
     // the lanes: tinted by their system's colour, headed by its name and kind
@@ -502,12 +607,12 @@ define([], function () {
     });
     bands.forEach(function (b, i) { if (i % 2) out.push('<rect x="' + X0 + '" y="' + b.y + '" width="' + (W - 2 * X0) + '" height="' + b.h + '" fill="#0b2a44" fill-opacity="0.025"/>'); });
     bands.forEach(function (b) { out.push('<line x1="' + X0 + '" y1="' + b.y + '" x2="' + (W - X0) + '" y2="' + b.y + '" stroke="#e4e9ef"/>'); });
-    out.push('<g><title>' + esc(p.label + ' (' + p.id + ')') + '</title>' + text(X0 + 12, 24, 'The page', { size: 11, weight: 700, fill: '#6b7889' })
-      + text(X0 + 12, 44, fit(p.label, PW - 24, 14), { size: 14, weight: 700, fill: '#2e6fd8' }) + text(X0 + 12, 60, fit(pf.flow + ' · ' + pf.steps.length + ' action' + (pf.steps.length === 1 ? '' : 's'), PW - 24, 11), { size: 11, fill: '#5b6876' }) + '</g>');
+    out.push('<g><title>' + esc(model.label + (model.id ? ' (' + model.id + ')' : '')) + '</title>' + text(X0 + 12, 24, model.kicker || 'The page', { size: 11, weight: 700, fill: '#6b7889' })
+      + text(X0 + 12, 44, fit(model.label, PW - 24, 14), { size: 14, weight: 700, fill: '#2e6fd8' }) + text(X0 + 12, 60, fit(model.sub || '', PW - 24, 11), { size: 11, fill: '#5b6876' }) + '</g>');
     systems.forEach(function (s, i) {
       var x = laneX[s.id];
-      out.push('<g><title>' + esc(s.name + ' — ' + s.kindLabel + (s.url ? ' · ' + s.url : '')) + '</title><rect x="' + x + '" y="0" width="' + LW + '" height="5" fill="' + colors[i] + '"/>'
-        + text(x + 14, 30, fit(s.name, LW - 28, 14), { size: 14, weight: 700 }) + text(x + 14, 48, fit(s.kindLabel + (s.host ? ' · ' + s.host : ''), LW - 28, 11), { size: 11, fill: '#5b6876' }) + '</g>');
+      out.push('<g><title>' + esc(s.name + ' — ' + (s.kindLabel || '') + (s.url ? ' · ' + s.url : '')) + '</title><rect x="' + x + '" y="0" width="' + LW + '" height="5" fill="' + colors[i] + '"/>'
+        + text(x + 14, 30, fit(s.name, LW - 28, 14), { size: 14, weight: 700 }) + text(x + 14, 48, fit((s.kindLabel || '') + (s.host && !plain ? ' · ' + s.host : ''), LW - 28, 11), { size: 11, fill: '#5b6876' }) + '</g>');
     });
     out.push('<line x1="' + X0 + '" y1="' + HEAD + '" x2="' + (W - X0) + '" y2="' + HEAD + '" stroke="#c9d6e0" stroke-width="1.5"/>');
     var lane = function (sid) { return systems.map(function (s) { return s.id; }).indexOf(sid); };
@@ -515,42 +620,77 @@ define([], function () {
       var st = b.st, y0 = b.y + 12;
       // what sets it off, in the page's lane
       var px = X0 + 12, pw = PW - 24;
-      var ty = y0 + b.pillH / 2 - (b.lines.length - 1) * 8 - (st.chain ? 6 : 0) + 4;
-      out.push('<g><title>' + esc(st.trigger + (st.chain ? ' — chain ' + st.chain : '')) + '</title>' + box(px, y0, pw, b.pillH, { fill: '#ffffff', stroke: '#2e6fd8', sw: 1.5, r: 22 })
+      var used = b.lines.length * 16 + (b.chainLine ? 16 : 0) + b.noteLines.length * 14;
+      var ty = y0 + (b.pillH - used) / 2 + 12;
+      out.push('<g><title>' + esc((plain ? (st.title || plainTrigger(st.trigger)) : st.trigger) + (st.chain ? ' — chain ' + st.chain : '') + (st.note ? ' — note: ' + st.note : '')) + '</title>' + box(px, y0, pw, b.pillH, { fill: '#ffffff', stroke: '#2e6fd8', sw: 1.5, r: 22 })
         + '<circle cx="' + (px + 16) + '" cy="' + (y0 + b.pillH / 2) + '" r="5" fill="#2e6fd8"/>'
-        + b.lines.map(function (l, i) { return text(px + 28, ty + i * 16, l, { size: i ? 11 : 12, weight: i ? 400 : 600, fill: i ? '#5b6876' : '#16212c' }); }).join('')
-        + (st.chain ? text(px + 28, ty + b.lines.length * 16, fit((st.chains && st.chains.length > 1 ? st.chains.length + ' chains: ' : '') + st.chain, pw - 40, 10, true), { size: 10, fill: '#6b7889', mono: true }) : '') + '</g>');
+        + b.lines.map(function (l, i) { return text(px + 28, ty + i * 16, l, { size: plain ? 12 : (i ? 11 : 12), weight: plain ? 600 : (i ? 400 : 600), fill: plain || !i ? '#16212c' : '#5b6876' }); }).join('')
+        + (b.chainLine ? text(px + 28, ty + b.lines.length * 16, fit((st.chains && st.chains.length > 1 ? st.chains.length + ' chains: ' : '') + st.chain, pw - 40, 10, true), { size: 10, fill: '#6b7889', mono: true }) : '')
+        + b.noteLines.map(function (l, i) { return text(px + 28, ty + b.lines.length * 16 + (b.chainLine ? 16 : 0) + i * 14, l, { size: 10.5, fill: '#8a5a00' }); }).join('') + '</g>');
       var prev = { x: px + pw, y: y0 + Math.min(b.pillH, SH) / 2, lane: -1, right: true };
+      if (!b.calls.length) out.push(text(X0 + PW + 18, y0 + 28, plain ? 'Nothing is called yet.' : 'No calls in this action yet.', { size: 11.5, fill: '#8a97a5' }));
       b.calls.forEach(function (c, i) {
         var li = lane(c.system);
         var bx = laneX[c.system] + BX, by = y0 + i * (SH + SG), cx = bx + BW / 2;
         var hand = prev.lane !== -1 && prev.lane !== li;
         // the arrow into this step: from what set it off (across), down the same lane, or over to another lane (darker)
         var path;
-        if (prev.right) path = 'M' + prev.x + ' ' + prev.y + ' H' + (bx - 4) + (Math.abs(prev.y - (by + SH / 2)) > 1 ? '' : '');
+        if (prev.right) path = Math.abs(prev.y - (by + SH / 2)) > 1 ? 'M' + prev.x + ' ' + prev.y + ' H' + (bx - 14) + ' V' + (by + SH / 2) + ' H' + (bx - 4) : 'M' + prev.x + ' ' + prev.y + ' H' + (bx - 4);
         else if (!hand) path = 'M' + cx + ' ' + prev.y + ' V' + (by - 3);
         else path = 'M' + prev.x + ' ' + prev.y + ' V' + (by - SG / 2) + ' H' + cx + ' V' + (by - 3);
-        if (prev.right && Math.abs(prev.y - (by + SH / 2)) > 1) path = 'M' + prev.x + ' ' + prev.y + ' H' + (bx - 14) + ' V' + (by + SH / 2) + ' H' + (bx - 4);
         out.push('<path d="' + path + '" fill="none" stroke="' + (hand ? '#3b4a58' : '#b3bdc7') + '" stroke-width="' + (hand ? 2 : 1.5) + '" marker-end="url(#ar' + (hand ? 1 : 0) + ')">'
           + (hand ? '<title>' + esc('then on to ' + c.systemName) + '</title>' : '') + '</path>');
         var D0 = DIR[c.direction] || DIR.Read;
-        out.push('<g><title>' + esc((i + 1) + '. ' + c.systemName + ' · ' + c.method + ' ' + c.path + (c.summary ? ' — ' + c.summary : '') + (c.via ? ' · via ' + c.via : '')) + '</title>'
-          + box(bx, by, BW, SH, { stroke: hand ? '#3b4a58' : '#c9d6e0', sw: hand ? 1.5 : 1 })
+        var ps = plainStep(c);
+        var said = c.text || ps.sentence;
+        var tip = (i + 1) + '. ' + (plain ? said : c.systemName + ' · ' + (c.manual ? (c.text || 'a step') : c.method + ' ' + c.path + (c.summary ? ' — ' + c.summary : '')) + (c.via ? ' · via ' + c.via : '')) + (c.note ? ' — note: ' + c.note : '');
+        var body;
+        var dot = c.note ? '<circle cx="' + (bx + BW - 10) + '" cy="' + (by + 10) + '" r="4" fill="#eda100"><title>' + esc('Note: ' + c.note) + '</title></circle>' : '';
+        // a step's own words: up to two lines (then its note is the amber dot); else line two says the note, or where
+        var own = function (t, sub, subFill, mono) {
+          var ls = wrapLines(t, BW - 40, 12.5, 2);
+          if (ls.length > 1) return text(bx + 32, by + 21, ls[0], { size: 12.5, weight: 600 }) + text(bx + 14, by + 39, ls[1], { size: 12.5, weight: 600 }) + dot;
+          return text(bx + 32, by + 21, ls[0] || '', { size: 12.5, weight: 600 }) + text(bx + 14, by + 39, fit(sub, BW - 22, 10.5, mono), { size: 10.5, fill: subFill, mono: mono });
+        };
+        if (plain) {
+          if (c.text) body = own(c.text, c.note ? 'Note: ' + c.note : ps.where, c.note ? '#8a5a00' : '#5b6876', false);
+          else {
+            // the sentence: its verb in the direction's colour, then what it does; under it the note (else where)
+            var vw = ps.verb.length * 7.5 + 6;
+            body = text(bx + 32, by + 21, ps.verb, { size: 12.5, weight: 700, fill: D0.ink }) + text(bx + 32 + vw, by + 21, fit(ps.text, BW - 40 - vw, 12.5), { size: 12.5 })
+              + text(bx + 14, by + 39, fit(c.note ? 'Note: ' + c.note : ps.where, BW - 22, 10.5), { size: 10.5, fill: c.note ? '#8a5a00' : '#5b6876' });
+          }
+        } else if (c.manual) {
+          body = own(c.text || 'A step', c.note ? 'Note: ' + c.note : 'added by hand', c.note ? '#8a5a00' : '#5b6876', false);
+        } else {
+          body = badge(bx + 32, by + 17, c) + text(bx + 92, by + 21, fit((c.object || c.endpoint) + (c.action ? ' (' + c.action + ')' : ''), BW - 100, 12.5), { size: 12.5, weight: 700 })
+            + text(bx + 14, by + 39, fit(short(c.path || c.endpoint, pre) + (c.via ? ' · via ' + c.via : ''), BW - 22, 10.5, true), { size: 10.5, fill: '#5b6876', mono: true }) + dot;
+        }
+        out.push('<g><title>' + esc(tip) + '</title>' + box(bx, by, BW, SH, { stroke: hand ? '#3b4a58' : '#c9d6e0', sw: hand ? 1.5 : 1, fill: c.manual ? '#fffdf5' : '#ffffff' })
           + '<rect x="' + bx + '" y="' + by + '" width="5" height="' + SH + '" rx="2" fill="' + D0.ink + '" fill-opacity="0.55"/>'
           + '<circle cx="' + (bx + 18) + '" cy="' + (by + 17) + '" r="8" fill="#eef3f7"/>' + text(bx + 18, by + 21, String(i + 1), { size: 10, weight: 700, fill: '#3b4a58', anchor: 'middle' })
-          + badge(bx + 32, by + 17, c)
-          + text(bx + 92, by + 21, fit((c.object || c.endpoint) + (c.action ? ' (' + c.action + ')' : ''), BW - 100, 12.5), { size: 12.5, weight: 700 })
-          + text(bx + 14, by + 39, fit(short(c.path || c.endpoint, pre) + (c.via ? ' · via ' + c.via : ''), BW - 22, 10.5, true), { size: 10.5, fill: '#5b6876', mono: true }) + '</g>');
+          + body + '</g>');
         prev = { x: cx, y: by + SH, lane: li, right: false };
       });
     });
+    if (!bands.length) out.push(text(X0 + PW + 18, top + 30, 'No steps yet.', { size: 12, fill: '#8a97a5' }));
     if (more) out.push(text(X0 + PW + 14, top + H0 - 8, '+ ' + more + ' more calls (every one is in the data sheet)', { size: 11.5, fill: '#5b6876' }));
     var y1 = top + H0 + 34;
-    out.push(['Read', 'Write', 'Report'].map(function (d, i) { var D0 = DIR[d]; return '<rect x="' + (24 + i * 90) + '" y="' + (y1 - 11) + '" width="16" height="14" rx="7" fill="' + D0.fill + '"/>' + text(24 + i * 90 + 22, y1, d, { size: 11, fill: D0.ink, weight: 600 }); }).join('')
-      + '<line x1="300" y1="' + (y1 - 4) + '" x2="330" y2="' + (y1 - 4) + '" stroke="#3b4a58" stroke-width="2" marker-end="url(#ar1)"/>' + text(338, y1, 'moves on to another system', { size: 11, fill: '#3b4a58' })
-      + '<line x1="520" y1="' + (y1 - 4) + '" x2="550" y2="' + (y1 - 4) + '" stroke="#b3bdc7" stroke-width="1.5" marker-end="url(#ar0)"/>' + text(558, y1, 'next call to the same system · the numbers: the order its code calls them', { size: 11, fill: '#6b7889' }));
+    out.push((plain ? [['Read', 'Reads'], ['Write', 'Creates · updates · deletes'], ['Report', 'Runs a report']] : [['Read', 'Read'], ['Write', 'Write'], ['Report', 'Report']]).map(function (d, i) { var D0 = DIR[d[0]]; return '<rect x="' + (24 + i * (plain ? 170 : 90)) + '" y="' + (y1 - 11) + '" width="16" height="14" rx="7" fill="' + D0.fill + '"/>' + text(24 + i * (plain ? 170 : 90) + 22, y1, d[1], { size: 11, fill: D0.ink, weight: 600 }); }).join(''));
+    var lx = plain ? 560 : 300;
+    out.push('<line x1="' + lx + '" y1="' + (y1 - 4) + '" x2="' + (lx + 30) + '" y2="' + (y1 - 4) + '" stroke="#3b4a58" stroke-width="2" marker-end="url(#ar1)"/>' + text(lx + 38, y1, 'moves on to another system', { size: 11, fill: '#3b4a58' })
+      + (plain ? '' : '<line x1="520" y1="' + (y1 - 4) + '" x2="550" y2="' + (y1 - 4) + '" stroke="#b3bdc7" stroke-width="1.5" marker-end="url(#ar0)"/>' + text(558, y1, 'next call to the same system · the numbers: the order its code calls them', { size: 11, fill: '#6b7889' })));
     var H = y1 + 18;
-    return { svg: wrap(W, H, out.join(''), p.label + ' — flow'), w: W, h: H, title: p.label + ' — flow' };
+    var title = model.title || (model.label + ' — flow');
+    return { svg: wrap(W, H, out.join(''), title), w: W, h: H, title: title };
+  }
+
+  /** One page's flow in swimlanes (see flowSwim); opts.plain: in plain English. */
+  function pageFlow(m, id, opts) {
+    var model = pageModel(m, id);
+    var p = (m.pages || []).filter(function (x) { return x.id === id; })[0] || { id: id, label: id };
+    if (!model) return { svg: wrap(1100, 90, text(24, 50, 'This page calls no web service.', { size: 13, fill: '#6b7889' }), p.label), w: 1100, h: 90, title: p.label };
+    return flowSwim(model, opts);
   }
 
   /** Every page with calls → the systems it calls, the pages grouped by flow; a line's thickness: its calls. */
@@ -614,5 +754,5 @@ define([], function () {
     return '<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#fff}svg{display:block;width:100%;height:auto}</style>' + (d && d.svg ? d.svg : '');
   }
 
-  return { landscape: landscape, system: system, page: page, pageBasic: pageBasic, pageFlow: pageFlow, pages: pages, systemFlow: systemFlow, journeys: journeys, listFit: listFit, doc: doc, KINDS: KINDS, DIR: DIR, esc: esc, fit: fit, figures: figures, commonPrefix: commonPrefix };
+  return { landscape: landscape, system: system, page: page, pageBasic: pageBasic, pageFlow: pageFlow, pageModel: pageModel, flowSwim: flowSwim, plainStep: plainStep, plainTrigger: plainTrigger, objectPhrase: objectPhrase, wrapLines: wrapLines, pages: pages, systemFlow: systemFlow, journeys: journeys, listFit: listFit, doc: doc, KINDS: KINDS, DIR: DIR, esc: esc, fit: fit, figures: figures, commonPrefix: commonPrefix };
 });

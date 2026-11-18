@@ -346,6 +346,7 @@ async function buildRiteOptions() {
     apiStore: apiStore(),
     scenarioStore: scenarioStore(),
     crStore: crStore(), // Change requests: a change asked of a page, made with Code Fix
+    flowStore: flowStore(), // Saved flows: integration flows saved under a name, edited, commented on, checked against the app
     htmlToPdf: htmlToPdf, // Create the functional design: the document printed to PDF
     fusionSqlStore: fusionSqlStore(), // Fusion SQL: read-only SQL on a Fusion pod through its BI Publisher runner
     appWindow: () => (runWin && !runWin.isDestroyed() ? { url: runWin.webContents.getURL(), title: runWin.getTitle() } : null), // the page your app's window shows (API Scenarios follows it)
@@ -747,6 +748,12 @@ let crStoreInst = null;
 function crStore() {
   if (!crStoreInst) crStoreInst = require('./lib/changeRequests').open({ dir: () => { const c = currentWorkspace(); return c ? path.join(app.getPath('userData'), 'change-requests', spaceOf(c)) : ''; } });
   return crStoreInst;
+}
+// Saved flows (Application → Integrations → Saved flows, lib/savedFlows.js): kept per VB Studio project on this PC
+let flowStoreInst = null;
+function flowStore() {
+  if (!flowStoreInst) flowStoreInst = require('./lib/savedFlows').open({ dir: () => { const c = currentWorkspace(); return c ? path.join(app.getPath('userData'), 'saved-flows', spaceOf(c)) : ''; } });
+  return flowStoreInst;
 }
 let analysisStoreInst = null;
 function analysisStore() {
