@@ -865,6 +865,25 @@ function createDevServer(o) {
             if (r.ok) { r.by = by; delete r.root; log(`Integrations scanned: ${r.app} — ${r.totals.systems} systems, ${r.totals.endpoints} endpoints, ${r.totals.calls} calls`); }
             return jsonP(200, r);
           }
+          // The AI Assistant (lib/assistant.js, Tools → AI Assistant): a question about the app answered from the workspace
+          // (code, pages, integrations, saved flows, FDDs) by the AI set up for it; conversations kept on this PC
+          if (pathname.startsWith('/__pages/assistant')) {
+            const as = o.assistantStore;
+            if (!as) return jsonP(200, { ok: false, error: 'The AI Assistant needs the desktop app.' });
+            const q = (k) => u.searchParams.get(k) || '';
+            if (pathname === '/__pages/assistant/suggest' && !post) return jsonP(200, as.suggestions());
+            if (pathname === '/__pages/assistant/convs' && !post) return jsonP(200, as.list());
+            if (pathname === '/__pages/assistant/conv' && !post) return jsonP(200, as.get(q('id')));
+            if (pathname === '/__pages/assistant/file' && !post) return jsonP(200, as.file(q('path')));
+            if (pathname === '/__pages/assistant/ask' && post) {
+              const r = await as.ask({ question: b.question, scope: b.scope, page: b.page, convId: b.convId, redo: !!b.redo, by });
+              log(`AI Assistant: ${r.ok ? 'answered' : 'not answered (' + r.error + ')'}${r.turn ? ' — ' + r.turn.looked.length + ' items looked at' : ''}`);
+              return jsonP(200, r);
+            }
+            if (pathname === '/__pages/assistant/remove' && post) return jsonP(200, as.remove(b.id));
+            if (pathname === '/__pages/assistant/rename' && post) return jsonP(200, as.rename(b.id, b.title));
+            return jsonP(404, { ok: false, error: 'Not found' });
+          }
           // Saved flows (lib/savedFlows.js, Page Flows → Saved flows): a flow saved under a name, edited, commented on
           if (pathname === '/__pages/flows' || pathname.startsWith('/__pages/flows/')) {
             const fl = o.flowStore;

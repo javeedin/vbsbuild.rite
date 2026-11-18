@@ -2,7 +2,7 @@ define(['resources/js/shellBus', 'resources/js/theme', 'resources/js/look', 'res
   'use strict';
 
   // The shell's page module: the line from the screens in the tabs (shellBus) to the shell's chains, the keyboard
-  // (Ctrl+K: the search box; Escape: close the open popup), a click outside the search list, and the Jira updates'
+  // (Ctrl+K: the search box; Ctrl+J: the AI Assistant; Escape: close the open popup), a click outside the search list, and the Jira updates'
   // five-minute check.
   const JIRA_EVERY_MS = 5 * 60 * 1000;
 
@@ -61,6 +61,10 @@ define(['resources/js/shellBus', 'resources/js/theme', 'resources/js/look', 'res
             e.preventDefault();
             const box = document.getElementById('nxCommand');
             if (box) { box.focus(); box.select(); }
+          } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && String(e.key).toLowerCase() === 'j') {
+            // Ctrl+J: the AI Assistant, from anywhere (its box ready to type in)
+            e.preventDefault();
+            bus.focus('assistant', {});
           } else if (e.key === 'Escape') {
             fire('dismiss');
           }

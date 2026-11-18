@@ -15,7 +15,7 @@ It is an independent app: it works with any VB Studio project and keeps its own 
 | **Workspace** | **Organizations & projects**: your VB Studio organizations (the sign-in is kept encrypted on this PC) and their projects and workspaces. **Set up your workspace**: a wizard that clones a workspace into `main` and `working` (a worktree on its own branch). **▶ Run** and the **Run console**: your workspace's app built from its working folder and run in a window of its own, with the build, its requests and its console shown live, and commands typed as in an editor's terminal. **Run as**: the user and roles the app runs as; the roles offered are the ones found in the app's own code. |
 | **Work** | **Issues**: an issue is logged against a page, then written up and analysed by the AI against the page's code and the FDD. Once approved, the agent applies it on a branch with a pull request, and Jira is kept up to date. **Jira stories**, sprints, daily progress and AI analyses of one story or several; under a story's analysis, **Create the functional design** writes its design document as a PDF (see below). **Standup minutes** and **Follow-ups**, with the messages you keep for them (see below). |
 | **Application** | **Application pages**: every VB page of your workspace's app, with its technical sheet, screenshots, navigation maps, page code (lines changed since VB Studio are highlighted) and **Code fix**. Code fix writes a change into your working folder only after you approve it — approving applies it, checks it and saves it there (a commit on this PC, never pushed) — and marks each change in the code with who asked for it, when, and its issue or Jira story. **Change requests**: a change asked of a page, with who asked, the customer, the Jira story and the issue, made with Code fix and followed until it is fixed (see below). **API Scenarios**: a page's web services put in order and tested through the APIs alone, with no need to open the page (see below). **FDD library**: the FDDs that Analyze with AI reads. **Flows explained**: how Build.Rite's own flows work. |
-| **Tools** | **SQL**: a worksheet against an Oracle database, with Ask AI. **Fusion SQL**: read-only SQL on your Oracle Fusion Cloud pod through one BI Publisher report, with a schema browser, saved queries and Ask AI (see below). **AI settings**: which AI Build.Rite asks, either **Claude Code** on your Claude subscription (no API key, no per-call cost) or an **API key** paid per use (Anthropic, OpenAI, Gemini, OCI Generative AI, or any OpenAI-compatible service). You pick one default for everything, and can give a feature its own: Code fix, Issues, Analyze with AI, Application pages, Standup minutes or SQL. **Try it** checks each one; Code fix also has a quick switch on its own tab. |
+| **Tools** | **AI Assistant** (Ctrl+J from anywhere): ask anything about your app — its code, integrations and processes — answered from your workspace, formatted, with its sources (see below). **SQL**: a worksheet against an Oracle database, with Ask AI. **Fusion SQL**: read-only SQL on your Oracle Fusion Cloud pod through one BI Publisher report, with a schema browser, saved queries and Ask AI (see below). **AI settings**: which AI Build.Rite asks, either **Claude Code** on your Claude subscription (no API key, no per-call cost) or an **API key** paid per use (Anthropic, OpenAI, Gemini, OCI Generative AI, or any OpenAI-compatible service). You pick one default for everything, and can give a feature its own: Code fix, Issues, Analyze with AI, Application pages, Standup minutes, SQL or the AI Assistant. **Try it** checks each one; Code fix also has a quick switch on its own tab. |
 
 ## Start
 
@@ -444,6 +444,33 @@ and saves it as a PDF in the FDD library:
 - **Where you see it.** Under the analysis (each version with Preview, PDF, MD and Open in this PC's PDF reader), and in
   **FDD library → Design documents**: every story's designs with story, sprint, version (the newest marked Latest),
   date, author, the FDD read and size; search, Preview, Download, Delete; the story's key opens its analysis.
+
+## AI Assistant: ask anything about your app
+
+**Tools → AI Assistant** (or **Ctrl+J** from any screen) answers any question about your workspace's app: how a page
+works, where something is in the code, which systems it talks to and what it sends, how a business process runs end to
+end, what to check before a change — and general questions about VB, Oracle Fusion, OIC and BI Publisher. It uses the
+AI set up in **AI settings** (its own choice for "AI Assistant", else the default: Claude Code on your subscription or
+an API key).
+
+- **Answered from your workspace.** Before each question it gathers what is relevant, never the whole app: the app at a
+  glance (its pages, its systems); the pages the question is about (their facts read from the code — action chains,
+  calls, reports, variables — and their AI-written sheet); the code files that match, as excerpts with their line
+  numbers (rarer words count more, words in a file's name more still); the integrations (interfaces, each page's calls
+  in order); saved flows; and the FDD library's sections. Each item is numbered and the AI cites them. A follow-up
+  question uses the conversation so far, so "and where is it saved?" knows what "it" is.
+- **What to look through**: **Everything**, **Code**, **Integrations** or **Process** (saved flows and design
+  documents), and **About a page** to make sure one page is looked at.
+- **Formatted to read**: a direct answer first (the key point in bold), then sections, numbered steps, tables, code
+  blocks (their language, colours, **Copy**), callouts (Note, Tip, Warning…) and flows between systems drawn as steps.
+  A citation chip opens what the AI was given for it (a page's facts, a saved flow, a design section — with **Open** to
+  go to it); a file reference such as `webApps/…/LoadCustomersChain.js:7` opens the file with that line marked.
+  **Sources** under each answer (and what else was looked at), **follow-up questions** to ask next, **Copy** (as
+  written, for Jira or Teams) and **Copy as text** (for an e-mail), **Ask again**.
+- **Conversations** are kept on this PC per VB Studio project: listed by their first question, opened again, removed.
+- **What leaves the PC**: only the question, the conversation so far and the context gathered for it, sent to the AI
+  you chose. An answer is drawn from the HTML it is allowed to make (every text escaped; links only http, https and
+  mailto), so nothing an answer says can run in the app.
 
 ## Fusion SQL: read-only SQL on your Fusion pod
 

@@ -1068,3 +1068,132 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
   background: linear-gradient(135deg, transparent 50%, var(--nx-note-edge, #e2c55a) 50%, var(--nx-note-edge, #e2c55a) 62%, transparent 62%, transparent 72%, var(--nx-note-edge, #e2c55a) 72%, var(--nx-note-edge, #e2c55a) 84%, transparent 84%); }
 .nx-sfp-boardhint { margin: 6px 2px 0; }
 .nx-sfp-pdfmode { display: inline-flex; gap: 6px; align-items: center; }
+
+
+/* AI Assistant (Tools → AI Assistant): conversations, the thread of questions and formatted answers, the question box */
+.nx-ask-shell { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 14px; align-items: stretch; }
+.nx-ask-shell--min { grid-template-columns: 52px minmax(0, 1fr); }
+.nx-ask-side { padding: 10px; display: flex; flex-direction: column; gap: 8px; height: max(460px, calc(100vh - 300px)); overflow: hidden; box-sizing: border-box; }
+.nx-ask-sidehead { display: flex; gap: 6px; align-items: center; }
+.nx-ask-shell--min .nx-ask-new { display: none; }
+.nx-ask-new { flex: 1; justify-content: center; }
+.nx-ask-convs { overflow-y: auto; display: grid; gap: 2px; align-content: start; }
+.nx-ask-noconv { margin: 6px 4px; }
+.nx-ask-conv { display: flex; align-items: center; border-radius: 8px; }
+.nx-ask-conv:hover { background: #f1f5f9; }
+.nx-ask-conv--on { background: #e8f0fb; }
+.nx-ask-convbtn { flex: 1; min-width: 0; display: grid; gap: 1px; text-align: left; border: 0; background: transparent; padding: 7px 8px; cursor: pointer; font: inherit; }
+.nx-ask-convtitle { font-weight: 600; font-size: 13px; color: #1f2a37; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nx-ask-convbtn small { color: #6b7783; font-size: 11px; }
+.nx-ask-convx { opacity: 0; }
+.nx-ask-conv:hover .nx-ask-convx, .nx-ask-conv--on .nx-ask-convx { opacity: 1; }
+.nx-ask-main { display: flex; flex-direction: column; height: max(460px, calc(100vh - 300px)); padding: 0; overflow: hidden; box-sizing: border-box; }
+.nx-ask-top { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #e6ebf0; }
+.nx-ask-ai { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 12px; background: #eef6f1; color: #11704b; font-size: 12px; font-weight: 600; }
+.nx-ask-ai--off { background: #fdf3e6; color: #8a5a00; }
+.nx-ask-convname { font-size: 13px; color: #55616d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
+.nx-ask-thread { flex: 1; overflow-y: auto; padding: 18px 22px 8px; display: flex; flex-direction: column; gap: 22px; scroll-behavior: smooth; background: linear-gradient(#fbfcfe, #fff 120px); }
+.nx-ask-hello { margin: auto; max-width: 760px; text-align: center; padding: 20px 0 30px; }
+.nx-ask-hello h2 { margin: 6px 0 6px; font-size: 22px; }
+.nx-ask-spark, .nx-ask-avatar { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; color: #fff; font-size: 22px;
+  background: linear-gradient(135deg, #6250d6, #2a78d6 60%, #1baf7a); box-shadow: 0 6px 18px rgba(42, 120, 214, .28); }
+.nx-ask-suggest { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 18px; text-align: left; }
+.nx-ask-card { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid #dfe6ee; border-radius: 12px; background: #fff; cursor: pointer; font: inherit; font-size: 13.5px; color: #1f2a37; text-align: left; transition: border-color .12s, box-shadow .12s, transform .12s; }
+.nx-ask-card:hover { border-color: #2a78d6; box-shadow: 0 4px 14px rgba(42, 120, 214, .14); transform: translateY(-1px); }
+.nx-ask-card .oj-ux-ico-chat { color: #2a78d6; margin-top: 2px; }
+.nx-ask-turn { display: grid; gap: 10px; }
+.nx-ask-q { justify-self: end; max-width: min(78%, 820px); background: #2a78d6; color: #fff; padding: 10px 14px; border-radius: 16px 16px 4px 16px; box-shadow: 0 2px 8px rgba(42, 120, 214, .2); }
+.nx-ask-qtext { white-space: pre-wrap; overflow-wrap: anywhere; }
+.nx-ask-qtags { display: block; margin-top: 3px; opacity: .85; font-size: 11px; }
+.nx-ask-a { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; align-items: start; }
+.nx-ask-avatar { width: 32px; height: 32px; border-radius: 10px; font-size: 15px; box-shadow: none; }
+.nx-ask-abody { min-width: 0; background: #fff; border: 1px solid #e3e9f0; border-radius: 4px 16px 16px 16px; padding: 14px 18px 12px; box-shadow: 0 1px 4px rgba(15, 23, 42, .05); }
+.nx-ask-thinking { display: flex; align-items: center; gap: 10px; color: #55616d; font-size: 13.5px; }
+.nx-ask-dots { display: inline-flex; gap: 4px; }
+.nx-ask-dots i { width: 7px; height: 7px; border-radius: 50%; background: #2a78d6; animation: nx-ask-dot 1.1s infinite ease-in-out; }
+.nx-ask-dots i:nth-child(2) { animation-delay: .15s; background: #6250d6; } .nx-ask-dots i:nth-child(3) { animation-delay: .3s; background: #1baf7a; }
+@keyframes nx-ask-dot { 0%, 80%, 100% { transform: scale(.55); opacity: .5; } 40% { transform: scale(1); opacity: 1; } }
+.nx-ask-err { color: #a12a1e; background: #fdeceb; border-radius: 8px; padding: 8px 12px; font-size: 13.5px; }
+.nx-ask-erracts { display: inline-flex; gap: 6px; margin-left: 8px; }
+.nx-ask-srcs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px dashed #dde4ec; }
+.nx-ask-srclabel { font-size: 11px; font-weight: 700; color: #6b7783; text-transform: uppercase; letter-spacing: .04em; margin-right: 2px; }
+.nx-ask-src { display: inline-flex; align-items: center; gap: 5px; max-width: 360px; padding: 2px 9px 2px 3px; border: 1px solid #d6e1ec; border-radius: 12px; background: #f6f9fc; font: inherit; font-size: 12px; color: #26323e; cursor: pointer; }
+.nx-ask-src b { display: inline-grid; place-items: center; min-width: 18px; height: 18px; border-radius: 9px; background: #2a78d6; color: #fff; font-size: 10.5px; padding: 0 4px; }
+.nx-ask-src:hover { border-color: #2a78d6; background: #eef4fc; }
+.nx-ask-src--dim b { background: #8a97a5; }
+.nx-ask-srctext { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nx-ask-more summary { cursor: pointer; font-size: 12px; color: #55616d; }
+.nx-ask-morelist { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.nx-ask-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 8px; }
+.nx-ask-follow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.nx-ask-fchip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #cfdcf0; border-radius: 16px; background: #f4f8fe; color: #1d4f91; font: inherit; font-size: 12.5px; cursor: pointer; text-align: left; }
+.nx-ask-fchip:hover { background: #e3eefc; border-color: #2a78d6; }
+.nx-ask-composer { border-top: 1px solid #e6ebf0; padding: 10px 16px 10px; background: #fff; display: grid; gap: 8px; }
+.nx-ask-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.nx-ask-scopes { display: inline-flex; gap: 4px; padding: 3px; border-radius: 10px; background: #f1f4f8; }
+.nx-ask-scope { border: 0; background: transparent; padding: 4px 10px; border-radius: 8px; font: inherit; font-size: 12.5px; color: #3a4652; cursor: pointer; }
+.nx-ask-scope--on { background: #fff; color: #1d4f91; font-weight: 600; box-shadow: 0 1px 3px rgba(15, 23, 42, .12); }
+.nx-ask-page { max-width: 300px; }
+.nx-ask-inputrow { display: flex; gap: 10px; align-items: flex-end; }
+.nx-ask-input { flex: 1; min-height: 46px; max-height: 220px; resize: vertical; font: inherit; font-size: 14px; line-height: 1.45; padding: 10px 12px; border-radius: 12px; }
+.nx-ask-send { height: 46px; padding: 0 18px; border-radius: 12px; }
+.nx-ask-hint { font-size: 11px; }
+/* the formatted answer (resources/js/mdRender.js) */
+.nx-ask-md { font-size: 14px; line-height: 1.6; color: #1c2733; overflow-wrap: anywhere; }
+.nx-ask-md > :first-child { margin-top: 0; }
+.nx-ask-md p { margin: 0 0 10px; }
+.nx-ask-md h3 { margin: 16px 0 8px; font-size: 16px; color: #0f3a66; padding-bottom: 4px; border-bottom: 1px solid #e8edf3; }
+.nx-ask-md h4, .nx-ask-md h5 { margin: 12px 0 6px; font-size: 14.5px; color: #1d4f91; }
+.nx-ask-md ul, .nx-ask-md ol { margin: 0 0 10px; padding-left: 22px; }
+.nx-ask-md li { margin: 3px 0; }
+.nx-ask-md li::marker { color: #2a78d6; font-weight: 600; }
+.nx-ask-md .nx-md-task { list-style: none; margin-left: -18px; }
+.nx-ask-md code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12.5px; background: #f1f4f8; border: 1px solid #e2e8f0; border-radius: 5px; padding: 0 5px; }
+.nx-ask-md a { color: #1d63c2; text-decoration: underline; text-underline-offset: 2px; }
+.nx-ask-md hr { border: 0; border-top: 1px solid #e3e9f0; margin: 14px 0; }
+.nx-ask-md blockquote { margin: 0 0 10px; padding: 4px 14px; border-left: 3px solid #c9d6e3; color: #44515e; }
+.nx-md-code { margin: 0 0 12px; border: 1px solid #1e2a38; border-radius: 10px; overflow: hidden; background: #0f1720; }
+.nx-md-codehead { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px 4px 12px; background: #182230; color: #9fb0c3; font-size: 11.5px; }
+.nx-md-lang { text-transform: lowercase; letter-spacing: .03em; }
+.nx-md-copy { border: 1px solid #33445a; background: transparent; color: #cbd6e2; border-radius: 6px; padding: 1px 9px; font: inherit; font-size: 11.5px; cursor: pointer; }
+.nx-md-copy:hover { background: #22324a; } .nx-md-copy--done { color: #7ee2b0; border-color: #2f6b52; }
+.nx-md-code pre { margin: 0; padding: 12px 14px; overflow-x: auto; color: #e3e9f0; font-size: 12.5px; line-height: 1.55; }
+.nx-md-code pre code { background: transparent; border: 0; padding: 0; color: inherit; font-size: inherit; }
+.nx-md-k { color: #7cb7ff; font-weight: 600; } .nx-md-s { color: #a6e3a1; } .nx-md-c { color: #7f8c9b; font-style: italic; } .nx-md-n { color: #f5b971; } .nx-md-a { color: #f0a6ca; }
+.nx-md-tablewrap { overflow-x: auto; margin: 0 0 12px; border: 1px solid #e1e7ee; border-radius: 8px; }
+.nx-md-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.nx-md-table th { background: #f3f6fa; text-align: left; font-weight: 700; color: #26323e; padding: 7px 10px; border-bottom: 1px solid #dfe6ee; white-space: nowrap; }
+.nx-md-table td { padding: 6px 10px; border-bottom: 1px solid #eef2f6; vertical-align: top; }
+.nx-md-table tr:nth-child(even) td { background: #fafcfe; }
+.nx-md-callout { margin: 0 0 12px; padding: 8px 14px 4px; border-radius: 8px; border-left: 4px solid; }
+.nx-md-callhead { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+.nx-md-callout--note { background: #eef5fd; border-color: #2a78d6; } .nx-md-callout--note .nx-md-callhead { color: #1d4f91; }
+.nx-md-callout--tip { background: #ecf8f1; border-color: #1baf7a; } .nx-md-callout--tip .nx-md-callhead { color: #11704b; }
+.nx-md-callout--important { background: #f2effd; border-color: #6250d6; } .nx-md-callout--important .nx-md-callhead { color: #4733b8; }
+.nx-md-callout--warning { background: #fff6e6; border-color: #eda100; } .nx-md-callout--warning .nx-md-callhead { color: #8a5a00; }
+.nx-md-callout--caution { background: #fdeceb; border-color: #e34948; } .nx-md-callout--caution .nx-md-callhead { color: #a12a1e; }
+.nx-md-cite { display: inline-grid; place-items: center; min-width: 17px; height: 17px; margin: 0 1px; padding: 0 4px; border: 0; border-radius: 9px; background: #e3eefc; color: #1d4f91; font: inherit; font-size: 10.5px; font-weight: 700; vertical-align: 2px; cursor: pointer; }
+.nx-md-cite:hover { background: #2a78d6; color: #fff; }
+.nx-md-fileref { border: 0; background: transparent; padding: 0; cursor: pointer; font: inherit; }
+.nx-md-fileref code { color: #1d63c2; border-color: #c9dbf3; background: #f1f6fd; }
+.nx-md-fileref:hover code { background: #e3eefc; text-decoration: underline; }
+.nx-md-flow { display: grid; gap: 6px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid #e1e7ee; border-radius: 10px; background: #fbfcfe; }
+.nx-md-fstep { display: grid; grid-template-columns: 24px minmax(0, max-content) minmax(90px, 1fr) minmax(0, max-content); align-items: center; gap: 8px; }
+.nx-md-fstep:has(.nx-md-ftext) { grid-template-columns: 24px minmax(0, 1fr); }
+.nx-md-fnum { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #eef3f7; color: #3b4a58; font-size: 11px; font-weight: 700; }
+.nx-md-fnode { padding: 4px 10px; border: 1.5px solid #2a78d6; border-radius: 8px; background: #fff; font-weight: 600; font-size: 13px; color: #16212c; }
+.nx-md-farrow { position: relative; display: flex; justify-content: center; align-items: center; min-height: 26px; }
+.nx-md-farrow::before { content: ''; position: absolute; left: 0; right: 8px; top: 50%; border-top: 2px solid #3b4a58; }
+.nx-md-farrow::after { content: ''; position: absolute; right: 0; top: calc(50% - 5px); border: 5px solid transparent; border-left: 8px solid #3b4a58; border-right: 0; }
+.nx-md-flabel { position: relative; z-index: 1; background: #fbfcfe; padding: 0 6px; font-size: 12px; color: #26323e; text-align: center; }
+.nx-md-ftext { font-size: 13px; }
+/* a source shown */
+.nx-ask-srcdlg { width: min(1100px, 100%); height: 86vh; display: flex; flex-direction: column; }
+.nx-ask-srcbody { flex: 1; min-height: 0; overflow: auto; padding: 0; }
+.nx-ask-code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12.5px; line-height: 1.55; background: #0f1720; color: #e3e9f0; min-height: 100%; padding: 8px 0; }
+.nx-ask-ln { display: grid; grid-template-columns: 56px minmax(0, 1fr); }
+.nx-ask-ln code { white-space: pre; padding-right: 14px; background: transparent; border: 0; color: inherit; font: inherit; }
+.nx-ask-lnno { text-align: right; padding-right: 12px; color: #5d6b7a; user-select: none; }
+.nx-ask-ln--at { background: rgba(237, 161, 0, .2); box-shadow: inset 3px 0 0 #eda100; }
+.nx-ask-given { margin: 0; padding: 14px 18px; white-space: pre-wrap; font-size: 12.5px; line-height: 1.55; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; color: #26323e; }
+@media (max-width: 900px) { .nx-ask-shell { grid-template-columns: 1fr; } .nx-ask-side { max-height: 200px; } .nx-ask-q { max-width: 92%; } }

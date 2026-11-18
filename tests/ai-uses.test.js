@@ -33,7 +33,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'br-ai-'));
     store.save({ provider: 'anthropic', key: 'sk-test-123', model: 'claude-test-model', makeDefault: false });
     s = store.settings();
     T.check('…an API key set up later: ready, the default kept (makeDefault: false)', s.active === 'claudecode' && s.providers.anthropic.ready && s.providers.anthropic.model === 'claude-test-model');
-    T.check('…the features listed, each on the default', s.features.map((f) => f.id).join() === 'codefix,issues,analysis,pages,minutes,sql' && Object.values(s.uses).every((u) => u === ''));
+    T.check('…the features listed, each on the default', s.features.map((f) => f.id).join() === 'codefix,issues,analysis,pages,minutes,sql,assistant' && Object.values(s.uses).every((u) => u === ''));
     T.check('…no key ever in the settings', JSON.stringify(s).indexOf('sk-test-123') === -1);
 
     T.section('each feature asks its own AI');

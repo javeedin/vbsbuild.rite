@@ -1,0 +1,93 @@
+{
+  "description": "AI Assistant (Tools → AI Assistant, Ctrl+J): any question about the workspace's app — its code, integrations and processes — answered by the AI set up for it (AI settings) from what is relevant in the workspace (code excerpts with line numbers, the pages' facts, the integrations, saved flows, the FDD library), formatted to read (headings, steps, tables, code, callouts, flows), with its sources and follow-up questions; conversations kept on this PC (desktop/lib/assistant.js, resources/js/mdRender.js).",
+  "navigation": {
+    "embeddable": "enabled"
+  },
+  "variables": {
+    "convs": {
+      "type": "any",
+      "defaultValue": [],
+      "description": "The conversations: [{ id, title, updated, turns }]."
+    },
+    "conv": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The conversation open: { id, title, turns: [{ q, scope, page, pageLabel, looked, a: { text, cited, followups, provider, model, ms } | { error } }] }."
+    },
+    "pending": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The question being answered: { q, scope, pageLabel }."
+    },
+    "secs": {
+      "type": "number",
+      "defaultValue": 0
+    },
+    "scope": {
+      "type": "string",
+      "defaultValue": "all",
+      "description": "all | code | integrations | process"
+    },
+    "page": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "sg": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "Questions to start with and the pages to choose from: { app, pages, questions }."
+    },
+    "ai": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The AI settings (which AI answers)."
+    },
+    "error": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The last question that was not answered: { text, needsSetup }."
+    },
+    "src": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "A source shown: { n, kind, label, ref, text, file, line, lang, busy }."
+    },
+    "sideOpen": {
+      "type": "boolean",
+      "defaultValue": true
+    }
+  },
+  "eventListeners": {
+    "vbEnter": {
+      "chains": [{ "chain": "askChain", "parameters": { "act": "load", "key": "", "value": "" } }]
+    },
+    "onAct": {
+      "chains": [{ "chain": "askChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "key": "{{ $event.currentTarget.dataset.key || '' }}", "value": "{{ $event.currentTarget.dataset.value || '' }}" } }]
+    },
+    "onField": {
+      "chains": [{ "chain": "askChain", "parameters": { "act": "field", "key": "{{ $event.currentTarget.dataset.field }}", "value": "{{ $event.currentTarget.value }}" } }]
+    },
+    "focusRequest": {
+      "chains": [{ "chain": "askChain", "parameters": { "act": "focus", "key": "", "value": "" } }]
+    }
+  },
+  "events": {
+    "focusRequest": {
+      "description": "From resources/js/shellBus.js focus(): another screen (or Ctrl+J) handed this one a question, a page or a scope.",
+      "payloadType": "object"
+    }
+  },
+  "imports": {
+    "components": {
+      "oj-bind-for-each": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-bind-if": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-bind-text": {
+        "path": "ojs/ojknockout"
+      }
+    }
+  }
+}

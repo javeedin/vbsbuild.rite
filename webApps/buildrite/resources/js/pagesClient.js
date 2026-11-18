@@ -74,6 +74,14 @@ define([], function () {
     integrations: function (app) { return call('integrations?app=' + encodeURIComponent(app || '')); },
     integrationsPdf: function (html, name) { return call('integrations/pdf', 'POST', { html: html, name: name || '' }); },
     // Saved flows (Page Flows → Saved flows, desktop/lib/savedFlows.js)
+    // the AI Assistant: questions to start with, its conversations, a question asked (redo: the last one again), a file
+    assistantSuggest: function () { return call('assistant/suggest'); },
+    assistantConvs: function () { return call('assistant/convs'); },
+    assistantConv: function (id) { return call('assistant/conv?id=' + encodeURIComponent(id || '')); },
+    assistantAsk: function (b) { return call('assistant/ask', 'POST', b || {}); },
+    assistantRemove: function (id) { return call('assistant/remove', 'POST', { id: id }); },
+    assistantRename: function (id, title) { return call('assistant/rename', 'POST', { id: id, title: title }); },
+    assistantFile: function (p) { return call('assistant/file?path=' + encodeURIComponent(p || '')); },
     flowsList: function (q) { return call('flows?q=' + encodeURIComponent(q || '')); },
     flowGet: function (id) { return call('flows/get?id=' + encodeURIComponent(id || '')); },
     flowSave: function (flow, note, copy) { return call('flows/save', 'POST', { flow: flow, note: note || '', copy: !!copy }); },

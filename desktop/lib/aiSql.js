@@ -105,6 +105,7 @@ const FEATURES = [
   { id: 'pages', label: 'Application pages', note: 'A page\'s technical sheet written by the AI.' },
   { id: 'minutes', label: 'Standup minutes', note: 'Format by AI.' },
   { id: 'sql', label: 'SQL', note: 'Ask AI in the worksheet: a question in plain words, a query back.' },
+  { id: 'assistant', label: 'AI Assistant', note: 'Any question about the app — its code, integrations and processes — answered from the workspace, formatted.' },
 ];
 const FEATURE_IDS = FEATURES.map((f) => f.id);
 const BY_ID = {};

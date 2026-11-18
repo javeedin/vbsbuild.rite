@@ -24,7 +24,8 @@
     "api-scenarios": { "path": "pages/api-scenarios-page" },
     "change-requests": { "path": "pages/change-requests-page" },
     "integrations": { "path": "pages/integrations-page" },
-    "saved-flow": { "path": "pages/saved-flow-page" }
+    "saved-flow": { "path": "pages/saved-flow-page" },
+    "assistant": { "path": "pages/assistant-page" }
   },
   "chains": {}, "services": {}, "types": {}, "variables": {}
 }

@@ -347,6 +347,7 @@ async function buildRiteOptions() {
     scenarioStore: scenarioStore(),
     crStore: crStore(), // Change requests: a change asked of a page, made with Code Fix
     flowStore: flowStore(), // Saved flows: integration flows saved under a name, edited, commented on, checked against the app
+    assistantStore: await assistantStore(), // AI Assistant: questions about the app answered from the workspace; conversations on this PC
     htmlToPdf: htmlToPdf, // Create the functional design: the document printed to PDF
     fusionSqlStore: fusionSqlStore(), // Fusion SQL: read-only SQL on a Fusion pod through its BI Publisher runner
     appWindow: () => (runWin && !runWin.isDestroyed() ? { url: runWin.webContents.getURL(), title: runWin.getTitle() } : null), // the page your app's window shows (API Scenarios follows it)
@@ -754,6 +755,19 @@ let flowStoreInst = null;
 function flowStore() {
   if (!flowStoreInst) flowStoreInst = require('./lib/savedFlows').open({ dir: () => { const c = currentWorkspace(); return c ? path.join(app.getPath('userData'), 'saved-flows', spaceOf(c)) : ''; } });
   return flowStoreInst;
+}
+// The AI Assistant (lib/assistant.js): a question about the app's code, integrations or processes, answered from the
+// workspace (its working folder, the pages' sheets, saved flows, the FDD library) by the AI set up for it; conversations
+// kept on this PC per VB Studio project.
+let assistantStoreInst = null;
+async function assistantStore() {
+  if (!assistantStoreInst) {
+    const ps = await pagesStore();
+    assistantStoreInst = require('./lib/assistant').open({
+      dir: () => { const c = currentWorkspace(); return c ? path.join(app.getPath('userData'), 'assistant', spaceOf(c)) : ''; },
+      root: () => (ps && ps.rootNow ? ps.rootNow() : ''), pages: ps, flows: flowStore(), fdd: await fddStore(), ai: await aiStore(), scan: require('./lib/integrations').scan });
+  }
+  return assistantStoreInst;
 }
 let analysisStoreInst = null;
 function analysisStore() {

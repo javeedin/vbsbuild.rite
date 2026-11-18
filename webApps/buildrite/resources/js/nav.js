@@ -68,6 +68,10 @@ define([], function () {
         keywords: 'flows explained guide steps issues code fix approval branch pull request data branch who does what' }
     ] },
     { key: 'tools', label: 'Tools', items: [
+      // AI Assistant: any question about the app — its code, integrations and processes — answered from the workspace,
+      // formatted, with its sources (flows/insights assistant; desktop/lib/assistant.js); Ctrl+J from anywhere
+      { id: 'assistant', label: 'AI Assistant', icon: 'oj-ux-ico-chat', route: { flow: 'insights', page: 'assistant' },
+        keywords: 'ai assistant ask question chat copilot help explain code integration process how does where is claude gpt answer' },
       // SQL against an Oracle database from this PC, as in SQL Developer (flows/insights sql): the desktop app connects
       // for it (desktop/lib/oracleSql.js), so it works in the desktop app only.
       { id: 'sql', label: 'SQL', icon: 'oj-ux-ico-database', route: { flow: 'insights', page: 'sql' },

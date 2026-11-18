@@ -1,0 +1,160 @@
+<!-- AI Assistant (Tools → AI Assistant, Ctrl+J): ask anything about the workspace's app — its code, integrations and processes;
+     answered from the workspace by the AI set up for it, formatted, with its sources and follow-up questions
+     (askChain; desktop/lib/assistant.js, resources/js/mdRender.js). -->
+<div class="nx-page nx-ask">
+  <div class="nx-pagehead">
+    <div>
+      <div class="nx-kicker">Build.Rite · Tools</div>
+      <h1 id="askTitle">AI Assistant</h1>
+      <div class="nx-sub">Ask anything about your app — its code, its integrations, its business processes. Each answer is drawn from your workspace (the code, the pages, the integrations, saved flows and design documents), formatted to read, with the sources it used.</div>
+    </div>
+  </div>
+
+  <div :class="[[ 'nx-ask-shell' + ($variables.sideOpen ? '' : ' nx-ask-shell--min') ]]">
+    <!-- the conversations -->
+    <aside class="nx-card nx-ask-side" id="askSide" aria-label="Conversations">
+      <div class="nx-ask-sidehead">
+        <button type="button" class="nx-btn nx-btn--sm nx-btn--primary nx-ask-new" id="askNew" data-act="newChat" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span> New chat</button>
+        <button type="button" class="nx-iconbtn" id="askSideBtn" data-act="side" on-click="[[ $listeners.onAct ]]" :title="[[ $variables.sideOpen ? 'Hide the conversations' : 'Show the conversations' ]]" aria-label="Show or hide the conversations"><span class="oj-ux-ico-sidebar" aria-hidden="true"></span></button>
+      </div>
+      <oj-bind-if test="[[ $variables.sideOpen ]]">
+        <div class="nx-ask-convs" id="askConvs">
+          <oj-bind-if test="[[ ($variables.convs || []).length === 0 ]]"><p class="nx-note nx-ask-noconv">Your conversations are kept here, on this PC.</p></oj-bind-if>
+          <oj-bind-for-each data="[[ $functions.convRows($variables.convs, $variables.conv) ]]"><template data-oj-as="c">
+            <div :class="[[ c.data.cls ]]" :data-id="[[ c.data.id ]]">
+              <button type="button" class="nx-ask-convbtn" data-act="openConv" :data-key="[[ c.data.id ]]" on-click="[[ $listeners.onAct ]]" :title="[[ c.data.title ]]">
+                <span class="nx-ask-convtitle"><oj-bind-text value="[[ c.data.title ]]"></oj-bind-text></span>
+                <small><oj-bind-text value="[[ c.data.when + ' · ' + c.data.n ]]"></oj-bind-text></small>
+              </button>
+              <button type="button" class="nx-iconbtn nx-ask-convx" data-act="removeConv" :data-key="[[ c.data.id ]]" on-click="[[ $listeners.onAct ]]" title="Remove this conversation" aria-label="Remove this conversation"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+            </div>
+          </template></oj-bind-for-each>
+        </div>
+      </oj-bind-if>
+    </aside>
+
+    <section class="nx-card nx-ask-main">
+      <div class="nx-ask-top">
+        <span :class="[[ 'nx-ask-ai' + ($functions.aiReady($variables.ai) ? '' : ' nx-ask-ai--off') ]]" id="askAi"><span class="oj-ux-ico-lightbulb" aria-hidden="true"></span> <oj-bind-text value="[[ $functions.aiText($variables.ai) ]]"></oj-bind-text></span>
+        <button type="button" class="nx-linkbtn" id="askSettings" data-act="settings" on-click="[[ $listeners.onAct ]]">AI settings</button>
+        <span class="nx-min-flex"></span>
+        <oj-bind-if test="[[ !!$variables.conv ]]"><span class="nx-ask-convname" id="askConvName"><oj-bind-text value="[[ $variables.conv.title ]]"></oj-bind-text></span></oj-bind-if>
+      </div>
+
+      <div class="nx-ask-thread" id="askThread" aria-live="polite">
+        <!-- nothing asked yet: what you can ask, from your own app -->
+        <oj-bind-if test="[[ !$variables.conv && !$variables.pending ]]">
+          <div class="nx-ask-hello" id="askHello">
+            <div class="nx-ask-spark" aria-hidden="true">✦</div>
+            <h2><oj-bind-text value="[[ 'Ask anything about ' + (($variables.sg && $variables.sg.app) || 'your app') ]]"></oj-bind-text></h2>
+            <p class="nx-note">How a page works, where something is in the code, which systems it talks to and what it sends, how a business process runs end to end — or anything about VB, Oracle Fusion, OIC and BI Publisher.</p>
+            <div class="nx-ask-suggest" id="askSuggest">
+              <oj-bind-for-each data="[[ ($variables.sg && $variables.sg.questions) || [] ]]"><template data-oj-as="s">
+                <button type="button" class="nx-ask-card" data-act="ask" :data-key="[[ s.data ]]" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-chat" aria-hidden="true"></span><span><oj-bind-text value="[[ s.data ]]"></oj-bind-text></span></button>
+              </template></oj-bind-for-each>
+            </div>
+          </div>
+        </oj-bind-if>
+
+        <oj-bind-for-each data="[[ $functions.turns($variables.conv, $variables.pending, $variables.secs, $functions.aiText($variables.ai).replace('Answers by ', '')) ]]"><template data-oj-as="t">
+          <div :class="[[ 'nx-ask-turn' + (t.data.last ? ' nx-ask-turn--last' : '') ]]" :data-turn="[[ t.data.idx ]]">
+            <div class="nx-ask-q"><div class="nx-ask-qtext"><oj-bind-text value="[[ t.data.q ]]"></oj-bind-text></div><oj-bind-if test="[[ !!t.data.tags ]]"><small class="nx-ask-qtags"><oj-bind-text value="[[ t.data.tags ]]"></oj-bind-text></small></oj-bind-if></div>
+            <div class="nx-ask-a">
+              <div class="nx-ask-avatar" aria-hidden="true">✦</div>
+              <div class="nx-ask-abody">
+                <oj-bind-if test="[[ t.data.pending ]]"><div class="nx-ask-thinking" id="askThinking"><span class="nx-ask-dots"><i></i><i></i><i></i></span> <oj-bind-text value="[[ t.data.step ]]"></oj-bind-text></div></oj-bind-if>
+                <oj-bind-if test="[[ !!t.data.error ]]"><div class="nx-ask-err"><b>Not answered.</b> <oj-bind-text value="[[ t.data.error ]]"></oj-bind-text>
+                  <span class="nx-ask-erracts"><oj-bind-if test="[[ t.data.last ]]"><button type="button" class="nx-btn nx-btn--sm" data-act="again" on-click="[[ $listeners.onAct ]]">Try again</button></oj-bind-if> <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="settings" on-click="[[ $listeners.onAct ]]">AI settings</button></span></div></oj-bind-if>
+                <oj-bind-if test="[[ !!t.data.html ]]">
+                  <div class="nx-ask-md" :inner-h-t-m-l="[[ t.data.html ]]"></div>
+                  <oj-bind-if test="[[ t.data.cited.length > 0 || t.data.others.length > 0 ]]">
+                    <div class="nx-ask-srcs">
+                      <span class="nx-ask-srclabel">Sources</span>
+                      <oj-bind-for-each data="[[ t.data.cited ]]"><template data-oj-as="s">
+                        <button type="button" class="nx-ask-src" data-act="srcOpen" :data-key="[[ s.data.key ]]" on-click="[[ $listeners.onAct ]]" :title="[[ s.data.kind + ': ' + s.data.label ]]"><b><oj-bind-text value="[[ s.data.n ]]"></oj-bind-text></b><span :class="[[ s.data.icon ]]" aria-hidden="true"></span><span class="nx-ask-srctext"><oj-bind-text value="[[ s.data.label ]]"></oj-bind-text></span></button>
+                      </template></oj-bind-for-each>
+                      <oj-bind-if test="[[ t.data.others.length > 0 ]]">
+                        <details class="nx-ask-more"><summary><oj-bind-text value="[[ t.data.othersText ]]"></oj-bind-text></summary>
+                          <div class="nx-ask-morelist"><oj-bind-for-each data="[[ t.data.others ]]"><template data-oj-as="s">
+                            <button type="button" class="nx-ask-src nx-ask-src--dim" data-act="srcOpen" :data-key="[[ s.data.key ]]" on-click="[[ $listeners.onAct ]]" :title="[[ s.data.kind + ': ' + s.data.label ]]"><b><oj-bind-text value="[[ s.data.n ]]"></oj-bind-text></b><span :class="[[ s.data.icon ]]" aria-hidden="true"></span><span class="nx-ask-srctext"><oj-bind-text value="[[ s.data.label ]]"></oj-bind-text></span></button>
+                          </template></oj-bind-for-each></div>
+                        </details>
+                      </oj-bind-if>
+                    </div>
+                  </oj-bind-if>
+                  <div class="nx-ask-meta">
+                    <span class="nx-note"><oj-bind-text value="[[ t.data.meta ]]"></oj-bind-text></span>
+                    <span class="nx-min-flex"></span>
+                    <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="copy" :data-key="[[ t.data.idx ]]" on-click="[[ $listeners.onAct ]]" title="Copy as written (Markdown — Jira, Teams, a README)"><span class="oj-ux-ico-copy" aria-hidden="true"></span> Copy</button>
+                    <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="copyText" :data-key="[[ t.data.idx ]]" on-click="[[ $listeners.onAct ]]" title="Copy as plain text (an e-mail)">Copy as text</button>
+                    <oj-bind-if test="[[ t.data.last ]]"><button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="askAgain" data-act="again" on-click="[[ $listeners.onAct ]]" title="Ask the same question again"><span class="oj-ux-ico-refresh" aria-hidden="true"></span> Ask again</button></oj-bind-if>
+                  </div>
+                  <oj-bind-if test="[[ t.data.last && t.data.followups.length > 0 ]]">
+                    <div class="nx-ask-follow" id="askFollow">
+                      <oj-bind-for-each data="[[ t.data.followups ]]"><template data-oj-as="f">
+                        <button type="button" class="nx-ask-fchip" data-act="ask" :data-key="[[ f.data.text ]]" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-arrow-right" aria-hidden="true"></span> <oj-bind-text value="[[ f.data.text ]]"></oj-bind-text></button>
+                      </template></oj-bind-for-each>
+                    </div>
+                  </oj-bind-if>
+                </oj-bind-if>
+              </div>
+            </div>
+          </div>
+        </template></oj-bind-for-each>
+      </div>
+
+      <!-- the question -->
+      <div class="nx-ask-composer" id="askComposer">
+        <div class="nx-ask-opts">
+          <span class="nx-ask-scopes" role="radiogroup" aria-label="What to look through">
+            <oj-bind-for-each data="[[ $functions.scopeChips($variables.scope) ]]"><template data-oj-as="s">
+              <button type="button" role="radio" :aria-checked="[[ s.data.on ]]" :class="[[ s.data.cls ]]" data-act="scope" :data-key="[[ s.data.id ]]" on-click="[[ $listeners.onAct ]]" :title="[[ s.data.title ]]"><oj-bind-text value="[[ s.data.text ]]"></oj-bind-text></button>
+            </template></oj-bind-for-each>
+          </span>
+          <select class="nx-cm-input nx-ask-page" id="askPage" data-field="page" on-change="[[ $listeners.onField ]]" aria-label="About a page" title="About one page (its code and calls are always looked at)">
+            <oj-bind-for-each data="[[ $functions.pageOptions($variables.sg, $variables.page) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+          </select>
+        </div>
+        <div class="nx-ask-inputrow">
+          <textarea class="nx-cm-input nx-ask-input" id="askInput" rows="2" placeholder="Ask about the code, an integration or a process…" aria-label="Your question" spellcheck="true"></textarea>
+          <button type="button" class="nx-btn nx-btn--primary nx-ask-send" id="askSend" data-act="send" on-click="[[ $listeners.onAct ]]" :disabled="[[ !!$variables.pending ]]" title="Send (Enter)"><span class="oj-ux-ico-send" aria-hidden="true"></span> <oj-bind-text value="[[ $variables.pending ? 'Answering…' : 'Ask' ]]"></oj-bind-text></button>
+        </div>
+        <small class="nx-note nx-ask-hint">Enter to send · Shift+Enter for a new line · Ctrl+J opens the assistant from anywhere · only the question, the conversation and what was gathered are sent to the AI</small>
+      </div>
+      <!-- a citation or a file reference in an answer (resources/js/mdRender.js) is handed here by the page module -->
+      <button type="button" id="askHookCite" hidden="hidden" tabindex="-1" aria-hidden="true" data-act="srcCite" data-key="" data-value="" on-click="[[ $listeners.onAct ]]"></button>
+      <button type="button" id="askHookFile" hidden="hidden" tabindex="-1" aria-hidden="true" data-act="srcFile" data-key="" data-value="" on-click="[[ $listeners.onAct ]]"></button>
+    </section>
+  </div>
+
+  <!-- a source: a file whole (the cited line marked), or what the AI was given -->
+  <oj-bind-if test="[[ !!$variables.src ]]">
+    <div class="nx-modal" id="askSrc">
+      <button type="button" class="nx-modal-scrim" aria-label="Close" data-act="srcClose" on-click="[[ $listeners.onAct ]]"></button>
+      <div class="nx-dialog nx-ask-srcdlg" role="dialog" aria-modal="true" aria-label="Source">
+        <div class="nx-dialog-head">
+          <div class="nx-dialog-titles">
+            <div class="nx-kicker"><oj-bind-text value="[[ ($variables.src.n ? 'Source ' + $variables.src.n + ' · ' : '') + ($variables.src.file ? 'Code' : 'What the AI was given') ]]"></oj-bind-text></div>
+            <h2 class="nx-dialog-title nx-int-mono" id="askSrcTitle"><oj-bind-text value="[[ $variables.src.label + ($variables.src.line ? ' · line ' + $variables.src.line : '') ]]"></oj-bind-text></h2>
+          </div>
+          <oj-bind-if test="[[ !$variables.src.file && ['page', 'flow', 'fdd', 'pageflow', 'interfaces', 'journeys'].indexOf($variables.src.kind) !== -1 ]]">
+            <button type="button" class="nx-btn nx-btn--sm" id="askSrcGo" data-act="srcGo" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-launch" aria-hidden="true"></span> Open</button>
+          </oj-bind-if>
+          <button type="button" class="nx-iconbtn" aria-label="Close" data-act="srcClose" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+        </div>
+        <div class="nx-dialog-body nx-ask-srcbody">
+          <oj-bind-if test="[[ $variables.src.busy ]]"><p class="nx-note">Reading the file…</p></oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.src.err ]]"><p class="nx-ask-err"><oj-bind-text value="[[ $variables.src.err ]]"></oj-bind-text></p></oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.src.file ]]">
+            <div class="nx-ask-code" id="askSrcCode">
+              <oj-bind-for-each data="[[ $functions.srcLines($variables.src) ]]"><template data-oj-as="l">
+                <div :class="[[ l.data.cls ]]"><span class="nx-ask-lnno"><oj-bind-text value="[[ l.data.n ]]"></oj-bind-text></span><code :inner-h-t-m-l="[[ l.data.html ]]"></code></div>
+              </template></oj-bind-for-each>
+            </div>
+          </oj-bind-if>
+          <oj-bind-if test="[[ !$variables.src.file && !$variables.src.busy && !!$variables.src.text ]]"><pre class="nx-ask-given" id="askSrcText"><oj-bind-text value="[[ $variables.src.text ]]"></oj-bind-text></pre></oj-bind-if>
+        </div>
+      </div>
+    </div>
+  </oj-bind-if>
+</div>
