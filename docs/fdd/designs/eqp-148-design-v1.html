@@ -1,0 +1,307 @@
+<!doctype html><html><head><meta charset="utf-8"><title>EQP-148 — Functional design</title><style>
+@page { size: A4; margin: 16mm 14mm 18mm; }
+* { box-sizing: border-box; }
+body { font: 10.5pt/1.45 "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: #1d2b36; margin: 0; }
+.cover { border-bottom: 3px solid #1d4f91; padding-bottom: 10px; margin-bottom: 14px; }
+.cover .kind { font-size: 9pt; font-weight: 700; letter-spacing: .08em; color: #1d4f91; text-transform: uppercase; }
+.cover h1 { font-size: 20pt; margin: 4px 0 2px; }
+.cover .sub { color: #4a5865; }
+table.ctl { border-collapse: collapse; width: 100%; margin: 8px 0 14px; font-size: 9.5pt; }
+table.ctl th { text-align: left; width: 22%; background: #f1f5f9; }
+table.ctl th, table.ctl td { border: 1px solid #d3dce6; padding: 4px 8px; vertical-align: top; }
+.toc { border: 1px solid #d3dce6; border-radius: 6px; padding: 8px 14px; margin: 0 0 16px; font-size: 9.5pt; columns: 2; }
+.toc b { display: block; column-span: all; margin-bottom: 4px; }
+.toc a { color: #1d2b36; text-decoration: none; display: block; }
+.toc .l3 { padding-left: 14px; color: #4a5865; }
+h2 { font-size: 14pt; color: #1d4f91; border-bottom: 1px solid #cfdcec; padding-bottom: 3px; margin: 20px 0 8px; page-break-after: avoid; }
+h3 { font-size: 11.5pt; margin: 14px 0 6px; page-break-after: avoid; }
+h4 { font-size: 10.5pt; margin: 10px 0 4px; }
+p { margin: 4px 0 8px; }
+ul, ol { margin: 4px 0 8px; padding-left: 20px; }
+li { margin: 2px 0; }
+code { font: 9pt Consolas, "Courier New", monospace; background: #f1f5f9; border-radius: 3px; padding: 0 3px; }
+pre { background: #f6f8fa; border: 1px solid #e0e6ec; border-radius: 6px; padding: 8px; overflow-wrap: anywhere; white-space: pre-wrap; font-size: 8.5pt; }
+table.tbl { border-collapse: collapse; width: 100%; margin: 6px 0 12px; font-size: 9pt; page-break-inside: auto; }
+table.tbl th { background: #eef3f8; text-align: left; }
+table.tbl th, table.tbl td { border: 1px solid #d3dce6; padding: 4px 6px; vertical-align: top; overflow-wrap: anywhere; }
+blockquote { border-left: 3px solid #cfdcec; margin: 6px 0; padding: 2px 10px; color: #4a5865; }
+.cite { font-size: 8.5pt; font-weight: 700; color: #1d4f91; background: #e6f0fc; border-radius: 6px; padding: 0 5px; }
+.new { font-size: 8pt; font-weight: 700; color: #8a5300; background: #fff1db; border-radius: 6px; padding: 0 4px; }
+.wf { border: 1px solid #9aa9b8; border-radius: 8px; margin: 10px 0 6px; page-break-inside: avoid; overflow: hidden; }
+.wf-bar { background: #e8edf2; border-bottom: 1px solid #9aa9b8; padding: 5px 10px; display: flex; gap: 10px; align-items: center; font-size: 9.5pt; }
+.wf-dots i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #b8c4cf; margin-right: 3px; }
+.wf-page { margin-left: auto; font: 8pt Consolas, monospace; color: #4a5865; }
+.wf-body { padding: 10px; background: repeating-linear-gradient(45deg, #fff, #fff 10px, #fbfcfd 10px, #fbfcfd 20px); }
+.wf-sec { border: 1px dashed #b8c4cf; border-radius: 6px; padding: 8px; margin-bottom: 8px; background: #fff; }
+.wf-st { font-weight: 700; font-size: 9.5pt; margin-bottom: 6px; }
+.wf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 10px; }
+.wf-f { display: grid; gap: 2px; font-size: 8.5pt; }
+.wf-f--wide { grid-column: 1 / -1; }
+.wf-l { color: #4a5865; }
+.wf-l i { color: #b42318; font-style: normal; }
+.wf-in { border: 1px solid #9aa9b8; border-radius: 4px; padding: 4px 6px; min-height: 22px; display: flex; justify-content: space-between; background: #fff; }
+.wf-textarea { min-height: 44px; }
+.wf-readonly { background: #f1f5f9; border-style: dashed; }
+.wf-ph { color: #9aa9b8; }
+.wf-mark { color: #4a5865; margin-left: 6px; }
+.wf-toggle { display: inline-block; width: 30px; height: 16px; border-radius: 8px; background: #c9d3dd; position: relative; }
+.wf-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; }
+.wf-toggle--on { background: #2e6fd8; } .wf-toggle--on::after { left: 16px; }
+.wf-check { display: inline-flex; width: 14px; height: 14px; border: 1px solid #9aa9b8; border-radius: 3px; align-items: center; justify-content: center; font-size: 9pt; }
+.wf-t { border-collapse: collapse; width: 100%; font-size: 8.5pt; margin-top: 4px; }
+.wf-t th { background: #eef3f8; text-align: left; }
+.wf-t th, .wf-t td { border: 1px solid #c9d3dd; padding: 3px 6px; }
+.wf-line { display: block; height: 7px; border-radius: 3px; background: #e3e8ee; width: 70%; }
+.wf-acts { display: flex; gap: 6px; justify-content: flex-end; }
+.wf-btn { border: 1px solid #9aa9b8; border-radius: 14px; padding: 3px 12px; font-size: 8.5pt; background: #fff; }
+.wf-btn--p { background: #1d4f91; border-color: #1d4f91; color: #fff; }
+.wf figcaption { font-size: 8.5pt; color: #4a5865; padding: 5px 10px; border-top: 1px solid #e0e6ec; background: #fafbfc; }
+.foot { margin-top: 20px; border-top: 1px solid #d3dce6; padding-top: 6px; font-size: 8pt; color: #6b7886; }
+@media screen { html { background: #e9edf1; } body { background: #fff; max-width: 210mm; margin: 18px auto; padding: 16mm 14mm 18mm; box-shadow: 0 1px 4px rgba(15, 23, 42, .18); } }
+</style></head><body><div class="cover"><div class="kind">Functional &amp; technical design</div><h1>EQP-148 · Oracle AR Invoice Integration - Section 8.1</h1><div class="sub">vbredwoodapp · Sprint 2026-11 A · Version 1 · 2026-11-18</div></div><table class="ctl"><tr><th>Story</th><td>EQP-148 — Oracle AR Invoice Integration - Section 8.1</td></tr><tr><th>Sprint</th><td>2026-11 A</td></tr><tr><th>Epic</th><td>EQP-126 AR Billing &amp; Invoicing</td></tr><tr><th>Assignee</th><td>JAVEED SHAIK</td></tr><tr><th>Due</th><td>2026-09-30</td></tr><tr><th>Status</th><td>FUNC DESIGN</td></tr><tr><th>Document version</th><td>v1</td></tr><tr><th>Date</th><td>2026-11-18</td></tr><tr><th>Prepared by</th><td>rite.user</td></tr><tr><th>Read against</th><td>EquipRite FDD · v1.7</td></tr><tr><th>Application</th><td>vbredwoodapp</td></tr><tr><th>Pages considered</th><td>vbredwoodapp/customer-portal/customer-rental-contract, vbredwoodapp/equipment-foundation/rental-agreement-create, vbredwoodapp/customer-portal/customer-create-req, vbredwoodapp/customer-portal/customer-my-billing</td></tr><tr><th>Written by</th><td>Claude (Anthropic) (AI), from the story, its analysis, the FDD and the app's code</td></tr></table><nav class="toc"><b>Contents</b><a class="l2" href="#h1">Functional &amp; Technical Design — EQP-148: Oracle AR Invoice Integration (Section 8.1)</a><a class="l2" href="#h2">1. Overview</a><a class="l2" href="#h3">2. Functional design (FDD)</a><a class="l3" href="#h4">2.1 Business requirement</a><a class="l3" href="#h5">2.2 Scope</a><a class="l3" href="#h6">2.3 User roles</a><a class="l3" href="#h7">2.4 User flow</a><a class="l3" href="#h8">2.5 Business rules</a><a class="l3" href="#h9">2.6 Acceptance criteria</a><a class="l2" href="#h10">3. Wireframes</a><a class="l2" href="#h11">4. Technical design (TDD)</a><a class="l3" href="#h12">4.1 Pages and components</a><a class="l3" href="#h13">4.2 Data model</a><a class="l3" href="#h14">4.3 Integration touch points</a><a class="l3" href="#h15">4.4 Action chains and modules</a><a class="l3" href="#h16">4.5 Security and roles</a><a class="l3" href="#h17">4.6 Error handling and messages</a><a class="l3" href="#h18">4.7 Performance and limits</a><a class="l2" href="#h19">5. Developer reference</a><a class="l3" href="#h20">5.1 Files to change</a><a class="l3" href="#h21">5.2 Existing patterns to reuse</a><a class="l3" href="#h22">5.3 Build steps</a><a class="l3" href="#h23">5.4 Test plan</a><a class="l2" href="#h24">6. Assumptions and open questions</a></nav><h2 id="h1">Functional &amp; Technical Design — EQP-148: Oracle AR Invoice Integration (Section 8.1)</h2>
+<h2 id="h2">1. Overview</h2>
+<p>This story delivers INT-11, the outbound integration that generates AR (Accounts Receivable) invoices in Oracle Accounts Receivable for external (third-party) customer rentals <span class="cite">FDD 8.1 INT-11</span>. The integration runs periodically, is gated by two configuration flags, maps EquipRite billing data to the Oracle Fusion <code>/fscmRestApi/receivablesInvoices</code> object, and coordinates with RPT-11 so the BI Publisher invoice PDF is attached to the created AR record <span class="cite">FDD 7.15.13</span><span class="cite">FDD 6.2</span>. The acceptance target is: an invoice is created in AR, its amount matches EquipRite billing, and the customer account is correct.</p>
+<p>The bulk of this story is a back-end/OIC integration (EQP-172 Development). The VBCS app changes are limited to surfacing invoice/billing status to customer and staff users on the existing billing screens; no new invoice-generation UI is added.</p>
+<h2 id="h3">2. Functional design (FDD)</h2>
+<h3 id="h4">2.1 Business requirement</h3>
+<p>Generate AR invoices in Oracle Accounts Receivable for external customer rentals via REST API / OIC against <code>/fscmRestApi/receivablesInvoices</code> <span class="cite">FDD 8.1 INT-11</span><span class="cite">FDD 6.2</span>. The invoice is generated only after all timesheets for the billing period are approved and costs are posted; the invoice number follows the configured sequence prefix (e.g. INV-2026-XXXX); and the RPT-11 BIP PDF is automatically attached to the AR invoice record <span class="cite">FDD 7.15.13</span>. INT-11 is active only when <code>AGREEMENTS_ENABLED</code> and <code>EXTERNAL_CUSTOMER_ENABLED</code> config flags are both Yes <span class="cite">FDD 8.1 INT-11</span>.</p>
+<h3 id="h5">2.2 Scope</h3>
+<p>In scope:</p>
+<ul>
+<li>Outbound OIC/REST flow (<span class="new">NEW</span>) that reads EquipRite agreement/billing data for a billing period and creates an AR invoice in Oracle Accounts Receivable via <code>/fscmRestApi/receivablesInvoices</code>.
+</li>
+<li>Periodic trigger for the flow <span class="cite">FDD 8.1 INT-11</span>.
+</li>
+<li>Pre-condition checks: config flags on; all period timesheets approved and costs posted <span class="cite">FDD 7.15.13</span><span class="cite">FDD 8.1 INT-11</span>.
+</li>
+<li>Idempotency to prevent duplicate invoices for the same agreement/period, modelled on the INT-08 reprocessing pattern <span class="cite">FDD 9.3.3</span>.
+</li>
+<li>Coordination with RPT-11 so the BIP invoice PDF is attached to the AR record <span class="cite">FDD 7.15.13</span>.
+</li>
+<li>Minimal VBCS changes: show AR invoice number / status on the customer <b>My Billing</b> page and the <b>Customer Billing Detail</b> page, and allow customers to download the invoice PDF <span class="cite">FDD 7.15.13</span>.
+</li></ul>
+<p>Out of scope / to confirm (see 6):</p>
+<ul>
+<li>The RPT-11 BIP report itself and the invoice-number sequence definition, if owned by a separate story.
+</li>
+<li>Any on-demand &quot;generate now&quot; trigger button (FDD specifies Periodic only) <span class="cite">FDD 8.1 INT-11</span>.
+</li>
+<li>INT-10 IC Billing (internal rentals) — separate integration <span class="cite">FDD 8.1</span>.
+</li></ul>
+<h3 id="h6">2.3 User roles</h3>
+<ul>
+<li><b>Finance</b> — audience for RPT-11 / AR invoices; reviews generated invoices in AR <span class="cite">FDD 7.15.13</span>.
+</li>
+<li><b>External Customer (customer portal user)</b> — views billing status and downloads the invoice PDF from <b>My Billing</b> <span class="cite">FDD 7.15.13</span><span class="cite">FDD 7.18.3</span>. Portal access is gated by <code>CUSTOMERS_MODULE_ENABLED</code> (customersModuleGuardChain) and page RBAC (enforcePageAccessChain).
+</li>
+<li><b>Integration/system account</b> — the OIC scheduled service account that calls Oracle AR (no interactive UI).
+</li></ul>
+<h3 id="h7">2.4 User flow</h3>
+<p>This integration is system-triggered, not a user action. The periodic flow:</p>
+<ol>
+<li>On its schedule, the OIC flow (<span class="new">NEW</span>) checks <code>AGREEMENTS_ENABLED</code> and <code>EXTERNAL_CUSTOMER_ENABLED</code> are Yes; if not, it exits <span class="cite">FDD 8.1 INT-11</span>.
+</li>
+<li>For each external agreement with a billing period due, it verifies all period timesheets are approved and costs posted <span class="cite">FDD 7.15.13</span>.
+</li>
+<li>It runs the idempotency check (no prior successful invoice for that agreement/period) <span class="cite">FDD 9.3.3</span>.
+</li>
+<li>It maps billing data to <code>/fscmRestApi/receivablesInvoices</code> (customer account, lines, amounts) and creates the AR invoice <span class="cite">FDD 6.2</span>.
+</li>
+<li>The RPT-11 BIP PDF is generated and attached to the AR invoice record <span class="cite">FDD 7.15.13</span>.
+</li>
+<li>EquipRite billing records are stamped with the AR invoice number/status.
+</li></ol>
+<p>User-facing view flow (read-only):</p>
+<ol>
+<li>External customer opens <b>My Billing</b> → sees their billed requests list.
+</li>
+<li>Customer selects a row → <b>Customer Billing Detail</b> shows per-line invoice schedules plus the AR invoice number/status (<span class="new">NEW</span> fields).
+</li>
+<li>Customer downloads the invoice PDF <span class="cite">FDD 7.15.13</span>.
+</li></ol>
+<h3 id="h8">2.5 Business rules</h3>
+<ul>
+<li>INT-11 runs only when <code>AGREEMENTS_ENABLED</code> = Yes AND <code>EXTERNAL_CUSTOMER_ENABLED</code> = Yes <span class="cite">FDD 8.1 INT-11</span>.
+</li>
+<li>An invoice is generated only after all timesheets for the billing period are approved and costs are posted <span class="cite">FDD 7.15.13</span>.
+</li>
+<li>One invoice per agreement/period: no duplicate invoice may be created where a prior successful invoice exists for the same agreement/period <span class="cite">FDD 9.3.3, modelled on INT-08</span>.
+</li>
+<li>Invoice number follows the configured sequence prefix (e.g. INV-2026-XXXX) <span class="cite">FDD 7.15.13</span>.
+</li>
+<li>The RPT-11 PDF is automatically attached to the Oracle AR invoice record <span class="cite">FDD 7.15.13</span>.
+</li>
+<li>The AR invoice customer account must be the external customer's Oracle AR Customer Account (linked via EQR_CUSTOMER_PORTAL_USER → HZ_CUST_ACCOUNTS) <span class="cite">FDD 7.18.3</span>.
+</li>
+<li>Invoice amount must match the EquipRite billing total for the period (acceptance criterion).
+</li></ul>
+<h3 id="h9">2.6 Acceptance criteria</h3>
+<ol>
+<li>Invoice is created in Oracle AR via <code>/fscmRestApi/receivablesInvoices</code> for an eligible external agreement/period <span class="cite">FDD 8.1 INT-11</span><span class="cite">FDD 6.2</span>.
+</li>
+<li>The AR invoice total amount matches the EquipRite billing amount for that period.
+</li>
+<li>The AR invoice is raised against the correct external customer account.
+</li>
+<li>No invoice is created when either config flag is off, or when any period timesheet is unapproved / costs unposted <span class="cite">FDD 8.1 INT-11</span><span class="cite">FDD 7.15.13</span>.
+</li>
+<li>Re-running the flow for an agreement/period that already has a successful invoice does not create a duplicate <span class="cite">FDD 9.3.3</span>.
+</li>
+<li>The RPT-11 PDF is attached to the AR invoice record and is downloadable by the customer from <b>My Billing</b> <span class="cite">FDD 7.15.13</span>.
+</li></ol>
+<h2 id="h10">3. Wireframes</h2>
+<figure class="wf"><div class="wf-bar"><span class="wf-dots"><i></i><i></i><i></i></span><b>My Billing — invoice status</b><span class="wf-page">customer-portal/customer-my-billing</span></div><div class="wf-body"><div class="wf-sec"><div class="wf-st">My Billing</div><div class="wf-grid"><div class="wf-f"><span class="wf-l">Search by request #, customer, or contact...</span><span class="wf-in wf-search"><span class="wf-ph">Search by request #, customer, or contact...</span><span class="wf-mark">🔍</span></span></div></div><table class="wf-t"><tr><th>Request #</th><th>Customer Name</th><th>Status</th><th>Lines</th><th>Contract Number</th><th>AR Invoice #</th><th>Invoice Status</th></tr><tr><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td></tr><tr><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td></tr></table></div><div class="wf-acts"><span class="wf-btn wf-btn--p">Open billing detail</span></div></div><figcaption>NEW read-only columns AR Invoice # and Invoice Status added to the existing billed-requests table; populated from the AR invoice stamped back after INT-11 runs.</figcaption></figure>
+<p>The customer scans their billed requests and sees whether an AR invoice has been generated; they click a row to open the detail.</p>
+<figure class="wf"><div class="wf-bar"><span class="wf-dots"><i></i><i></i><i></i></span><b>Customer Billing Detail — AR invoice</b><span class="wf-page">customer-portal/customer-billing-detail</span></div><div class="wf-body"><div class="wf-sec"><div class="wf-st">Invoice</div><div class="wf-grid"><div class="wf-f"><span class="wf-l">AR Invoice Number</span><span class="wf-in wf-readonly">INV-2026-0001</span></div><div class="wf-f"><span class="wf-l">Invoice Date</span><span class="wf-in wf-readonly"><span class="wf-ph">—</span></span></div><div class="wf-f"><span class="wf-l">Due Date</span><span class="wf-in wf-readonly"><span class="wf-ph">—</span></span></div><div class="wf-f"><span class="wf-l">Invoice Status</span><span class="wf-in wf-readonly">Open</span></div><div class="wf-f"><span class="wf-l">Total Amount Due</span><span class="wf-in wf-readonly"><span class="wf-ph">—</span></span></div></div><table class="wf-t"><tr><th>Equipment Name</th><th>Rate Period</th><th>Rate</th><th>Hours/Days</th><th>Line Amount</th></tr><tr><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td></tr><tr><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td></tr><tr><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td><td><span class="wf-line"></span></td></tr></table></div><div class="wf-acts"><span class="wf-btn wf-btn--p">Download Invoice PDF</span></div></div><figcaption>NEW invoice header fields and a Download Invoice PDF action; PDF is the RPT-11 attachment on the AR record [FDD 7.15.13].</figcaption></figure>
+<p>The customer reviews the AR invoice header and lines and downloads the invoice PDF.</p>
+<h2 id="h11">4. Technical design (TDD)</h2>
+<h3 id="h12">4.1 Pages and components</h3>
+<ul>
+<li><b>customer-portal/customer-my-billing</b> (existing) — add two read-only table columns (AR Invoice #, Invoice Status). Backed by the existing <code>getEquipriteV1ViewsCustomerMyRequests</code> view; the view (or a <span class="new">NEW</span> view) must expose the invoice fields.
+</li>
+<li><b>customer-portal/customer-billing-detail</b> (existing) — add AR invoice header fields and a Download Invoice PDF action.
+</li>
+<li><b>No new VBCS page</b> is required for invoice generation; generation is the OIC flow (back end).
+</li>
+<li>INT-11 itself is an <b>Integration (OIC/REST)</b> artifact, best tracked on the interfaces sheet, consistent with the suggested page in the analysis.
+</li></ul>
+<h3 id="h13">4.2 Data model</h3>
+<p>Objects below are Oracle Fusion standard objects referenced; no new EquipRite custom business object is introduced by this story except optional stamp-back fields (marked <span class="new">NEW</span>).</p>
+<p><b>Receivables Invoices (Oracle Fusion — <code>/fscmRestApi/receivablesInvoices</code>)</b> <span class="cite">FDD 6.2</span></p>
+<table class="tbl"><thead><tr><th>Field</th><th>Type</th><th>Key</th><th>Notes</th></tr></thead><tbody><tr><td>InvoiceNumber</td><td>text</td><td>Y</td><td>Follows configured sequence prefix, e.g. INV-2026-XXXX <span class="cite">FDD 7.15.13</span></td></tr><tr><td>BillToCustomerAccount</td><td>text</td><td>Y</td><td>External customer AR account; must match agreement customer</td></tr><tr><td>InvoiceDate</td><td>date</td><td>N</td><td>Invoice header date</td></tr><tr><td>DueDate</td><td>date</td><td>N</td><td>Derived from payment terms</td></tr><tr><td>TransactionType</td><td>text</td><td>N</td><td>AR invoice transaction type (Oracle config)</td></tr><tr><td>InvoiceLines</td><td>array</td><td>N</td><td>One line per agreement rate line (Equipment, Rate Period, Rate, Hours/Days, Line Amount) <span class="cite">FDD 7.15.13</span></td></tr><tr><td>TotalAmount</td><td>number</td><td>N</td><td>Must equal EquipRite billing total for the period</td></tr><tr><td>Attachment (RPT-11 PDF)</td><td>binary</td><td>N</td><td>BIP PDF auto-attached to the AR record <span class="cite">FDD 7.15.13</span></td></tr></tbody></table>
+<p><b>EquipRite agreement/billing stamp-back (eqpt — <span class="new">NEW</span> fields)</b></p>
+<table class="tbl"><thead><tr><th>Field</th><th>Type</th><th>Key</th><th>Notes</th></tr></thead><tbody><tr><td>arInvoiceNumber</td><td>text</td><td>N</td><td><span class="new">NEW</span> — AR invoice number stamped after successful creation</td></tr><tr><td>arInvoiceStatus</td><td>text</td><td>N</td><td><span class="new">NEW</span> — Open / Paid / Overdue, mirrored for display <span class="cite">FDD 7.15.13</span></td></tr><tr><td>arInvoicedPeriod</td><td>text</td><td>N</td><td><span class="new">NEW</span> — agreement/period key used for the idempotency check <span class="cite">FDD 9.3.3</span></td></tr></tbody></table>
+<h3 id="h14">4.3 Integration touch points</h3>
+<table class="tbl"><thead><tr><th>#</th><th>System</th><th>Endpoint or report</th><th>Method</th><th>Purpose</th><th>Sends</th><th>Uses from the answer</th></tr></thead><tbody><tr><td>1</td><td>Oracle Accounts Receivable (<span class="new">NEW</span> INT-11 flow)</td><td><code>/fscmRestApi/receivablesInvoices</code></td><td>POST</td><td>Create the AR invoice for an external agreement/period</td><td>Customer account, invoice header, invoice lines, amounts</td><td>Created InvoiceNumber, invoice id</td></tr><tr><td>2</td><td>Oracle AR (Customers)</td><td><code>/crmRestApi/accounts</code></td><td>GET</td><td>Resolve/confirm external customer AR account <span class="cite">FDD 6.2</span></td><td>Customer ref / account no.</td><td>BillToCustomerAccount</td></tr><tr><td>3</td><td>BI Publisher — RPT-11</td><td>AR Invoice Report (<span class="new">NEW</span> / coordinate)</td><td>Generate</td><td>Produce invoice PDF and attach to AR record <span class="cite">FDD 7.15.13</span></td><td>Customer, invoice period, agreement ref</td><td>PDF attachment on AR invoice</td></tr><tr><td>4</td><td>eqpt</td><td><code>GET /equiprite/v1/views/customer-my-requests</code> (getEquipriteV1ViewsCustomerMyRequests)</td><td>GET</td><td>Feed My Billing list; must expose AR invoice #/status</td><td>page, size</td><td>arInvoiceNumber, arInvoiceStatus</td></tr><tr><td>5</td><td>eqpt</td><td>AR invoice stamp-back endpoint (<span class="new">NEW</span>)</td><td>PATCH</td><td>Write arInvoiceNumber/arInvoiceStatus back to agreement/billing</td><td>agreement id, period, invoice no./status</td><td>—</td></tr><tr><td>6</td><td>eqpt</td><td>Config flags read (<code>AGREEMENTS_ENABLED</code>, <code>EXTERNAL_CUSTOMER_ENABLED</code>)</td><td>GET</td><td>Gate INT-11 execution <span class="cite">FDD 8.1 INT-11</span></td><td>—</td><td>flag values</td></tr></tbody></table>
+<h3 id="h15">4.4 Action chains and modules</h3>
+<ul>
+<li><b>OIC flow (<span class="new">NEW</span>)</b> — periodic orchestration: read flags → select due external agreements → validate timesheets approved &amp; costs posted → idempotency check → POST <code>/fscmRestApi/receivablesInvoices</code> → trigger RPT-11 PDF attach → stamp back via <span class="new">NEW</span> PATCH. No VBCS chain owns invoice generation.
+</li>
+<li><b>customer-my-billing</b> — <code>BilledRequestInitChain</code> (existing) loads the billed-requests view; no new chain if the view carries the invoice fields. <code>customersModuleGuardChain</code> / <code>enforcePageAccessChain</code> remain as gates.
+</li>
+<li><b>customer-billing-detail</b> — its init chain (existing) to be extended to bind AR invoice header fields and a <span class="new">NEW</span> DownloadInvoicePdfChain to fetch the RPT-11 PDF.
+</li>
+<li>Reuse module <b>fetchAllPages</b> (<code>webApps/vbredwoodapp/resources/js/fetchAllPages.js</code>) when reading paged lists, per existing pattern.
+</li></ul>
+<h3 id="h16">4.5 Security and roles</h3>
+<ul>
+<li>Customer portal pages remain guarded by <code>customersModuleGuardChain</code> (<code>CUSTOMERS_MODULE_ENABLED</code>) and <code>enforcePageAccessChain</code> (RBAC deep-link guard); the <code>externalProjectAssignGuardChain</code> continues to withdraw the billing screen when <code>EXTERNAL_PROJECT_ASSIGN_ENABLED</code> is ON.
+</li>
+<li>Customers may only see invoices for their own account; enforced by the customer-portal session link to their AR Customer Account (HZ_CUST_ACCOUNTS) <span class="cite">FDD 7.18.3</span>.
+</li>
+<li>The OIC flow runs under a dedicated integration service account with AR create privileges; not an interactive user.
+</li>
+<li>INT-11 is further gated by <code>AGREEMENTS_ENABLED</code> and <code>EXTERNAL_CUSTOMER_ENABLED</code> <span class="cite">FDD 8.1 INT-11</span>.
+</li></ul>
+<h3 id="h17">4.6 Error handling and messages</h3>
+<ul>
+<li>Config flags off → flow exits cleanly, no error, no invoice <span class="cite">FDD 8.1 INT-11</span>.
+</li>
+<li>Period has unapproved timesheets or unposted costs → skip that agreement, log &quot;Invoice not generated: timesheets not approved / costs not posted&quot; <span class="cite">FDD 7.15.13</span>.
+</li>
+<li>Duplicate detected (prior successful invoice for agreement/period) → skip, log and continue; no duplicate created <span class="cite">FDD 9.3.3</span>.
+</li>
+<li>AR POST failure → mark period as failed; flow re-invokes with the original payload on reprocess, preconditioned on no existing invoice (idempotency) — pattern per INT-08 <span class="cite">FDD 9.3.3</span>.
+</li>
+<li>UI: if no AR invoice yet exists for a billed request, My Billing shows a blank/&quot;Pending&quot; invoice status; Download Invoice PDF is disabled until the PDF attachment exists.
+</li></ul>
+<h3 id="h18">4.7 Performance and limits</h3>
+<ul>
+<li>Periodic batch run; scope by billing period, not real-time per rental <span class="cite">FDD 8.1 INT-11</span>.
+</li>
+<li>Paged reads of agreements/billing use <code>fetchAllPages</code> to avoid dropping records beyond the first page (same rationale as <code>loadEquipmentClassesChain</code>).
+</li>
+<li>My Billing currently loads with <code>size=200</code>; confirm this covers a customer's billed requests, else paginate.
+</li>
+<li>Oracle AR REST throttling/batch limits apply — the OIC flow should process agreements in controlled batches.
+</li></ul>
+<h2 id="h19">5. Developer reference</h2>
+<h3 id="h20">5.1 Files to change</h3>
+<ul>
+<li><code>webApps/vbredwoodapp/flows/customer-portal/pages/customer-my-billing-page.json</code> — add AR Invoice # and Invoice Status columns to the Requests table.
+</li>
+<li><code>webApps/vbredwoodapp/flows/customer-portal/pages/customer-my-billing-page.html</code> — render the two new columns.
+</li>
+<li><code>webApps/vbredwoodapp/flows/customer-portal/pages/customer-billing-detail-page.json</code> / <code>.html</code> / <code>.js</code> — add AR invoice header fields and the Download Invoice PDF action (page files exist under <code>customer-portal/pages/</code>).
+</li>
+<li><code>webApps/vbredwoodapp/flows/customer-portal/pages/customer-billing-detail-page-chains/DownloadInvoicePdfChain.js</code> — <b><span class="new">NEW</span></b> chain to retrieve the RPT-11 PDF attachment.
+</li>
+<li>OIC integration project for INT-11 — <b><span class="new">NEW</span></b> (goes to the integration repo / OIC, not the VBCS app).
+</li>
+<li>eqpt service: <b><span class="new">NEW</span></b> AR invoice stamp-back PATCH endpoint and the view fields <code>arInvoiceNumber</code> / <code>arInvoiceStatus</code> on <code>views/customer-my-requests</code> (back-end, eqpt).
+</li></ul>
+<h3 id="h21">5.2 Existing patterns to reuse</h3>
+<ul>
+<li><b>Idempotency / reprocessing</b> — model INT-11 on the INT-08 IC Billing reprocess rule: &quot;no prior invoice for same period&quot; <span class="cite">FDD 9.3.3</span>.
+</li>
+<li><b>Config-flag page/flow gating</b> — <code>agreementsFlagGuardChain</code> (AGREEMENTS_ENABLED) and the module-guard pattern (<code>customersModuleGuardChain</code>) show how flags gate behaviour; apply equivalent flag reads in the OIC flow.
+</li>
+<li><b>Paged reads</b> — <code>fetchAllPages.js</code>.
+</li>
+<li><b>Oracle Fusion REST LOV</b> — the <code>ProjectLOV/getFscmRestApiResources11_13_18_05ShippingCustomersLOV</code> / <code>/crmRestApi/accounts</code> usage shows how the app resolves customer accounts <span class="cite">FDD 6.2</span>.
+</li>
+<li><b>Billing list loader</b> — <code>BilledRequestInitChain</code> on My Billing already filters to billed requests; extend its row shape rather than adding a new view where possible.
+</li></ul>
+<h3 id="h22">5.3 Build steps</h3>
+<ol>
+<li>Confirm <code>AGREEMENTS_ENABLED</code> and <code>EXTERNAL_CUSTOMER_ENABLED</code> are Yes in configurations <span class="cite">FDD 8.1 INT-11</span>.
+</li>
+<li>Add <code>arInvoiceNumber</code> / <code>arInvoiceStatus</code> / <code>arInvoicedPeriod</code> to the eqpt billing/agreement data and expose on <code>views/customer-my-requests</code>.
+</li>
+<li>Build the <span class="new">NEW</span> OIC flow: flag check → due-agreement selection → timesheet/cost precondition → idempotency check → map to <code>/fscmRestApi/receivablesInvoices</code> → POST → RPT-11 attach → stamp-back PATCH.
+</li>
+<li>Set the periodic schedule for the flow <span class="cite">FDD 8.1 INT-11</span>.
+</li>
+<li>Add the two columns to My Billing and the invoice header + Download PDF to Customer Billing Detail.
+</li>
+<li>Wire <code>DownloadInvoicePdfChain</code> to the RPT-11 attachment.
+</li>
+<li>Move EQP-172 into development and execute the test plan.
+</li></ol>
+<h3 id="h23">5.4 Test plan</h3>
+<p><b>API scenario (in order):</b></p>
+<ol>
+<li>Set both config flags Yes; confirm an eligible external agreement with an approved, posted billing period.
+</li>
+<li>Run the OIC flow → assert POST <code>/fscmRestApi/receivablesInvoices</code> returns 201 with an InvoiceNumber matching the configured prefix.
+</li>
+<li>Assert the created invoice <code>TotalAmount</code> equals the EquipRite billing total for the period.
+</li>
+<li>Assert <code>BillToCustomerAccount</code> = the agreement's external customer AR account (resolved via <code>/crmRestApi/accounts</code>).
+</li>
+<li>Assert the RPT-11 PDF is attached to the AR invoice record <span class="cite">FDD 7.15.13</span>.
+</li>
+<li>Re-run the flow for the same agreement/period → assert no second invoice is created (idempotency) <span class="cite">FDD 9.3.3</span>.
+</li>
+<li>Turn one flag off → run → assert no invoice is created.
+</li>
+<li>With a period that has an unapproved timesheet → run → assert the agreement is skipped and logged.
+</li></ol>
+<p><b>UI checks:</b></p>
+<ul>
+<li>My Billing shows AR Invoice # and Invoice Status for a billed request after the flow runs; blank/&quot;Pending&quot; before.
+</li>
+<li>Customer Billing Detail shows invoice header fields and line amounts matching the AR invoice.
+</li>
+<li>Download Invoice PDF returns the RPT-11 PDF; disabled when no attachment exists.
+</li>
+<li>A customer cannot see another customer's invoices (portal account scoping) <span class="cite">FDD 7.18.3</span>.
+</li>
+<li>Page still blocked when <code>CUSTOMERS_MODULE_ENABLED</code> is off (customersModuleGuardChain).
+</li></ul>
+<h2 id="h24">6. Assumptions and open questions</h2>
+<ul>
+<li><b>Config-flag gating vs acceptance criteria:</b> the acceptance criteria do not mention the flag gates; we assume INT-11 must honour <code>AGREEMENTS_ENABLED</code> and <code>EXTERNAL_CUSTOMER_ENABLED</code> <span class="cite">FDD 8.1 INT-11</span>. Confirm.
+</li>
+<li><b>Trigger:</b> FDD says Periodic/Scheduled; the story is silent. We assume scheduled, with no on-demand button. Confirm whether an on-demand run is needed.
+</li>
+<li><b>Reprocessing/idempotency:</b> FDD 9.3.3 defines this for INT-08 (IC Billing), not INT-11. We assume the same pattern applies to INT-11 — confirm the preconditions/post-conditions for INT-11 specifically.
+</li>
+<li><b>RPT-11 and invoice-number sequence:</b> confirm whether the BIP report build and the sequence-prefix setup are in this story's scope or a separate story <span class="cite">FDD 7.15.13</span>.
+</li>
+<li><b>View fields:</b> assumes <code>views/customer-my-requests</code> can carry AR invoice number/status, or a <span class="new">NEW</span> billing view is provided (back-end decision).
+</li>
+<li><b>Customer-billing-detail page internals</b> are not fully listed in the context; field/chain additions assume the standard customer-portal page structure.
+</li>
+<li>Ownership has changed repeatedly (current assignee JAVEED SHAIK); confirm scope is frozen before EQP-172 starts development.
+</li></ul><div class="foot">Generated by Build.Rite from the working folder's code on 2026-11-18. Review before use: names, values and decisions are for the team to confirm.</div></body></html>
