@@ -1,5 +1,5 @@
 {
- "scannedAt": "2026-11-17T19:22:37.392Z",
+ "scannedAt": "2026-11-18T17:32:43.027Z",
  "pages": [
   {
    "id": "vbredwoodapp//shell",
@@ -171,6 +171,25 @@
    "sheet": null
   },
   {
+   "id": "vbredwoodapp/customer-portal/non-catalog-request",
+   "app": "vbredwoodapp",
+   "appName": "vbredwoodapp",
+   "flow": "customer-portal",
+   "page": "non-catalog-request",
+   "label": "Request Other Equipment",
+   "route": {
+    "url": "/vp/shell/customer-portal/non-catalog-request",
+    "menu": "",
+    "needs": ""
+   },
+   "next": [
+    "vbredwoodapp/customer-portal/request-catalog",
+    "vbredwoodapp/customer-portal/customer-my-requests"
+   ],
+   "stories": [],
+   "sheet": null
+  },
+  {
    "id": "vbredwoodapp/customer-portal/project-create-request",
    "app": "vbredwoodapp",
    "appName": "vbredwoodapp",
@@ -188,12 +207,12 @@
    "menu": "Create Request",
    "stories": [],
    "sheet": {
-    "at": "2026-11-17T19:22:37.326Z",
+    "at": "2026-11-18T17:32:43.006Z",
     "by": "rite.user",
-    "codeHash": "ca67bac5a555e769",
+    "codeHash": "651783b64210d51c",
     "screenshots": 1,
     "ai": false,
-    "rest": 29,
+    "rest": 27,
     "chains": 30
    }
   },
@@ -259,7 +278,8 @@
    },
    "next": [
     "vbredwoodapp/customer-portal/request-catalog-detail",
-    "vbredwoodapp/customer-portal/request-cart"
+    "vbredwoodapp/customer-portal/request-cart",
+    "vbredwoodapp/customer-portal/non-catalog-request"
    ],
    "menu": "Equipment Catalog",
    "stories": [],
@@ -594,7 +614,7 @@
    "appName": "vbredwoodapp",
    "flow": "equipment-foundation",
    "page": "rental-agreement-create",
-   "label": "New Rental Agreement",
+   "label": "Rental Agreement Create",
    "route": {
     "url": "/vp/shell/equipment-foundation/rental-agreement-create",
     "menu": "",

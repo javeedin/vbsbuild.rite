@@ -16,15 +16,15 @@
   "files": [
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.json",
-    "lines": 628
+    "lines": 659
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
-    "lines": 787
+    "lines": 1077
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.js",
-    "lines": 521
+    "lines": 611
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/AddressSuggestionSelectedChain.js",
@@ -32,7 +32,7 @@
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/AgreementSelectedChain.js",
-    "lines": 231
+    "lines": 189
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureContractChain.js",
@@ -43,16 +43,12 @@
     "lines": 43
    },
    {
-    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureExternalCustomerChain.js",
-    "lines": 42
-   },
-   {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureFallbackCustomerChain.js",
-    "lines": 54
+    "lines": 124
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureInvOrgLocationChain.js",
-    "lines": 106
+    "lines": 136
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureProjectNameChain.js",
@@ -72,15 +68,11 @@
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CustomerTypeaheadChain.js",
-    "lines": 75
-   },
-   {
-    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/GoHomeChain.js",
-    "lines": 28
+    "lines": 115
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/HydrateDraftChain.js",
-    "lines": 221
+    "lines": 243
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/LoadAgreementsChain.js",
@@ -92,11 +84,19 @@
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/LoadExternalPartyLovsChain.js",
-    "lines": 71
+    "lines": 65
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/LoadInvOrgLocationsChain.js",
+    "lines": 151
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/LoadProjectDetailsChain.js",
+    "lines": 128
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/LoadShipToSitesChain.js",
-    "lines": 92
+    "lines": 94
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/LoadTaskTreeChain.js",
@@ -108,11 +108,11 @@
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/LocationResolvedChain.js",
-    "lines": 29
+    "lines": 41
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/NavigateToCatalogChain.js",
-    "lines": 350
+    "lines": 354
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/ProjectTypeaheadChain.js",
@@ -120,7 +120,7 @@
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/RequestTypeChangedChain.js",
-    "lines": 181
+    "lines": 191
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/SeedCustomerTypeChain.js",
@@ -136,7 +136,7 @@
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/UseLocationChain.js",
-    "lines": 36
+    "lines": 45
    },
    {
     "path": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/eitherModuleGuardChain.js",
@@ -147,13 +147,21 @@
     "lines": 72
    }
   ],
-  "codeHash": "ca67bac5a555e769",
+  "codeHash": "651783b64210d51c",
   "features": {
    "sections": [
     "Create Equipment Request",
+    "Project Details",
     "Clear agreement?"
    ],
    "actions": [
+    {
+     "label": "Project details",
+     "listener": "showProjectDetails",
+     "chains": [
+      "LoadProjectDetailsChain"
+     ]
+    },
     {
      "label": "Use this location",
      "listener": "useLocation",
@@ -183,10 +191,10 @@
      ]
     },
     {
-     "label": "oj-select-single: value item changed",
-     "listener": "externalCustomerSelected",
+     "label": "Customer / Legal Entity: value item changed",
+     "listener": "customerSelectedFromSDP",
      "chains": [
-      "CaptureExternalCustomerChain"
+      "CaptureFallbackCustomerChain"
      ]
     },
     {
@@ -194,13 +202,6 @@
      "listener": "externalContactSelected",
      "chains": [
       "CaptureExternalContactChain"
-     ]
-    },
-    {
-     "label": "Customer / Legal Entity: value item changed",
-     "listener": "customerSelectedFromSDP",
-     "chains": [
-      "CaptureFallbackCustomerChain"
      ]
     },
     {
@@ -266,6 +267,7 @@
     "Location Type",
     "Delivery Location",
     "Notes / Special Instructions",
+    "Location name (optional)",
     "Address Line 1",
     "Address Line 2",
     "City",
@@ -274,12 +276,12 @@
     "Postal Code",
     "Country",
     "— Select Customer Type —",
-    "— Select Customer / Legal Entity —",
+    "Search customers…",
     "Select a contact...",
     "Project",
     "Task",
-    "Search internal locations",
-    "Start typing an address…"
+    "Start typing an address…",
+    "e.g. North Gate, Rig 42 lay-down"
    ],
    "columns": [],
    "components": [
@@ -291,6 +293,7 @@
     "oj-input-number",
     "oj-input-search",
     "oj-input-text",
+    "oj-progress-circle",
     "oj-select-single",
     "oj-sp-collection-container",
     "oj-sp-general-overview-page",
@@ -313,7 +316,8 @@
       "SeedCustomerTypeChain",
       "SeedRequestorChain",
       "LoadAgreementsChain",
-      "LoadTaskTreeChain"
+      "LoadTaskTreeChain",
+      "LoadInvOrgLocationsChain"
      ]
     }
    ]
@@ -338,21 +342,19 @@
      "name": "AgreementSelectedChain",
      "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/AgreementSelectedChain.js",
      "about": "Path B — the user picked (or cleared) a rental agreement from the optional dropdown on the create-request page. GOAL: produce the EXACT same agreement context that Path A (rental-agreement-lines -> CreateRequestFromAgreementChain) produces, so the downstream catalog/cart/submit pages don't care which path was used. That context is: draftStorage + $flow vars holding fromAgreement*, CartItemsArray, agreementLineIdByEquipmentId, agreementClassIds, plus an agreementRateByEquipmentId map the catalog uses to override rates. Path B does NOT pre-load the cart. Unlike Path A (where the user…",
-     "calls": [
-      "eqp-v1/getAgreementLines",
-      "eqp-v1/getEquipriteV1ViewsRentalAgreementLines",
-      "eqp-v1/getEquipriteV1EquipmentMaster"
-     ],
+     "calls": [],
      "reports": [],
      "local": [],
      "opens": [],
      "modules": [
-      "resources/js/draftStorage"
+      "resources/js/draftStorage",
+      "resources/js/agreementCoverage",
+      "resources/js/fetchAllPages"
      ],
      "on": [
       "agreementSelected"
      ],
-     "lines": 231
+     "lines": 189
     },
     {
      "name": "CaptureContractChain",
@@ -383,24 +385,12 @@
      "lines": 43
     },
     {
-     "name": "CaptureExternalCustomerChain",
-     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureExternalCustomerChain.js",
-     "about": "Capture the customer picked in the EXTERNAL Customer Name LOV. Mirrors customer-create-req-page CustomerSelectedChain, but writes to $flow.variables.request (this page's model lives on the flow so it survives the catalog round-trip) instead of that page's $page.variables.formData. customerRefId is an EQR_CUSTOMER_REF id — a DIFFERENT id space from request.customerId, which the INTERNAL flow fills from the Fusion ShippingCustomersLOV. They are kept as separate fields rather than shared, so a user who fills one, switches type, and fills the other can't end up with a Fusion party id being…",
-     "calls": [],
-     "reports": [],
-     "local": [],
-     "opens": [],
-     "modules": [],
-     "on": [
-      "externalCustomerSelected"
-     ],
-     "lines": 42
-    },
-    {
      "name": "CaptureFallbackCustomerChain",
      "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureFallbackCustomerChain.js",
      "about": "Fired by the Internal Customer oj-select-single's on-value-item-changed. Named \"Fallback\" for historical reasons: this used to be the second of two customer pickers, shown only until a contract was chosen, at which point a contract-scoped BIP picker took over. That BIP picker is gone (its only purpose was parameterising the old per-customer ship-to-sites report, which is now contract-scoped), so this is the ONLY customer path on the page and the name is a misnomer — kept to avoid a rename with no behavioural gain. Writes request.customerId, then re-runs CustomerSelectedChain (agreement…",
-     "calls": [],
+     "calls": [
+      "eqp-v1/resolveCustomerRef"
+     ],
      "reports": [],
      "local": [],
      "opens": [],
@@ -408,7 +398,7 @@
      "on": [
       "customerSelectedFromSDP"
      ],
-     "lines": 54
+     "lines": 124
     },
     {
      "name": "CaptureInvOrgLocationChain",
@@ -424,7 +414,7 @@
      "on": [
       "invOrgLocationSelected"
      ],
-     "lines": 106
+     "lines": 136
     },
     {
      "name": "CaptureProjectNameChain",
@@ -505,21 +495,7 @@
      "on": [
       "customerSearchRequested"
      ],
-     "lines": 75
-    },
-    {
-     "name": "GoHomeChain",
-     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/GoHomeChain.js",
-     "about": "Fired by the header \"Home\" button (secondary action on the overview page). Navigates the user to the application's home page.",
-     "calls": [],
-     "reports": [],
-     "local": [],
-     "opens": [
-      "page home"
-     ],
-     "modules": [],
-     "on": [],
-     "lines": 28
+     "lines": 115
     },
     {
      "name": "HydrateDraftChain",
@@ -537,7 +513,7 @@
      "on": [
       "vbEnter"
      ],
-     "lines": 221
+     "lines": 243
     },
     {
      "name": "LoadAgreementsChain",
@@ -577,9 +553,8 @@
     {
      "name": "LoadExternalPartyLovsChain",
      "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/LoadExternalPartyLovsChain.js",
-     "about": "Load the two EXTERNAL-flow party LOVs: Customer Name (EQR_CUSTOMER_REF) and Customer Contact (EQR_CUSTOMER_PORTAL_USER). Deliberately a copy of customer-create-req-page CreateRequestInitChain's LOV block — same endpoints, same row shapes — so an EXTERNAL request raised from THIS page resolves its customer and contact from exactly the same source as one raised in the customer flow, and lands in the same DB columns (eqrCustomerRefId / eqrCustomerPortalUserId). The two pickers are INDEPENDENT: there is no DB relationship between a customer and a portal user, so picking a customer neither…",
+     "about": "Load the EXTERNAL-flow Customer Contact LOV (EQR_CUSTOMER_PORTAL_USER). IT USED TO LOAD THE CUSTOMER LIST TOO, from EQR_CUSTOMER_REF. That list is gone: the external Customer picker now searches Fusion through the same report the internal one uses, and the EQR_CUSTOMER_REF row is found-or- created on selection (CaptureFallbackCustomerChain -> resolveCustomerRef). Fetching all 15 local rows on page enter served nothing and is dropped. Deliberately a copy of customer-create-req-page CreateRequestInitChain's LOV block — same endpoints, same row shapes — so an EXTERNAL request raised from THIS…",
      "calls": [
-      "eqp-v1/getCustomerRefs",
       "eqp-v1/getCustomerPortalUsers"
      ],
      "reports": [],
@@ -587,7 +562,43 @@
      "opens": [],
      "modules": [],
      "on": [],
-     "lines": 71
+     "lines": 65
+    },
+    {
+     "name": "LoadInvOrgLocationsChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/LoadInvOrgLocationsChain.js",
+     "about": "Loads EVERY ACTIVE LOCATION on the Fusion instance into $page.variables.invOrgLocationsAdp — the Delivery Location list when Location Type = 'Internal Location' (locationType === 'INV_ORG'). LOCATIONS, NOT INVENTORY ORGS. Measured on dev20 2026-11-16: 911 hr_locations rows, 839 active, of which ~147 are inventory orgs. The list used to be those 147; it is now all 839, because the field answers \"where does the equipment go\" and most delivery addresses are not warehouses. ⚠ KEYED ON locationId, NOT invOrgId. Three quarters of the rows have no org, so invOrgId is null on them and cannot key the…",
+     "calls": [
+      "bipService/runBIPReport"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/bipLov",
+      "resources/js/invOrgAddress"
+     ],
+     "on": [
+      "vbEnter"
+     ],
+     "lines": 151
+    },
+    {
+     "name": "LoadProjectDetailsChain",
+     "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/LoadProjectDetailsChain.js",
+     "about": "Fills the read-only Project Details modal behind the (i) button next to the Project LOV, then opens it. TWO CALLS, CONCURRENT. The project's own attributes and its classifications live on different Fusion resources (projects/{id} and its child/ProjectClassifications), and neither depends on the other's answer, so they go out together — the modal opens on the slower of the two rather than on their sum. WHY `fields` IS PASSED HERE rather than left to the endpoint's default: ProjectsById is SHARED with resources/js/projectBusinessUnit.js and AssignProjectSelectedChain, whose registered default…",
+     "calls": [
+      "ProjectLOV/getFscmRestApiResources11_13_18_05ProjectsById",
+      "ProjectLOV/getFscmRestApiResources11_13_18_05ProjectClassifications"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "showProjectDetails"
+     ],
+     "lines": 128
     },
     {
      "name": "LoadShipToSitesChain",
@@ -605,7 +616,7 @@
       "resources/js/bipLov"
      ],
      "on": [],
-     "lines": 92
+     "lines": 94
     },
     {
      "name": "LoadTaskTreeChain",
@@ -652,7 +663,7 @@
      "on": [
       "locationResolved"
      ],
-     "lines": 29
+     "lines": 41
     },
     {
      "name": "NavigateToCatalogChain",
@@ -676,7 +687,7 @@
      "on": [
       "nextToCatalog"
      ],
-     "lines": 350
+     "lines": 354
     },
     {
      "name": "ProjectTypeaheadChain",
@@ -710,7 +721,7 @@
      "on": [
       "requestTypeChanged"
      ],
-     "lines": 181
+     "lines": 191
     },
     {
      "name": "SeedCustomerTypeChain",
@@ -770,7 +781,7 @@
      "on": [
       "useLocation"
      ],
-     "lines": 36
+     "lines": 45
     },
     {
      "name": "eitherModuleGuardChain",
@@ -812,6 +823,24 @@
      "lines": 59
     },
     {
+     "name": "agreementCoverage",
+     "file": "webApps/vbredwoodapp/resources/js/agreementCoverage.js",
+     "about": "Which equipment masters an agreement's lines cover, at which line + rate. MIRRORS THE SERVER VIEW EQP_M_AGREEMENT_LINE (V481), which the catalog uses to scope and price an agreement. Keep the two in step: - a line naming a master covers that master (specificity 1) - a class+subclass line covers every master in the subclass (2) - a class-only line covers every master in the class (3) When several lines cover one master the lowest specificity wins, then the highest lineNumber. Before V481 a…",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 76
+    },
+    {
+     "name": "fetchAllPages",
+     "file": "webApps/vbredwoodapp/resources/js/fetchAllPages.js",
+     "about": "Read a whole paged list, not just its first page. ASKING FOR A BIG size IS NOT ENOUGH. These endpoints cap the page and return their own maximum without saying so. Verified on the equipment master: 306 rows exist, `size=10000` came back with recordCount=306, pageSize=200, totalPages=2, hasMore=true — a valid HTTP 200 carrying two thirds of the data. Nothing throws, nothing warns; the caller just silently works from a partial set. That truncation has already caused two separate visible bugs: -…",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 84
+    },
+    {
      "name": "maintAssetLocation",
      "file": "webApps/vbredwoodapp/resources/js/maintAssetLocation.js",
      "about": "════════════════════════════════════════════════════════════════════════ Relocate the maintenance asset in Fusion when equipment ships. ════════════════════════════════════════════════════════════════════════ WHAT IT DOES When a request's delivery location is an internal inventory location (deliveryLocationType === 'INV_ORG') and a line ships, tell Fusion the equipment's maintenance asset now lives at that location: PATCH installedBaseAssets/{AssetId} { CurrentLocationContextCode:…",
@@ -849,7 +878,7 @@
      "local": [],
      "calls": [],
      "reports": [],
-     "lines": 112
+     "lines": 125
     },
     {
      "name": "bipLov",
@@ -872,6 +901,17 @@
      ],
      "reports": [],
      "lines": 228
+    },
+    {
+     "name": "invOrgAddress",
+     "file": "webApps/vbredwoodapp/resources/js/invOrgAddress.js",
+     "about": "Inventory-org address enrichment for the BU & Org Mapping table. When an admin maps an inventory org to a business unit, we want the org's physical address (and its coordinates) stored on the mapping row, so the Transfer Order engine and anything distance-based has a real location for the yard instead of just a LOCATION_CODE. Flow, per mapping: 1. BIP report EQP_INV_ORG_ADDRESS_RP, keyed by the inventory org id → the hr_locations row for that org (address lines, city, region, postal code,…",
+     "local": [],
+     "calls": [],
+     "reports": [
+      "EQP_INV_ORG_ADDRESS_RP"
+     ],
+     "lines": 175
     },
     {
      "name": "projectTaskTree",
@@ -900,7 +940,7 @@
       "eqp-v1/getNearestEquipmentOrg"
      ],
      "reports": [],
-     "lines": 158
+     "lines": 159
     },
     {
      "name": "currentUser",
@@ -922,7 +962,7 @@
       "eqp-v1/createShipToSite"
      ],
      "reports": [],
-     "lines": 469
+     "lines": 481
     },
     {
      "name": "catalogCart",
@@ -933,7 +973,7 @@
       "eqp-v1/getEquipriteV1ViewsEquipmentCatalog"
      ],
      "reports": [],
-     "lines": 418
+     "lines": 419
     },
     {
      "name": "geocoder",
@@ -954,58 +994,22 @@
      "lines": 338
     }
    ],
-   "variables": 52
+   "variables": 58
   },
   "integrations": {
    "rest": [
     {
-     "endpoint": "eqp-v1/getAgreementLines",
+     "endpoint": "eqp-v1/resolveCustomerRef",
      "service": "eqp-v1",
-     "operation": "getAgreementLines",
-     "method": "GET",
-     "path": "/equiprite/v1/agreement-lines",
-     "summary": "List agreement lines",
+     "operation": "resolveCustomerRef",
+     "method": "POST",
+     "path": "/equiprite/v1/customer-refs/resolve",
+     "summary": "Find or create the EQR_CUSTOMER_REF row for a Fusion customer account",
      "backend": "eqpt",
      "backendLabel": "eqpt",
      "usedBy": [
-      "AgreementSelectedChain"
-     ],
-     "params": {
-      "agreementId": "{{id}}"
-     }
-    },
-    {
-     "endpoint": "eqp-v1/getEquipriteV1ViewsRentalAgreementLines",
-     "service": "eqp-v1",
-     "operation": "getEquipriteV1ViewsRentalAgreementLines",
-     "method": "GET",
-     "path": "/equiprite/v1/views/rental-agreement-lines",
-     "summary": "Get equipment lines for a rental agreement",
-     "backend": "eqpt",
-     "backendLabel": "eqpt",
-     "usedBy": [
-      "AgreementSelectedChain"
-     ],
-     "params": {
-      "agreementNumber": "{{agreementNumber}}"
-     }
-    },
-    {
-     "endpoint": "eqp-v1/getEquipriteV1EquipmentMaster",
-     "service": "eqp-v1",
-     "operation": "getEquipriteV1EquipmentMaster",
-     "method": "GET",
-     "path": "/equiprite/v1/equipment-master",
-     "summary": "Search / list equipment (paginated, filterable, sortable)",
-     "backend": "eqpt",
-     "backendLabel": "eqpt",
-     "usedBy": [
-      "AgreementSelectedChain"
-     ],
-     "params": {
-      "equipmentClassId": "{{classId}}",
-      "size": "10"
-     }
+      "CaptureFallbackCustomerChain"
+     ]
     },
     {
      "endpoint": "bipService/runBIPReport",
@@ -1019,6 +1023,7 @@
      "usedBy": [
       "CustomerTypeaheadChain",
       "LoadContractsChain",
+      "LoadInvOrgLocationsChain",
       "LoadShipToSitesChain",
       "ProjectTypeaheadChain"
      ]
@@ -1049,8 +1054,7 @@
      "backend": "eqpt",
      "backendLabel": "eqpt",
      "usedBy": [
-      "LoadAgreementsChain",
-      "LoadExternalPartyLovsChain"
+      "LoadAgreementsChain"
      ]
     },
     {
@@ -1065,6 +1069,40 @@
      "usedBy": [
       "LoadExternalPartyLovsChain"
      ]
+    },
+    {
+     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05ProjectsById",
+     "service": "ProjectLOV",
+     "operation": "getFscmRestApiResources11_13_18_05ProjectsById",
+     "method": "GET",
+     "path": "/fscmRestApi/resources/11.13.18.05/projects/{ProjectId}",
+     "summary": "",
+     "backend": "fusion",
+     "backendLabel": "Oracle Fusion REST",
+     "usedBy": [
+      "LoadProjectDetailsChain",
+      "projectBusinessUnit"
+     ],
+     "params": {
+      "ProjectId": "{{projectId}}",
+      "fields": "{{DETAIL_FIELDS}}"
+     }
+    },
+    {
+     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05ProjectClassifications",
+     "service": "ProjectLOV",
+     "operation": "getFscmRestApiResources11_13_18_05ProjectClassifications",
+     "method": "GET",
+     "path": "/fscmRestApi/resources/11.13.18.05/projects/{ProjectId}/child/ProjectClassifications",
+     "summary": "",
+     "backend": "fusion",
+     "backendLabel": "Oracle Fusion REST",
+     "usedBy": [
+      "LoadProjectDetailsChain"
+     ],
+     "params": {
+      "ProjectId": "{{projectId}}"
+     }
     },
     {
      "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05ProjectTasks",
@@ -1268,19 +1306,6 @@
      ]
     },
     {
-     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05ProjectsById",
-     "service": "ProjectLOV",
-     "operation": "getFscmRestApiResources11_13_18_05ProjectsById",
-     "method": "GET",
-     "path": "/fscmRestApi/resources/11.13.18.05/projects/{ProjectId}",
-     "summary": "",
-     "backend": "fusion",
-     "backendLabel": "Oracle Fusion REST",
-     "usedBy": [
-      "projectBusinessUnit"
-     ]
-    },
-    {
      "endpoint": "eqp-v1/getEquipriteV1EquipmentRequestsRequestIdLines2",
      "service": "eqp-v1",
      "operation": "getEquipriteV1EquipmentRequestsRequestIdLines2",
@@ -1357,24 +1382,12 @@
      "usedBy": [
       "catalogCart"
      ]
-    },
-    {
-     "endpoint": "eqp-v1/getBuOrgMappings",
-     "service": "eqp-v1",
-     "operation": "getBuOrgMappings",
-     "method": "GET",
-     "path": "/equiprite/v1/bu-org-mappings",
-     "summary": "Get Business Unit to Inventory Org mappings",
-     "backend": "eqpt",
-     "backendLabel": "eqpt",
-     "usedBy": [
-      "the page's data (ServiceDataProvider)"
-     ]
     }
    ],
    "reports": [
     "EQP_CONTRACTS_BY_PROJECT_LOV_RP",
     "EQP_CUSTOMERS_LOV_RP",
+    "EQP_INV_ORG_ADDRESS_RP",
     "EQP_PROJECTS_LOV_RP",
     "EQP_SHIP_TO_SITES_BY_CONTRACT_LOV_RP"
    ],
@@ -1443,24 +1456,33 @@
     {
      "field": "Customer / Legal Entity",
      "component": "oj-select-single",
-     "target": "customerRefId",
-     "text": "customerName",
-     "key": "id",
-     "textFrom": "customerName",
-     "keyFrom": "id",
-     "sub": "",
-     "subFrom": "",
-     "source": "chain",
-     "endpoint": "eqp-v1/getCustomerRefs",
-     "report": "",
-     "reportPath": "",
-     "rowTag": "",
-     "search": "",
-     "itemsPath": "data",
-     "params": {},
+     "target": "CustomerId",
+     "text": "Customer",
+     "key": "CustomerId",
+     "textFrom": "CUSTOMER",
+     "keyFrom": "CUSTOMERID",
+     "sub": "AccountNumber",
+     "subFrom": "ACCOUNTNUMBER",
+     "source": "report",
+     "endpoint": "",
+     "report": "EQP_CUSTOMERS_LOV_RP",
+     "reportPath": "/Custom/EquipRite/EQP_CUSTOMERS_LOV_RP.xdo",
+     "rowTag": "G_1",
+     "search": "P_SEARCH",
+     "itemsPath": "",
+     "params": {
+      "P_SEARCH": "",
+      "P_SEARCH_BY": "ALL",
+      "P_CUSTOMER_TYPE": "{{customerType}}"
+     },
      "values": [],
-     "via": "LoadExternalPartyLovsChain",
-     "when": "requestTypeSel === 'EXTERNAL'"
+     "via": "CustomerTypeaheadChain",
+     "when": "requestTypeSel === 'EXTERNAL'",
+     "cols": [
+      "CUSTOMERID",
+      "CUSTOMER",
+      "CUSTOMERNUMBER"
+     ]
     },
     {
      "field": "Customer Contact",
@@ -1483,36 +1505,6 @@
      "values": [],
      "via": "LoadExternalPartyLovsChain",
      "when": "requestTypeSel === 'EXTERNAL'"
-    },
-    {
-     "field": "Customer / Legal Entity",
-     "component": "oj-select-single",
-     "target": "CustomerId",
-     "text": "Customer",
-     "key": "CustomerId",
-     "textFrom": "CUSTOMER",
-     "keyFrom": "CUSTOMERID",
-     "sub": "CustomerNumber",
-     "subFrom": "CUSTOMERNUMBER",
-     "source": "report",
-     "endpoint": "",
-     "report": "EQP_CUSTOMERS_LOV_RP",
-     "reportPath": "/Custom/EquipRite/EQP_CUSTOMERS_LOV_RP.xdo",
-     "rowTag": "G_1",
-     "search": "P_SEARCH",
-     "itemsPath": "",
-     "params": {
-      "P_SEARCH": "",
-      "P_SEARCH_BY": "ALL"
-     },
-     "values": [],
-     "via": "CustomerTypeaheadChain",
-     "when": "requestTypeSel !== 'EXTERNAL'",
-     "cols": [
-      "CUSTOMERID",
-      "CUSTOMER",
-      "CUSTOMERNUMBER"
-     ]
     },
     {
      "field": "Requestor Contact",
@@ -1699,30 +1691,26 @@
      "component": "oj-select-single",
      "target": "selectedInvOrgLocationId",
      "text": "",
-     "key": "invOrgId",
+     "key": "locationId",
      "textFrom": "",
-     "keyFrom": "",
-     "sub": "invOrgName",
-     "subFrom": "",
-     "source": "service",
-     "endpoint": "eqp-v1/getBuOrgMappings",
+     "keyFrom": "LOCATION_ID",
+     "sub": "locationName",
+     "subFrom": "LOCATION_NAME",
+     "source": "chain",
+     "endpoint": "bipService/runBIPReport",
      "report": "",
      "reportPath": "",
      "rowTag": "",
      "search": "",
-     "itemsPath": "data",
-     "params": {
-      "isActiveFlag": "Y",
-      "orgRole": "DESTINATION_YARD"
-     },
+     "itemsPath": "",
+     "params": {},
      "values": [],
-     "via": "",
+     "via": "LoadInvOrgLocationsChain",
      "when": "locationType === 'INV_ORG'"
     }
    ]
   },
   "links": [
-   "page home",
    "page request-catalog"
   ],
   "next": [
@@ -1734,9 +1722,7 @@
     ]
    }
   ],
-  "unresolvedLinks": [
-   "page home"
-  ]
+  "unresolvedLinks": []
  },
  "ai": null,
  "screenshots": [
@@ -1752,7 +1738,7 @@
   }
  ],
  "stories": [],
- "at": "2026-11-17T19:22:37.326Z",
+ "at": "2026-11-18T17:32:43.006Z",
  "by": "rite.user",
- "codeHash": "ca67bac5a555e769"
+ "codeHash": "651783b64210d51c"
 }
