@@ -271,14 +271,16 @@ app, it reads the one with the most pages; the header lets you choose another. *
     object** — what the app **sends** it (writes), what it **returns** (reads) and the BI Publisher **reports** it runs.
     The business object is read from each call's path: `…/salesOrdersForOrderHub/{id}/child/lines` is *Sales orders for
     order hub › lines*; `…/requests/{id}/returns/plan` is *Requests › returns*, with *plan* kept as an action on it; an
-    OIC integration is named by its integration; a report by its name.
+    OIC integration is named by its integration; a report by its name. **Summary / Detailed** switches it to the
+    detailed flow, kept beside it: the app's flows → the systems (as on Overview), and **each system in detail** — the
+    pages that call it → its endpoints → the system — with Save SVG and its rows, page by page.
   - **Interfaces**: one line per system and business object (IF-001…) — which way the data goes (*Fusion → app*,
     *app → Fusion*, *app ⇄ Fusion*), read / write / report, its methods, what sets it off (*"Submit" button · when 3
     pages open*), how many endpoints, calls and pages. **Its rows** opens the data sheet on just that interface.
   - **Cross-system flows**: one action — a button, a page opening — that calls two or more systems, in the order its
     code calls them (SF-01…), e.g. *1. reads customers from the shop → 2. runs the customers report in BI Publisher*,
-    with where it happens; and **system to system**: which systems one action calls one after the other, how often,
-    and what goes from the first to the second.
+    with where it happens — as steps or as a diagram; and **system to system**: which systems one action calls one
+    after the other, how often, and what goes from the first to the second.
 - **Data sheet**: the integration data sheet, one row per page and endpoint — its ID (INT-0001…), the **source** page
   and its flow, what **sets it off** (*when the page opens*, a button by its label, or the chain or module that runs
   it), the **target** system and its kind (Oracle Fusion Cloud, Oracle Integration Cloud, BI Publisher, APEX / ORDS,

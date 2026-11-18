@@ -26,10 +26,13 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         if (act === 'field') {
           const val = String(value == null ? '' : value);
           if (key === 'app') { await scan(val); return; }
-          if (['q', 'fSystem', 'fFlow', 'diaSystem', 'diaPage', 'sq', 'sSystem'].indexOf(key) !== -1) { v[key] = val; if (['q', 'fSystem', 'fFlow'].indexOf(key) !== -1) v.limit = 200; }
+          if (['q', 'fSystem', 'fFlow', 'diaSystem', 'diaPage', 'sq', 'sSystem', 'sfSystem'].indexOf(key) !== -1) { v[key] = val; if (['q', 'fSystem', 'fFlow'].indexOf(key) !== -1) v.limit = 200; }
           return;
         }
         if (act === 'dir') { v.fDir = String(key || 'all'); v.limit = 200; return; }
+        // System flows: the summary or the detailed flow; the cross-system flows as steps or as a diagram
+        if (act === 'sfView') { v.sfView = key === 'detailed' ? 'detailed' : 'summary'; return; }
+        if (act === 'jView') { v.jView = key === 'diagram' ? 'diagram' : 'steps'; return; }
         if (act === 'more') { v.limit = (v.limit || 200) + 300; return; }
         // a system's or a page's diagram (from the systems, the data sheet, the overview)
         if (act === 'dia') { v.dia = String(key || 'landscape'); return; }
@@ -46,8 +49,10 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         if (act === 'openPage') { if (key) bus.focus('app-pages', { id: String(key) }); return; }
         if (!v.m || !v.m.ok) return;
         if (act === 'svg') {
-          const kind = key || v.dia;
-          const d = kind === 'system' ? D.system(v.m, v.diaSystem || v.m.systems[0].id) : kind === 'page' ? D.page(v.m, v.diaPage || ((v.m.pages.filter((p) => p.calls)[0] || {}).id))
+          // key: a diagram (landscape, systems, journeys, system, page; system:<id> = that system), else the one in Diagrams
+          const kind = String(key || v.dia).split(':')[0];
+          const one = String(key || '').split(':')[1] || '';
+          const d = kind === 'system' ? D.system(v.m, one || v.diaSystem || v.m.systems[0].id) : kind === 'page' ? D.page(v.m, v.diaPage || ((v.m.pages.filter((p) => p.calls)[0] || {}).id))
             : kind === 'systems' ? D.systemFlow(v.m) : kind === 'journeys' ? D.journeys(v.m) : D.landscape(v.m);
           const name = 'integrations-' + v.m.app + '-' + (kind === 'landscape' ? 'landscape' : String(d.title || kind).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')) + '.svg';
           exportKit.download(name, 'image/svg+xml', d.svg);

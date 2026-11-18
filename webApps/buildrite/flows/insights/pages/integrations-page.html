@@ -70,8 +70,28 @@
       <oj-bind-if test="[[ $variables.tab === 'flows' ]]">
         <div class="nx-card nx-sc-sec" id="intSysFlow">
           <div class="nx-sc-head"><div><h2>Flow between systems</h2><span class="nx-note" id="intFlowsSummary"><oj-bind-text value="[[ $functions.flowsSummary($variables.m) ]]"></oj-bind-text></span></div>
-            <span class="nx-min-flex"></span><button type="button" class="nx-btn nx-btn--sm" id="intSysSvg" data-act="svg" data-key="systems" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> Save SVG</button></div>
-          <iframe class="nx-int-frame" id="intSysDia" title="Flow between systems" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.m, 'systems', '', '') ]]" :srcdoc="[[ $functions.diaDoc($variables.m, 'systems', '', '') ]]"></iframe>
+            <span class="nx-min-flex"></span><button type="button" class="nx-btn nx-btn--sm" id="intSysSvg" data-act="svg" :data-key="[[ $variables.sfView === 'detailed' ? 'landscape' : 'systems' ]]" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> Save SVG</button></div>
+          <div class="nx-sc-listbar" id="intSfChips" role="tablist" aria-label="Summary or detailed">
+            <oj-bind-for-each data="[[ $functions.sfChips($variables.sfView) ]]"><template data-oj-as="c"><button type="button" role="tab" :aria-selected="[[ c.data.cls.indexOf('--on') !== -1 ? 'true' : 'false' ]]" :class="[[ c.data.cls ]]" data-act="sfView" :data-key="[[ c.data.key ]]" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ c.data.text ]]"></oj-bind-text></button></template></oj-bind-for-each>
+          </div>
+          <oj-bind-if test="[[ $variables.sfView !== 'detailed' ]]">
+            <iframe class="nx-int-frame" id="intSysDia" title="Flow between systems" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.m, 'systems', '', '') ]]" :srcdoc="[[ $functions.diaDoc($variables.m, 'systems', '', '') ]]"></iframe>
+          </oj-bind-if>
+          <!-- the detailed flow, as before: the app's flows → the systems, and each system's pages → its endpoints → it -->
+          <oj-bind-if test="[[ $variables.sfView === 'detailed' ]]">
+            <p class="nx-note">The app's flows (the source) and the systems they call (the target), a line as thick as its calls.</p>
+            <iframe class="nx-int-frame" id="intSysLand" title="The app's flows and the systems they call" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.m, 'landscape', '', '') ]]" :srcdoc="[[ $functions.diaDoc($variables.m, 'landscape', '', '') ]]"></iframe>
+            <div class="nx-sc-head nx-int-detailhead">
+              <div><h3 class="nx-int-h3">Each system in detail</h3><span class="nx-note">The pages that call it → its endpoints (method, path) → the system.</span></div>
+              <span class="nx-min-flex"></span>
+              <select class="nx-cm-input" id="intSfSystem" data-field="sfSystem" on-change="[[ $listeners.onField ]]" aria-label="The system shown in detail">
+                <oj-bind-for-each data="[[ $functions.systemOptions($variables.m, $functions.sfSystemOf($variables.m, $variables.sfSystem), 'Choose a system').slice(1) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+              </select>
+              <button type="button" class="nx-btn nx-btn--sm" id="intSfSystemSvg" data-act="svg" :data-key="[[ 'system:' + $functions.sfSystemOf($variables.m, $variables.sfSystem) ]]" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> Save SVG</button>
+              <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="sheetFor" :data-key="[[ $functions.sfSystemOf($variables.m, $variables.sfSystem) ]]" on-click="[[ $listeners.onAct ]]">Its rows, page by page</button>
+            </div>
+            <iframe class="nx-int-frame" id="intSysDetail" title="A system in detail" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.m, 'system', $functions.sfSystemOf($variables.m, $variables.sfSystem), '') ]]" :srcdoc="[[ $functions.diaDoc($variables.m, 'system', $functions.sfSystemOf($variables.m, $variables.sfSystem), '') ]]"></iframe>
+          </oj-bind-if>
         </div>
 
         <div class="nx-card nx-sc-sec" id="intIfaces">
@@ -119,7 +139,14 @@
               </template></oj-bind-for-each>
             </div>
           </oj-bind-if>
-          <h3 class="nx-int-h3">Each flow</h3>
+          <div class="nx-sc-head nx-int-detailhead"><h3 class="nx-int-h3">Each flow</h3><span class="nx-min-flex"></span>
+            <div class="nx-sc-listbar nx-int-jchips" id="intJChips" role="tablist" aria-label="Steps or diagram">
+              <oj-bind-for-each data="[[ $functions.jChips($variables.jView) ]]"><template data-oj-as="c"><button type="button" role="tab" :aria-selected="[[ c.data.cls.indexOf('--on') !== -1 ? 'true' : 'false' ]]" :class="[[ c.data.cls ]]" data-act="jView" :data-key="[[ c.data.key ]]" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ c.data.text ]]"></oj-bind-text></button></template></oj-bind-for-each>
+            </div></div>
+          <oj-bind-if test="[[ $variables.jView === 'diagram' ]]">
+            <iframe class="nx-int-frame" id="intJDia" title="Cross-system flows" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.m, 'journeys', '', '') ]]" :srcdoc="[[ $functions.diaDoc($variables.m, 'journeys', '', '') ]]"></iframe>
+          </oj-bind-if>
+          <oj-bind-if test="[[ $variables.jView !== 'diagram' ]]">
           <div class="nx-int-jlist" id="intJList">
             <oj-bind-for-each data="[[ $functions.journeyRows($variables.m, $variables.sq, $variables.sSystem) ]]"><template data-oj-as="j">
               <div class="nx-int-journey" :data-id="[[ j.data.id ]]">
@@ -136,6 +163,7 @@
             </template></oj-bind-for-each>
             <oj-bind-if test="[[ $functions.journeyRows($variables.m, $variables.sq, $variables.sSystem).length === 0 ]]"><p class="nx-note" id="intJNone">No single action calls more than one system<oj-bind-text value="[[ ($variables.sq || $variables.sSystem) ? ' among the ones shown' : '' ]]"></oj-bind-text>.</p></oj-bind-if>
           </div>
+          </oj-bind-if>
         </div>
       </oj-bind-if>
 

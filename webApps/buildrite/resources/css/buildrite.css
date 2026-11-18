@@ -864,3 +864,9 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-int-jstep small { color: #5b6876; font-size: 11.5px; overflow-wrap: anywhere; }
 .nx-int-jarrow { align-self: center; color: #8a97a5; font-size: 18px; font-weight: 700; }
 @media (max-width: 900px) { .nx-int-ifgrid { grid-template-columns: 60px minmax(140px, 1fr) minmax(140px, 1fr) 110px 80px; } .nx-int-ifgrid .nx-int-row > span:nth-child(5), .nx-int-ifgrid .nx-int-row > span:nth-child(6), .nx-int-ifgrid .nx-int-row > span:nth-child(7) { display: none; } }
+
+/* System flows: the summary / detailed switch, each system in detail, steps / diagram */
+.nx-int .nx-int-detailhead { margin: 14px 0 6px; }
+.nx-int .nx-int-detailhead .nx-int-h3 { margin: 0; }
+.nx-int-jchips { margin: 0; }
+#intSysLand, #intJDia { margin-bottom: 4px; }

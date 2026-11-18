@@ -110,6 +110,13 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
         pages: h.pages.slice(0, 3).join(', ') + (h.pages.length > 3 ? ' and ' + (h.pages.length - 3) + ' more' : '') }));
     }
 
+    /** Two-way switches: [{ key, text, cls }]. */
+    viewChips(cur, list) { return list.map((c) => ({ key: c[0], text: c[1], cls: 'nx-sc-chip' + (cur === c[0] ? ' nx-sc-chip--on' : '') })); }
+    sfChips(cur) { return PageModule.prototype.viewChips(cur || 'summary', [['summary', 'Summary — by business object'], ['detailed', 'Detailed — flows, pages and endpoints']]); }
+    jChips(cur) { return PageModule.prototype.viewChips(cur || 'steps', [['steps', 'Steps'], ['diagram', 'Diagram']]); }
+    /** The system shown in detail: the one chosen, else the busiest. */
+    sfSystemOf(m, sel) { return sel && ((m && m.systems) || []).some((s) => s.id === sel) ? sel : (((m && m.systems) || [])[0] || {}).id || ''; }
+
     // ── diagrams ──
     diaChips(cur) { return [['landscape', 'Landscape'], ['systems', 'Between systems'], ['journeys', 'Cross-system flows'], ['system', 'A system'], ['page', 'A page']].map((c) => ({ key: c[0], text: c[1], cls: 'nx-sc-chip' + (cur === c[0] ? ' nx-sc-chip--on' : '') })); }
     pageOptions(m, sel) {

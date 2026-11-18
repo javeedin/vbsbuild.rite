@@ -78,6 +78,21 @@
     "pdfBusy": {
       "type": "boolean",
       "defaultValue": false
+    },
+    "sfView": {
+      "type": "string",
+      "defaultValue": "summary",
+      "description": "System flows: summary (by business object) | detailed (the flows → systems, each system's pages → endpoints)."
+    },
+    "sfSystem": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "System flows › Detailed: the system shown in detail (its first one when empty)."
+    },
+    "jView": {
+      "type": "string",
+      "defaultValue": "steps",
+      "description": "Cross-system flows: steps | diagram."
     }
   },
   "eventListeners": {
