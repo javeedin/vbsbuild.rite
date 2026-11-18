@@ -39,6 +39,12 @@ T.check('New Order\'s integration flow: the page → what sets it off (the page 
   && />when the page opens</.test(pg.svg) && />LoadCustomersChain</.test(pg.svg) && />&quot;Submit&quot; \(button\)<|>"Submit" \(button\)</.test(pg.svg) && />SubmitChain</.test(pg.svg) && />Oracle BI Publisher …<|>Oracle BI Publisher \(SOAP\)</.test(pg.svg), pg.svg.slice(0, 200));
 T.check('…the calls numbered in their code\'s order, each with its business object and system', /<title>1\. GET \/shop\/v1\/customers[^<]*· Customers<\/title>/.test(pg.svg) && /<title>2\. POST \/xmlpserver[^<]*→ Oracle BI Publisher \(SOAP\) · Customers report \(CUSTOMERS_RP\)<\/title>/.test(pg.svg)
   && /The numbers: the order each action.s code makes its calls\./.test(pg.svg));
+const sw = D.pageFlow(m, 'shop/orders/order-create');
+T.check('New Order\'s flow in swimlanes: the page\'s lane, a lane per system (the shop, BI Publisher), each action from what sets it off', /The page<\/text>/.test(sw.svg) && />New Order</.test(sw.svg) && />The shop.s REST backend</.test(sw.svg) && />Oracle BI Publisher \(SOAP\)</.test(sw.svg)
+  && />when the page opens</.test(sw.svg) && />&quot;Submit&quot; \(button\)<|>"Submit" \(button\)</.test(sw.svg) && sw.title === 'New Order — flow', sw.svg.slice(0, 200));
+T.check('…the calls in their system\'s lane, in order: 1. the shop · GET Customers, then over to BI Publisher (a dark arrow) · 2. the customers report', /<title>1\. The shop.s REST backend · GET \/shop\/v1\/customers[^<]*<\/title>/.test(sw.svg) && /<title>2\. Oracle BI Publisher \(SOAP\) · POST/.test(sw.svg)
+  && /stroke="#3b4a58" stroke-width="2" marker-end="url\(#ar1\)"><title>then on to Oracle BI Publisher \(SOAP\)<\/title>/.test(sw.svg) && />Customers report \(CUSTOMERS_RP\)</.test(sw.svg) && /moves on to another system/.test(sw.svg));
+T.check('…a page with no call: said so', /This page calls no web service/.test(D.pageFlow(m, 'nope').svg));
 const allp = D.pages(m);
 T.check('all pages → the systems: each page with calls (5) by flow, its calls, a line per page × system', /Each page with integrations \(5\), by flow/.test(allp.svg) && />customers</.test(allp.svg) && />orders</.test(allp.svg) && />New Order</.test(allp.svg)
   && (allp.svg.match(/<path d="M[^"]* C/g) || []).length === 6 && /<title>New Order → Oracle BI Publisher \(SOAP\): 1 call<\/title>/.test(allp.svg), allp.svg.slice(0, 200));
@@ -66,7 +72,8 @@ T.check('…then the landscape, between systems, interfaces, cross-system flows,
   && /6\. Integration data sheet[\s\S]*INT-0001[\s\S]*INT-0007/.test(html) && /7\. Endpoints/.test(html) && /8\. Flows × systems/.test(html) && /9\.1 The shop.s REST backend/.test(html) && /9\.2 Oracle BI Publisher \(SOAP\)/.test(html) && /Page: New Order/.test(html) && !/Not resolved/.test(html));
 T.check('…an interface line: which way, the object, both directions, its methods, what sets it off', /shop ⇄ The shop.s REST backend<\/td><td><b>Orders<\/b><\/td><td><span class="dir dir-read">Read<\/span> <span class="dir dir-write">Write<\/span><\/td><td class="mono">GET, POST<\/td><td>&quot;Submit&quot; button · when 3 pages open<\/td>/.test(html), (html.match(/IF-001[\s\S]{0,500}/) || [''])[0]);
 const hall = R.html(m, { pages: 'all' });
-T.check('with every page: Page by page — all pages → the systems, then each page\'s integration flow (5)', /10\. Page by page[\s\S]*Each page with integrations/.test(hall) && (hall.match(/<h2>10\.\d+ /g) || []).length === 5 && /<h2>10\.3 New Order<\/h2>[\s\S]*What sets it off/.test(hall)
+T.check('with every page: Page by page — all pages → the systems, then each page\'s flow and its details (5 × 2)', /10\. Page by page[\s\S]*Each page with integrations/.test(hall) && (hall.match(/<h2>10\.\d+ /g) || []).length === 10
+  && /<h2>10\.3 New Order — flow<\/h2>[\s\S]*moves on to another system[\s\S]*<h2>10\.3 New Order — details<\/h2>[\s\S]*What sets it off/.test(hall)
   && /Page by page: each page.s integration flow/.test(hall) && !/10\. Page by page/.test(html));
 T.check('…a cross-system flow: the systems in order with what each does', /1\. The shop.s REST backend \(read: Customers\) → 2\. Oracle BI Publisher \(SOAP\) \(report: Customers report \(CUSTOMERS_RP\)\)/.test(html));
 T.check('…A4 landscape, page breaks, rows kept whole, the direction as a word', /@page\{size:A4 landscape/.test(html) && /class="brk"/.test(html) && /tr\{page-break-inside:avoid\}/.test(html) && /class="dir dir-write">Write</.test(html));

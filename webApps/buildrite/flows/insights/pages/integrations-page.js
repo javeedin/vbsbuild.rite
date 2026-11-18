@@ -13,6 +13,7 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
     if (!m || !m.ok) return null;
     if (kind === 'systems') return D.systemFlow(m);
     if (kind === 'pages') return D.pages(m);
+    if (kind === 'pageflow') return D.pageFlow(m, page || ((m.pageFlows || [])[0] || {}).page);
     if (kind === 'journeys') return D.journeys(m);
     if (kind === 'system') return D.system(m, sys || (m.systems[0] && m.systems[0].id));
     if (kind === 'page') return D.page(m, page || ((m.pages.filter((p) => p.calls)[0] || {}).id));
@@ -131,13 +132,22 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
       const all = ((m && m.pageFlows) || []).length, shown = PageModule.prototype.pageList(m, q, '').length, none = m && m.totals ? m.totals.pages - m.totals.pagesWith : 0;
       return (shown === all ? n(all, 'page') + ' with integrations' : shown + ' of ' + all + ' pages') + (none ? ' · ' + n(none, 'page') + (none === 1 ? ' calls' : ' call') + ' no web service' : '');
     }
-    pageViewChips(cur) { return PageModule.prototype.viewChips(cur || 'one', [['one', 'One page — its integration flow'], ['all', 'All pages → the systems']]); }
+    pageViewChips(cur) { return PageModule.prototype.viewChips(cur || 'flow', [['flow', 'One page — flow'], ['one', 'One page — details'], ['all', 'All pages → the systems']]); }
+    /** The diagram of the page view: its flow (swimlanes) or its details. */
+    pageDiaKind(view) { return view === 'one' ? 'page' : 'pageflow'; }
+    pageDiaNote(view) {
+      return view === 'one' ? 'Details: the page → what sets each call off → its calls, numbered in the order its code makes them → the systems.'
+        : 'Flow: a lane for the page and one per system. Each action starts at what sets it off and goes down call by call, each call in the lane of the system it calls; a dark arrow is where it moves on to another system.';
+    }
     pageTitle(m, sel) { const p = ((m && m.pageFlows) || []).filter((x) => x.page === PageModule.prototype.pageCur(m, sel))[0]; return p ? p.pageLabel : ''; }
     pageSummary(m, sel) {
       const p = ((m && m.pageFlows) || []).filter((x) => x.page === PageModule.prototype.pageCur(m, sel))[0];
       if (!p) return '';
       const names = p.systems.map((id) => (((m.systems || []).filter((s) => s.id === id)[0]) || { name: id }).name);
-      return p.flow + ' · ' + p.page + ' — ' + n(p.calls, 'call') + ' to ' + names.join(', ') + '; ' + n(p.steps.length, 'action') + ' (' + p.steps.map((st) => st.triggers[0] + (st.triggers.length > 1 ? ' +' + (st.triggers.length - 1) : '')).join('; ') + ')';
+      // what sets its actions off, each once (×2 when two actions start the same way)
+      const seen = {};
+      p.steps.forEach((st) => { const t = st.triggers[0] + (st.triggers.length > 1 ? ' +' + (st.triggers.length - 1) : ''); seen[t] = (seen[t] || 0) + 1; });
+      return p.flow + ' · ' + p.page + ' — ' + n(p.calls, 'call') + ' to ' + names.join(', ') + '; ' + n(p.steps.length, 'action') + ' (' + Object.keys(seen).map((t) => t + (seen[t] > 1 ? ' ×' + seen[t] : '')).join('; ') + ')';
     }
     /** Its calls in order, under each action: [{ act, trigger (on the first call of an action), n, method, path, object, system, kind, direction, cls, id, via }]. */
     pageCalls(m, sel) {
@@ -150,7 +160,7 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
     }
 
     // ── diagrams ──
-    diaChips(cur) { return [['landscape', 'Landscape'], ['systems', 'Between systems'], ['journeys', 'Cross-system flows'], ['pages', 'All pages'], ['system', 'A system'], ['page', 'A page']].map((c) => ({ key: c[0], text: c[1], cls: 'nx-sc-chip' + (cur === c[0] ? ' nx-sc-chip--on' : '') })); }
+    diaChips(cur) { return [['landscape', 'Landscape'], ['systems', 'Between systems'], ['journeys', 'Cross-system flows'], ['pages', 'All pages'], ['system', 'A system'], ['pageflow', 'A page — flow'], ['page', 'A page — details']].map((c) => ({ key: c[0], text: c[1], cls: 'nx-sc-chip' + (cur === c[0] ? ' nx-sc-chip--on' : '') })); }
     pageOptions(m, sel) {
       const ps = ((m && m.pages) || []).filter((p) => p.calls);
       const cur = sel || (ps[0] && ps[0].id);
@@ -165,6 +175,7 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
       return kind === 'system' ? 'System: ' + d.title + ' — the pages that call it, its endpoints, and it' : kind === 'page' ? 'Page: ' + d.title + ' — what sets each call off, its calls in order, the systems'
         : kind === 'systems' ? 'Between systems: what the app sends each system, what each returns, its reports — by business object'
           : kind === 'pages' ? 'All pages: each page with integrations and the systems it calls, by flow'
+            : kind === 'pageflow' ? 'Page: ' + d.title + ' — in swimlanes, system by system'
           : kind === 'journeys' ? 'Cross-system flows: each action that calls two or more systems, in the order its code calls them' : 'The app\'s flows (the source) and the systems they call (the target)';
     }
   }

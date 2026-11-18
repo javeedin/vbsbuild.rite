@@ -126,8 +126,16 @@ const count = (page, sel) => page.$$eval(sel, (l) => l.length).catch(() => 0);
     await settle(page);
     T.check('New Order: its title and summary — 3 calls to the shop and BI Publisher, 2 actions', (await env.text('#intPgTitle')) === 'New Order'
       && /orders · shop\/orders\/order-create — 3 calls to The shop's REST backend, Oracle BI Publisher \(SOAP\); 2 actions \(when the page opens; "Submit" \(button\)\)/.test(await env.text('#intPgSummary')), await env.text('#intPgSummary'));
+    const swd = (await page.getAttribute('#intPgDia', 'srcdoc')) || '';
+    T.check('…its flow first, in swimlanes: the page and a lane per system, 1. the shop · GET Customers → over to BI Publisher · 2. the report', /One page — flow/.test(await env.text('#intPgChips .nx-sc-chip--on')) && /The page<\/text>/.test(swd)
+      && /<title>1\. The shop.s REST backend · GET \/shop\/v1\/customers[^<]*<\/title>/.test(swd) && /then on to Oracle BI Publisher \(SOAP\)/.test(swd) && /^Flow: a lane for the page/.test(await env.text('#intPgDiaNote')), swd.slice(0, 160));
+    await env.shot('integrations-page-swimlanes.png');
+    const [fsv] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }), page.click('#intPgSvg')]);
+    T.check('…Save SVG: the flow', fsv.suggestedFilename() === 'integrations-shop-new-order-flow.svg', fsv.suggestedFilename());
+    await page.click('#intPgChips [data-key="one"]');
+    await settle(page);
     const pgd = (await page.getAttribute('#intPgDia', 'srcdoc')) || '';
-    T.check('…its integration flow: the page → what sets it off → its calls in order → the systems', /What sets it off/.test(pgd) && /What it calls, in order \(3\)/.test(pgd) && />when the page opens</.test(pgd) && />LoadCustomersChain</.test(pgd) && />SubmitChain</.test(pgd), pgd.slice(0, 160));
+    T.check('One page — details: the page → what sets it off → its calls in order → the systems', /What sets it off/.test(pgd) && /What it calls, in order \(3\)/.test(pgd) && />when the page opens</.test(pgd) && />LoadCustomersChain</.test(pgd) && />SubmitChain</.test(pgd), pgd.slice(0, 160));
     const pc = await page.$$eval('#intPgCalls .nx-int-row:not(.nx-int-row--head)', (l) => l.map((r) => r.innerText.replace(/\s+/g, ' ').trim()));
     T.check('…its calls, in order under each action: 1.1 customers, 1.2 the report, 2.1 the order (Submit)', pc.length === 3 && /^1 when the page opens LoadCustomersChain 1 GET \/shop\/v1\/customers Customers The shop's REST backend Read INT-0005$/.test(pc[0])
       && /^2 POST \/xmlpserver.* Customers report \(CUSTOMERS_RP\) Oracle BI Publisher \(SOAP\) Report INT-0003$/.test(pc[1]) && /^2 "Submit" \(button\) SubmitChain 1 POST \/shop\/v1\/orders Orders The shop's REST backend Write INT-0004$/.test(pc[2]), JSON.stringify(pc));

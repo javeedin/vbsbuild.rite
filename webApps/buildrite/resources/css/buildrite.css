@@ -891,3 +891,4 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 #intPgSummary { margin: 2px 0 10px; }
 .nx-int .nx-sc-head .nx-int-pagesel { flex: 0 1 360px; }
 .nx-int .nx-int-pgpick #intPgQ { flex: 0 1 220px; }
+.nx-int-pgdianote { margin: -4px 0 8px; font-size: 11.5px; }

@@ -65,7 +65,7 @@
     "dia": {
       "type": "string",
       "defaultValue": "landscape",
-      "description": "landscape | systems | journeys | pages | system | page"
+      "description": "landscape | systems | journeys | pages | system | page | pageflow"
     },
     "diaSystem": {
       "type": "string",
@@ -105,8 +105,8 @@
     },
     "pgView": {
       "type": "string",
-      "defaultValue": "one",
-      "description": "Page flows: one (a page's integration flow) | all (every page → the systems)."
+      "defaultValue": "flow",
+      "description": "Page flows: flow (the page's flow in swimlanes, system by system) | one (its details: what sets each call off → its calls → the systems) | all (every page → the systems)."
     },
     "pdfPages": {
       "type": "boolean",

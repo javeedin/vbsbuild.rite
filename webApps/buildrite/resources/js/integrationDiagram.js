@@ -10,6 +10,9 @@ define([], function () {
   //                     → what it calls, in the order its code calls it → the systems (pageBasic: the plain version,
   //                     for a scan without pageFlows)
   //   pages(m)          every page with calls → the systems it calls (grouped by flow); a line's thickness = calls
+  //   pageFlow(m, id)   one page's flow in swimlanes: a lane for the page and one per system; each action starts at what
+  //                     sets it off and goes down step by step, each call in the lane of the system it calls (Oracle
+  //                     Fusion · GET Items → the app's backend · POST Items); a darker arrow = it moves on to another system
   //   systemFlow(m)     between systems, not page by page: the app ⇄ each system — what the app sends it (writes),
   //                     what it returns (reads) and the reports it runs, by business object
   //   journeys(m)       cross-system flows: each action that calls two or more systems, its systems in order
@@ -404,9 +407,11 @@ define([], function () {
       st.y = y; st.h = Math.max(h, TMIN, st.lines.length * 16 + (st.chain ? 16 : 0) + 14); st.cy = y + (st.h - h) / 2; y += st.h + SG;
     });
     var H0 = Math.max(90, y - top - SG + (more ? 30 : 0));
-    var SH = 64, SGAP = 14, sH = systems.length * (SH + SGAP) - SGAP, sTop = top + Math.max(0, (H0 - sH) / 2), sy = {};
+    // a tall page: the page box and the systems stay at the top (centred, they sat far down an empty column)
+    var tall = H0 > 420;
+    var SH = 64, SGAP = 14, sH = systems.length * (SH + SGAP) - SGAP, sTop = tall ? top : top + Math.max(0, (H0 - sH) / 2), sy = {};
     systems.forEach(function (s, i) { sy[s.id] = sTop + i * (SH + SGAP); });
-    var pH = Math.min(Math.max(84, Math.min(H0, 180)), H0), pTop = top + (H0 - pH) / 2;
+    var pH = Math.min(Math.max(84, Math.min(H0, 180)), H0), pTop = tall ? top : top + (H0 - pH) / 2;
     var colors = systems.map(function (s) { return kindOf(s.kind).color; });
     var out = [arrowDefs(colors.concat(['#9aa6b2']))];
     var gi = colors.length;
@@ -456,6 +461,96 @@ define([], function () {
       + text(300, y0, 'The numbers: the order each action\'s code makes its calls.', { size: 11, fill: '#6b7889' }));
     var H = y0 + 18;
     return { svg: wrap(W, H, out.join(''), p.label), w: W, h: H, title: p.label };
+  }
+
+  /** One page's flow in swimlanes: the page's lane (what sets each action off) and a lane per system; each action goes
+   *  down step by step, every call in the lane of its system; a darker arrow where it moves on to another system. */
+  function pageFlow(m, id) {
+    var pf = (m.pageFlows || []).filter(function (x) { return x.page === id; })[0];
+    var p = (m.pages || []).filter(function (x) { return x.id === id; })[0] || { id: id, label: pf ? pf.pageLabel : id };
+    if (!pf) return { svg: wrap(1100, 90, text(24, 50, 'This page calls no web service.', { size: 13, fill: '#6b7889' }), p.label), w: 1100, h: 90, title: p.label };
+    var systems = pf.systems.map(function (sid) { return (m.systems || []).filter(function (s) { return s.id === sid; })[0]; }).filter(Boolean);
+    var X0 = 24, PW = 220, LW = Math.max(230, Math.floor((1100 - 2 * X0 - PW) / Math.max(1, systems.length)));
+    var W = 2 * X0 + PW + LW * systems.length;
+    var laneX = {};
+    systems.forEach(function (s, i) { laneX[s.id] = X0 + PW + i * LW; });
+    var BX = 18, BW = LW - 2 * BX, SH = 48, SG = 22, HEAD = 64, top = HEAD + 14;
+    var pre = commonPrefix([].concat.apply([], pf.steps.map(function (st) { return st.calls.map(function (c) { return c.path; }); })));
+    // layout: each action a band; its steps one under the other (cut at MAX_CALLS calls)
+    var bands = [], y = top, left = MAX_CALLS, more = 0;
+    pf.steps.forEach(function (st) {
+      if (left <= 0) { more += st.calls.length; return; }
+      var calls = st.calls.slice(0, left);
+      more += st.calls.length - calls.length;
+      left -= calls.length;
+      var lines = triggerLines(st.trigger, PW - 44);
+      var pillH = Math.max(SH, lines.length * 16 + (st.chain ? 16 : 0) + 14);
+      var stepsH = calls.length * (SH + SG) - SG;
+      var h = Math.max(pillH, stepsH) + 24;
+      bands.push({ st: st, calls: calls, lines: lines, y: y, h: h, pillH: pillH });
+      y += h;
+    });
+    var H0 = y - top + (more ? 26 : 0);
+    var colors = systems.map(function (s) { return kindOf(s.kind).color; });
+    var out = [arrowDefs(['#b3bdc7', '#3b4a58'])];
+    // the lanes: tinted by their system's colour, headed by its name and kind
+    out.push('<rect x="' + X0 + '" y="0" width="' + PW + '" height="' + (top + H0 + 8) + '" fill="#f6f9fb"/>');
+    systems.forEach(function (s, i) {
+      var x = laneX[s.id];
+      out.push('<rect x="' + x + '" y="0" width="' + LW + '" height="' + (top + H0 + 8) + '" fill="' + colors[i] + '" fill-opacity="0.045"/>'
+        + '<line x1="' + x + '" y1="0" x2="' + x + '" y2="' + (top + H0 + 8) + '" stroke="#d5dde5" stroke-dasharray="4 4"/>');
+    });
+    bands.forEach(function (b, i) { if (i % 2) out.push('<rect x="' + X0 + '" y="' + b.y + '" width="' + (W - 2 * X0) + '" height="' + b.h + '" fill="#0b2a44" fill-opacity="0.025"/>'); });
+    bands.forEach(function (b) { out.push('<line x1="' + X0 + '" y1="' + b.y + '" x2="' + (W - X0) + '" y2="' + b.y + '" stroke="#e4e9ef"/>'); });
+    out.push('<g><title>' + esc(p.label + ' (' + p.id + ')') + '</title>' + text(X0 + 12, 24, 'The page', { size: 11, weight: 700, fill: '#6b7889' })
+      + text(X0 + 12, 44, fit(p.label, PW - 24, 14), { size: 14, weight: 700, fill: '#2e6fd8' }) + text(X0 + 12, 60, fit(pf.flow + ' · ' + pf.steps.length + ' action' + (pf.steps.length === 1 ? '' : 's'), PW - 24, 11), { size: 11, fill: '#5b6876' }) + '</g>');
+    systems.forEach(function (s, i) {
+      var x = laneX[s.id];
+      out.push('<g><title>' + esc(s.name + ' — ' + s.kindLabel + (s.url ? ' · ' + s.url : '')) + '</title><rect x="' + x + '" y="0" width="' + LW + '" height="5" fill="' + colors[i] + '"/>'
+        + text(x + 14, 30, fit(s.name, LW - 28, 14), { size: 14, weight: 700 }) + text(x + 14, 48, fit(s.kindLabel + (s.host ? ' · ' + s.host : ''), LW - 28, 11), { size: 11, fill: '#5b6876' }) + '</g>');
+    });
+    out.push('<line x1="' + X0 + '" y1="' + HEAD + '" x2="' + (W - X0) + '" y2="' + HEAD + '" stroke="#c9d6e0" stroke-width="1.5"/>');
+    var lane = function (sid) { return systems.map(function (s) { return s.id; }).indexOf(sid); };
+    bands.forEach(function (b) {
+      var st = b.st, y0 = b.y + 12;
+      // what sets it off, in the page's lane
+      var px = X0 + 12, pw = PW - 24;
+      var ty = y0 + b.pillH / 2 - (b.lines.length - 1) * 8 - (st.chain ? 6 : 0) + 4;
+      out.push('<g><title>' + esc(st.trigger + (st.chain ? ' — chain ' + st.chain : '')) + '</title>' + box(px, y0, pw, b.pillH, { fill: '#ffffff', stroke: '#2e6fd8', sw: 1.5, r: 22 })
+        + '<circle cx="' + (px + 16) + '" cy="' + (y0 + b.pillH / 2) + '" r="5" fill="#2e6fd8"/>'
+        + b.lines.map(function (l, i) { return text(px + 28, ty + i * 16, l, { size: i ? 11 : 12, weight: i ? 400 : 600, fill: i ? '#5b6876' : '#16212c' }); }).join('')
+        + (st.chain ? text(px + 28, ty + b.lines.length * 16, fit((st.chains && st.chains.length > 1 ? st.chains.length + ' chains: ' : '') + st.chain, pw - 40, 10, true), { size: 10, fill: '#6b7889', mono: true }) : '') + '</g>');
+      var prev = { x: px + pw, y: y0 + Math.min(b.pillH, SH) / 2, lane: -1, right: true };
+      b.calls.forEach(function (c, i) {
+        var li = lane(c.system);
+        var bx = laneX[c.system] + BX, by = y0 + i * (SH + SG), cx = bx + BW / 2;
+        var hand = prev.lane !== -1 && prev.lane !== li;
+        // the arrow into this step: from what set it off (across), down the same lane, or over to another lane (darker)
+        var path;
+        if (prev.right) path = 'M' + prev.x + ' ' + prev.y + ' H' + (bx - 4) + (Math.abs(prev.y - (by + SH / 2)) > 1 ? '' : '');
+        else if (!hand) path = 'M' + cx + ' ' + prev.y + ' V' + (by - 3);
+        else path = 'M' + prev.x + ' ' + prev.y + ' V' + (by - SG / 2) + ' H' + cx + ' V' + (by - 3);
+        if (prev.right && Math.abs(prev.y - (by + SH / 2)) > 1) path = 'M' + prev.x + ' ' + prev.y + ' H' + (bx - 14) + ' V' + (by + SH / 2) + ' H' + (bx - 4);
+        out.push('<path d="' + path + '" fill="none" stroke="' + (hand ? '#3b4a58' : '#b3bdc7') + '" stroke-width="' + (hand ? 2 : 1.5) + '" marker-end="url(#ar' + (hand ? 1 : 0) + ')">'
+          + (hand ? '<title>' + esc('then on to ' + c.systemName) + '</title>' : '') + '</path>');
+        var D0 = DIR[c.direction] || DIR.Read;
+        out.push('<g><title>' + esc((i + 1) + '. ' + c.systemName + ' · ' + c.method + ' ' + c.path + (c.summary ? ' — ' + c.summary : '') + (c.via ? ' · via ' + c.via : '')) + '</title>'
+          + box(bx, by, BW, SH, { stroke: hand ? '#3b4a58' : '#c9d6e0', sw: hand ? 1.5 : 1 })
+          + '<rect x="' + bx + '" y="' + by + '" width="5" height="' + SH + '" rx="2" fill="' + D0.ink + '" fill-opacity="0.55"/>'
+          + '<circle cx="' + (bx + 18) + '" cy="' + (by + 17) + '" r="8" fill="#eef3f7"/>' + text(bx + 18, by + 21, String(i + 1), { size: 10, weight: 700, fill: '#3b4a58', anchor: 'middle' })
+          + badge(bx + 32, by + 17, c)
+          + text(bx + 92, by + 21, fit((c.object || c.endpoint) + (c.action ? ' (' + c.action + ')' : ''), BW - 100, 12.5), { size: 12.5, weight: 700 })
+          + text(bx + 14, by + 39, fit(short(c.path || c.endpoint, pre) + (c.via ? ' · via ' + c.via : ''), BW - 22, 10.5, true), { size: 10.5, fill: '#5b6876', mono: true }) + '</g>');
+        prev = { x: cx, y: by + SH, lane: li, right: false };
+      });
+    });
+    if (more) out.push(text(X0 + PW + 14, top + H0 - 8, '+ ' + more + ' more calls (every one is in the data sheet)', { size: 11.5, fill: '#5b6876' }));
+    var y1 = top + H0 + 34;
+    out.push(['Read', 'Write', 'Report'].map(function (d, i) { var D0 = DIR[d]; return '<rect x="' + (24 + i * 90) + '" y="' + (y1 - 11) + '" width="16" height="14" rx="7" fill="' + D0.fill + '"/>' + text(24 + i * 90 + 22, y1, d, { size: 11, fill: D0.ink, weight: 600 }); }).join('')
+      + '<line x1="300" y1="' + (y1 - 4) + '" x2="330" y2="' + (y1 - 4) + '" stroke="#3b4a58" stroke-width="2" marker-end="url(#ar1)"/>' + text(338, y1, 'moves on to another system', { size: 11, fill: '#3b4a58' })
+      + '<line x1="520" y1="' + (y1 - 4) + '" x2="550" y2="' + (y1 - 4) + '" stroke="#b3bdc7" stroke-width="1.5" marker-end="url(#ar0)"/>' + text(558, y1, 'next call to the same system · the numbers: the order its code calls them', { size: 11, fill: '#6b7889' }));
+    var H = y1 + 18;
+    return { svg: wrap(W, H, out.join(''), p.label + ' — flow'), w: W, h: H, title: p.label + ' — flow' };
   }
 
   /** Every page with calls → the systems it calls, the pages grouped by flow; a line's thickness: its calls. */
@@ -519,5 +614,5 @@ define([], function () {
     return '<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#fff}svg{display:block;width:100%;height:auto}</style>' + (d && d.svg ? d.svg : '');
   }
 
-  return { landscape: landscape, system: system, page: page, pageBasic: pageBasic, pages: pages, systemFlow: systemFlow, journeys: journeys, listFit: listFit, doc: doc, KINDS: KINDS, DIR: DIR, esc: esc, fit: fit, figures: figures, commonPrefix: commonPrefix };
+  return { landscape: landscape, system: system, page: page, pageBasic: pageBasic, pageFlow: pageFlow, pages: pages, systemFlow: systemFlow, journeys: journeys, listFit: listFit, doc: doc, KINDS: KINDS, DIR: DIR, esc: esc, fit: fit, figures: figures, commonPrefix: commonPrefix };
 });

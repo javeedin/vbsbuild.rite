@@ -116,10 +116,12 @@ define(['resources/js/integrationDiagram'], function (D) {
     }
     if (o.pages === 'all') {
       var all = D.pages(m);
-      parts.push('<section class="brk"><h2>10. Page by page</h2><p class="note">Each page with integrations and the systems it calls; then each page\'s integration flow — what sets each call off, its calls in the order its code makes them, the systems.</p><div class="dia">' + all.svg + '</div></section>');
+      parts.push('<section class="brk"><h2>10. Page by page</h2><p class="note">Each page with integrations and the systems it calls; then each page\'s flow in swimlanes and its details — what sets each call off, its calls in the order its code makes them, the systems.</p><div class="dia">' + all.svg + '</div></section>');
       (m.pageFlows || []).forEach(function (pf, i) {
+        var fl = D.pageFlow(m, pf.page);
+        parts.push('<section class="brk"><h2>10.' + (i + 1) + ' ' + esc(pf.pageLabel) + ' — flow</h2><p class="note">In swimlanes: a lane for the page and one per system; each action goes down call by call, a dark arrow where it moves on to another system.</p><div class="dia">' + fl.svg + '</div></section>');
         var d = D.page(m, pf.page);
-        parts.push('<section class="brk"><h2>10.' + (i + 1) + ' ' + esc(pf.pageLabel) + '</h2><p class="note">' + esc(pf.flow) + ' · <span class="mono">' + esc(pf.page) + '</span> · ' + plural(pf.calls, 'call') + ' to ' + plural(pf.systems.length, 'system')
+        parts.push('<section class="brk"><h2>10.' + (i + 1) + ' ' + esc(pf.pageLabel) + ' — details</h2><p class="note">' + esc(pf.flow) + ' · <span class="mono">' + esc(pf.page) + '</span> · ' + plural(pf.calls, 'call') + ' to ' + plural(pf.systems.length, 'system')
           + ' · ' + plural(pf.steps.length, 'action') + (pf.reads ? ' · ' + plural(pf.reads, 'read') : '') + (pf.writes ? ' · ' + plural(pf.writes, 'write') : '') + (pf.reports ? ' · ' + plural(pf.reports, 'report') : '') + '</p><div class="dia">' + d.svg + '</div></section>');
       });
     }

@@ -189,13 +189,14 @@
                 <span class="nx-min-flex"></span>
                 <button type="button" class="nx-btn nx-btn--sm" id="intPgPrev" data-act="pgStep" data-key="-1" on-click="[[ $listeners.onAct ]]" title="The previous page">‹ Previous</button>
                 <button type="button" class="nx-btn nx-btn--sm" id="intPgNext" data-act="pgStep" data-key="1" on-click="[[ $listeners.onAct ]]" title="The next page">Next ›</button>
-                <button type="button" class="nx-btn nx-btn--sm" id="intPgSvg" data-act="svg" :data-key="[[ 'page:' + $functions.pageCur($variables.m, $variables.pgId) ]]" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> Save SVG</button>
+                <button type="button" class="nx-btn nx-btn--sm" id="intPgSvg" data-act="svg" :data-key="[[ $functions.pageDiaKind($variables.pgView) + ':' + $functions.pageCur($variables.m, $variables.pgId) ]]" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> Save SVG</button>
                 <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="openPage" :data-key="[[ $functions.pageCur($variables.m, $variables.pgId) ]]" on-click="[[ $listeners.onAct ]]" title="Its technical sheet in Application pages">Its page sheet</button>
               </div>
               <div class="nx-note" id="intPgNote"><oj-bind-text value="[[ $functions.pageListNote($variables.m, $variables.pgQ) ]]"></oj-bind-text></div>
               <h2 id="intPgTitle" class="nx-int-pgtitle"><oj-bind-text value="[[ $functions.pageTitle($variables.m, $variables.pgId) ]]"></oj-bind-text></h2>
               <p class="nx-note" id="intPgSummary"><oj-bind-text value="[[ $functions.pageSummary($variables.m, $variables.pgId) ]]"></oj-bind-text></p>
-              <iframe class="nx-int-frame" id="intPgDia" title="The page's integration flow" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.m, 'page', '', $functions.pageCur($variables.m, $variables.pgId)) ]]" :srcdoc="[[ $functions.diaDoc($variables.m, 'page', '', $functions.pageCur($variables.m, $variables.pgId)) ]]"></iframe>
+              <p class="nx-note nx-int-pgdianote" id="intPgDiaNote"><oj-bind-text value="[[ $functions.pageDiaNote($variables.pgView) ]]"></oj-bind-text></p>
+              <iframe class="nx-int-frame" id="intPgDia" title="The page's integration flow" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.m, $functions.pageDiaKind($variables.pgView), '', $functions.pageCur($variables.m, $variables.pgId)) ]]" :srcdoc="[[ $functions.diaDoc($variables.m, $functions.pageDiaKind($variables.pgView), '', $functions.pageCur($variables.m, $variables.pgId)) ]]"></iframe>
               <h3 class="nx-int-h3">Its calls, in order</h3>
               <div class="nx-int-pcgrid" id="intPgCalls" role="table" aria-label="The page's calls in order">
                 <div class="nx-int-row nx-int-row--head" role="row"><span>Action</span><span>Set off by</span><span>#</span><span>Method</span><span>Endpoint</span><span>Business object</span><span>System</span><span>Direction</span><span>Row</span></div>
@@ -318,14 +319,14 @@
                 <oj-bind-for-each data="[[ $functions.systemOptions($variables.m, $variables.diaSystem || ($variables.m.systems[0] && $variables.m.systems[0].id), 'Choose a system') ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
               </select>
             </oj-bind-if>
-            <oj-bind-if test="[[ $variables.dia === 'page' ]]">
+            <oj-bind-if test="[[ $variables.dia === 'page' || $variables.dia === 'pageflow' ]]">
               <select class="nx-cm-input nx-int-pagesel" id="intDiaPage" data-field="diaPage" on-change="[[ $listeners.onField ]]" aria-label="The page">
                 <oj-bind-for-each data="[[ $functions.pageOptions($variables.m, $variables.diaPage) ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
               </select>
             </oj-bind-if>
             <span class="nx-min-flex"></span>
             <button type="button" class="nx-btn nx-btn--sm" id="intSvg" data-act="svg" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> Save SVG</button>
-            <oj-bind-if test="[[ $variables.dia === 'page' && !!$variables.diaPage ]]"><button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="openPage" :data-key="[[ $variables.diaPage ]]" on-click="[[ $listeners.onAct ]]">Its sheet in Application pages</button></oj-bind-if>
+            <oj-bind-if test="[[ ($variables.dia === 'page' || $variables.dia === 'pageflow') && !!$variables.diaPage ]]"><button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="openPage" :data-key="[[ $variables.diaPage ]]" on-click="[[ $listeners.onAct ]]">Its sheet in Application pages</button></oj-bind-if>
           </div>
           <p class="nx-note" id="intDiaTitle"><oj-bind-text value="[[ $functions.diaTitle($variables.m, $variables.dia, $variables.diaSystem, $variables.diaPage) ]]"></oj-bind-text></p>
           <iframe class="nx-int-frame" id="intDia" title="Integration diagram" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.m, $variables.dia, $variables.diaSystem, $variables.diaPage) ]]" :srcdoc="[[ $functions.diaDoc($variables.m, $variables.dia, $variables.diaSystem, $variables.diaPage) ]]"></iframe>

@@ -27,7 +27,7 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
           const val = String(value == null ? '' : value);
           if (key === 'app') { await scan(val); return; }
           // a page chosen, or a search that leaves the page shown out: the first page it finds
-          if (key === 'pgId') { v.pgId = val; v.pgView = 'one'; return; }
+          if (key === 'pgId') { v.pgId = val; if (v.pgView === 'all') v.pgView = 'flow'; return; }
           if (key === 'pgQ') {
             v.pgQ = val;
             const w = val.toLowerCase().split(/\s+/).filter(Boolean);
@@ -43,14 +43,14 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         if (act === 'sfView') { v.sfView = key === 'detailed' ? 'detailed' : 'summary'; return; }
         if (act === 'jView') { v.jView = key === 'diagram' ? 'diagram' : 'steps'; return; }
         // Page flows: a page's integration flow (pgOpen (key)), one page or all pages, the previous / next page
-        if (act === 'pgOpen') { v.pgId = String(key || ''); v.pgView = 'one'; v.tab = 'pages'; return; }
-        if (act === 'pgView') { v.pgView = key === 'all' ? 'all' : 'one'; return; }
+        if (act === 'pgOpen') { v.pgId = String(key || ''); if (v.pgView === 'all') v.pgView = 'flow'; v.tab = 'pages'; return; }
+        if (act === 'pgView') { v.pgView = ['all', 'one'].indexOf(key) !== -1 ? key : 'flow'; return; }
         if (act === 'pgStep') {
           const list = ((v.m && v.m.pageFlows) || []).map((p) => p.page);
           if (!list.length) return;
           const at = Math.max(0, list.indexOf(v.pgId || list[0]));
           v.pgId = list[(at + (Number(key) || 1) + list.length) % list.length];
-          v.pgView = 'one';
+          if (v.pgView === 'all') v.pgView = 'flow';
           return;
         }
         if (act === 'pdfPages') { v.pdfPages = !v.pdfPages; return; }
@@ -59,7 +59,7 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         if (act === 'dia') { v.dia = String(key || 'landscape'); return; }
         if (act === 'showSystem') { v.dia = 'system'; v.diaSystem = String(key || ''); v.tab = 'diagrams'; return; }
         // a page's diagram: its integration flow on Page flows
-        if (act === 'showPage') { v.pgId = String(key || ''); v.pgView = 'one'; v.tab = 'pages'; v.dia = 'page'; v.diaPage = String(key || ''); return; }
+        if (act === 'showPage') { v.pgId = String(key || ''); if (v.pgView === 'all') v.pgView = 'flow'; v.tab = 'pages'; v.diaPage = String(key || ''); return; }
         if (act === 'sheetFor') { v.fSystem = String(key || ''); v.fDir = 'all'; v.q = ''; v.fObject = ''; v.fObjectLabel = ''; v.limit = 200; v.tab = 'sheet'; return; }
         // an interface: the data-sheet rows behind it (its system, its business object)
         if (act === 'sheetIf') {
@@ -75,7 +75,8 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
           const kind = String(key || v.dia).split(':')[0];
           const one = String(key || '').split(':')[1] || '';
           const d = kind === 'system' ? D.system(v.m, one || v.diaSystem || v.m.systems[0].id) : kind === 'page' ? D.page(v.m, one || v.diaPage || ((v.m.pages.filter((p) => p.calls)[0] || {}).id))
-            : kind === 'systems' ? D.systemFlow(v.m) : kind === 'journeys' ? D.journeys(v.m) : kind === 'pages' ? D.pages(v.m) : D.landscape(v.m);
+            : kind === 'pageflow' ? D.pageFlow(v.m, one || v.diaPage || ((v.m.pageFlows || [])[0] || {}).page)
+              : kind === 'systems' ? D.systemFlow(v.m) : kind === 'journeys' ? D.journeys(v.m) : kind === 'pages' ? D.pages(v.m) : D.landscape(v.m);
           const name = 'integrations-' + v.m.app + '-' + (kind === 'landscape' ? 'landscape' : String(d.title || kind).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')) + '.svg';
           exportKit.download(name, 'image/svg+xml', d.svg);
           say({ ok: true }, 'Saved ' + name + '.');

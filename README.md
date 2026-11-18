@@ -281,8 +281,12 @@ app, it reads the one with the most pages; the header lets you choose another. *
     code calls them (SF-01…), e.g. *1. reads customers from the shop → 2. runs the customers report in BI Publisher*,
     with where it happens — as steps or as a diagram; and **system to system**: which systems one action calls one
     after the other, how often, and what goes from the first to the second.
-- **Page flows** — page by page: pick a page (find, the list, Previous / Next) and see **its integration flow**: the
-  page → **what sets each call off** (the page opening, each button by its label, its data loading — with the chain
+- **Page flows** — page by page: pick a page (find, the list, Previous / Next).
+  - **One page — flow**: the page's flow **in swimlanes** — a lane for the page and one per system it calls. Each
+    action starts at what sets it off (the page opening, a button…) and goes down call by call, each call in the lane
+    of the system it calls (method and business object, e.g. *Oracle Fusion · GET Items* → *your backend · POST
+    Items*); a dark arrow marks where it moves on to another system.
+  - **One page — details**: the page → **what sets each call off** (the page opening, each button by its label, its data loading — with the chain
   that runs it) → **what it calls, in the order its code calls it** (numbered, method, endpoint, business object; a
   call made through a module says *via* that module) → the systems. Actions that make exactly the same calls are one
   box with every trigger on it. Under the diagram, its calls in order (action, set off by, #, method, endpoint, object,
@@ -297,13 +301,13 @@ app, it reads the one with the most pages; the header lets you choose another. *
 - **Systems**: one card per system — its base URL, how it signs in (and whether it goes through the proxy), its calls,
   pages and services — with its diagram and its rows in the data sheet.
 - **Diagrams**: the landscape; **between systems**; the **cross-system flows**; **all pages**; **a system** (the pages
-  that call it → its endpoints → the system); **a page** (its integration flow). **Save SVG** keeps the diagram as a
+  that call it → its endpoints → the system); **a page — flow** (swimlanes) and **a page — details**. **Save SVG** keeps the diagram as a
   file.
 
 **PDF** writes the whole report, A4 landscape: a cover with the figures and contents, the landscape, the flow between
 systems (with system to system), the interfaces, the cross-system flows, the systems, the data sheet, the endpoints,
-flows × systems, a section per system with its diagram, then **Page by page** — all pages → the systems and every
-page's integration flow, one per page (untick *with every page's flow* beside PDF to leave them out; the page shown in
+flows × systems, a section per system with its diagram, then **Page by page** — all pages → the systems, and for
+every page its flow in swimlanes and its details (untick *with every page's flow* beside PDF to leave them out; the page shown in
 Diagrams is then added). In the desktop app it is a real PDF; in a browser, Print and choose Save as PDF. **Excel**
 writes the same as a workbook: Summary, Interfaces, Cross-system flows, Page flows (each page's actions and their calls
 in order), System to system, Systems, Integrations, Endpoints, Flows x systems.
