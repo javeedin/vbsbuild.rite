@@ -870,3 +870,24 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-int .nx-int-detailhead .nx-int-h3 { margin: 0; }
 .nx-int-jchips { margin: 0; }
 #intSysLand, #intJDia { margin-bottom: 4px; }
+
+/* Integrations › Page flows: the page list and the page's integration flow */
+.nx-int-pdfopt { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #3b4a58; cursor: pointer; }
+.nx-int-pgwrap { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 14px; align-items: start; }
+.nx-int-pglist { padding: 12px; display: grid; gap: 8px; position: sticky; top: 8px; max-height: calc(100vh - 120px); grid-template-rows: auto auto minmax(0, 1fr); }
+.nx-int-pglist .nx-cm-input { width: 100%; }
+.nx-int-pgitems { overflow: auto; display: grid; gap: 4px; align-content: start; min-height: 0; }
+.nx-int-pgitem { display: grid; grid-template-columns: 1fr auto; gap: 1px 8px; text-align: left; padding: 7px 9px; border: 1px solid transparent; border-radius: 8px; background: none; font: inherit; cursor: pointer; }
+.nx-int-pgitem b { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .nx-int-pgitem small { grid-column: 1; color: #6b7889; font-size: 11.5px; }
+.nx-int-pgitem .nx-int-pgdots { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: 3px; align-items: center; }
+.nx-int-pgitem:hover { background: #f3f7fa; } .nx-int-pgitem--on { background: #e8f1fb; border-color: #b9d3f0; }
+.nx-int-pgmain { min-width: 0; }
+.nx-int-pcgrid { display: grid; grid-template-columns: 72px minmax(140px, 1.2fr) 34px 70px minmax(200px, 1.8fr) minmax(130px, 1fr) minmax(130px, 1fr) 84px 76px; border-top: 1px solid #e4e9ef; }
+.nx-int-row--first > span { border-top: 2px solid #e1e7ee; }
+.nx-int-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+@media (max-width: 1100px) { .nx-int-pgwrap { grid-template-columns: 1fr; } .nx-int-pglist { position: static; max-height: 320px; } }
+.nx-int-pgpick { margin-bottom: 4px; }
+.nx-int-pgtitle { margin: 8px 0 0; }
+#intPgSummary { margin: 2px 0 10px; }
+.nx-int .nx-sc-head .nx-int-pagesel { flex: 0 1 360px; }
+.nx-int .nx-int-pgpick #intPgQ { flex: 0 1 220px; }

@@ -35,8 +35,13 @@ T.check('the shop: its pages → its endpoints (method badge, path, pages) → i
   && />…\/orders\/\{id\}</.test(sys.svg) && />GET</.test(sys.svg) && />POST</.test(sys.svg) && />Order Workbench</.test(sys.svg), sys.svg.slice(0, 300));
 T.eq('…the common prefix: two or more folders only', [D.commonPrefix(['/a/b/c/x', '/a/b/c/y']), D.commonPrefix(['/a/x', '/a/y']), D.commonPrefix(['/x'])].join(' | '), '/a/b/c |  | ');
 const pg = D.page(m, 'shop/orders/order-create');
-T.check('New Order: the page → its 3 calls → 2 systems; set off by in the tooltips', /What it calls \(3\)/.test(pg.svg) && />New Order</.test(pg.svg) && /set off by &quot;Submit&quot; \(button\)|set off by "Submit" \(button\)/.test(pg.svg)
-  && />Oracle BI Publisher \(SO…<|>Oracle BI Publisher \(SOAP\)</.test(pg.svg), pg.svg.slice(0, 200));
+T.check('New Order\'s integration flow: the page → what sets it off (the page opening, the Submit button, their chains) → its calls in order → the systems', /What sets it off/.test(pg.svg) && /What it calls, in order \(3\)/.test(pg.svg) && />New Order</.test(pg.svg)
+  && />when the page opens</.test(pg.svg) && />LoadCustomersChain</.test(pg.svg) && />&quot;Submit&quot; \(button\)<|>"Submit" \(button\)</.test(pg.svg) && />SubmitChain</.test(pg.svg) && />Oracle BI Publisher …<|>Oracle BI Publisher \(SOAP\)</.test(pg.svg), pg.svg.slice(0, 200));
+T.check('…the calls numbered in their code\'s order, each with its business object and system', /<title>1\. GET \/shop\/v1\/customers[^<]*· Customers<\/title>/.test(pg.svg) && /<title>2\. POST \/xmlpserver[^<]*→ Oracle BI Publisher \(SOAP\) · Customers report \(CUSTOMERS_RP\)<\/title>/.test(pg.svg)
+  && /The numbers: the order each action.s code makes its calls\./.test(pg.svg));
+const allp = D.pages(m);
+T.check('all pages → the systems: each page with calls (5) by flow, its calls, a line per page × system', /Each page with integrations \(5\), by flow/.test(allp.svg) && />customers</.test(allp.svg) && />orders</.test(allp.svg) && />New Order</.test(allp.svg)
+  && (allp.svg.match(/<path d="M[^"]* C/g) || []).length === 6 && /<title>New Order → Oracle BI Publisher \(SOAP\): 1 call<\/title>/.test(allp.svg), allp.svg.slice(0, 200));
 T.check('…no such system: nothing; a page with no call says so', D.system(m, 'nope').svg === '' && /This page calls no web service\./.test(D.page(m, 'shop//shell').svg));
 T.eq('text is escaped', D.esc('<a & "b">'), '&lt;a &amp; &quot;b&quot;&gt;');
 
@@ -60,13 +65,19 @@ T.check('…then the landscape, between systems, interfaces, cross-system flows,
   && /2\. Flow between systems[\s\S]*Flow between systems[\s\S]*System to system/.test(html) && /3\. Interfaces[\s\S]*IF-001[\s\S]*IF-004/.test(html) && /4\. Cross-system flows[\s\S]*SF-01/.test(html) && /5\. Systems/.test(html)
   && /6\. Integration data sheet[\s\S]*INT-0001[\s\S]*INT-0007/.test(html) && /7\. Endpoints/.test(html) && /8\. Flows × systems/.test(html) && /9\.1 The shop.s REST backend/.test(html) && /9\.2 Oracle BI Publisher \(SOAP\)/.test(html) && /Page: New Order/.test(html) && !/Not resolved/.test(html));
 T.check('…an interface line: which way, the object, both directions, its methods, what sets it off', /shop ⇄ The shop.s REST backend<\/td><td><b>Orders<\/b><\/td><td><span class="dir dir-read">Read<\/span> <span class="dir dir-write">Write<\/span><\/td><td class="mono">GET, POST<\/td><td>&quot;Submit&quot; button · when 3 pages open<\/td>/.test(html), (html.match(/IF-001[\s\S]{0,500}/) || [''])[0]);
+const hall = R.html(m, { pages: 'all' });
+T.check('with every page: Page by page — all pages → the systems, then each page\'s integration flow (5)', /10\. Page by page[\s\S]*Each page with integrations/.test(hall) && (hall.match(/<h2>10\.\d+ /g) || []).length === 5 && /<h2>10\.3 New Order<\/h2>[\s\S]*What sets it off/.test(hall)
+  && /Page by page: each page.s integration flow/.test(hall) && !/10\. Page by page/.test(html));
 T.check('…a cross-system flow: the systems in order with what each does', /1\. The shop.s REST backend \(read: Customers\) → 2\. Oracle BI Publisher \(SOAP\) \(report: Customers report \(CUSTOMERS_RP\)\)/.test(html));
 T.check('…A4 landscape, page breaks, rows kept whole, the direction as a word', /@page\{size:A4 landscape/.test(html) && /class="brk"/.test(html) && /tr\{page-break-inside:avoid\}/.test(html) && /class="dir dir-write">Write</.test(html));
 const sh = R.sheets(m);
-T.eq('the Excel sheets and their rows', sh.map((s) => s.name + ':' + s.rows.length).join(' '), 'Summary:13 Interfaces:4 Cross-system flows:1 System to system:1 Systems:2 Integrations:7 Endpoints:6 Flows x systems:3');
+T.eq('the Excel sheets and their rows', sh.map((s) => s.name + ':' + s.rows.length).join(' '), 'Summary:13 Interfaces:4 Cross-system flows:1 Page flows:7 System to system:1 Systems:2 Integrations:7 Endpoints:6 Flows x systems:3');
 const shI = sh.filter((s) => s.name === 'Integrations')[0];
 T.check('…the integrations sheet: source → target columns, the business object, values joined', shI.columns.map((c) => c.label).slice(0, 10).join('|') === 'ID|App|Source flow|Source page|Page id|Set off by|Via (chains)|Target system|Target kind|Business object' && shI.rows.filter((r) => r.pageLabel === 'My Billing')[0].params === 'customer');
 const shF = sh.filter((s) => s.name === 'Interfaces')[0].rows[0], shJ = sh.filter((s) => s.name === 'Cross-system flows')[0].rows[0];
+const shP = sh.filter((s) => s.name === 'Page flows')[0].rows.filter((r) => r.page === 'New Order');
+T.eq('…the page flows sheet: New Order, action by action, each call numbered in order', shP.map((r) => r.action + '.' + r.n + ' ' + r.trigger + ' ' + r.method + ' ' + r.path + ' ' + r.row).join(' | '),
+  '1.1 when the page opens GET /shop/v1/customers INT-0005 | 1.2 when the page opens POST /xmlpserver/services/ExternalReportWSSService INT-0003 | 2.1 "Submit" (button) POST /shop/v1/orders INT-0004');
 T.check('…the interfaces sheet (from → to, object, direction, set off by, counts) and the cross-system flows sheet', shF.id === 'IF-001' && shF.data === 'shop ⇄ The shop\'s REST backend' && shF.object === 'Orders' && shF.direction === 'Read & write' && shF.endpoints === 3 && shF.calls === 4
   && shJ.path === 'The shop\'s REST backend → Oracle BI Publisher (SOAP)' && /New Order — when the page opens \(LoadCustomersChain\)/.test(shJ.where), JSON.stringify([shF, shJ]));
 T.check('the file name: app and day', /^integrations-shop-\d{4}-\d{2}-\d{2}\.pdf$/.test(R.fileName(m, 'pdf')) && /\.xlsx$/.test(R.fileName(m, 'xlsx')));

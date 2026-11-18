@@ -20,7 +20,7 @@
     "tab": {
       "type": "string",
       "defaultValue": "overview",
-      "description": "overview | flows | sheet | endpoints | systems | diagrams"
+      "description": "overview | flows | pages | sheet | endpoints | systems | diagrams"
     },
     "q": {
       "type": "string",
@@ -65,7 +65,7 @@
     "dia": {
       "type": "string",
       "defaultValue": "landscape",
-      "description": "landscape | systems | journeys | system | page"
+      "description": "landscape | systems | journeys | pages | system | page"
     },
     "diaSystem": {
       "type": "string",
@@ -93,6 +93,25 @@
       "type": "string",
       "defaultValue": "steps",
       "description": "Cross-system flows: steps | diagram."
+    },
+    "pgId": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "Page flows: the page shown (the first with calls when empty)."
+    },
+    "pgQ": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "pgView": {
+      "type": "string",
+      "defaultValue": "one",
+      "description": "Page flows: one (a page's integration flow) | all (every page → the systems)."
+    },
+    "pdfPages": {
+      "type": "boolean",
+      "defaultValue": true,
+      "description": "The PDF holds every page's integration flow (Page by page)."
     }
   },
   "eventListeners": {

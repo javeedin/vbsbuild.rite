@@ -64,6 +64,14 @@ T.eq('business objects from paths: Fusion child and action, a record\'s collecti
 T.eq('…a call running two reports: one object each', I.objectsOf({ report: 'A_RP, B_RP' }, 'bip').map((o) => o.label).join(' | '), 'A report (A_RP) | B report (B_RP)');
 T.eq('…no path: the operation without its verb', I.objectOf({ path: '', operation: 'getall_salesOrders' }, 'rest').label, 'Sales orders');
 
+T.section('page by page: each page\'s actions and their calls, in order');
+T.eq('the pages with calls, by flow', m.pageFlows.map((p) => p.flow + '/' + p.pageLabel + ' ' + p.calls).join(' | '), 'customers/Customer Dashboard 1 | customers/My Billing 1 | orders/New Order 3 | orders/Order 1 | orders/Order Workbench 1');
+const no = m.pageFlows.filter((p) => p.page === 'shop/orders/order-create')[0];
+T.eq('New Order: the page opening first (customers, then the report — its code\'s order), then the Submit button', no.steps.map((st) => st.trigger + ' [' + st.chain + ']: ' + st.calls.map((c) => c.method + ' ' + c.path + ' → ' + c.system + ' ' + c.id).join(', ')).join(' | '),
+  'when the page opens [LoadCustomersChain]: GET /shop/v1/customers → shop INT-0005, POST /xmlpserver/services/ExternalReportWSSService → bipService INT-0003 | "Submit" (button) [SubmitChain]: POST /shop/v1/orders → shop INT-0004');
+T.check('…its figures: 3 calls (as in the data sheet), 2 systems, 1 read, 1 write, 1 report; each call\'s business object', no.calls === 3 && no.actionCalls === 3 && no.systems.join() === 'shop,bipService' && no.reads === 1 && no.writes === 1 && no.reports === 1
+  && no.steps[0].calls.map((c) => c.object).join() === 'Customers,Customers report (CUSTOMERS_RP)', JSON.stringify(no).slice(0, 300));
+
 T.section('kinds by name and address; an endpoint not in services/');
 T.eq('kinds', ['fusion|https://x.fa.oraclecloud.com', 'ics|https://oic.example.com/ic/api', 'bipService|https://x/xmlpserver', 'ords|https://h/ords/x', 'jira|https://acme.atlassian.net', 'stripe|https://api.stripe.com'].map((x) => I.kindOf(x.split('|')[0], x.split('|')[1]).kind).join(','),
   'fusion,oic,bip,ords,jira,rest');
@@ -76,5 +84,12 @@ try {
   T.check('a call whose endpoint is not in services/: its row says so, listed as unresolved', m2.totals.unresolved === 1 && m2.unresolved[0].endpoint === 'missingApi/createThing'
     && m2.rows.some((r) => r.endpoint === 'missingApi/createThing' && /Not in services|missingApi/.test(r.systemName)), JSON.stringify(m2.unresolved));
   T.check('…no app: said so', !I.scan(path.join(tmp, 'nothing')).ok);
+  // a second chain on New Order making the same call as Submit: one action, both chains and triggers on it
+  fs.writeFileSync(chain, fs.readFileSync(chain, 'utf8').replace("'missingApi/createThing'", "'shopApi/createOrder'"));
+  fs.writeFileSync(path.join(path.dirname(chain), 'SaveDraftChain.js'), fs.readFileSync(chain, 'utf8').replace(/SubmitChain/g, 'SaveDraftChain'));
+  const m3 = I.scan(tmp);
+  const st3 = m3.pageFlows.filter((p) => p.page === 'shop/orders/order-create')[0].steps;
+  T.check('actions making exactly the same calls are one: both chains and what sets them off on it', st3.length === 2 && st3[1].chains.sort().join() === 'SaveDraftChain,SubmitChain' && st3[1].triggers.length === 2 && st3[1].calls.length === 1,
+    JSON.stringify(st3.map((x) => [x.trigger, x.chain, x.calls.length])));
 } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 T.report();

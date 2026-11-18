@@ -4,7 +4,9 @@
  * Integrations, in a browser: Application → Integrations scans your working folder's app (the sample shop) and shows
  * every system it talks to and every call it makes — figures, the integration landscape, calls by system; between
  * systems, not page by page (System flows): the app ⇄ each system by business object, the interfaces (each opens its
- * rows in the data sheet), system → system and the cross-system flows (an action calling two systems, in order); the
+ * rows in the data sheet), system → system and the cross-system flows (an action calling two systems, in order); page
+ * by page (Page flows): each page's integration flow — what sets each call off, its calls in order, the systems — its
+ * calls listed, previous / next, all pages → the systems, Save SVG, a data-sheet row's page opening it; the
  * integration data sheet (source page → target system, set off by, method, endpoint, direction) with a search, a system,
  * a flow and a direction; the endpoints; the systems (base URL, sign-in, services); the diagrams (landscape, a system,
  * a page) and Save SVG; the Excel workbook and a real PDF (Chromium, as the desktop app prints with Electron).
@@ -115,6 +117,42 @@ const count = (page, sel) => page.$$eval(sel, (l) => l.length).catch(() => 0);
     await page.selectOption('#intFSystem', '');
     await settle(page);
 
+    T.section('page by page: each page\'s integration flow');
+    await page.click('#intTabPages');
+    await page.waitForSelector('#intPgSel', { timeout: 10000 });
+    T.check('the pages with integrations (5) to pick from, the first one shown; 1 page calls no web service', (await count(page, '#intPgSel option')) === 5 && /^5 pages with integrations · 1 page calls no web service$/.test(await env.text('#intPgNote'))
+      && (await page.$eval('#intPgSel', (x) => x.value)) === 'shop/customers/customer-dashboard' && (await env.text('#intPgTitle')) === 'Customer Dashboard' && /Customer Dashboard — customers \(1 call, 1 action\)/.test(await env.text('#intPgSel')), await env.text('#intPgNote'));
+    await page.selectOption('#intPgSel', 'shop/orders/order-create');
+    await settle(page);
+    T.check('New Order: its title and summary — 3 calls to the shop and BI Publisher, 2 actions', (await env.text('#intPgTitle')) === 'New Order'
+      && /orders · shop\/orders\/order-create — 3 calls to The shop's REST backend, Oracle BI Publisher \(SOAP\); 2 actions \(when the page opens; "Submit" \(button\)\)/.test(await env.text('#intPgSummary')), await env.text('#intPgSummary'));
+    const pgd = (await page.getAttribute('#intPgDia', 'srcdoc')) || '';
+    T.check('…its integration flow: the page → what sets it off → its calls in order → the systems', /What sets it off/.test(pgd) && /What it calls, in order \(3\)/.test(pgd) && />when the page opens</.test(pgd) && />LoadCustomersChain</.test(pgd) && />SubmitChain</.test(pgd), pgd.slice(0, 160));
+    const pc = await page.$$eval('#intPgCalls .nx-int-row:not(.nx-int-row--head)', (l) => l.map((r) => r.innerText.replace(/\s+/g, ' ').trim()));
+    T.check('…its calls, in order under each action: 1.1 customers, 1.2 the report, 2.1 the order (Submit)', pc.length === 3 && /^1 when the page opens LoadCustomersChain 1 GET \/shop\/v1\/customers Customers The shop's REST backend Read INT-0005$/.test(pc[0])
+      && /^2 POST \/xmlpserver.* Customers report \(CUSTOMERS_RP\) Oracle BI Publisher \(SOAP\) Report INT-0003$/.test(pc[1]) && /^2 "Submit" \(button\) SubmitChain 1 POST \/shop\/v1\/orders Orders The shop's REST backend Write INT-0004$/.test(pc[2]), JSON.stringify(pc));
+    await env.shot('integrations-page-flow.png');
+    await page.click('#intPgNext');
+    await settle(page);
+    T.check('Next: the next page (Order)', (await env.text('#intPgTitle')) === 'Order' && (await page.$eval('#intPgSel', (x) => x.value)) === 'shop/orders/order-detail');
+    await page.click('#intPgPrev');
+    await settle(page);
+    T.check('Previous: back to New Order', (await env.text('#intPgTitle')) === 'New Order');
+    const [psv] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }), page.click('#intPgSvg')]);
+    T.check('Save SVG: this page\'s flow', psv.suggestedFilename() === 'integrations-shop-new-order.svg', psv.suggestedFilename());
+    await page.fill('#intPgQ', 'billing');
+    await settle(page);
+    T.check('find a page: billing — My Billing, shown', (await count(page, '#intPgSel option')) === 1 && (await env.text('#intPgTitle')) === 'My Billing' && /^1 of 5 pages/.test(await env.text('#intPgNote')));
+    await page.fill('#intPgQ', '');
+    await page.selectOption('#intPgSel', 'shop/orders/order-create');
+    await settle(page);
+    await page.click('#intPgChips [data-key="all"]');
+    await page.waitForSelector('#intPgAll', { timeout: 5000 });
+    T.check('All pages → the systems: every page with calls, by flow', /Each page with integrations \(5\), by flow/.test((await page.getAttribute('#intPgAll', 'srcdoc')) || '') && !(await page.$('#intPgDia')));
+    await env.shot('integrations-pages-all.png');
+    await page.click('#intPgChips [data-key="one"]');
+    await page.waitForSelector('#intPgDia', { timeout: 5000 });
+
     T.section('the integration data sheet');
     await page.click('#intTabSheet');
     await page.waitForSelector('#intGrid', { timeout: 10000 });
@@ -145,6 +183,11 @@ const count = (page, sel) => page.$$eval(sel, (l) => l.length).catch(() => 0);
     await page.selectOption('#intFFlow', '');
     await settle(page);
     await env.shot('integrations-sheet.png');
+    await page.click('#intGrid .nx-int-row[data-id="INT-0002"] [data-act="showPage"]');
+    await page.waitForSelector('#intPgDia', { timeout: 5000 });
+    T.check('a row\'s page opens its integration flow (My Billing)', (await env.text('#intPgTitle')) === 'My Billing' && /LoadInvoicesChain/.test((await page.getAttribute('#intPgDia', 'srcdoc')) || ''));
+    await page.click('#intTabSheet');
+    await page.waitForSelector('#intGrid', { timeout: 5000 });
 
     T.section('endpoints and systems');
     await page.click('#intTabEndpoints');
@@ -175,7 +218,7 @@ const count = (page, sel) => page.$$eval(sel, (l) => l.length).catch(() => 0);
     await page.selectOption('#intDiaPage', 'shop/orders/order-list');
     await settle(page, 600);
     const pd = (await page.getAttribute('#intDia', 'srcdoc')) || '';
-    T.check('a page: what it calls and where', /^Page: .* — what it calls and where$/.test(await text(page, '#intDiaTitle')) && /<svg/.test(pd) && !!(await page.$('#intDiaPage')), await text(page, '#intDiaTitle'));
+    T.check('a page: what it calls and where', /^Page: .* — what sets each call off, its calls in order, the systems$/.test(await text(page, '#intDiaTitle')) && /<svg/.test(pd) && !!(await page.$('#intDiaPage')), await text(page, '#intDiaTitle'));
     T.check('the frame keeps the diagram\'s proportions', /aspect-ratio/.test((await page.getAttribute('#intDia', 'style')) || ''));
     await env.shot('integrations-diagram-page.png');
     const [svg] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }), page.click('#intSvg')]);
@@ -188,6 +231,9 @@ const count = (page, sel) => page.$$eval(sel, (l) => l.length).catch(() => 0);
     await page.click('#intDiaChips [data-key="journeys"]');
     await settle(page);
     T.check('…and the cross-system flows', /^Cross-system flows:/.test(await text(page, '#intDiaTitle')) && /SF-01/.test((await page.getAttribute('#intDia', 'srcdoc')) || ''));
+    await page.click('#intDiaChips [data-key="pages"]');
+    await settle(page);
+    T.check('…and all pages', /^All pages:/.test(await text(page, '#intDiaTitle')) && /Each page with integrations/.test((await page.getAttribute('#intDia', 'srcdoc')) || ''));
     await page.click('#intDiaChips [data-key="landscape"]');
     await settle(page);
     T.check('the landscape again', /flows \(the source\)/.test(await text(page, '#intDiaTitle')));
@@ -198,11 +244,12 @@ const count = (page, sel) => page.$$eval(sel, (l) => l.length).catch(() => 0);
     await xl.saveAs(xlFile);
     const xlBytes = fs.readFileSync(xlFile);
     T.check('Excel: a workbook (zip) with the summary, systems, integrations, endpoints, flows × systems', /^integrations-shop-.*\.xlsx$/.test(xl.suggestedFilename()) && xlBytes.slice(0, 2).toString() === 'PK'
-      && ['Summary', 'Interfaces', 'Cross-system flows', 'System to system', 'Systems', 'Integrations', 'Endpoints', 'Flows x systems'].every((n) => xlBytes.indexOf(n) !== -1), xl.suggestedFilename());
+      && ['Summary', 'Interfaces', 'Cross-system flows', 'Page flows', 'System to system', 'Systems', 'Integrations', 'Endpoints', 'Flows x systems'].every((n) => xlBytes.indexOf(n) !== -1), xl.suggestedFilename());
     const [pdf] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), page.click('#intPdf')]);
     const pdfFile = path.join(dir, 'int.pdf');
     await pdf.saveAs(pdfFile);
     const pdfBytes = fs.readFileSync(pdfFile);
+    T.check('the PDF with every page\'s flow: ticked by default', await page.isChecked('#intPdfPages'));
     T.check('PDF: a real PDF (several KB) — the report with its diagrams', /^integrations-shop-.*\.pdf$/.test(pdf.suggestedFilename()) && pdfBytes.slice(0, 5).toString() === '%PDF-' && pdfBytes.length > 20000, pdf.suggestedFilename() + ' ' + pdfBytes.length);
     await page.waitForSelector('#intResult', { timeout: 5000 }).catch(() => {});
     T.check('…said so, with its size', /Saved integrations-shop-.*\.pdf \(\d+ KB\)/.test(await text(page, '#intResult')), await text(page, '#intResult'));

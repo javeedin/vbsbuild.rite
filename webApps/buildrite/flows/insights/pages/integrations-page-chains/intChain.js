@@ -26,6 +26,15 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         if (act === 'field') {
           const val = String(value == null ? '' : value);
           if (key === 'app') { await scan(val); return; }
+          // a page chosen, or a search that leaves the page shown out: the first page it finds
+          if (key === 'pgId') { v.pgId = val; v.pgView = 'one'; return; }
+          if (key === 'pgQ') {
+            v.pgQ = val;
+            const w = val.toLowerCase().split(/\s+/).filter(Boolean);
+            const hits = ((v.m && v.m.pageFlows) || []).filter((p) => { const hay = [p.pageLabel, p.page, p.flow, p.steps.map((st) => st.trigger + ' ' + st.chain).join(' ')].join(' ').toLowerCase(); return w.every((x) => hay.indexOf(x) !== -1); });
+            if (hits.length && !hits.some((p) => p.page === v.pgId)) v.pgId = hits[0].page;
+            return;
+          }
           if (['q', 'fSystem', 'fFlow', 'diaSystem', 'diaPage', 'sq', 'sSystem', 'sfSystem'].indexOf(key) !== -1) { v[key] = val; if (['q', 'fSystem', 'fFlow'].indexOf(key) !== -1) v.limit = 200; }
           return;
         }
@@ -33,11 +42,24 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         // System flows: the summary or the detailed flow; the cross-system flows as steps or as a diagram
         if (act === 'sfView') { v.sfView = key === 'detailed' ? 'detailed' : 'summary'; return; }
         if (act === 'jView') { v.jView = key === 'diagram' ? 'diagram' : 'steps'; return; }
+        // Page flows: a page's integration flow (pgOpen (key)), one page or all pages, the previous / next page
+        if (act === 'pgOpen') { v.pgId = String(key || ''); v.pgView = 'one'; v.tab = 'pages'; return; }
+        if (act === 'pgView') { v.pgView = key === 'all' ? 'all' : 'one'; return; }
+        if (act === 'pgStep') {
+          const list = ((v.m && v.m.pageFlows) || []).map((p) => p.page);
+          if (!list.length) return;
+          const at = Math.max(0, list.indexOf(v.pgId || list[0]));
+          v.pgId = list[(at + (Number(key) || 1) + list.length) % list.length];
+          v.pgView = 'one';
+          return;
+        }
+        if (act === 'pdfPages') { v.pdfPages = !v.pdfPages; return; }
         if (act === 'more') { v.limit = (v.limit || 200) + 300; return; }
         // a system's or a page's diagram (from the systems, the data sheet, the overview)
         if (act === 'dia') { v.dia = String(key || 'landscape'); return; }
         if (act === 'showSystem') { v.dia = 'system'; v.diaSystem = String(key || ''); v.tab = 'diagrams'; return; }
-        if (act === 'showPage') { v.dia = 'page'; v.diaPage = String(key || ''); v.tab = 'diagrams'; return; }
+        // a page's diagram: its integration flow on Page flows
+        if (act === 'showPage') { v.pgId = String(key || ''); v.pgView = 'one'; v.tab = 'pages'; v.dia = 'page'; v.diaPage = String(key || ''); return; }
         if (act === 'sheetFor') { v.fSystem = String(key || ''); v.fDir = 'all'; v.q = ''; v.fObject = ''; v.fObjectLabel = ''; v.limit = 200; v.tab = 'sheet'; return; }
         // an interface: the data-sheet rows behind it (its system, its business object)
         if (act === 'sheetIf') {
@@ -52,8 +74,8 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
           // key: a diagram (landscape, systems, journeys, system, page; system:<id> = that system), else the one in Diagrams
           const kind = String(key || v.dia).split(':')[0];
           const one = String(key || '').split(':')[1] || '';
-          const d = kind === 'system' ? D.system(v.m, one || v.diaSystem || v.m.systems[0].id) : kind === 'page' ? D.page(v.m, v.diaPage || ((v.m.pages.filter((p) => p.calls)[0] || {}).id))
-            : kind === 'systems' ? D.systemFlow(v.m) : kind === 'journeys' ? D.journeys(v.m) : D.landscape(v.m);
+          const d = kind === 'system' ? D.system(v.m, one || v.diaSystem || v.m.systems[0].id) : kind === 'page' ? D.page(v.m, one || v.diaPage || ((v.m.pages.filter((p) => p.calls)[0] || {}).id))
+            : kind === 'systems' ? D.systemFlow(v.m) : kind === 'journeys' ? D.journeys(v.m) : kind === 'pages' ? D.pages(v.m) : D.landscape(v.m);
           const name = 'integrations-' + v.m.app + '-' + (kind === 'landscape' ? 'landscape' : String(d.title || kind).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')) + '.svg';
           exportKit.download(name, 'image/svg+xml', d.svg);
           say({ ok: true }, 'Saved ' + name + '.');
@@ -68,7 +90,8 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         if (act === 'pdf' || act === 'print') {
           // the report: cover, landscape, systems, the data sheet, endpoints, flows × systems, each system's diagram, and the
           // page diagram on screen when there is one
-          const html = R.html(v.m, { by: v.m.by || '', pages: v.dia === 'page' && v.diaPage ? [v.diaPage] : [] });
+          // with every page's integration flow (Page by page) unless switched off; else the page shown in Diagrams
+          const html = R.html(v.m, { by: v.m.by || '', pages: v.pdfPages !== false ? 'all' : (v.dia === 'page' && v.diaPage ? [v.diaPage] : []) });
           if (act === 'print') { exportKit.printDocument(html); return; }
           if (v.pdfBusy) return;
           v.pdfBusy = true;

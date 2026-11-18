@@ -6,7 +6,10 @@ define([], function () {
   //
   //   landscape(m)      the app's flows (the source) → the systems they call (the targets); a line's thickness = calls
   //   system(m, id)     one system: the pages that call it → its endpoints (method, path) → the system
-  //   page(m, id)       one page: the page → the endpoints it calls → their systems
+  //   page(m, id)       one page's integration flow: the page → what sets each call off (the page opening, a button…)
+  //                     → what it calls, in the order its code calls it → the systems (pageBasic: the plain version,
+  //                     for a scan without pageFlows)
+  //   pages(m)          every page with calls → the systems it calls (grouped by flow); a line's thickness = calls
   //   systemFlow(m)     between systems, not page by page: the app ⇄ each system — what the app sends it (writes),
   //                     what it returns (reads) and the reports it runs, by business object
   //   journeys(m)       cross-system flows: each action that calls two or more systems, its systems in order
@@ -200,8 +203,8 @@ define([], function () {
     return { svg: wrap(W, H, out.join(''), s.name), w: W, h: H, title: s.name };
   }
 
-  /** One page: the page → the endpoints it calls → their systems. */
-  function page(m, id) {
+  /** One page: the page → the endpoints it calls → their systems (the plain version). */
+  function pageBasic(m, id) {
     var rows = (m.rows || []).filter(function (r) { return r.page === id; });
     var p = (m.pages || []).filter(function (x) { return x.id === id; })[0] || { id: id, label: id };
     var eps = [];
@@ -368,10 +371,153 @@ define([], function () {
     return { svg: wrap(W, H, out.join(''), 'Cross-system flows'), w: W, h: H, title: 'Cross-system flows' };
   }
 
+  var MAX_CALLS = 60;
+  /** A trigger in one or two lines ('"Submit" (button); when the page opens' → two). */
+  function triggerLines(t, px) {
+    var parts = String(t || '').split(/;\s*/).filter(Boolean);
+    if (parts.length <= 3) return parts.map(function (x) { return fit(x, px, 12); });
+    return [fit(parts[0], px, 12), fit(parts[1], px, 12), fit('+ ' + (parts.length - 2) + ' more: ' + parts.slice(2).join(', '), px, 11)];
+  }
+  /** One page's integration flow: the page → what sets each call off → its calls, in order → the systems. */
+  function page(m, id) {
+    var pf = (m.pageFlows || []).filter(function (x) { return x.page === id; })[0];
+    if (!pf) return pageBasic(m, id);
+    var p = (m.pages || []).filter(function (x) { return x.id === id; })[0] || { id: id, label: pf.pageLabel };
+    var W = 1100, PX = 24, PW = 176, TX = 232, TW = 214, CX = 478, CW = 392, SX = 902, SW = 174, top = 50, CH = 38, CG = 6, SG = 14, TMIN = 50;
+    // the actions and their calls, cut at MAX_CALLS calls
+    var steps = [], left = MAX_CALLS, more = 0;
+    pf.steps.forEach(function (st) {
+      if (left <= 0) { more += st.calls.length; return; }
+      var calls = st.calls.slice(0, left);
+      more += st.calls.length - calls.length;
+      left -= calls.length;
+      steps.push({ trigger: st.trigger, chain: st.chain, chains: st.chains || [], calls: calls });
+    });
+    var sysIds = [];
+    steps.forEach(function (st) { st.calls.forEach(function (c) { if (sysIds.indexOf(c.system) === -1) sysIds.push(c.system); }); });
+    var systems = sysIds.map(function (sid) { return (m.systems || []).filter(function (s) { return s.id === sid; })[0]; }).filter(Boolean);
+    var pre = commonPrefix([].concat.apply([], steps.map(function (st) { return st.calls.map(function (c) { return c.path; }); })));
+    var y = top;
+    steps.forEach(function (st) {
+      var h = st.calls.length * (CH + CG) - CG;
+      st.lines = triggerLines(st.trigger, TW - 20);
+      st.y = y; st.h = Math.max(h, TMIN, st.lines.length * 16 + (st.chain ? 16 : 0) + 14); st.cy = y + (st.h - h) / 2; y += st.h + SG;
+    });
+    var H0 = Math.max(90, y - top - SG + (more ? 30 : 0));
+    var SH = 64, SGAP = 14, sH = systems.length * (SH + SGAP) - SGAP, sTop = top + Math.max(0, (H0 - sH) / 2), sy = {};
+    systems.forEach(function (s, i) { sy[s.id] = sTop + i * (SH + SGAP); });
+    var pH = Math.min(Math.max(84, Math.min(H0, 180)), H0), pTop = top + (H0 - pH) / 2;
+    var colors = systems.map(function (s) { return kindOf(s.kind).color; });
+    var out = [arrowDefs(colors.concat(['#9aa6b2']))];
+    var gi = colors.length;
+    out.push(text(PX, 26, 'The page', { size: 13, weight: 700, fill: '#3b4a58' }));
+    out.push(text(TX, 26, 'What sets it off', { size: 13, weight: 700, fill: '#3b4a58' }));
+    out.push(text(CX, 26, 'What it calls, in order (' + (pf.actionCalls || pf.calls) + ')', { size: 13, weight: 700, fill: '#3b4a58' }));
+    if (pre) out.push(text(CX + 200, 26, fit('under ' + pre, CW - 200, 11, true), { size: 11, fill: '#6b7889', mono: true }));
+    out.push(text(SX, 26, 'The systems', { size: 13, weight: 700, fill: '#3b4a58' }));
+    // edges under the boxes: page → each action, action → each call, call → its system
+    steps.forEach(function (st) {
+      out.push(curve(PX + PW, pTop + pH / 2, TX - 2, st.y + st.h / 2, { color: '#9aa6b2', w: 1.4, op: 0.7, marker: 'ar' + gi }));
+      st.calls.forEach(function (c, i) {
+        var cy = st.cy + i * (CH + CG) + CH / 2;
+        out.push(curve(TX + TW, st.y + st.h / 2, CX - 2, cy, { color: '#9aa6b2', w: 1.2, op: 0.6, marker: 'ar' + gi }));
+        var si = sysIds.indexOf(c.system);
+        if (sy[c.system] != null) out.push(curve(CX + CW, cy, SX - 2, sy[c.system] + SH / 2, { color: colors[si], w: 1.3, op: 0.5, marker: 'ar' + si, title: c.method + ' ' + c.path + ' → ' + c.systemName }));
+      });
+    });
+    out.push('<g><title>' + esc(p.label + ' (' + p.id + ') — ' + pf.calls + ' calls to ' + pf.systems.length + ' system(s)') + '</title>' + box(PX, pTop, PW, pH, { stroke: '#2e6fd8', sw: 2, r: 12 })
+      + text(PX + PW / 2, pTop + pH / 2 - 10, fit(p.label, PW - 16, 13), { size: 13, weight: 700, anchor: 'middle' })
+      + text(PX + PW / 2, pTop + pH / 2 + 8, fit(pf.flow, PW - 16, 11), { size: 11, fill: '#5b6876', anchor: 'middle' })
+      + text(PX + PW / 2, pTop + pH / 2 + 24, pf.calls + ' call' + (pf.calls === 1 ? '' : 's') + ' · ' + pf.steps.length + ' action' + (pf.steps.length === 1 ? '' : 's'), { size: 11, fill: '#5b6876', anchor: 'middle' }) + '</g>');
+    steps.forEach(function (st) {
+      var lines = st.lines;
+      var ty = st.y + st.h / 2 - (lines.length - 1) * 8 - (st.chain ? 6 : 0) + 4;
+      out.push('<g><title>' + esc(st.trigger + (st.chain ? ' — chain ' + st.chain : '')) + '</title>' + box(TX, st.y, TW, st.h, { fill: '#f6f9fb', stroke: '#c9d6e0' })
+        + lines.map(function (l, i) { return text(TX + 10, ty + i * 16, l, { size: i ? 11 : 12, weight: i ? 400 : 600, fill: i ? '#5b6876' : '#16212c' }); }).join('')
+        + (st.chain ? text(TX + 10, ty + lines.length * 16, fit((st.chains.length > 1 ? st.chains.length + ' chains: ' : '') + st.chain, TW - 20, 10.5, true), { size: 10.5, fill: '#6b7889', mono: true }) : '') + '</g>');
+      st.calls.forEach(function (c, i) {
+        var cy = st.cy + i * (CH + CG);
+        out.push('<g><title>' + esc((i + 1) + '. ' + c.method + ' ' + c.path + (c.summary ? ' — ' + c.summary : '') + ' → ' + c.systemName + (c.object ? ' · ' + c.object : '')) + '</title>' + box(CX, cy, CW, CH)
+          + '<circle cx="' + (CX + 14) + '" cy="' + (cy + CH / 2) + '" r="9" fill="#eef3f7"/>' + text(CX + 14, cy + CH / 2 + 4, String(i + 1), { size: 10.5, weight: 700, fill: '#3b4a58', anchor: 'middle' })
+          + badge(CX + 30, cy + 14, c)
+          + text(CX + 90, cy + 16, fit(short(c.path || c.endpoint, pre), CW - 100, 11.5, true), { size: 11.5, mono: true })
+          + text(CX + 90, cy + 31, fit((c.object || '') + (c.action ? ' (' + c.action + ')' : '') + ' → ' + c.systemName + (c.via ? ' · via ' + c.via : ''), CW - 100, 10.5), { size: 10.5, fill: '#5b6876' }) + '</g>');
+      });
+    });
+    if (more) out.push(text(CX, top + H0 - 8, '+ ' + more + ' more calls (every one is in the data sheet)', { size: 11.5, fill: '#5b6876' }));
+    systems.forEach(function (s) {
+      var sy0 = sy[s.id], K = kindOf(s.kind);
+      out.push('<g><title>' + esc(s.name + (s.url ? ' · ' + s.url : '')) + '</title>' + box(SX, sy0, SW, SH) + '<rect x="' + SX + '" y="' + sy0 + '" width="6" height="' + SH + '" rx="3" fill="' + K.color + '"/>'
+        + text(SX + 16, sy0 + 22, fit(s.name, SW - 24, 12.5), { size: 12.5, weight: 700 }) + text(SX + 16, sy0 + 39, fit(s.kindLabel, SW - 24, 11), { size: 11, fill: '#5b6876' })
+        + text(SX + 16, sy0 + 54, fit(s.host || '', SW - 24, 10, true), { size: 10, fill: '#5b6876', mono: true }) + '</g>');
+    });
+    var y0 = top + H0 + 30;
+    out.push(['Read', 'Write', 'Report'].map(function (d, i) { var D = DIR[d]; return '<rect x="' + (24 + i * 90) + '" y="' + (y0 - 11) + '" width="16" height="14" rx="7" fill="' + D.fill + '"/>' + text(24 + i * 90 + 22, y0, d, { size: 11, fill: D.ink, weight: 600 }); }).join('')
+      + text(300, y0, 'The numbers: the order each action\'s code makes its calls.', { size: 11, fill: '#6b7889' }));
+    var H = y0 + 18;
+    return { svg: wrap(W, H, out.join(''), p.label), w: W, h: H, title: p.label };
+  }
+
+  /** Every page with calls → the systems it calls, the pages grouped by flow; a line's thickness: its calls. */
+  function pages(m) {
+    var pfs = m.pageFlows || [];
+    var W = 1100, LX = 24, LW = 380, RX = 760, RW = 316, top = 46, PH = 30, PG = 6, FH = 26;
+    var systems = (m.systems || []).filter(function (s) { return pfs.some(function (p) { return p.systems.indexOf(s.id) !== -1; }); });
+    // page × system calls, from the data sheet
+    var cnt = {};
+    (m.rows || []).forEach(function (r) { var k = r.page + '|' + r.system; cnt[k] = (cnt[k] || 0) + 1; });
+    var max = Object.keys(cnt).reduce(function (a, k) { return Math.max(a, cnt[k]); }, 1);
+    var y = top, py = {}, flowY = [], curFlow = null;
+    pfs.forEach(function (p) {
+      if (p.flow !== curFlow) { curFlow = p.flow; flowY.push({ flow: p.flow, y: y }); y += FH; }
+      py[p.page] = y; y += PH + PG;
+    });
+    var leftH = Math.max(0, y - top - PG);
+    var SH = 66, SGAP = 12, rightH = systems.length * (SH + SGAP) - SGAP;
+    var H0 = Math.max(leftH, rightH, 80);
+    var sTop = top + Math.max(0, (H0 - rightH) / 2), sy = {};
+    systems.forEach(function (s, i) { sy[s.id] = sTop + i * (SH + SGAP); });
+    var colors = systems.map(function (s) { return kindOf(s.kind).color; });
+    var out = [arrowDefs(colors)];
+    out.push(text(LX, 24, 'Each page with integrations (' + pfs.length + '), by flow', { size: 13, weight: 700, fill: '#3b4a58' }));
+    out.push(text(RX, 24, 'The systems they call', { size: 13, weight: 700, fill: '#3b4a58' }));
+    // the systems' in-points, ordered by the pages' rows so lines cross less
+    var ins = {};
+    pfs.forEach(function (p) { p.systems.forEach(function (sid) { (ins[sid] = ins[sid] || []).push(p.page); }); });
+    var at = {};
+    Object.keys(ins).forEach(function (sid) { if (sy[sid] == null) return; var ys = spread(ins[sid].length, sy[sid], SH); ins[sid].forEach(function (pg, i) { at[pg + '|' + sid] = ys[i]; }); });
+    pfs.forEach(function (p) {
+      var outs = p.systems.filter(function (sid) { return sy[sid] != null; }).sort(function (a, b) { return sy[a] - sy[b]; });
+      var ys = spread(outs.length, py[p.page], PH);
+      outs.forEach(function (sid, i) {
+        var si = systems.map(function (s) { return s.id; }).indexOf(sid), c = cnt[p.page + '|' + sid] || 1;
+        out.push(curve(LX + LW, ys[i], RX - 2, at[p.page + '|' + sid], { color: colors[si], w: 1.2 + 4 * (c / max), op: 0.5, marker: 'ar' + si, title: p.pageLabel + ' → ' + systems[si].name + ': ' + c + ' call' + (c === 1 ? '' : 's') }));
+      });
+    });
+    flowY.forEach(function (f) { out.push(text(LX, f.y + 17, fit(f.flow, LW, 12), { size: 12, weight: 700, fill: '#00506c' })); });
+    pfs.forEach(function (p) {
+      var y1 = py[p.page];
+      out.push('<g><title>' + esc(p.pageLabel + ' (' + p.page + '): ' + p.calls + ' calls · ' + p.steps.length + ' actions') + '</title>' + box(LX + 12, y1, LW - 12, PH)
+        + text(LX + 24, y1 + 19, fit(p.pageLabel, LW - 130, 12), { size: 12, weight: 600 })
+        + text(LX + LW - 10, y1 + 19, p.calls + ' call' + (p.calls === 1 ? '' : 's'), { size: 11, fill: '#5b6876', anchor: 'end' }) + '</g>');
+    });
+    systems.forEach(function (s) {
+      var y1 = sy[s.id], K = kindOf(s.kind);
+      out.push('<g><title>' + esc(s.name + ' — ' + s.kindLabel) + '</title>' + box(RX, y1, RW, SH) + '<rect x="' + RX + '" y="' + y1 + '" width="6" height="' + SH + '" rx="3" fill="' + K.color + '"/>'
+        + text(RX + 18, y1 + 22, fit(s.name, RW - 30, 13), { size: 13, weight: 700 }) + text(RX + 18, y1 + 39, fit(s.kindLabel, RW - 30, 11), { size: 11, fill: '#5b6876' })
+        + text(RX + 18, y1 + 55, s.pages.length + ' page' + (s.pages.length === 1 ? '' : 's') + ' · ' + s.calls + ' call' + (s.calls === 1 ? '' : 's'), { size: 11, fill: '#26323e' }) + '</g>');
+    });
+    if (!pfs.length) out.push(text(LX, top + 30, 'No page calls a web service.', { size: 13, fill: '#6b7889' }));
+    var lg = legend(systems.map(function (s) { return s.kind; }).filter(function (k, i, a) { return a.indexOf(k) === i; }), top + H0 + 30, W, 'A line\'s thickness: the page\'s calls to that system.');
+    out.push(lg.svg);
+    var H = lg.y + 18;
+    return { svg: wrap(W, H, out.join(''), 'Pages and the systems they call'), w: W, h: H, title: 'Pages and the systems they call' };
+  }
+
   /** A small document showing a diagram, scaled to its frame (for a sandboxed iframe). */
   function doc(d) {
     return '<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#fff}svg{display:block;width:100%;height:auto}</style>' + (d && d.svg ? d.svg : '');
   }
 
-  return { landscape: landscape, system: system, page: page, systemFlow: systemFlow, journeys: journeys, listFit: listFit, doc: doc, KINDS: KINDS, DIR: DIR, esc: esc, fit: fit, figures: figures, commonPrefix: commonPrefix };
+  return { landscape: landscape, system: system, page: page, pageBasic: pageBasic, pages: pages, systemFlow: systemFlow, journeys: journeys, listFit: listFit, doc: doc, KINDS: KINDS, DIR: DIR, esc: esc, fit: fit, figures: figures, commonPrefix: commonPrefix };
 });

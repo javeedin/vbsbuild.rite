@@ -25,6 +25,12 @@
  *                  with its objects, and the actions (page, chain, what sets it off) that do it
  *     handoffs     system → system: two systems one action calls one after the other (the app usually passes what the
  *                  first returned on to the second)
+ *   Page by page:
+ *     pageFlows    per page with calls: its actions in order — what sets each off (the page opening, a button, its
+ *                  data…), the chain, and the calls that action makes in the order its code makes them (row id,
+ *                  method, endpoint, business object, system, direction; `via` = the module it goes through, which
+ *                  may hold more calls than the action uses); actions with the same calls are one, their triggers
+ *                  listed together; calls no chain makes are a last action
  *   Each row also carries its business object (`object`), e.g. GET …/salesOrdersForOrderHub/{id}/child/lines →
  *   "Sales orders for order hub › lines", a BI Publisher report → "Customers report (CUSTOMERS_RP)"; a path ending in
  *   something done to the object (…/returns/plan, …/{id}/action/submit) → the object, the action kept in `action`.
@@ -230,6 +236,7 @@ function scanApp(root, opts) {
   const unresolved = [];
   const chainFlows = [];
   const objs = new Map(); // row → its business objects
+  const pageFlowsRaw = []; // { page, pageLabel, flow, steps: [{ trigger, chain, rows }] }
   const setObject = (row, kind) => { const ob = objectOf(row, kind); row.object = ob.label; row.objectKey = ob.key; row.action = ob.op || ''; objs.set(row, objectsOf(row, kind)); };
   pages.forEach((p) => {
     const f = scan.analyze(root, p.id);
@@ -265,6 +272,38 @@ function scanApp(root, opts) {
     const mine = rows.slice(first);
     const L = f.logic || {};
     const modCalls = (id) => ((L.modules || []).filter((x) => 'resources/js/' + x.name === id)[0] || {}).calls || [];
+    // the page's actions in order: each chain's calls as its code makes them; then what no chain makes
+    const pf = { page: f.id, pageLabel: f.label || f.page, flow: f.flow || '(app shell)', steps: [] };
+    const inChain = new Set();
+    (L.chains || []).forEach((c) => {
+      // its own calls, then its modules' (a module may make several calls; the chain may use only some of them)
+      const eps = (c.calls || []).map((ep) => ({ ep, via: '' })).concat(...(c.modules || []).map((mid) => modCalls(mid).map((ep) => ({ ep, via: mid.replace(/^resources\/js\//, '') }))));
+      const its = [], vias = [];
+      eps.forEach((e) => { mine.filter((x) => x.endpoint === e.ep).forEach((r) => { if (its.indexOf(r) === -1) { its.push(r); vias.push(e.via); } }); });
+      if (!its.length) return;
+      its.forEach((r) => inChain.add(r));
+      pf.steps.push({ triggers: (triggersOf(f, [c.name]).join('; ') || 'run by ' + c.name).split(/;\s*/), chains: [c.name], rows: its, vias: vias });
+    });
+    const rest = mine.filter((r) => !inChain.has(r));
+    if (rest.length) {
+      const byTrig = {};
+      rest.forEach((r) => { const t = r.trigger || 'the page\'s code'; (byTrig[t] = byTrig[t] || []).push(r); });
+      Object.keys(byTrig).forEach((t) => pf.steps.push({ triggers: t.split(/;\s*/), chains: [], rows: byTrig[t], vias: byTrig[t].map(() => '') }));
+    }
+    // actions that make exactly the same calls are one box: every trigger and chain listed on it
+    const merged = [];
+    pf.steps.forEach((st) => {
+      const sig = st.rows.map((r) => r.system + '|' + r.endpoint).join('>') + '#' + st.vias.join(',');
+      const same = merged.filter((x) => x.sig === sig)[0];
+      if (!same) { merged.push(Object.assign({ sig: sig }, st)); return; }
+      st.triggers.forEach((t) => { if (same.triggers.indexOf(t) === -1) same.triggers.push(t); });
+      st.chains.forEach((c) => { if (same.chains.indexOf(c) === -1) same.chains.push(c); });
+    });
+    pf.steps = merged.map((st) => ({ trigger: st.triggers.join('; '), triggers: st.triggers, chain: st.chains.join(', '), chains: st.chains, rows: st.rows, vias: st.vias }));
+    // the page opening first, then its buttons, then the rest (each kept in its code's order)
+    const rank = (t) => (/opens|enter/i.test(t) ? 0 : /page.s data/i.test(t) ? 1 : /\(button\)/.test(t) ? 2 : 3);
+    pf.steps = pf.steps.map((x, i) => ({ x, i })).sort((a, b) => rank(a.x.trigger) - rank(b.x.trigger) || a.i - b.i).map((y) => y.x);
+    if (pf.steps.length) pageFlowsRaw.push(pf);
     (L.chains || []).forEach((c) => {
       const eps = (c.calls || []).concat(...(c.modules || []).map(modCalls));
       const steps = [];
@@ -311,6 +350,22 @@ function scanApp(root, opts) {
     m.calls++;
     if (r.direction === 'Read') m.reads++; else if (r.direction === 'Write') m.writes++; else m.reports++;
   });
+  // ── page by page: each page's actions and their calls, in order ──
+  const pageFlows = pageFlowsRaw.map((pf) => {
+    const sysIds = [];
+    const steps = pf.steps.map((st) => ({ trigger: st.trigger, triggers: st.triggers, chain: st.chain, chains: st.chains, calls: st.rows.map((r, i) => {
+      if (sysIds.indexOf(r.system) === -1) sysIds.push(r.system);
+      return { id: r.id, endpoint: r.endpoint, method: r.method, path: r.path, summary: r.summary, object: r.object, action: r.action || '', system: r.system, systemName: r.systemName, kind: r.kind, direction: r.direction, report: r.report || '', via: st.vias[i] || '' };
+    }) }));
+    // calls: the page's calls as in the data sheet (page × endpoint); actionCalls: the calls its actions make (a call two
+    // actions make counts twice)
+    const distinct = new Set();
+    pf.steps.forEach((x) => x.rows.forEach((r) => distinct.add(r)));
+    return { page: pf.page, pageLabel: pf.pageLabel, flow: pf.flow, steps: steps, systems: sysIds, calls: distinct.size, actionCalls: steps.reduce((a, x) => a + x.calls.length, 0),
+      reads: Array.from(distinct).filter((r) => r.direction === 'Read').length, writes: Array.from(distinct).filter((r) => r.direction === 'Write').length,
+      reports: Array.from(distinct).filter((r) => r.direction === 'Report').length };
+  }).sort((a, b) => a.flow.localeCompare(b.flow) || a.pageLabel.localeCompare(b.pageLabel));
+
   // ── between systems ──
   const order = sysList.map((x) => x.id);
   const ifs = {};
@@ -380,7 +435,7 @@ function scanApp(root, opts) {
       reads: rows.filter((r) => r.direction === 'Read').length, writes: rows.filter((r) => r.direction === 'Write').length, reports: rows.filter((r) => r.direction === 'Report').length, unresolved: unresolved.length,
       interfaces: interfaces.length, journeys: journeys.length, crossActions: chainFlows.length },
     systems: sysList, rows: rows, endpoints: endpoints, flows: flowList, matrix: matrix, unresolved: unresolved,
-    interfaces: interfaces, systemFlows: systemFlows, journeys: journeys, handoffs: handoffs,
+    interfaces: interfaces, systemFlows: systemFlows, journeys: journeys, handoffs: handoffs, pageFlows: pageFlows,
     pages: pages.map((p) => ({ id: p.id, label: p.label || p.page, flow: p.flow || '(app shell)', calls: rows.filter((r) => r.page === p.id).length }))
   };
 }

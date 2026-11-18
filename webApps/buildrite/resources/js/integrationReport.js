@@ -4,13 +4,15 @@ define(['resources/js/integrationDiagram'], function (D) {
   // The integrations report (Application → Integrations → PDF / Excel) — pure (no DOM): from the scan
   // (desktop/lib/integrations.js), a printable A4 landscape document and the Excel sheets.
   //
-  //   html(m, { by, systems: true, pages: [ids] }) → '<!doctype html>…'  the cover and its figures; the landscape
+  //   html(m, { by, systems: true, pages: 'all' | [ids] }) → '<!doctype html>…' (pages 'all': a Page by page section — every
+  //       page's integration flow, after the pages → systems diagram)  the cover and its figures; the landscape
   //       diagram; between systems (the app ⇄ each system by business object, system → system handoffs); the
   //       interfaces (system × business object); the cross-system flows; the systems; the integration data sheet
   //       (source → target); the endpoints; flow × system; one page per system with its diagram and endpoints (and the
   //       page diagrams asked for); what could not be resolved
   //   sheets(m)            → [{ name, rows, columns }]  Summary, Interfaces, Cross-system flows, System to system,
-  //                          Systems, Integrations, Endpoints, Flows × systems
+  //                          Page flows (each page's actions and their calls in order), Systems, Integrations,
+  //                          Endpoints, Flows × systems
   //   flowText(x, app)     → "Oracle Fusion → app" / "app → Oracle Fusion" / "app ⇄ Oracle Fusion": which way an
   //                          interface's data goes
   //   fileName(m, ext)     → integrations-<app>-<yyyy-mm-dd>.<ext>
@@ -48,7 +50,7 @@ define(['resources/js/integrationDiagram'], function (D) {
       + '<p class="sub">Every system the app talks to and every call it makes, read from its code (services and pages) — scanned ' + esc(when(m.at)) + (o.by ? ' by ' + esc(o.by) : '') + '.</p>'
       + '<div class="tiles">' + tiles.map(function (t) { return '<div class="tile"><b>' + esc(t[0]) + '</b><span>' + esc(t[1]) + '</span></div>'; }).join('') + '</div>'
       + '<ol class="toc"><li>Integration landscape</li><li>Flow between systems</li><li>Interfaces (system × business object)</li><li>Cross-system flows</li><li>Systems</li><li>Integration data sheet (source → target)</li><li>Endpoints</li><li>Flows × systems</li>'
-      + (o.systems !== false ? '<li>Each system: its diagram and endpoints</li>' : '') + ((o.pages || []).length ? '<li>Page diagrams</li>' : '') + '</ol></section>');
+      + (o.systems !== false ? '<li>Each system: its diagram and endpoints</li>' : '') + (o.pages === 'all' ? '<li>Page by page: each page\'s integration flow</li>' : (o.pages || []).length ? '<li>Page diagrams</li>' : '') + '</ol></section>');
     var land = D.landscape(m);
     parts.push('<section class="brk"><h2>1. Integration landscape</h2><p class="note">The app\'s flows (the source) and the systems they call (the target). A line\'s thickness: the number of calls.</p><div class="dia">' + land.svg + '</div></section>');
     // between systems, not page by page
@@ -112,7 +114,16 @@ define(['resources/js/integrationDiagram'], function (D) {
           + ' · ' + esc(D.figures(s)) + ' · ' + plural(s.pages.length, 'page') + '</p><div class="dia">' + d.svg + '</div></section>');
       });
     }
-    (o.pages || []).forEach(function (pid) {
+    if (o.pages === 'all') {
+      var all = D.pages(m);
+      parts.push('<section class="brk"><h2>10. Page by page</h2><p class="note">Each page with integrations and the systems it calls; then each page\'s integration flow — what sets each call off, its calls in the order its code makes them, the systems.</p><div class="dia">' + all.svg + '</div></section>');
+      (m.pageFlows || []).forEach(function (pf, i) {
+        var d = D.page(m, pf.page);
+        parts.push('<section class="brk"><h2>10.' + (i + 1) + ' ' + esc(pf.pageLabel) + '</h2><p class="note">' + esc(pf.flow) + ' · <span class="mono">' + esc(pf.page) + '</span> · ' + plural(pf.calls, 'call') + ' to ' + plural(pf.systems.length, 'system')
+          + ' · ' + plural(pf.steps.length, 'action') + (pf.reads ? ' · ' + plural(pf.reads, 'read') : '') + (pf.writes ? ' · ' + plural(pf.writes, 'write') : '') + (pf.reports ? ' · ' + plural(pf.reports, 'report') : '') + '</p><div class="dia">' + d.svg + '</div></section>');
+      });
+    }
+    (o.pages === 'all' ? [] : o.pages || []).forEach(function (pid) {
       var d = D.page(m, pid);
       if (d.svg) parts.push('<section class="brk"><h2>Page: ' + esc(d.title) + '</h2><div class="dia">' + d.svg + '</div></section>');
     });
@@ -152,6 +163,15 @@ define(['resources/js/integrationDiagram'], function (D) {
         return { id: j.id, path: j.path, steps: stepsText(j), actions: j.actions.length, pages: j.pages.length, where: j.actions.map(function (a) { return a.pageLabel + (a.trigger ? ' — ' + a.trigger : '') + ' (' + a.chain + ')'; }).join('; ') };
       }), columns: [{ key: 'id', label: 'ID' }, { key: 'path', label: 'Systems in order' }, { key: 'steps', label: 'Steps (what each reads, writes, reports)' }, { key: 'actions', label: 'Actions', type: 'number' },
         { key: 'pages', label: 'Pages', type: 'number' }, { key: 'where', label: 'Where (page — set off by (chain))' }] },
+      { name: 'Page flows', rows: [].concat.apply([], (m.pageFlows || []).map(function (pf) {
+        return [].concat.apply([], pf.steps.map(function (st, si) {
+          return st.calls.map(function (c, ci) {
+            return { flow: pf.flow, page: pf.pageLabel, pageId: pf.page, action: si + 1, trigger: st.trigger, chains: st.chain, n: ci + 1, method: c.method, path: c.path, object: c.object + (c.action ? ' (' + c.action + ')' : ''), system: c.systemName, direction: c.direction, via: c.via || '', row: c.id };
+          });
+        }));
+      })), columns: [{ key: 'flow', label: 'Flow' }, { key: 'page', label: 'Page' }, { key: 'pageId', label: 'Page id' }, { key: 'action', label: 'Action #', type: 'number' }, { key: 'trigger', label: 'Set off by' }, { key: 'chains', label: 'Chains' },
+        { key: 'n', label: 'Call # (in order)', type: 'number' }, { key: 'method', label: 'Method' }, { key: 'path', label: 'Path' }, { key: 'object', label: 'Business object' }, { key: 'system', label: 'System' }, { key: 'direction', label: 'Direction' },
+        { key: 'via', label: 'Via module' }, { key: 'row', label: 'Data sheet row' }] },
       { name: 'System to system', rows: (m.handoffs || []).map(function (h) { return { from: h.fromName, to: h.toName, actions: h.actions, fromObjects: h.fromObjects.join(', '), toObjects: h.toObjects.join(', '), pages: h.pages.join(', ') }; }),
         columns: [{ key: 'from', label: 'From' }, { key: 'to', label: 'To' }, { key: 'actions', label: 'Actions', type: 'number' }, { key: 'fromObjects', label: 'From the first' }, { key: 'toObjects', label: 'To the second' }, { key: 'pages', label: 'Pages' }] },
       { name: 'Systems', rows: (m.systems || []).map(function (s) { return { name: s.name, kind: s.kindLabel, url: s.url, host: s.host, auth: s.auth, proxy: s.proxy, calls: s.calls, reads: s.reads, writes: s.writes, reports: s.reports, endpoints: s.endpoints.length, pages: s.pages.length, services: s.services.join(', '), about: s.about || '' }; }),
