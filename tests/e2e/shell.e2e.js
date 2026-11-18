@@ -28,7 +28,7 @@ const text = (page, sel) => page.$eval(sel, (e) => e.textContent.replace(/\s+/g,
     const groups = await page.$$eval('.nx-nav-label', (l) => l.map((x) => x.textContent.trim()));
     T.eq('its groups', groups.join(' | '), 'Workspace | Work | Application | Tools');
     const items = await page.$$eval('.nx-nav-item', (b) => b.map((x) => x.getAttribute('data-nav-id')));
-    T.eq('its screens, in order', items.join(','), 'projects,run-console,issues,jira,minutes,followups,app-pages,api-scenarios,fdd-library,flows,sql,fusion-sql,ai');
+    T.eq('its screens, in order', items.join(','), 'projects,run-console,issues,jira,minutes,followups,app-pages,api-scenarios,change-requests,integrations,fdd-library,flows,sql,fusion-sql,ai');
     T.check('the open screen\'s item marked', /nx-nav-item--on/.test((await page.getAttribute('.nx-nav-item[data-nav-id="issues"]', 'class')) || ''));
     await page.click('.nx-nav-item[data-nav-id="minutes"]');
     await page.waitForSelector('.nx-tab--on[data-tab-id="minutes"]', { timeout: 15000 }).catch(() => {});
@@ -78,7 +78,7 @@ const text = (page, sel) => page.$eval(sel, (e) => e.textContent.replace(/\s+/g,
 
     T.section('nothing of another app');
     const all = await page.evaluate(() => document.body.innerText + ' ' + Array.prototype.map.call(document.querySelectorAll('[title],[aria-label],[placeholder]'), (e) => [e.title, e.getAttribute('aria-label'), e.getAttribute('placeholder')].join(' ')).join(' '));
-    T.check('no other product named on the page (its text, titles, labels, placeholders)', !/equip\s*rite|Old app|New app|requests|availability|yard/i.test(all), (all.match(/.{0,40}(equip\s*rite|requests|availability|yard).{0,40}/i) || [''])[0]);
+    T.check('no other product named on the page (its text, titles, labels, placeholders)', !/equip\s*rite|Old app|New app|(?<!change )requests|availability|yard/i.test(all), (all.match(/.{0,40}(equip\s*rite|(?<!change )requests|availability|yard).{0,40}/i) || [''])[0]);
     T.check('no business actions in the top bar', !(await page.$('#nxNewRequest')) && !(await page.$('#nxQa')) && !(await page.$('#nxCart')) && !(await page.$('#nxPhone')) && !(await page.$('#nxBell')) && !(await page.$('#nxHelp')));
     await env.shot('shell.png');
 

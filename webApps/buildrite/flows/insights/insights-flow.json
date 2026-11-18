@@ -22,7 +22,8 @@
     "fusion-sql": { "path": "pages/fusion-sql-page" },
     "ai": { "path": "pages/ai-page" },
     "api-scenarios": { "path": "pages/api-scenarios-page" },
-    "change-requests": { "path": "pages/change-requests-page" }
+    "change-requests": { "path": "pages/change-requests-page" },
+    "integrations": { "path": "pages/integrations-page" }
   },
   "chains": {}, "services": {}, "types": {}, "variables": {}
 }

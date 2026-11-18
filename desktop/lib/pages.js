@@ -437,6 +437,7 @@ function open(opts) {
 
   return {
     remove: remove, restore: restore, removeShot: removeShot,
+    rootNow: rootNow, // the folder the pages are read from (your workspace's working folder, else the project)
     catalog: catalog, rescan: rescan, sheet: sheet, facts: (id) => scan.analyze(rootNow(), str(id)), texts: texts, code: code, codeFile: codeFile, shotImages: shotImages, build: build, assign: assign, unassign: unassign, forStory: forStory,
     saveShot: saveShot, capture: capture, saveAi: saveAi, canCapture: () => typeof o.capture === 'function', run: run, canRun: () => typeof o.run === 'function',
     canWrite: () => { try { return fs.statSync(path.join(root, 'webApps', 'buildrite')).isDirectory(); } catch (e) { return false; } },

@@ -799,3 +799,52 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-cr-kbtech { flex: none; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #eceafc; color: #4b3cb0; }
 .nx-cr-kbprev { margin-top: 10px; } .nx-cr-kbprev summary { cursor: pointer; font-weight: 600; color: #3b4a58; }
 .nx-cr-kbprev pre { white-space: pre-wrap; max-height: 300px; overflow: auto; background: #f7f9fb; border-radius: 8px; padding: 10px; font-size: 12px; }
+
+/* Integrations (flows/insights integrations): figures, calls by system, the data sheet, endpoints, systems, diagrams.
+   Kinds keep the categorical colours of resources/js/integrationDiagram.js; reads / writes / reports are named in words. */
+.nx-int-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 4px; }
+.nx-int-kpi { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid #e1e7ee; border-radius: 10px; background: #fbfcfd; min-width: 0; }
+.nx-int-kpi b { font-size: 22px; line-height: 1.1; color: #16212c; }
+.nx-int-kpi span { font-size: 12px; color: #5b6876; }
+.nx-int-kpi--bad { border-color: #f1c4bf; background: #fff8f7; } .nx-int-kpi--bad b { color: #a3271b; }
+.nx-int .nx-min-flex { flex: 1; }
+.nx-int .nx-sc-head .nx-cm-input { width: auto; flex: 0 1 220px; min-width: 150px; }
+.nx-int .nx-sc-head .nx-int-q { flex: 0 1 280px; }
+.nx-int-app { max-width: 260px; }
+.nx-int-frame { width: 100%; border: 1px solid #e1e7ee; border-radius: 10px; background: #fff; display: block; min-height: 120px; }
+.nx-int-legend { display: flex; gap: 16px; margin: 0 0 8px; font-size: 12px; color: #3b4a58; }
+.nx-int-lg { display: inline-flex; align-items: center; gap: 6px; } .nx-int-lg .nx-int-seg { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.nx-int-sysbar { display: grid; grid-template-columns: minmax(180px, 26%) 1fr minmax(200px, 30%); gap: 12px; align-items: center; padding: 7px 0; border-bottom: 1px solid #f0f3f6; }
+.nx-int-sysname { display: grid; grid-template-columns: auto 1fr; gap: 0 8px; align-items: center; text-align: left; border: 0; background: none; padding: 0; font: inherit; cursor: pointer; min-width: 0; }
+.nx-int-sysname b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .nx-int-sysname small { grid-column: 2; color: #6b7889; font-size: 11.5px; }
+.nx-int-sysname:hover b { text-decoration: underline; }
+.nx-int-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.nx-int-bar2 { display: flex; gap: 2px; height: 22px; min-width: 0; }
+.nx-int-seg { display: flex; align-items: center; justify-content: center; color: #16212c; font-size: 11.5px; font-weight: 700; border-radius: 0 4px 4px 0; min-width: 18px; overflow: hidden; }
+.nx-int-seg--read { background: #cde2fb; } .nx-int-seg--write { background: #f9c9b1; } .nx-int-seg--report { background: #bfe9d8; }
+.nx-int-grid { display: grid; grid-template-columns: 84px minmax(150px, 1.1fr) minmax(130px, 1fr) minmax(150px, 1fr) 76px minmax(220px, 1.9fr) 88px; border-top: 1px solid #e4e9ef; }
+.nx-int-epgrid { display: grid; grid-template-columns: minmax(150px, 1fr) 76px minmax(240px, 2fr) 88px minmax(200px, 1.6fr); border-top: 1px solid #e4e9ef; }
+.nx-int-row { display: contents; }
+.nx-int-row > span { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 7px 8px; border-bottom: 1px solid #edf1f5; min-width: 0; font-size: 12.5px; overflow-wrap: anywhere; }
+.nx-int-row:not(.nx-int-row--head):hover > span { background: #f5f8fb; }
+.nx-int-row--head > span { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #6b7889; }
+.nx-int-row small { color: #6b7889; font-size: 11.5px; }
+.nx-int-id { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; color: #3b4a58; }
+.nx-int-page { text-align: left; font-weight: 600; }
+.nx-int-sys { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.nx-int-method { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; font-weight: 700; color: #3b4a58; }
+.nx-int-path { font-size: 11.5px; overflow-wrap: anywhere; }
+.nx-int-dir { display: inline-flex; align-self: flex-start; padding: 1px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
+.nx-int-dir--read { background: #e6f0fc; color: #1d4f91; } .nx-int-dir--write { background: #fdeee6; color: #a8461b; } .nx-int-dir--report { background: #e3f6ef; color: #11704b; }
+.nx-int-more { margin-top: 10px; }
+.nx-int-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.nx-int-card { padding: 0 0 12px; overflow: hidden; display: flex; flex-direction: column; gap: 6px; }
+.nx-int-cardhead { display: grid; gap: 3px; padding: 12px 14px 8px; border-top: 4px solid #8a97a5; }
+.nx-int-cardhead b { font-size: 15px; } .nx-int-kind { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: #5b6876; }
+.nx-int-dl { display: grid; grid-template-columns: 90px 1fr; gap: 4px 10px; margin: 0 14px; font-size: 12.5px; }
+.nx-int-dl dt { color: #6b7889; } .nx-int-dl dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.nx-int-about { margin: 2px 14px; max-height: 64px; overflow: hidden; }
+.nx-int-card .nx-fx-row { margin: 4px 14px 0; }
+.nx-int-diachips { margin: 0; }
+.nx-int-pagesel { max-width: 420px; }
+@media (max-width: 900px) { .nx-int-grid { grid-template-columns: 74px minmax(130px, 1fr) minmax(140px, 1.4fr) 76px; } .nx-int-grid .nx-int-row > span:nth-child(3), .nx-int-grid .nx-int-row > span:nth-child(4), .nx-int-grid .nx-int-row > span:nth-child(5) { display: none; } .nx-int-sysbar { grid-template-columns: 1fr; } }

@@ -44,6 +44,7 @@ const CA = (() => {
 })();
 const path = require('path');
 const TT = require('./testTrace');
+const INT = require('./integrations');
 const { buildCatalog } = require('./catalog');
 
 const DESKTOP_DIR = path.join(__dirname, '..');
@@ -856,6 +857,23 @@ function createDevServer(o) {
           const b = post ? JSON.parse((await bodyOf()) || '{}') : {};
           const by = who();
           if (pathname === '/__pages/info' && req.method === 'GET') return jsonP(200, { ok: true, canWrite: ps.canWrite(), canCapture: ps.canCapture(), canRun: !!(ps.canRun && ps.canRun()), data: ps.dataInfo ? ps.dataInfo() : null });
+          // Integrations (lib/integrations.js, Application → Integrations): every system the app talks to and every call it
+          // makes, read from its code (the pages and services of your workspace's working folder); its report as a PDF
+          if (pathname === '/__pages/integrations' && req.method === 'GET') {
+            const r = INT.scan(ps.rootNow ? ps.rootNow() : repoRoot, { app: u.searchParams.get('app') || '' });
+            if (r.ok) { r.by = by; delete r.root; log(`Integrations scanned: ${r.app} — ${r.totals.systems} systems, ${r.totals.endpoints} endpoints, ${r.totals.calls} calls`); }
+            return jsonP(200, r);
+          }
+          if (pathname === '/__pages/integrations/pdf' && post) {
+            if (typeof o.htmlToPdf !== 'function') return jsonP(200, { ok: false, noPdf: true, error: 'Saving a PDF needs the desktop app: use Print and choose Save as PDF.' });
+            const html = String(b.html || '');
+            if (!/^<!doctype html>/i.test(html) || html.length > 30 * 1024 * 1024) return jsonP(200, { ok: false, error: 'No report to print.' });
+            try {
+              const pdf = await o.htmlToPdf(html);
+              log(`Integrations report printed to PDF: ${String(b.name || '').slice(0, 80)} (${Math.round(pdf.length / 1024)} KB)`);
+              return jsonP(200, { ok: true, base64: Buffer.from(pdf).toString('base64'), size: pdf.length });
+            } catch (e) { return jsonP(200, { ok: false, error: 'The PDF could not be made: ' + String((e && e.message) || e) }); }
+          }
           if (pathname === '/__pages/run' && post) { const r = ps.run ? await ps.run(b.id) : { ok: false, error: 'Not here.' }; log(`Pages: run ${b.id} -> ${r.ok ? r.url : r.error}`); return jsonP(200, r); }
           if (pathname === '/__pages/git/pull' && post) return jsonP(200, ps.gitPull ? await ps.gitPull() : { ok: true, merged: false });
           if (pathname === '/__pages/catalog' && req.method === 'GET') return jsonP(200, Object.assign({ ok: true }, ps.catalog()));

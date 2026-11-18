@@ -70,6 +70,9 @@ define([], function () {
   return {
     info: info, catalog: catalog, sheet: sheet, shotUrl: shotUrl, readFile: readFile, fileOf: fileOf,
     build: function (id, commit) { return call('build', 'POST', { id: id, commit: !!commit }); },
+    // Integrations (Application → Integrations): the app's systems and calls, read from its code; its report as a PDF
+    integrations: function (app) { return call('integrations?app=' + encodeURIComponent(app || '')); },
+    integrationsPdf: function (html, name) { return call('integrations/pdf', 'POST', { html: html, name: name || '' }); },
     assign: function (id, key, commit) { return call('assign', 'POST', { id: id, key: key, commit: !!commit }); },
     unassign: function (id, key, commit) { return call('unassign', 'POST', { id: id, key: key, commit: !!commit }); },
     upload: function (id, base64, mime, commit, caption) { return call('shot', 'POST', { id: id, base64: base64, mime: mime, commit: !!commit, caption: caption || '' }); },

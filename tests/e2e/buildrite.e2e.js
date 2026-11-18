@@ -11,7 +11,7 @@ const H = require('../_harness');
 
 const T = H.makeAsserter();
 const text = (page, sel) => page.$eval(sel, (e) => e.textContent.replace(/\s+/g, ' ').trim()).catch(() => '');
-const BUILD_SCREENS = ['projects', 'run-console', 'issues', 'jira', 'minutes', 'followups', 'app-pages', 'api-scenarios', 'fdd-library', 'flows', 'sql', 'fusion-sql', 'ai'];
+const BUILD_SCREENS = ['projects', 'run-console', 'issues', 'jira', 'minutes', 'followups', 'app-pages', 'api-scenarios', 'change-requests', 'integrations', 'fdd-library', 'flows', 'sql', 'fusion-sql', 'ai'];
 
 (async () => {
   // Jira (the fake backend): one story changed lately — created, moved, assigned to me, commented — and one older story

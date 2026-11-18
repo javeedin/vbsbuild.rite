@@ -1,0 +1,89 @@
+{
+  "description": "Integrations: every system your workspace's app talks to and every call it makes, read from its code — the integration data sheet (source → target), the endpoints, the systems, the diagrams (landscape, a system, a page), exported as a PDF or an Excel workbook (desktop/lib/integrations.js, /__pages/integrations).",
+  "navigation": {
+    "embeddable": "enabled"
+  },
+  "variables": {
+    "m": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The scan: { app, apps, totals, systems, rows, endpoints, flows, matrix, pages, unresolved, at, by }."
+    },
+    "busy": {
+      "type": "boolean",
+      "defaultValue": false
+    },
+    "result": {
+      "type": "any",
+      "defaultValue": null
+    },
+    "tab": {
+      "type": "string",
+      "defaultValue": "overview",
+      "description": "overview | sheet | endpoints | systems | diagrams"
+    },
+    "q": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "fSystem": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "fFlow": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "fDir": {
+      "type": "string",
+      "defaultValue": "all",
+      "description": "all | Read | Write | Report"
+    },
+    "limit": {
+      "type": "number",
+      "defaultValue": 200,
+      "description": "How many data-sheet rows are shown (More shows the next ones)."
+    },
+    "dia": {
+      "type": "string",
+      "defaultValue": "landscape",
+      "description": "landscape | system | page"
+    },
+    "diaSystem": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "diaPage": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "pdfBusy": {
+      "type": "boolean",
+      "defaultValue": false
+    }
+  },
+  "eventListeners": {
+    "vbEnter": {
+      "chains": [{ "chain": "intChain", "parameters": { "act": "load", "key": "", "value": "" } }]
+    },
+    "onAct": {
+      "chains": [{ "chain": "intChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "key": "{{ $event.currentTarget.dataset.key || '' }}", "value": "" } }]
+    },
+    "onField": {
+      "chains": [{ "chain": "intChain", "parameters": { "act": "field", "key": "{{ $event.currentTarget.dataset.field }}", "value": "{{ $event.currentTarget.value }}" } }]
+    }
+  },
+  "imports": {
+    "components": {
+      "oj-bind-for-each": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-bind-if": {
+        "path": "ojs/ojknockout"
+      },
+      "oj-bind-text": {
+        "path": "ojs/ojknockout"
+      }
+    }
+  }
+}

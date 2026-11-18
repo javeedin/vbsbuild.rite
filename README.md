@@ -254,6 +254,34 @@ the first try, the lines and files changed, what is overdue; where they are (sta
 fixed them, for which customers, who asks, by area (the app's flows); the files changed most; and the overdue and latest
 fixed requests (each opens it).
 
+## Integrations: every system your app talks to, its data sheet and diagrams
+
+**Application → Integrations** reads your workspace's app — every page, its chains and modules, and its services
+(`services/catalog.json` and each service's OpenAPI document) — and lists every system it talks to and every call it
+makes. Nothing is run and nothing is called: it is all read from the code. When the working folder holds more than one
+app, it reads the one with the most pages; the header lets you choose another. **Scan again** reads it afresh.
+
+- **The figures**: the systems it talks to, the endpoints, the calls (page × endpoint), the pages that have
+  integrations, how many read, write (change data) or run a BI Publisher report, and any call to a service that is
+  not in `services/`.
+- **Overview**: the **integration landscape** — the app's flows on the left (the source), the systems on the right (the
+  target), a line per flow and system, as thick as its calls — and each system's reads, writes and reports.
+- **Data sheet**: the integration data sheet, one row per page and endpoint — its ID (INT-0001…), the **source** page
+  and its flow, what **sets it off** (*when the page opens*, a button by its label, or the chain or module that runs
+  it), the **target** system and its kind (Oracle Fusion Cloud, Oracle Integration Cloud, BI Publisher, APEX / ORDS,
+  Jira, VB Business Objects, a REST service), the method, the endpoint with its summary, what it sends and the report
+  it runs, and the direction (Read, Write, Report). Find searches every column; filter by system, flow and direction.
+- **Endpoints**: each endpoint once, with the pages that call it.
+- **Systems**: one card per system — its base URL, how it signs in (and whether it goes through the proxy), its calls,
+  pages and services — with its diagram and its rows in the data sheet.
+- **Diagrams**: the landscape; **a system** (the pages that call it → its endpoints → the system); **a page** (what it
+  calls and where). **Save SVG** keeps the diagram as a file.
+
+**PDF** writes the whole report, A4 landscape: a cover with the figures and contents, the landscape, the systems, the
+data sheet, the endpoints, flows × systems, then a section per system with its diagram (and the page diagram shown in
+Diagrams, if any). In the desktop app it is a real PDF; in a browser, Print and choose Save as PDF. **Excel** writes
+the same as a workbook: Summary, Systems, Integrations, Endpoints, Flows x systems.
+
 ## Follow-ups: chase stories by email, with your own messages
 
 On **Jira stories** or a sprint, tick some stories and choose **Copy to follow-up**. The dialog drafts the email: a
