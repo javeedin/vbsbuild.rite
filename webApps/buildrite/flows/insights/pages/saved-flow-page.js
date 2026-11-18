@@ -6,6 +6,14 @@ define(['resources/js/integrationDiagram', 'resources/js/flowModel', 'resources/
   const kindColor = (k) => (D.KINDS[k] || D.KINDS.rest).color;
   // what is compared to tell unsaved changes: its details and its steps (not comments, history, versions)
   const body = (f) => (f ? JSON.stringify([f.name, f.purpose, f.area, f.owner, f.status, f.story, f.tags, f.lanes, f.actions, f.stickies || []]) : '');
+  // the diagram as drawn for the flow on screen (kept while nothing changes: it is asked for several times a redraw)
+  let memo = { k: '', d: null };
+  const swim = (f, plain, live) => {
+    const k = JSON.stringify([f.id, f.name, f.status, f.version, f.source, f.lanes, f.actions, f.stickies || [], !!plain, !!live]);
+    if (memo.k !== k) memo = { k, d: D.flowSwim(FM.toModel(f), { plain: !!plain, live: !!live }) };
+    return memo.d;
+  };
+  const pct = (a, b) => (b ? Math.round((a / b) * 100000) / 1000 : 0) + '%';
   const stepLabel = (flow) => {
     const out = {};
     (flow && flow.actions || []).forEach((a, ai) => (a.steps || []).forEach((s, si) => { out[s.id] = (ai + 1) + '.' + (si + 1); }));
@@ -31,8 +39,37 @@ define(['resources/js/integrationDiagram', 'resources/js/flowModel', 'resources/
     tags(f) { return ((f && f.tags) || []).join(', '); }
 
     // ── the flow ──
-    diaDoc(f, plain) { return f ? D.doc(D.flowSwim(FM.toModel(f), { plain: plain })) : ''; }
-    diaStyle(f, plain) { if (!f) return {}; const d = D.flowSwim(FM.toModel(f), { plain: plain }); return { aspectRatio: d.w + ' / ' + d.h }; }
+    diaDoc(f, plain, live) { return f ? D.doc(swim(f, plain, live)) : ''; }
+    diaStyle(f, plain) { if (!f) return {}; const d = swim(f, plain, false); return { aspectRatio: d.w + ' / ' + d.h }; }
+    // ── the Flow tab's board: the diagram with its sticky notes over it, to drag, resize and write in ──
+    boardStyle(f, plain) { if (!f) return {}; const d = swim(f, plain, true); return { aspectRatio: d.w + ' / ' + d.h, '--dw': String(d.w) }; }
+    boardW(f, plain) { return f ? String(swim(f, plain, true).w) : '1'; }
+    boardH(f, plain) { return f ? String(swim(f, plain, true).h) : '1'; }
+    /** Its sticky notes where the diagram puts them (placed by hand, or laid out under an action): place, size, colour. */
+    liveNotes(f, plain) {
+      if (!f) return [];
+      const d = swim(f, plain, true);
+      return (d.notes || []).map((n) => ({ id: n.id, text: n.text, field: 'n.' + n.id + '.text',
+        cls: 'nx-sfp-sn nx-sfp-sn--' + n.color + (n.free ? '' : ' nx-sfp-sn--laid'),
+        style: { left: pct(n.x, d.w), top: pct(n.y, d.h), width: pct(n.w, d.w), height: pct(n.h, d.h) },
+        colors: FM.STICKY_COLORS.map((c) => ({ id: c[0], text: c[1], cls: 'nx-sfp-ncolor nx-sfp-swatch--' + c[0] + (n.color === c[0] ? ' nx-sfp-ncolor--on' : '') })) }));
+    }
+    noteCount(f) { return ((f && f.stickies) || []).length; }
+
+    // ── the PDF, previewed as it prints ──
+    /** The PDF as it prints, shown on screen as a page (the printed PDF is the document itself). */
+    pdfDoc(f, plain) {
+      if (!f) return '';
+      const page = '<style>@media screen{html{background:#e7e9ee}body{box-sizing:border-box;max-width:1120px;margin:18px auto !important;padding:30px 38px !important;background:#fff;box-shadow:0 2px 14px rgba(15,23,42,.14);border-radius:4px}}</style>';
+      const h = FM.html(f, { plain: !!plain });
+      return h.indexOf('</head>') !== -1 ? h.replace('</head>', page + '</head>') : page + h;
+    }
+    pdfSub(f, plain) {
+      if (!f) return '';
+      const steps = (f.actions || []).reduce((a, x) => a + (x.steps || []).length, 0);
+      return 'A4 landscape · ' + (plain ? 'in plain English' : 'technical') + ' · its details, the diagram' + (((f.stickies || []).length) ? ' with its ' + n(f.stickies.length, 'sticky note') : '') + ', ' + n(steps, 'step')
+        + (PageModule.prototype.openComments(f) ? ', ' + n(PageModule.prototype.openComments(f), 'open comment') : '');
+    }
     /** Its steps as rows, with the comments on each. */
     stepRows(f, plain) {
       if (!f) return [];
@@ -119,12 +156,17 @@ define(['resources/js/integrationDiagram', 'resources/js/flowModel', 'resources/
     stickyRows(f, actionId) {
       if (!f) return [];
       const lanes = f.lanes || [];
-      return (f.stickies || []).filter((x) => (x.action || '') === (actionId || '') || (!actionId && !(f.actions || []).some((a) => a.id === x.action))).map((x) => ({
-        id: x.id, text: x.text || '', cls: 'nx-sfp-sticky nx-sfp-sticky--' + (x.color || 'yellow'),
-        laneOpts: [{ id: '', text: 'The page\'s lane', on: !x.lane }].concat(lanes.map((l) => ({ id: l.id, text: l.name, on: l.id === x.lane }))),
-        actionOpts: [{ id: '', text: 'The whole flow (at the top)', on: !x.action }].concat((f.actions || []).map((a, i) => ({ id: a.id, text: 'Action ' + (i + 1) + ' — ' + (a.title || D.plainTrigger(a.trigger || '') || 'When …').slice(0, 50), on: a.id === x.action }))),
+      return (f.stickies || []).filter((x) => (x.action || '') === (actionId || '') || (!actionId && !(f.actions || []).some((a) => a.id === x.action))).map((x) => {
+        // placed by hand on the Flow tab: it stays where it was put until an action or a lane is chosen here
+        const free = FM.placed(x);
+        const here = free ? [{ id: '__placed', text: 'Where it was dragged on the diagram', on: true }] : [];
+        return {
+        id: x.id, text: x.text || '', cls: 'nx-sfp-sticky nx-sfp-sticky--' + (x.color || 'yellow'), free: free,
+        laneOpts: here.concat([{ id: '', text: 'The page\'s lane', on: !free && !x.lane }]).concat(lanes.map((l) => ({ id: l.id, text: l.name, on: !free && l.id === x.lane }))),
+        actionOpts: here.concat([{ id: '', text: 'The whole flow (at the top)', on: !free && !x.action }]).concat((f.actions || []).map((a, i) => ({ id: a.id, text: 'Action ' + (i + 1) + ' — ' + (a.title || D.plainTrigger(a.trigger || '') || 'When …').slice(0, 50), on: !free && a.id === x.action }))),
         colors: FM.STICKY_COLORS.map((c) => ({ id: c[0], text: c[1], cls: 'nx-sfp-swatch nx-sfp-swatch--' + c[0] + ((x.color || 'yellow') === c[0] ? ' nx-sfp-swatch--on' : '') }))
-      }));
+        };
+      });
     }
     stickyCount(f) { return ((f && f.stickies) || []).length; }
     historyLabel(f) { const k = ((f && f.versions) || []).length + 1; return 'History (' + k + (k === 1 ? ' version' : ' versions') + ')'; }

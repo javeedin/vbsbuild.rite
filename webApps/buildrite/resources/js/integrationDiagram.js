@@ -567,10 +567,19 @@ define([], function () {
 
   // sticky notes: a light paper colour each (named in the editor, never told apart by colour alone — each holds its text)
   var STICKY = { yellow: ['#fff3b0', '#e2c55a'], pink: ['#ffdbe4', '#e3a1b4'], green: ['#d8f3de', '#97cfa5'], blue: ['#dbeaff', '#9cbfe9'] };
-  var stickyH = function (n, w) { return 18 + wrapLines(n.text || 'An empty note', w - 22, 11.5, 8).length * 15; };
-  function sticky(x, y, w, n) {
-    var c = STICKY[n.color] || STICKY.yellow, h = stickyH(n, w), f = 12;
-    var lines = wrapLines(n.text || 'An empty note', w - 22, 11.5, 8);
+  /** A note's lines: its own lines kept (Enter), each wrapped to the width; at most max (the last cut with …). */
+  function noteLines(t, w, max) {
+    var out = [];
+    String(t || 'An empty note').split(/\r?\n/).forEach(function (p) { var ls = wrapLines(p, w - 22, 11.5, 999); if (ls.length) out = out.concat(ls); else out.push(''); });
+    while (out.length > 1 && out[out.length - 1] === '') out.pop();
+    if (out.length > max) { out = out.slice(0, Math.max(1, max)); out[out.length - 1] = fit(out[out.length - 1] + ' …', w - 22, 11.5); }
+    return out;
+  }
+  var stickyH = function (n, w) { return 18 + noteLines(n.text, w, 8).length * 15; };
+  /** A sticky note at x, y, w wide (h high: a note placed by hand keeps its size; else as tall as its text). */
+  function sticky(x, y, w, n, h0) {
+    var c = STICKY[n.color] || STICKY.yellow, h = h0 || stickyH(n, w), f = 12;
+    var lines = noteLines(n.text, w, h0 ? Math.max(1, Math.floor((h0 - 12) / 15)) : 8);
     return '<g><title>' + esc('Sticky note: ' + (n.text || '')) + '</title>'
       + '<path d="M' + x + ' ' + y + ' H' + (x + w) + ' V' + (y + h - f) + ' L' + (x + w - f) + ' ' + (y + h) + ' H' + x + ' Z" fill="' + c[0] + '" stroke="' + c[1] + '" stroke-width="1"/>'
       + '<path d="M' + (x + w) + ' ' + (y + h - f) + ' L' + (x + w - f) + ' ' + (y + h - f) + ' L' + (x + w - f) + ' ' + (y + h) + ' Z" fill="' + c[1] + '" fill-opacity="0.55"/>'
@@ -582,7 +591,9 @@ define([], function () {
    *  moves on to another system. opts.plain: in plain English (a sentence per call, what sets it off in words, no
    *  paths or chains); a step's or an action's note is shown under it. model.stickies: sticky notes — on an action (its
    *  index) in a lane ('' = the page's), placed under that lane's steps clear of the arrows; on the whole flow (action
-   *  -1) in a band at the top. */
+   *  -1) in a band at the top; or placed by hand (x, y, w, h — dragged on the Flow tab): there, over everything, taking
+   *  no room of its own. opts.live: the notes not drawn — the page draws them over it (to drag, resize, write in); the
+   *  answer's `notes` says where each one is ({ id, x, y, w, h, free }) and `bands` where each action's band is. */
   function flowSwim(model, opts) {
     var o = opts || {};
     var plain = !!o.plain;
@@ -593,8 +604,12 @@ define([], function () {
     systems.forEach(function (s, i) { laneX[s.id] = X0 + PW + i * LW; });
     var BX = 18, BW = LW - 2 * BX, SH = 48, SG = 22, HEAD = 64, top = HEAD + 14;
     var pre = commonPrefix([].concat.apply([], (model.actions || []).map(function (st) { return st.calls.map(function (c) { return c.path; }); })));
+    // sticky notes placed by hand (x, y): over everything, where they were put; the others are laid out
+    var isFree = function (n) { return n && isFinite(n.x) && isFinite(n.y) && n.x !== null && n.y !== null; };
+    var freeNotes = (model.stickies || []).filter(isFree);
+    var laid = (model.stickies || []).filter(function (n) { return !isFree(n); });
     // sticky notes on the whole flow: a band at the top, side by side
-    var nAll = (model.stickies || []).filter(function (n) { return !(n.action >= 0 && n.action < (model.actions || []).length); });
+    var nAll = laid.filter(function (n) { return !(n.action >= 0 && n.action < (model.actions || []).length); });
     var topNotes = [], NW = 230, NG = 14;
     if (nAll.length) {
       var nx = X0 + 12, ny = top + 12, rowH = 0;
@@ -632,7 +647,7 @@ define([], function () {
         else { var lp = laneIdx(calls[i - 1].system); if (lp !== li) cross.push({ y: i * (SH + SG) - SG / 2, a: lp, b: li }); }
       });
       var bottom = {}, notes = [];
-      (model.stickies || []).filter(function (n) { return n.action === ai; }).forEach(function (n) {
+      laid.filter(function (n) { return n.action === ai; }).forEach(function (n) {
         var lane = n.lane && laneX[n.lane] != null ? n.lane : '';
         var L = laneIdx(lane);
         if (bottom[lane] == null) {
@@ -731,9 +746,15 @@ define([], function () {
         prev = { x: cx, y: by + SH, lane: li, right: false };
       });
     });
-    // the sticky notes, over everything
-    topNotes.forEach(function (t) { out.push(sticky(t.x, t.y, t.w, t.n)); });
-    bands.forEach(function (b) { (b.notes || []).forEach(function (t) { out.push(sticky(t.x, b.y + 12 + t.y, t.w, t.n)); }); });
+    // the sticky notes, over everything (opts.live: the page draws them, so they can be moved)
+    var where = [];
+    topNotes.forEach(function (t) { where.push({ n: t.n, x: t.x, y: t.y, w: t.w, h: stickyH(t.n, t.w), free: false }); });
+    bands.forEach(function (b) { (b.notes || []).forEach(function (t) { where.push({ n: t.n, x: t.x, y: b.y + 12 + t.y, w: t.w, h: t.h, free: false }); }); });
+    freeNotes.forEach(function (n) {
+      var w0 = Math.max(80, Number(n.w) || 230);
+      where.push({ n: n, x: Math.max(0, Number(n.x)), y: Math.max(0, Number(n.y)), w: w0, h: Math.max(40, Number(n.h) || stickyH(n, w0)), free: true });
+    });
+    if (!o.live) where.forEach(function (t) { out.push(sticky(t.x, t.y, t.w, t.n, t.free ? t.h : 0)); });
     if (!bands.length) out.push(text(X0 + PW + 18, top + 30, 'No steps yet.', { size: 12, fill: '#8a97a5' }));
     if (more) out.push(text(X0 + PW + 14, top + H0 - 8, '+ ' + more + ' more calls (every one is in the data sheet)', { size: 11.5, fill: '#5b6876' }));
     var y1 = top + H0 + 34;
@@ -742,8 +763,12 @@ define([], function () {
     out.push('<line x1="' + lx + '" y1="' + (y1 - 4) + '" x2="' + (lx + 30) + '" y2="' + (y1 - 4) + '" stroke="#3b4a58" stroke-width="2" marker-end="url(#ar1)"/>' + text(lx + 38, y1, 'moves on to another system', { size: 11, fill: '#3b4a58' })
       + (plain ? '' : '<line x1="520" y1="' + (y1 - 4) + '" x2="550" y2="' + (y1 - 4) + '" stroke="#b3bdc7" stroke-width="1.5" marker-end="url(#ar0)"/>' + text(558, y1, 'next call to the same system · the numbers: the order its code calls them', { size: 11, fill: '#6b7889' })));
     var H = y1 + 18;
+    // a note placed beyond the diagram (it got smaller since): the drawing grows to hold it
+    where.forEach(function (t) { if (t.free) { W = Math.max(W, Math.ceil(t.x + t.w + 12)); H = Math.max(H, Math.ceil(t.y + t.h + 12)); } });
     var title = model.title || (model.label + ' — flow');
-    return { svg: wrap(W, H, out.join(''), title), w: W, h: H, title: title };
+    return { svg: wrap(W, H, out.join(''), title), w: W, h: H, title: title, top: top,
+      bands: bands.map(function (b) { return { action: (model.actions || []).indexOf(b.st), y: b.y, h: b.h }; }),
+      notes: where.map(function (t) { return { id: t.n.id, x: Math.round(t.x), y: Math.round(t.y), w: Math.round(t.w), h: Math.round(t.h), free: t.free, color: t.n.color || 'yellow', text: t.n.text || '' }; }) };
   }
 
   /** One page's flow in swimlanes (see flowSwim); opts.plain: in plain English. */
@@ -815,5 +840,5 @@ define([], function () {
     return '<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#fff}svg{display:block;width:100%;height:auto}</style>' + (d && d.svg ? d.svg : '');
   }
 
-  return { landscape: landscape, system: system, page: page, pageBasic: pageBasic, pageFlow: pageFlow, pageModel: pageModel, flowSwim: flowSwim, plainStep: plainStep, plainTrigger: plainTrigger, objectPhrase: objectPhrase, wrapLines: wrapLines, pages: pages, systemFlow: systemFlow, journeys: journeys, listFit: listFit, doc: doc, KINDS: KINDS, DIR: DIR, esc: esc, fit: fit, figures: figures, commonPrefix: commonPrefix };
+  return { landscape: landscape, system: system, page: page, pageBasic: pageBasic, pageFlow: pageFlow, pageModel: pageModel, flowSwim: flowSwim, plainStep: plainStep, plainTrigger: plainTrigger, objectPhrase: objectPhrase, wrapLines: wrapLines, noteLines: noteLines, STICKY: STICKY, pages: pages, systemFlow: systemFlow, journeys: journeys, listFit: listFit, doc: doc, KINDS: KINDS, DIR: DIR, esc: esc, fit: fit, figures: figures, commonPrefix: commonPrefix };
 });

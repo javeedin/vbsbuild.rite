@@ -29,7 +29,7 @@
         <button type="button" class="nx-btn nx-btn--sm" id="sfpCopy" data-act="saveCopy" on-click="[[ $listeners.onAct ]]">Save as copy</button>
         <button type="button" class="nx-btn nx-btn--sm" id="sfpCheckBtn" data-act="check" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-check-circle" aria-hidden="true"></span> Check against the app</button>
         <button type="button" class="nx-btn nx-btn--sm" id="sfpSvg" data-act="svg" on-click="[[ $listeners.onAct ]]">SVG</button>
-        <button type="button" class="nx-btn nx-btn--sm" id="sfpPdf" data-act="pdf" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.pdfBusy ]]"><span class="oj-ux-ico-file-pdf" aria-hidden="true"></span> <oj-bind-text value="[[ $variables.pdfBusy ? 'Making…' : 'PDF' ]]"></oj-bind-text></button>
+        <button type="button" class="nx-btn nx-btn--sm" id="sfpPdf" data-act="pdf" on-click="[[ $listeners.onAct ]]" title="Preview the PDF, then download or print it"><span class="oj-ux-ico-file-pdf" aria-hidden="true"></span> PDF</button>
         <button type="button" class="nx-iconbtn" id="sfpRemove" data-act="remove" on-click="[[ $listeners.onAct ]]" title="Remove this flow" aria-label="Remove this flow"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
       </div>
     </div>
@@ -50,10 +50,28 @@
           <oj-bind-if test="[[ !!$variables.flow.purpose ]]"><p class="nx-sfp-purpose" id="sfpPurposeShow"><oj-bind-text value="[[ $variables.flow.purpose ]]"></oj-bind-text></p></oj-bind-if>
           <span class="nx-min-flex"></span>
           <button type="button" class="nx-btn nx-btn--sm nx-sfp-runall" id="sfpRunFlow" data-act="runFlow" on-click="[[ $listeners.onAct ]]" :disabled="[[ !!$variables.runBusy ]]" title="Run every step in order against the app's backend — each read with the values the steps before it gave; a call that changes data is never sent from here"><span class="oj-ux-ico-play" aria-hidden="true"></span> <oj-bind-text value="[[ $functions.runAllText($variables.runBusy, 'flow') ]]"></oj-bind-text></button>
-          <button type="button" class="nx-btn nx-btn--sm nx-sfp-addnote" id="sfpAddNoteFlow" data-act="addSticky" on-click="[[ $listeners.onAct ]]" title="A sticky note on the flow — write it, then place it on an action and a lane"><span class="oj-ux-ico-note" aria-hidden="true"></span> Sticky note</button>
+          <button type="button" class="nx-btn nx-btn--sm nx-sfp-addnote" id="sfpAddNoteFlow" data-act="addSticky" on-click="[[ $listeners.onAct ]]" title="A sticky note on the diagram, where you are looking: write in it, drag its top bar to move it, its corner to resize it"><span class="oj-ux-ico-note" aria-hidden="true"></span> Sticky note</button>
         </div>
         <oj-bind-if test="[[ !!$variables.runSum ]]"><div :class="[[ 'nx-sfp-runsum' + ($variables.runSum.ok ? '' : ' nx-sfp-runsum--bad') ]]" id="sfpRunSum"><oj-bind-text value="[[ $variables.runSum.text ]]"></oj-bind-text></div></oj-bind-if>
-        <iframe class="nx-int-frame" id="sfpDia" title="The flow" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.flow, $variables.plain) ]]" :srcdoc="[[ $functions.diaDoc($variables.flow, $variables.plain) ]]"></iframe>
+        <!-- the diagram, its sticky notes over it: drag a note by its top bar, resize it by its corner (resources/js/stickyBoard.js) -->
+        <div class="nx-sfp-board" id="sfpBoard" :style="[[ $functions.boardStyle($variables.flow, $variables.plain) ]]" :data-dw="[[ $functions.boardW($variables.flow, $variables.plain) ]]" :data-dh="[[ $functions.boardH($variables.flow, $variables.plain) ]]">
+          <iframe class="nx-int-frame nx-sfp-boardframe" id="sfpDia" title="The flow" sandbox="allow-same-origin" :srcdoc="[[ $functions.diaDoc($variables.flow, $variables.plain, true) ]]"></iframe>
+          <div class="nx-sfp-notes" id="sfpNotes">
+            <oj-bind-for-each data="[[ $functions.liveNotes($variables.flow, $variables.plain) ]]"><template data-oj-as="n">
+              <div :class="[[ n.data.cls ]]" :data-id="[[ n.data.id ]]" :style="[[ n.data.style ]]">
+                <div class="nx-sfp-nbar" data-drag="move" title="Drag to move this note">
+                  <span class="nx-sfp-ngrip" aria-hidden="true"></span>
+                  <span class="nx-sfp-ncolors" role="group" aria-label="Its colour"><oj-bind-for-each data="[[ n.data.colors ]]"><template data-oj-as="c"><button type="button" :class="[[ c.data.cls ]]" data-act="stickyColor" :data-key="[[ n.data.id ]]" :data-value="[[ c.data.id ]]" on-click="[[ $listeners.onAct ]]" :title="[[ c.data.text ]]" :aria-label="[[ c.data.text ]]"></button></template></oj-bind-for-each></span>
+                  <button type="button" class="nx-sfp-nx" data-act="removeSticky" :data-key="[[ n.data.id ]]" on-click="[[ $listeners.onAct ]]" title="Remove this sticky note" aria-label="Remove this sticky note"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+                </div>
+                <textarea class="nx-sfp-ntext" :data-field="[[ n.data.field ]]" :value="[[ n.data.text ]]" on-change="[[ $listeners.onField ]]" placeholder="Write the note… (Enter: a new line)" aria-label="The note" spellcheck="true"></textarea>
+                <span class="nx-sfp-nresize" data-drag="resize" title="Drag to resize this note"></span>
+                <button type="button" class="nx-sfp-ncommit" hidden="hidden" tabindex="-1" aria-hidden="true" data-act="placeSticky" :data-key="[[ n.data.id ]]" data-value="" on-click="[[ $listeners.onAct ]]"></button>
+              </div>
+            </template></oj-bind-for-each>
+          </div>
+        </div>
+        <p class="nx-note nx-sfp-boardhint"><oj-bind-text value="[[ $functions.noteCount($variables.flow) ? 'Sticky notes: drag a note by its top bar to place it anywhere, its bottom-right corner to resize it; write in it (Enter for a new line); its circles change its colour, × removes it. Save keeps them.' : 'Sticky note puts a note on the diagram, where you are looking — drag it anywhere, resize it, write in it.' ]]"></oj-bind-text></p>
         <h3 class="nx-int-h3">Step by step</h3>
         <div class="nx-sfp-stepgrid" id="sfpSteps" role="table" aria-label="The flow step by step">
           <div class="nx-int-row nx-int-row--head" role="row"><span>Step</span><span>When</span><span>What happens</span><span>System</span><span>Note</span><span>Last run</span></div>
@@ -340,5 +358,35 @@
       </div>
     </oj-bind-if>
   </section>
+  </oj-bind-if>
+
+  <!-- the PDF, previewed as it prints: plain English or technical, then Download PDF or Print -->
+  <oj-bind-if test="[[ !!$variables.pdfView && !!$variables.flow ]]">
+    <div class="nx-modal" id="sfpPdfDlg">
+      <button type="button" class="nx-modal-scrim" aria-label="Close" data-act="pdfClose" on-click="[[ $listeners.onAct ]]"></button>
+      <div class="nx-dialog nx-sc-repdlg" role="dialog" aria-modal="true" aria-label="PDF preview">
+        <div class="nx-dialog-head">
+          <div class="nx-dialog-titles">
+            <div class="nx-kicker">Build.Rite · Saved flow · PDF preview</div>
+            <h2 class="nx-dialog-title" id="sfpPdfTitle"><oj-bind-text value="[[ $variables.flow.id + ' · ' + $variables.flow.name ]]"></oj-bind-text></h2>
+            <div class="nx-sub" id="sfpPdfSub"><oj-bind-text value="[[ $functions.pdfSub($variables.flow, $variables.pdfView.plain) ]]"></oj-bind-text></div>
+          </div>
+          <button type="button" class="nx-iconbtn" aria-label="Close" data-act="pdfClose" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+        </div>
+        <div class="nx-sc-reptools">
+          <span class="nx-sfp-pdfmode" role="radiogroup" aria-label="How the steps are said">
+            <button type="button" role="radio" id="sfpPdfPlain" :aria-checked="[[ $variables.pdfView.plain ? 'true' : 'false' ]]" :class="[[ 'nx-sc-chip' + ($variables.pdfView.plain ? ' nx-sc-chip--on' : '') ]]" data-act="pdfPlain" data-key="1" on-click="[[ $listeners.onAct ]]">Plain English</button>
+            <button type="button" role="radio" id="sfpPdfTech" :aria-checked="[[ $variables.pdfView.plain ? 'false' : 'true' ]]" :class="[[ 'nx-sc-chip' + ($variables.pdfView.plain ? '' : ' nx-sc-chip--on') ]]" data-act="pdfPlain" data-key="0" on-click="[[ $listeners.onAct ]]">Technical</button>
+          </span>
+          <oj-bind-if test="[[ $functions.isDirty($variables.flow, $variables.saved) ]]"><span class="nx-sfp-dirty">Shows your unsaved changes</span></oj-bind-if>
+          <span class="nx-min-flex"></span>
+          <button type="button" class="nx-btn nx-btn--sm" id="sfpPdfPrint" data-act="pdfPrint" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-print" aria-hidden="true"></span> Print</button>
+          <button type="button" class="nx-btn nx-btn--sm nx-btn--primary" id="sfpPdfSave" data-act="pdfSave" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.pdfBusy ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> <oj-bind-text value="[[ $variables.pdfBusy ? 'Making the PDF…' : 'Download PDF' ]]"></oj-bind-text></button>
+        </div>
+        <div class="nx-dialog-body nx-sc-repbody">
+          <iframe class="nx-sc-repframe" id="sfpPdfFrame" title="The flow as the PDF prints it" sandbox="" :srcdoc="[[ $functions.pdfDoc($variables.flow, $variables.pdfView.plain) ]]"></iframe>
+        </div>
+      </div>
+    </div>
   </oj-bind-if>
 </div>

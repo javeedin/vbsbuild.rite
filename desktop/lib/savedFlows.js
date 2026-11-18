@@ -41,8 +41,14 @@ function cleanBody(f) {
       action: cut(s.action, 100), direction: ['Read', 'Write', 'Report'].indexOf(s.direction) !== -1 ? s.direction : 'Read', summary: cut(s.summary, 300), via: cut(s.via, 100),
       row: cut(s.row, 20), text: cut(s.text, 500), note: cut(s.note, 2000), manual: !!s.manual })) }));
   // sticky notes: on an action and a lane, or on the whole flow
-  const stickies = (Array.isArray(f.stickies) ? f.stickies : []).filter(isObj).slice(0, MAX.stickies).map((n) => ({
-    id: idOf(n.id, 20) || 'n', text: cut(n.text, 1500), color: ['yellow', 'pink', 'green', 'blue'].indexOf(n.color) !== -1 ? n.color : 'yellow', action: idOf(n.action, 20), lane: idOf(n.lane) }));
+  // one placed by hand (dragged on the Flow tab): where it is and its size, in the diagram's units
+  const num = (v, lo, hi) => (typeof v === 'number' && isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v))) : null);
+  const stickies = (Array.isArray(f.stickies) ? f.stickies : []).filter(isObj).slice(0, MAX.stickies).map((n) => {
+    const out = { id: idOf(n.id, 20) || 'n', text: cut(n.text, 1500), color: ['yellow', 'pink', 'green', 'blue'].indexOf(n.color) !== -1 ? n.color : 'yellow', action: idOf(n.action, 20), lane: idOf(n.lane) };
+    const x = num(n.x, 0, 20000), y = num(n.y, 0, 20000);
+    if (x !== null && y !== null) Object.assign(out, { x, y, w: num(n.w, 80, 1200) || 230, h: num(n.h, 40, 1200) || 96 });
+    return out;
+  });
   return { lanes, actions, stickies };
 }
 const sameBody = (a, b) => JSON.stringify({ l: a.lanes, a: a.actions, n: a.stickies || [] }) === JSON.stringify({ l: b.lanes, a: b.actions, n: b.stickies || [] });

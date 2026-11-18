@@ -342,11 +342,14 @@ A **saved flow** has:
   **Add an action**.
   Each step and action **starts with its description** (the automatic wording) — edit it to put it in your words; left
   as it is, or cleared, it keeps following the app's wording.
-- **Sticky notes** — anything you want to write on the flow: **Sticky note** on an action puts one on it (choose its
-  lane — the page's or a system's — and a colour: yellow, pink, green, blue); **Sticky note** on the Flow tab or under
-  *Sticky notes on the whole flow* puts one at the top of the diagram. On the diagram a note sits under its lane's steps,
-  clear of the arrows; it is in the PDF too, with where it sits. A note on an action that is removed stays, on the whole
-  flow.
+- **Sticky notes** — anything you want to write on the flow, right on the diagram (the Flow tab): **Sticky note**
+  puts one where you are looking — in a free spot, ready to type — and you stay on the Flow tab. Drag a note by its top
+  bar to place it anywhere (it moves smoothly with the mouse and stays where you drop it, over what you dropped it
+  on); resize it by its bottom-right corner; write in it on as many lines as you like (Enter: a new line); point at it
+  for its colour circles (yellow, pink, green, blue); × removes it. Notes added on Edit steps (**Sticky note** on an
+  action, or on the whole flow) are laid out under the action's steps or in a band at the top until you drag them;
+  choosing an action or a lane for a note on Edit steps puts it back there. They are drawn in the SVG, the PDF (with
+  where each sits) and the History, and **Save** keeps where each one is and its size.
 - **▶ Run** — each step's call sent for real to the app's backend, with the app's login (through the API tester, as in
   Application pages → Test). **Run** on a step opens its panel under it: where the call goes and as whom, its
   parameters (each filled from the value you used last, its default, or one an earlier answer gave — an id from a list,
@@ -367,8 +370,9 @@ A **saved flow** has:
   page no longer makes, calls it makes that the flow does not have (**Add them to the flow**).
 
 **Save** keeps a new version (with *what changed*, if you say) and the one before in History; **Discard** puts back
-the version saved; **Save as copy** asks for a name; **SVG** and **PDF** (its details, the diagram, its steps, its open
-comments) export it. Saved flows are kept on this PC per VB Studio project.
+the version saved; **Save as copy** asks for a name; **SVG** exports the diagram; **PDF** opens a preview first — the
+document as it prints (its details, the diagram with its sticky notes, its steps, its open comments), in plain English
+or technical, your unsaved changes included — with **Download PDF** and **Print**. Saved flows are kept on this PC per VB Studio project.
 
 ## Follow-ups: chase stories by email, with your own messages
 

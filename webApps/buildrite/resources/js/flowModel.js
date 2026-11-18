@@ -79,11 +79,18 @@ define(['resources/js/integrationDiagram'], function (D) {
         return { trigger: a.trigger || a.title || 'When …', title: a.title || '', note: a.note || '', chain: a.chain || '', chains: a.chains || [],
           calls: (a.steps || []).map(function (s) { return Object.assign({}, s, { systemName: nameOf(s.system), kind: kindOf(s.system) }); }) };
       }),
-      // sticky notes: on an action (its index) in a lane ('' = the page's), or on the whole flow (action -1)
+      // sticky notes: on an action (its index) in a lane ('' = the page's), or on the whole flow (action -1); one placed
+      // by hand (dragged on the Flow tab) keeps where it was put and its size
       stickies: (f.stickies || []).map(function (n) {
-        return { id: n.id, text: n.text || '', color: n.color || 'yellow', action: (f.actions || []).map(function (a) { return a.id; }).indexOf(n.action), lane: lanes.some(function (l) { return l.id === n.lane; }) ? n.lane : '' };
+        var o = { id: n.id, text: n.text || '', color: n.color || 'yellow', action: (f.actions || []).map(function (a) { return a.id; }).indexOf(n.action), lane: lanes.some(function (l) { return l.id === n.lane; }) ? n.lane : '' };
+        if (placed(n)) { o.x = n.x; o.y = n.y; o.w = n.w; o.h = n.h; }
+        return o;
       }) };
   }
+
+  /** A sticky note placed by hand (x, y — dragged on the Flow tab), not laid out under an action. */
+  function placed(n) { return !!n && typeof n.x === 'number' && typeof n.y === 'number' && isFinite(n.x) && isFinite(n.y); }
+  var clampN = function (v, lo, hi, d) { var k = Number(v); return isFinite(k) ? Math.max(lo, Math.min(hi, Math.round(k))) : d; };
 
   // ── editing: each change gives a new flow ──
   var allSteps = function (f) { return (f.actions || []).reduce(function (a, x) { return a.concat(x.steps || []); }, []); };
@@ -123,7 +130,10 @@ define(['resources/js/integrationDiagram'], function (D) {
         }
       } else if (p[0] === 'n' && FIELDS.n.indexOf(p[2]) !== -1) {
         var nt = (f.stickies || []).filter(function (y) { return y.id === p[1]; })[0];
+        if (nt && (p[2] === 'action' || p[2] === 'lane') && x.value === '__placed') return f; // "where it was dragged": as it is
         if (nt) nt[p[2]] = p[2] === 'color' ? (STICKY_COLORS.some(function (c) { return c[0] === x.value; }) ? x.value : 'yellow') : str(x.value);
+        // an action or a lane chosen: the note goes back there (laid out under its steps), no longer where it was dragged
+        if (nt && (p[2] === 'action' || p[2] === 'lane')) { delete nt.x; delete nt.y; delete nt.w; delete nt.h; }
       } else if (p[0] === 'l' && FIELDS.l.indexOf(p[2]) !== -1) {
         var l = f.lanes.filter(function (y) { return y.id === p[1]; })[0];
         if (l) { l[p[2]] = str(x.value); if (p[2] === 'kind') l.kindLabel = kindLabelOf(l.kind); }
@@ -182,8 +192,28 @@ define(['resources/js/integrationDiagram'], function (D) {
     }
     if (op === 'addSticky') {
       f.stickies = f.stickies || [];
-      f.stickies.push({ id: nextId('n', f.stickies.map(function (y) { return y.id; })), text: str(x.text), color: STICKY_COLORS.some(function (c) { return c[0] === x.color; }) ? x.color : 'yellow',
-        action: f.actions.some(function (a) { return a.id === x.action; }) ? x.action : '', lane: f.lanes.some(function (l) { return l.id === x.lane; }) ? x.lane : '' });
+      var nn = { id: nextId('n', f.stickies.map(function (y) { return y.id; })), text: str(x.text), color: STICKY_COLORS.some(function (c) { return c[0] === x.color; }) ? x.color : 'yellow',
+        action: f.actions.some(function (a) { return a.id === x.action; }) ? x.action : '', lane: f.lanes.some(function (l) { return l.id === x.lane; }) ? x.lane : '' };
+      // added on the Flow tab: placed where you are looking, ready to drag
+      if (x.x != null && x.y != null) { nn.x = clampN(x.x, 0, 20000, 0); nn.y = clampN(x.y, 0, 20000, 0); nn.w = clampN(x.w, 80, 1200, 230); nn.h = clampN(x.h, 40, 1200, 96); }
+      f.stickies.push(nn);
+      return f;
+    }
+    // a sticky note dragged or resized on the Flow tab (diagram units). One laid out until now (under an action) takes no
+    // room any more, so the action band it was dropped on may move up: it moves with it, staying over what it was put on.
+    if (op === 'placeSticky') {
+      var sn = (f.stickies || []).filter(function (y) { return y.id === x.id; })[0];
+      if (!sn) return f;
+      var px = clampN(x.x, 0, 20000, 0), py = clampN(x.y, 0, 20000, 0), pw = clampN(x.w, 80, 1200, 230), ph = clampN(x.h, 40, 1200, 96);
+      var before = placed(sn) ? null : D.flowSwim(toModel(f), { live: true });
+      sn.x = px; sn.y = py; sn.w = pw; sn.h = ph;
+      if (before) {
+        var at = py + 10;
+        var b0 = before.bands.filter(function (b) { return at >= b.y && at < b.y + b.h; })[0];
+        var after = b0 ? D.flowSwim(toModel(f), { live: true }) : null;
+        var b1 = after ? after.bands.filter(function (b) { return b.action === b0.action; })[0] : null;
+        if (b1) sn.y = Math.max(0, py + (b1.y - b0.y));
+      }
       return f;
     }
     if (op === 'removeSticky') { f.stickies = (f.stickies || []).filter(function (y) { return y.id !== x.id; }); return f; }
@@ -273,12 +303,12 @@ define(['resources/js/integrationDiagram'], function (D) {
       + '</tbody></table>'
       + ((f.stickies || []).length ? '<h2>Sticky notes</h2><table><tbody>' + f.stickies.map(function (n) {
         var a = (f.actions || []).map(function (y) { return y.id; }).indexOf(n.action), l = (f.lanes || []).filter(function (y) { return y.id === n.lane; })[0];
-        return '<tr><td style="width:220px" class="muted">' + esc(a === -1 ? 'On the whole flow' : 'Action ' + (a + 1) + (l ? ' · ' + l.name : ' · the page')) + '</td><td>' + esc(n.text) + '</td></tr>';
+        return '<tr><td style="width:220px" class="muted">' + esc(placed(n) ? 'Placed on the diagram' : a === -1 ? 'On the whole flow' : 'Action ' + (a + 1) + (l ? ' · ' + l.name : ' · the page')) + '</td><td style="white-space:pre-wrap">' + esc(n.text) + '</td></tr>';
       }).join('') + '</tbody></table>' : '')
       + (comments.length ? '<h2>Comments</h2><table><tbody>' + comments.map(function (c) { return '<tr><td style="width:180px" class="muted">' + esc((c.by || '') + ' · ' + str(c.at).slice(0, 16).replace('T', ' ')) + '</td><td>' + esc(c.text) + '</td></tr>'; }).join('') + '</tbody></table>' : '')
       + '</body></html>';
   }
 
-  return { STICKY_COLORS: STICKY_COLORS, autoText: autoText, autoTitle: autoTitle, STATUSES: STATUSES, statusText: statusText, KIND_OPTIONS: KIND_OPTIONS, kindLabelOf: kindLabelOf, details: details, fromPage: fromPage, blank: blank, toModel: toModel, edit: edit, laneUsed: laneUsed,
+  return { STICKY_COLORS: STICKY_COLORS, placed: placed, autoText: autoText, autoTitle: autoTitle, STATUSES: STATUSES, statusText: statusText, KIND_OPTIONS: KIND_OPTIONS, kindLabelOf: kindLabelOf, details: details, fromPage: fromPage, blank: blank, toModel: toModel, edit: edit, laneUsed: laneUsed,
     check: check, addFromApp: addFromApp, rows: rows, html: html, keyOf: keyOf };
 });

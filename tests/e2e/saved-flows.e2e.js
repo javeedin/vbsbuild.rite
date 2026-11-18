@@ -121,8 +121,9 @@ const setField = async (page, sel, value) => { const el = vis(page, sel); await 
     await settle(page);
     await vis(page, '#sfpAddNoteFlow').click();
     await settle(page, 600);
-    T.check('Sticky note on the Flow tab: a note on the whole flow, on to Edit steps to write it', /Edit steps/.test(await text(page, '#sfpTabs .nx-sc-tab--on')) && (await count(page, '#sfpStickyList .nx-sfp-sticky')) === 1);
-    await setField(page, '[data-field="n.n2.text"]', 'Reviewed with the sales team on 18 Nov.');
+    T.check('Sticky note on the Flow tab: a note on the diagram, ready to write in — and you stay on the Flow tab', /^Flow$/.test(await text(page, '#sfpTabs .nx-sc-tab--on')) && (await count(page, '#sfpNotes .nx-sfp-sn[data-id="n2"]')) === 1
+      && (await page.evaluate(() => (document.activeElement || {}).getAttribute && document.activeElement.getAttribute('data-field'))) === 'n.n2.text');
+    await setField(page, '#sfpNotes [data-field="n.n2.text"]', 'Reviewed with the sales team on 18 Nov.');
     await env.shot('saved-flow-edit.png');
     await setField(page, '#sfpNote', 'Business wording and the e-mail step');
     await vis(page, '#sfpSave').click();
@@ -135,7 +136,8 @@ const setField = async (page, sel, value) => { const el = vis(page, sel); await 
     await settle(page);
     const fd2 = (await vis(page, '#sfpDia').getAttribute('srcdoc')) || '';
     T.check('the diagram follows: the reworded action and step, the E-mail lane and its step, the note', />When a clerk opens a new</.test(fd2) && />Looks up the customer list</.test(fd2) && />E-mail</.test(fd2) && />E-mails the order</.test(fd2) && /Note: Credit status comes from this/.test(fd2));
-    T.check('…and the sticky notes (pink, in its lane; the whole flow\'s at the top)', /<title>Sticky note: BI Publisher is slow at month end/.test(fd2) && /fill="#ffdbe4"/.test(fd2) && /<title>Sticky note: Reviewed with the sales team/.test(fd2));
+    const notes2 = await page.$$eval('#sfpNotes .nx-sfp-sn', (l) => l.map((x) => x.getAttribute('data-id') + ':' + x.className.replace(/.*nx-sfp-sn--(yellow|pink|green|blue).*/, '$1') + ':' + (x.querySelector('textarea') || {}).value));
+    T.check('…and the sticky notes over it, to drag (pink, in its lane; the one added on the Flow tab)', notes2.length === 2 && /^n1:pink:BI Publisher is slow at month end/.test(notes2[0]) && /^n2:yellow:Reviewed with the sales team/.test(notes2[1]), JSON.stringify(notes2));
     await env.shot('saved-flow-v2.png');
 
     T.section('comments');
@@ -194,10 +196,18 @@ const setField = async (page, sel, value) => { const el = vis(page, sel); await 
     T.section('exports, copy');
     const [svg] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }), vis(page, '#sfpSvg').click()]);
     T.check('SVG: the flow as a file', /^flow-fl-0001-order-intake\.svg$/.test(svg.suggestedFilename()), svg.suggestedFilename());
-    const [pdf] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), vis(page, '#sfpPdf').click()]);
+    await vis(page, '#sfpPdf').click();
+    await page.waitForSelector('#sfpPdfFrame', { timeout: 5000 });
+    const pv = (await page.getAttribute('#sfpPdfFrame', 'srcdoc')) || '';
+    T.check('PDF: a preview first, as it prints — its details, the diagram with its sticky notes, its steps', /<h1>Order intake<\/h1>/.test(pv) && /<title>Sticky note: BI Publisher is slow at month end/.test(pv) && /Its steps/.test(pv)
+      && /^A4 landscape · in plain English/.test(await text(page, '#sfpPdfSub')), await text(page, '#sfpPdfSub'));
+    const [pdf] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), vis(page, '#sfpPdfSave').click()]);
     const pdfFile = path.join(dir, 'f.pdf');
     await pdf.saveAs(pdfFile);
-    T.check('PDF: a real PDF — its details, the diagram, its steps', pdf.suggestedFilename() === 'flow-fl-0001-order-intake.pdf' && fs.readFileSync(pdfFile).slice(0, 5).toString() === '%PDF-' && fs.statSync(pdfFile).size > 10000);
+    T.check('…Download PDF in the preview: a real PDF — its details, the diagram, its steps', pdf.suggestedFilename() === 'flow-fl-0001-order-intake.pdf' && fs.readFileSync(pdfFile).slice(0, 5).toString() === '%PDF-' && fs.statSync(pdfFile).size > 10000);
+    await vis(page, '#sfpPdfDlg .nx-dialog-head [data-act="pdfClose"]').click();
+    await settle(page);
+    T.check('…closed', !(await page.$('#sfpPdfDlg')));
     await vis(page, '#sfpCopy').click();
     await page.waitForFunction(() => /FL-0002/.test((document.querySelector('.nx-tab--on .nx-tab-title') || {}).textContent || ''), null, { timeout: 10000 }).catch(() => {});
     T.check('Save as copy: FL-0002 under the name asked, in its own tab, a draft', /^FL-0002 · Order intake — copy$/.test(await tabTitle()) && flowStore.get('FL-0002').flow.copiedFrom === 'FL-0001' && flowStore.get('FL-0002').flow.status === 'draft', await tabTitle());

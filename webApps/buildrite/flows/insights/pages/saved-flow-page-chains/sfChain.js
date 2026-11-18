@@ -1,6 +1,6 @@
 define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shellBus', 'resources/js/integrationDiagram', 'resources/js/flowModel', 'resources/js/exportKit',
-  'resources/js/apiClient', 'resources/js/flowRun'],
-  (ActionChain, PC, bus, D, FM, exportKit, AC, FR) => {
+  'resources/js/apiClient', 'resources/js/flowRun', 'resources/js/stickyBoard'],
+  (ActionChain, PC, bus, D, FM, exportKit, AC, FR, stickyBoard) => {
     'use strict';
 
     // One saved flow: load; the tabs (tab); a field changed (field: flow.<name> / a.<id>.<field> / s.<id>.<field> /
@@ -26,6 +26,7 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         const ed = (op, args) => { v.flow = FM.edit(v.flow, op, args); };
 
         if (act === 'load') {
+          stickyBoard.install(); // sticky notes dragged and resized on the Flow tab
           v.busy = true;
           try {
             const r = await PC.flowGet(v.flowId);
@@ -56,10 +57,23 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         }
         if (act === 'addStep') { ed('addStep', { action: key }); return; }
         if (act === 'addAction') { ed('addAction', {}); return; }
-        // sticky notes: on an action (key) or the whole flow (no key); from the Flow tab, then on to Edit steps to write it
+        // sticky notes: on the Flow tab, one on the diagram where you are looking (you stay there: write in it, drag it,
+        // resize it); on Edit steps, on an action (key) or the whole flow (no key)
         if (act === 'addSticky') {
+          if (!key && v.tab === 'flow') {
+            const at = sfChain.freeSpot(v);
+            ed('addSticky', { action: '', lane: '', color: 'yellow', text: '', x: at.x, y: at.y, w: 230, h: 110 });
+            const list = v.flow.stickies || [];
+            sfChain.focusNote(list.length ? list[list.length - 1].id : '');
+            return;
+          }
           ed('addSticky', { action: key || '', lane: '', color: 'yellow', text: '' });
-          if (v.tab !== 'edit') { v.tab = 'edit'; bus.toast('A sticky note was added — write it under "Sticky notes on the whole flow".', 'info'); }
+          return;
+        }
+        // a note dragged or resized on the Flow tab: where it is and its size (x,y,w,h in the diagram's units)
+        if (act === 'placeSticky') {
+          const p = String(value || '').split(',').map(Number);
+          if (p.length === 4 && p.every((x) => isFinite(x))) ed('placeSticky', { id: key, x: p[0], y: p[1], w: p[2], h: p[3] });
           return;
         }
         if (act === 'removeSticky') { ed('removeSticky', { id: key }); return; }
@@ -150,14 +164,19 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         if (act === 'openPage') { if (v.flow.source && v.flow.source.page) bus.focus('app-pages', { id: v.flow.source.page }); return; }
         // the exports
         const fileBase = 'flow-' + String(v.flow.id || 'new').toLowerCase() + '-' + String(v.flow.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
+        // the PDF: previewed first (plain English or technical, as it prints), then downloaded or printed from there
+        if (act === 'pdf') { v.pdfView = { plain: !!v.plain }; return; }
+        if (act === 'pdfClose') { v.pdfView = null; return; }
+        if (act === 'pdfPlain') { if (v.pdfView) v.pdfView = Object.assign({}, v.pdfView, { plain: key === '1' }); return; }
+        if (act === 'pdfPrint') { exportKit.printDocument(FM.html(v.flow, { plain: !!(v.pdfView && v.pdfView.plain) })); return; }
         if (act === 'svg') {
           const d = D.flowSwim(FM.toModel(v.flow), { plain: v.plain });
           exportKit.download(fileBase + '.svg', 'image/svg+xml', d.svg);
           bus.toast('Saved ' + fileBase + '.svg.', 'success');
           return;
         }
-        if (act === 'pdf') {
-          const html = FM.html(v.flow, { plain: v.plain });
+        if (act === 'pdfSave') {
+          const html = FM.html(v.flow, { plain: v.pdfView ? !!v.pdfView.plain : v.plain });
           if (v.pdfBusy) return;
           v.pdfBusy = true;
           try {
@@ -323,6 +342,45 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
             bus.toast(v.runSum.text, t.counts.fail ? 'error' : 'success');
           } finally { v.runBusy = ''; }
         }
+      }
+
+      /** Where a new sticky note goes on the Flow tab's diagram (diagram units): from the top of what you see of it, the
+       *  first place beside the page's lane, then across the lanes and down, that no other note covers. */
+      static freeSpot(v) {
+        const W0 = 230, H0 = 110, G = 16;
+        let d = null;
+        try { d = D.flowSwim(FM.toModel(v.flow), { plain: v.plain, live: true }); } catch (e) { d = null; }
+        const dw = d ? d.w : 1100, dh = d ? d.h : 600;
+        let y0 = 90;
+        try {
+          const b = document.getElementById('sfpBoard');
+          if (b) {
+            const r = b.getBoundingClientRect();
+            const k = r.width / (Number(b.getAttribute('data-dw')) || r.width || 1);
+            y0 = (Math.max(0, 140 - r.top) / k) + G;
+          }
+        } catch (e) { /* not shown */ }
+        y0 = Math.max(G, Math.min(dh - H0 - G, y0));
+        const notes = (d && d.notes) || [];
+        const free = (x, y) => !notes.some((n) => x < n.x + n.w + 8 && n.x < x + W0 + 8 && y < n.y + n.h + 8 && n.y < y + H0 + 8);
+        for (let y = y0; y <= Math.max(y0, dh - H0 - G); y += H0 / 2) {
+          for (let x = 262; x + W0 <= dw - G; x += W0 / 2) { if (free(x, y)) return { x: Math.round(x), y: Math.round(y) }; }
+        }
+        const k = notes.length % 6; // everywhere taken: a little lower and to the right of the last one
+        return { x: 262 + k * 26, y: Math.round(y0 + k * 26) };
+      }
+      /** A note just added: its box ready to type in. */
+      static focusNote(id) {
+        if (!id) return;
+        let tries = 0;
+        const go = () => {
+          try {
+            const el = document.querySelector('#sfpNotes .nx-sfp-sn[data-id="' + id + '"] textarea');
+            if (el) { el.focus(); return; }
+          } catch (e) { return; }
+          if (++tries < 20) setTimeout(go, 50);
+        };
+        setTimeout(go, 50);
       }
 
       /** A box emptied on screen too (its value was typed, so the binding alone may leave it). */

@@ -81,6 +81,11 @@
       "type": "boolean",
       "defaultValue": false
     },
+    "pdfView": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "The PDF preview, when open: { plain } (plain English or technical)."
+    },
     "runs": {
       "type": "any",
       "defaultValue": {},

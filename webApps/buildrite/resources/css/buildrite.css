@@ -1037,3 +1037,34 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-sfp-ranswer summary { cursor: pointer; font-weight: 600; color: #1d4f91; }
 .nx-sfp-ranswer pre { margin: 6px 0 0; max-height: 320px; overflow: auto; padding: 8px 10px; background: #f6f8fa; border-radius: 6px; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (max-width: 1000px) { .nx-sfp-run { margin-left: 0; } }
+
+/* Saved flow — the Flow tab's board: the diagram, its sticky notes over it (dragged by the top bar, resized by the corner) */
+.nx-sfp-board { position: relative; width: 100%; container-type: inline-size; border: 1px solid #e1e7ee; border-radius: 10px; overflow: hidden; background: #fff; }
+.nx-sfp-board .nx-sfp-boardframe { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; border: 0; border-radius: 0; }
+.nx-sfp-board--drag { user-select: none; cursor: grabbing; }
+.nx-sfp-board--drag .nx-sfp-boardframe { pointer-events: none; }
+.nx-sfp-notes { position: absolute; inset: 0; pointer-events: none; }
+.nx-sfp-sn { position: absolute; pointer-events: auto; display: flex; flex-direction: column; min-width: 60px; min-height: 36px; box-sizing: border-box;
+  border: 1px solid var(--nx-note-edge, #e2c55a); border-radius: 3px 3px 14px 3px; background: var(--nx-note, #fff3b0); box-shadow: 0 2px 6px rgba(60, 50, 0, .14);
+  font-size: max(10.5px, calc(100cqw * 12 / var(--dw, 1100))); transition: box-shadow .12s; }
+.nx-sfp-sn--yellow { --nx-note: #fff3b0; --nx-note-edge: #e2c55a; }
+.nx-sfp-sn--pink { --nx-note: #ffdbe4; --nx-note-edge: #e3a1b4; }
+.nx-sfp-sn--green { --nx-note: #d8f3de; --nx-note-edge: #97cfa5; }
+.nx-sfp-sn--blue { --nx-note: #dbeaff; --nx-note-edge: #9cbfe9; }
+.nx-sfp-sn:hover, .nx-sfp-sn:focus-within { box-shadow: 0 6px 18px rgba(40, 34, 0, .22); z-index: 2; }
+.nx-sfp-sn--drag { box-shadow: 0 12px 28px rgba(40, 34, 0, .3); z-index: 3; opacity: .96; }
+.nx-sfp-sn--drag, .nx-sfp-sn--drag * { cursor: grabbing !important; }
+.nx-sfp-nbar { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; min-height: 22px; padding: 2px 4px 2px 6px; cursor: grab; touch-action: none; border-bottom: 1px dashed rgba(0, 0, 0, .12); }
+.nx-sfp-ngrip { width: 14px; height: 10px; flex: 0 0 auto; opacity: .5; background: radial-gradient(circle, #6b5a10 1.2px, transparent 1.4px) 0 0 / 5px 5px; }
+.nx-sfp-ncolors { display: inline-flex; gap: 4px; opacity: 0; transition: opacity .12s; }
+.nx-sfp-sn:hover .nx-sfp-ncolors, .nx-sfp-sn:focus-within .nx-sfp-ncolors { opacity: 1; }
+.nx-sfp-ncolor { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .3); padding: 0; cursor: pointer; }
+.nx-sfp-ncolor--on { outline: 2px solid #26323e; outline-offset: 1px; }
+.nx-sfp-nx { margin-left: auto; width: 20px; height: 20px; display: inline-grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: #5b5320; cursor: pointer; padding: 0; font-size: 12px; }
+.nx-sfp-nx:hover { background: rgba(0, 0, 0, .1); color: #a12a1e; }
+.nx-sfp-ntext { flex: 1 1 auto; min-height: 0; width: 100%; box-sizing: border-box; resize: none; border: 0; outline: 0; background: transparent; padding: 4px 8px 8px; font: inherit; font-size: 1em; line-height: 1.35; color: #2b2a1f; overflow: auto; }
+.nx-sfp-ntext::placeholder { color: #8a8a7a; }
+.nx-sfp-nresize { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize; touch-action: none; border-bottom-right-radius: 14px;
+  background: linear-gradient(135deg, transparent 50%, var(--nx-note-edge, #e2c55a) 50%, var(--nx-note-edge, #e2c55a) 62%, transparent 62%, transparent 72%, var(--nx-note-edge, #e2c55a) 72%, var(--nx-note-edge, #e2c55a) 84%, transparent 84%); }
+.nx-sfp-boardhint { margin: 6px 2px 0; }
+.nx-sfp-pdfmode { display: inline-flex; gap: 6px; align-items: center; }

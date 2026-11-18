@@ -101,6 +101,39 @@ T.check('a lane removed: its sticky notes move to the page\'s lane', ln.stickies
 T.check('…removed', M.edit(sn, 'removeSticky', { id: 'n1' }).stickies.map((x) => x.id).join() === 'n2');
 T.check('…printed: Sticky notes, where each sits', /<h2>Sticky notes<\/h2>/.test(M.html(sn, {})) && /Action 1 · Oracle BI Publisher \(SOAP\)/.test(M.html(sn, {})) && /On the whole flow/.test(M.html(sn, {})));
 
+T.section('sticky notes placed by hand (dragged on the Flow tab)');
+const live = D.flowSwim(M.toModel(sn), { plain: true, live: true });
+T.check('live: the notes not drawn (the page draws them over it, to drag) — where each one is, said', !/<title>Sticky note:/.test(live.svg) && live.notes.length === 2 && live.notes.every((x) => !x.free && x.w > 0 && x.h > 0)
+  && live.bands.length === 2 && live.bands[0].action === 0, JSON.stringify(live.notes));
+// the whole flow's note (n2, in the band at the top) dropped over action 1's step, 20 below its band's top
+const band0 = live.bands[0];
+const placedN = M.edit(sn, 'placeSticky', { id: 'n2', x: 400.4, y: band0.y + 20, w: 300, h: 140 });
+const live2 = D.flowSwim(M.toModel(placedN), { plain: true, live: true });
+const p2 = placedN.stickies.filter((x) => x.id === 'n2')[0];
+T.check('placed: where it was dropped and its size (whole units); the band it took at the top is gone; it moved up with the band it was dropped on', p2.x === 400 && p2.w === 300 && p2.h === 140 && M.placed(p2)
+  && live2.h < live.h && live2.bands[0].y < band0.y && p2.y === live2.bands[0].y + 20, JSON.stringify({ p2, b0: band0.y, b1: live2.bands[0].y }));
+T.check('…drawn over everything there (not live), its size kept, its lines kept', /<title>Sticky note: Reviewed with the sales team/.test(D.flowSwim(M.toModel(placedN), {}).svg)
+  && /<path d="M400 \d+ H700 V\d+/.test(D.flowSwim(M.toModel(placedN), {}).svg));
+const lines3 = M.edit(placedN, 'set', { what: 'n.n2.text', value: 'Line one\nLine two\n\nLine four' });
+const svg3 = D.flowSwim(M.toModel(lines3), {}).svg;
+T.check('several lines: each kept (an empty one too), not run together', />Line one</.test(svg3) && />Line two</.test(svg3) && />Line four</.test(svg3) && D.noteLines('Line one\nLine two\n\nLine four', 300, 8).join('|') === 'Line one|Line two||Line four');
+T.eq('a long text in a small note: cut with … to fit its height', D.noteLines('one two three four five six seven eight nine ten eleven twelve', 110, 2).length + ' ' + /…$/.test(D.noteLines('one two three four five six seven eight nine ten eleven twelve', 110, 2)[1]), '2 true');
+const moved2 = M.edit(placedN, 'placeSticky', { id: 'n2', x: 20, y: 30, w: 10, h: 99999 });
+const q2 = moved2.stickies.filter((x) => x.id === 'n2')[0];
+T.check('moved again: no band moves (it took no room) — where it was dropped; its size kept within limits', q2.x === 20 && q2.y === 30 && q2.w === 80 && q2.h === 1200, JSON.stringify(q2));
+const beyond = D.flowSwim(M.toModel(M.edit(placedN, 'placeSticky', { id: 'n2', x: 3000, y: 2000, w: 230, h: 100 })), {});
+T.check('…placed beyond the diagram: the drawing grows to hold it', beyond.w >= 3242 && beyond.h >= 2112, beyond.w + 'x' + beyond.h);
+const backN = M.edit(placedN, 'set', { what: 'n.n2.action', value: 'a1' });
+T.check('an action chosen on Edit steps: back under its steps, laid out (no longer where it was dragged); "where it was dragged" chosen: as it is', !M.placed(backN.stickies.filter((x) => x.id === 'n2')[0])
+  && M.placed(M.edit(placedN, 'set', { what: 'n.n2.action', value: '__placed' }).stickies.filter((x) => x.id === 'n2')[0]));
+const addedFree = M.edit(sn, 'addSticky', { x: 262, y: 90, w: 230, h: 110 });
+T.check('added on the Flow tab: placed where you look', M.placed(addedFree.stickies[2]) && addedFree.stickies[2].x === 262 && addedFree.stickies[2].h === 110);
+T.check('…printed: "Placed on the diagram", its lines kept', /Placed on the diagram/.test(M.html(lines3, {})) && /white-space:pre-wrap">Line one\nLine two/.test(M.html(lines3, {})));
+const cleanFlow = SF.open({ dir: fs.mkdtempSync(path.join(os.tmpdir(), 'br-sfn-')) });
+const sv = cleanFlow.save(Object.assign({}, M.blank({ name: 'Notes' }), { stickies: [{ id: 'n1', text: 'a', x: 12.6, y: 'x', w: 50, h: 5000 }, { id: 'n2', text: 'b', x: 10.2, y: 20.7, w: 50, h: 5000 }] }), 'Priya Raman');
+T.check('the store keeps a note\'s place and size only when it has both numbers, within limits', sv.ok && sv.flow.stickies[0].x === undefined && sv.flow.stickies[1].x === 10 && sv.flow.stickies[1].y === 21 && sv.flow.stickies[1].w === 80 && sv.flow.stickies[1].h === 1200,
+  JSON.stringify(sv.flow && sv.flow.stickies));
+
 T.section('checked against the app');
 T.check('the flow just made: matches the app', M.check(f0, m).ok && M.check(f0, m).same === 3);
 const less = M.edit(f0, 'removeStep', { id: 's3' });
