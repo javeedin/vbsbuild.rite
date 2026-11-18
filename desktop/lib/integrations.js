@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Integrations (Application → Integrations): every system your workspace's app talks to and every call it makes, read
+ * Page Flows (Application → Page Flows): every system your workspace's app talks to and every call it makes, read
  * from its code — the integration data sheet (source → target) and the facts its diagrams are drawn from.
  *
  *   scan(root, { app }) → { ok, app, appName, at, totals, systems, rows, endpoints, flows, matrix, pages, unresolved }

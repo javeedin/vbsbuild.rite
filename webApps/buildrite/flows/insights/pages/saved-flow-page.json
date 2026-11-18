@@ -1,5 +1,5 @@
 {
-  "description": "One saved flow (Integrations → Saved flows): its details, its diagram (plain English or technical), an editor (reword steps, notes, steps and actions added, moved, removed, systems as lanes), comments, its versions (view, restore) and a check against the app; Save (a new version), Save as copy, PDF, SVG, Remove (desktop/lib/savedFlows.js, resources/js/flowModel.js).",
+  "description": "One saved flow (Page Flows → Saved flows): its details, its diagram (plain English or technical), an editor (reword steps, notes, steps and actions added, moved, removed, systems as lanes), comments, its versions (view, restore) and a check against the app; Save (a new version), Save as copy, PDF, SVG, Remove (desktop/lib/savedFlows.js, resources/js/flowModel.js).",
   "navigation": {
     "embeddable": "enabled"
   },

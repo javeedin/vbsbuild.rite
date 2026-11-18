@@ -858,14 +858,14 @@ function createDevServer(o) {
           const b = post ? JSON.parse((await bodyOf()) || '{}') : {};
           const by = who();
           if (pathname === '/__pages/info' && req.method === 'GET') return jsonP(200, { ok: true, canWrite: ps.canWrite(), canCapture: ps.canCapture(), canRun: !!(ps.canRun && ps.canRun()), data: ps.dataInfo ? ps.dataInfo() : null });
-          // Integrations (lib/integrations.js, Application → Integrations): every system the app talks to and every call it
+          // Integrations (lib/integrations.js, Application → Page Flows): every system the app talks to and every call it
           // makes, read from its code (the pages and services of your workspace's working folder); its report as a PDF
           if (pathname === '/__pages/integrations' && req.method === 'GET') {
             const r = INT.scan(ps.rootNow ? ps.rootNow() : repoRoot, { app: u.searchParams.get('app') || '' });
             if (r.ok) { r.by = by; delete r.root; log(`Integrations scanned: ${r.app} — ${r.totals.systems} systems, ${r.totals.endpoints} endpoints, ${r.totals.calls} calls`); }
             return jsonP(200, r);
           }
-          // Saved flows (lib/savedFlows.js, Integrations → Saved flows): a flow saved under a name, edited, commented on
+          // Saved flows (lib/savedFlows.js, Page Flows → Saved flows): a flow saved under a name, edited, commented on
           if (pathname === '/__pages/flows' || pathname.startsWith('/__pages/flows/')) {
             const fl = o.flowStore;
             if (!fl) return jsonP(200, { ok: false, error: 'Saved flows need the desktop app.' });

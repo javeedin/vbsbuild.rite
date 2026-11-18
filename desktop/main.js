@@ -749,7 +749,7 @@ function crStore() {
   if (!crStoreInst) crStoreInst = require('./lib/changeRequests').open({ dir: () => { const c = currentWorkspace(); return c ? path.join(app.getPath('userData'), 'change-requests', spaceOf(c)) : ''; } });
   return crStoreInst;
 }
-// Saved flows (Application → Integrations → Saved flows, lib/savedFlows.js): kept per VB Studio project on this PC
+// Saved flows (Application → Page Flows → Saved flows, lib/savedFlows.js): kept per VB Studio project on this PC
 let flowStoreInst = null;
 function flowStore() {
   if (!flowStoreInst) flowStoreInst = require('./lib/savedFlows').open({ dir: () => { const c = currentWorkspace(); return c ? path.join(app.getPath('userData'), 'saved-flows', spaceOf(c)) : ''; } });

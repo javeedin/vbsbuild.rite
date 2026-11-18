@@ -1,12 +1,12 @@
-<!-- Integrations: every system your workspace's app talks to and every call it makes, read from its code
+<!-- Page Flows (Application → Page Flows; the page is still integrations-page): every system your workspace's app talks to and every call it makes, read from its code
      (desktop/lib/integrations.js) — the overview and landscape, the integration data sheet (source → target), the endpoints,
      the systems, the diagrams (landscape, a system, a page), exported as a PDF or an Excel workbook. -->
 <div class="nx-page nx-int">
   <div class="nx-pagehead">
     <div>
       <div class="nx-kicker">Build.Rite · Application</div>
-      <h1 id="intTitle">Integrations</h1>
-      <div class="nx-sub">Every system your app talks to and every call it makes — read from its code (its pages, chains and services): the flow between systems, the integration data sheet (source → target), its diagrams, and a PDF or Excel copy.</div>
+      <h1 id="intTitle">Page Flows</h1>
+      <div class="nx-sub">How each page of your app works with other systems, and every call it makes — read from its code (its pages, chains and services): page by page (in plain English too), between systems, saved flows to edit and share, the integration data sheet (source → target), its diagrams, and a PDF or Excel copy.</div>
     </div>
   </div>
 
@@ -41,7 +41,7 @@
       <div class="nx-sc-tabs" role="tablist" id="intTabs">
         <button type="button" role="tab" id="intTabOverview" :aria-selected="[[ $variables.tab === 'overview' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'overview' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="overview" on-click="[[ $listeners.onAct ]]">Overview</button>
         <button type="button" role="tab" id="intTabFlows" :aria-selected="[[ $variables.tab === 'flows' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'flows' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="flows" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'System flows (' + ($variables.m.totals.interfaces || 0) + ')' ]]"></oj-bind-text></button>
-        <button type="button" role="tab" id="intTabPages" :aria-selected="[[ $variables.tab === 'pages' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'pages' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="pages" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'Page flows (' + ($variables.m.pageFlows || []).length + ')' ]]"></oj-bind-text></button>
+        <button type="button" role="tab" id="intTabPages" :aria-selected="[[ $variables.tab === 'pages' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'pages' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="pages" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'By page (' + ($variables.m.pageFlows || []).length + ')' ]]"></oj-bind-text></button>
         <button type="button" role="tab" id="intTabSaved" :aria-selected="[[ $variables.tab === 'saved' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'saved' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="saved" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'Saved flows (' + $variables.flows.length + ')' ]]"></oj-bind-text></button>
         <button type="button" role="tab" id="intTabSheet" :aria-selected="[[ $variables.tab === 'sheet' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'sheet' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="sheet" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'Data sheet (' + $variables.m.totals.calls + ')' ]]"></oj-bind-text></button>
         <button type="button" role="tab" id="intTabEndpoints" :aria-selected="[[ $variables.tab === 'endpoints' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'endpoints' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="endpoints" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'Endpoints (' + $variables.m.totals.endpoints + ')' ]]"></oj-bind-text></button>
@@ -240,7 +240,7 @@
       <oj-bind-if test="[[ $variables.tab === 'saved' ]]">
         <div class="nx-card nx-sc-sec" id="intSaved">
           <div class="nx-sc-head">
-            <div><h2>Saved flows</h2><span class="nx-note">Integration flows saved under a name — from Page flows (Edit &amp; save as flow) or drawn by hand. Open one to reword its steps, add steps and notes, comment, set its status and check it against the app.</span></div>
+            <div><h2>Saved flows</h2><span class="nx-note">Flows saved under a name — from By page (Edit &amp; save as flow) or drawn by hand. Open one to reword its steps, add steps and notes, comment, set its status and check it against the app.</span></div>
             <span class="nx-min-flex"></span>
             <input type="search" class="nx-cm-input nx-int-q" id="intFlowsQ" placeholder="Find a flow: name, system, page, owner…" data-field="flowsQ" :value="[[ $variables.flowsQ ]]" on-input="[[ $listeners.onField ]]">
             <button type="button" class="nx-btn nx-btn--sm" id="intFlowsCheck" data-act="flowsCheck" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.flows.length === 0 ]]" title="Compare every saved flow with the app's code now"><span class="oj-ux-ico-check-circle" aria-hidden="true"></span> Check all against the app</button>
@@ -251,7 +251,7 @@
           </div>
           <oj-bind-if test="[[ !!$variables.flowsErr ]]"><p class="nx-note" id="intFlowsErr"><oj-bind-text value="[[ $variables.flowsErr ]]"></oj-bind-text></p></oj-bind-if>
           <oj-bind-if test="[[ !$variables.flowsErr && $variables.flows.length === 0 ]]">
-            <div class="nx-int-empty" id="intFlowsNone"><b>No saved flow yet.</b> Open <button type="button" class="nx-linkbtn" data-act="tab" data-key="pages" on-click="[[ $listeners.onAct ]]">Page flows</button>, choose a page and press <b>Edit &amp; save as flow…</b> — or start a <button type="button" class="nx-linkbtn" data-act="saveOpen" data-key="blank" on-click="[[ $listeners.onAct ]]">new flow</button> and draw it by hand.</div>
+            <div class="nx-int-empty" id="intFlowsNone"><b>No saved flow yet.</b> Open <button type="button" class="nx-linkbtn" data-act="tab" data-key="pages" on-click="[[ $listeners.onAct ]]">By page</button>, choose a page and press <b>Edit &amp; save as flow…</b> — or start a <button type="button" class="nx-linkbtn" data-act="saveOpen" data-key="blank" on-click="[[ $listeners.onAct ]]">new flow</button> and draw it by hand.</div>
           </oj-bind-if>
           <oj-bind-if test="[[ $variables.flows.length > 0 ]]">
           <div class="nx-int-sfgrid" id="intFlowsGrid" role="table" aria-label="Saved flows">

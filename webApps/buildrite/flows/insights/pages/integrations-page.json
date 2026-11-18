@@ -1,5 +1,5 @@
 {
-  "description": "Integrations: every system your workspace's app talks to and every call it makes, read from its code — between systems (the app ⇄ each system by business object, interfaces, cross-system flows), the integration data sheet (source → target), the endpoints, the systems, the diagrams (landscape, a system, a page), exported as a PDF or an Excel workbook (desktop/lib/integrations.js, /__pages/integrations).",
+  "description": "Page Flows (Application → Page Flows): every system your workspace's app talks to and every call it makes, read from its code — between systems (the app ⇄ each system by business object, interfaces, cross-system flows), the integration data sheet (source → target), the endpoints, the systems, the diagrams (landscape, a system, a page), exported as a PDF or an Excel workbook (desktop/lib/integrations.js, /__pages/integrations).",
   "navigation": {
     "embeddable": "enabled"
   },

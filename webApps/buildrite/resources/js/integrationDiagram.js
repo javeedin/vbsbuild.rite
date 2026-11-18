@@ -1,7 +1,7 @@
 define([], function () {
   'use strict';
 
-  // Integration diagrams (Application → Integrations), drawn as SVG from the scan (desktop/lib/integrations.js) — pure
+  // Integration diagrams (Application → Page Flows), drawn as SVG from the scan (desktop/lib/integrations.js) — pure
   // (no DOM): the same picture in the page, in the PDF and saved as .svg.
   //
   //   landscape(m)      the app's flows (the source) → the systems they call (the targets); a line's thickness = calls

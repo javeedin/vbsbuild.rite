@@ -1,7 +1,7 @@
 define(['resources/js/integrationDiagram'], function (D) {
   'use strict';
 
-  // The integrations report (Application → Integrations → PDF / Excel) — pure (no DOM): from the scan
+  // The integrations report (Application → Page Flows → PDF / Excel) — pure (no DOM): from the scan
   // (desktop/lib/integrations.js), a printable A4 landscape document and the Excel sheets.
   //
   //   html(m, { by, systems: true, pages: 'all' | [ids] }) → '<!doctype html>…' (pages 'all': a Page by page section — every

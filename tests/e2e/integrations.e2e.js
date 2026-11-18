@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * Integrations, in a browser: Application → Integrations scans your working folder's app (the sample shop) and shows
+ * Page Flows (the screen once called Integrations), in a browser: Application → Page Flows scans your working folder's app (the sample shop) and shows
  * every system it talks to and every call it makes — figures, the integration landscape, calls by system; between
  * systems, not page by page (System flows): the app ⇄ each system by business object, the interfaces (each opens its
  * rows in the data sheet), system → system and the cross-system flows (an action calling two systems, in order); page
- * by page (Page flows): each page's integration flow — what sets each call off, its calls in order, the systems — its
+ * by page (By page): each page's integration flow — what sets each call off, its calls in order, the systems — its
  * calls listed, previous / next, all pages → the systems, Save SVG, a data-sheet row's page opening it; the
  * integration data sheet (source page → target system, set off by, method, endpoint, direction) with a search, a system,
  * a flow and a direction; the endpoints; the systems (base URL, sign-in, services); the diagrams (landscape, a system,
@@ -37,7 +37,9 @@ const count = (page, sel) => page.$$eval(sel, (l) => l.length).catch(() => 0);
     T.section('the scan');
     await env.open('/?open=integrations');
     await page.waitForSelector('#intKpis', { timeout: 30000 });
-    T.check('Integrations under Application', !!(await page.$('[data-nav-id="integrations"]')));
+    T.check('Page Flows under Application: its menu item, its tab and its title', !!(await page.$('[data-nav-id="integrations"]')) && /Page Flows/.test(await env.text('[data-nav-id="integrations"]'))
+      && (await page.$eval('.nx-tab--on .nx-tab-title', (e) => e.textContent.trim()).catch(() => '')) === 'Page Flows' && (await env.text('#intTitle')) === 'Page Flows');
+    T.check('…its tab By page (no Page Flows › Page flows)', /^By page \(5\)$/.test(await env.text('#intTabPages')));
     const head = await text(page, '#intBar');
     T.check('the app scanned: shop, when, pages read', /shop/.test(head) && /Scanned .* · 6 pages read/.test(head), head);
     const kpis = await env.text('#intKpis');

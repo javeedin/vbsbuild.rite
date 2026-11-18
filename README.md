@@ -254,9 +254,9 @@ the first try, the lines and files changed, what is overdue; where they are (sta
 fixed them, for which customers, who asks, by area (the app's flows); the files changed most; and the overdue and latest
 fixed requests (each opens it).
 
-## Integrations: every system your app talks to, its data sheet and diagrams
+## Page Flows: how each page works with other systems — flows, data sheet, diagrams
 
-**Application → Integrations** reads your workspace's app — every page, its chains and modules, and its services
+**Application → Page Flows** (it was called Integrations) reads your workspace's app — every page, its chains and modules, and its services
 (`services/catalog.json` and each service's OpenAPI document) — and lists every system it talks to and every call it
 makes. Nothing is run and nothing is called: it is all read from the code. When the working folder holds more than one
 app, it reads the one with the most pages; the header lets you choose another. **Scan again** reads it afresh.
@@ -281,7 +281,7 @@ app, it reads the one with the most pages; the header lets you choose another. *
     code calls them (SF-01…), e.g. *1. reads customers from the shop → 2. runs the customers report in BI Publisher*,
     with where it happens — as steps or as a diagram; and **system to system**: which systems one action calls one
     after the other, how often, and what goes from the first to the second.
-- **Page flows** — page by page: pick a page (find, the list, Previous / Next).
+- **By page** — page by page: pick a page (find, the list, Previous / Next).
   - **One page — flow**: the page's flow **in swimlanes** — a lane for the page and one per system it calls. Each
     action starts at what sets it off (the page opening, a button…) and goes down call by call, each call in the lane
     of the system it calls (method and business object, e.g. *Oracle Fusion · GET Items* → *your backend · POST
@@ -314,19 +314,19 @@ in order), System to system, Systems, Integrations, Endpoints, Flows x systems.
 
 ### Plain English and saved flows
 
-**Plain English** (the switch on Page flows, and on a saved flow) says every step the way a business user would: each
+**Plain English** (the switch on By page, and on a saved flow) says every step the way a business user would: each
 call as a sentence — *Reads the list of projects from Oracle Fusion*, *Starts the Project integration in Oracle
 Integration Cloud*, *Promotes the equipment import in your backend* — and each action as when it happens — *When the
 page opens*, *When the user clicks "Fetch"*, *When the user selects a row*, *When the user changes the project*. No
 paths, methods or chain names. The steps table under the diagram becomes *What happens, step by step* (step, when, what
 happens, system).
 
-**Edit & save as flow…** (Page flows) saves the page's flow under a name. It asks for the **flow name** (required),
+**Edit & save as flow…** (By page) saves the page's flow under a name. It asks for the **flow name** (required),
 its **purpose**, the **business area / process**, the **owner**, the **status** (Draft, In review, Approved, Retired),
 the **Jira story** and **tags**, then opens the saved flow in a tab of its own (FL-0001…). **New flow (blank)** on
 Saved flows starts an empty one to draw by hand.
 
-**Saved flows** (a tab of Integrations) lists every saved flow: its ID, name and purpose, the page it came from, its
+**Saved flows** (a tab of Page Flows) lists every saved flow: its ID, name and purpose, the page it came from, its
 systems, steps and actions, status and version, owner, when and by whom it was saved, open comments. Find, filter by
 status, open, save as a copy, remove; **Check all against the app** compares each with the app's code now and says
 whether it still matches.

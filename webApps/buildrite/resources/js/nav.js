@@ -54,10 +54,11 @@ define([], function () {
       // Fix and followed until it is fixed (flows/insights change-requests; desktop/lib/changeRequests.js)
       { id: 'change-requests', label: 'Change requests', icon: 'oj-ux-ico-edit', route: { flow: 'insights', page: 'change-requests' },
         keywords: 'change requests cr enhancement fix bug request customer jira issue code fix page approve applied saved fixed due priority new page menu knowledge base fdd analytics' },
-      // Integrations: every system the app talks to and every call it makes, read from its code — the data sheet
+      // Page Flows (id integrations): every system the app talks to and every call it makes, read from its code — page
+      // by page and between systems, saved flows, the data sheet
       // (source → target), the diagrams, a PDF / Excel copy (flows/insights integrations; desktop/lib/integrations.js)
-      { id: 'integrations', label: 'Integrations', icon: 'oj-ux-ico-link', route: { flow: 'insights', page: 'integrations' },
-        keywords: 'integrations interfaces systems source target data sheet rest services endpoints fusion oic bip ords jira diagram landscape pdf excel' },
+      { id: 'integrations', label: 'Page Flows', icon: 'oj-ux-ico-link', route: { flow: 'insights', page: 'integrations' },
+        keywords: 'page flows integrations interfaces saved flows plain english systems source target data sheet rest services endpoints fusion oic bip ords jira diagram landscape pdf excel' },
       // The FDD documents "Analyze with AI" reads (flows/fdd library): uploaded into the project's data and pushed to
       // git, so every user has them; one is the latest.
       { id: 'fdd-library', label: 'FDD library', icon: 'oj-ux-ico-upload', route: { flow: 'fdd', page: 'library' },
@@ -99,7 +100,7 @@ define([], function () {
     'change-request': { flow: 'insights', page: 'change-requests', icon: 'oj-ux-ico-edit', navId: 'change-requests',
       key: function (p) { return p ? String(p.crId || '') : ''; },
       title: function (p) { return (p && p.title) || 'Change request'; } },
-    // One saved flow ({ flowId: FL-0001, title }) — from Integrations → Saved flows, or just saved from Page flows: its
+    // One saved flow ({ flowId: FL-0001, title }) — from Page Flows → Saved flows, or just saved from By page: its
     // diagram (plain English or technical), editor, comments, versions and a check against the app (flows/insights saved-flow).
     'saved-flow': { flow: 'insights', page: 'saved-flow', icon: 'oj-ux-ico-link', navId: 'integrations',
       key: function (p) { return p ? String(p.flowId || '') : ''; },

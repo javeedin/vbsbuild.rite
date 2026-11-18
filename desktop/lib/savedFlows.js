@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Saved flows (Application → Integrations → Saved flows): an integration flow saved under a name — made from a page's
+ * Saved flows (Application → Page Flows → Saved flows): an integration flow saved under a name — made from a page's
  * flow (resources/js/flowModel.js fromPage) or drawn by hand — then edited, commented on and checked against the app.
  *
  * A flow: id (FL-0001, given on the first save), name, purpose, area, owner, status (draft | review | approved |

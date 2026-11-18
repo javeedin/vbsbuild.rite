@@ -55,7 +55,7 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         // System flows: the summary or the detailed flow; the cross-system flows as steps or as a diagram
         if (act === 'sfView') { v.sfView = key === 'detailed' ? 'detailed' : 'summary'; return; }
         if (act === 'jView') { v.jView = key === 'diagram' ? 'diagram' : 'steps'; return; }
-        // Page flows: a page's integration flow (pgOpen (key)), one page or all pages, the previous / next page
+        // By page: a page's integration flow (pgOpen (key)), one page or all pages, the previous / next page
         if (act === 'pgOpen') { v.pgId = String(key || ''); if (v.pgView === 'all') v.pgView = 'flow'; v.tab = 'pages'; return; }
         if (act === 'pgView') { v.pgView = ['all', 'one'].indexOf(key) !== -1 ? key : 'flow'; return; }
         if (act === 'pgStep') {
@@ -86,7 +86,7 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
           if (!flow) { v.saveErr = 'That page makes no call now — scan again.'; return; }
           v.saveBusy = true;
           try {
-            const r = await PC.flowSave(flow, f0.mode === 'blank' ? 'drawn by hand' : 'saved from Page flows');
+            const r = await PC.flowSave(flow, f0.mode === 'blank' ? 'drawn by hand' : 'saved from By page');
             const b = r.body || {};
             if (!r.ok || !b.ok) { v.saveErr = b.error || 'It could not be saved.'; return; }
             v.saveDlg = false;
@@ -128,7 +128,7 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         // a system's or a page's diagram (from the systems, the data sheet, the overview)
         if (act === 'dia') { v.dia = String(key || 'landscape'); return; }
         if (act === 'showSystem') { v.dia = 'system'; v.diaSystem = String(key || ''); v.tab = 'diagrams'; return; }
-        // a page's diagram: its integration flow on Page flows
+        // a page's diagram: its integration flow on By page
         if (act === 'showPage') { v.pgId = String(key || ''); if (v.pgView === 'all') v.pgView = 'flow'; v.tab = 'pages'; v.diaPage = String(key || ''); return; }
         if (act === 'sheetFor') { v.fSystem = String(key || ''); v.fDir = 'all'; v.q = ''; v.fObject = ''; v.fObjectLabel = ''; v.limit = 200; v.tab = 'sheet'; return; }
         // an interface: the data-sheet rows behind it (its system, its business object)

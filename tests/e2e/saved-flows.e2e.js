@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * Saved flows, in a browser: Integrations → Page flows in plain English (sentences, what sets each action off in words);
+ * Saved flows, in a browser: Page Flows → By page in plain English (sentences, what sets each action off in words);
  * Edit & save as flow → the name and details asked (a name required) → the saved flow opens in a tab of its own: its
  * diagram (plain English or technical), step by step; Edit steps — an action reworded, a step reworded, a system (lane)
  * added and a step added by hand in it, a note — Save as version 2 with what changed; comments on a step, resolved; its
@@ -36,7 +36,7 @@ const setField = async (page, sel, value) => { const el = vis(page, sel); await 
   const tabTitle = () => page.$eval('.nx-tab--on .nx-tab-title', (e) => e.textContent.trim()).catch(() => '');
   const toTab = async (title) => { await page.locator('.nx-tab .nx-tab-title', { hasText: title }).first().click(); await settle(page, 600); };
   try {
-    T.section('plain English on Page flows');
+    T.section('plain English on By page');
     await env.open('/?open=integrations');
     await page.waitForSelector('#intKpis', { timeout: 30000 });
     await page.click('#intTabPages');
@@ -202,8 +202,8 @@ const setField = async (page, sel, value) => { const el = vis(page, sel); await 
     await page.waitForFunction(() => /FL-0002/.test((document.querySelector('.nx-tab--on .nx-tab-title') || {}).textContent || ''), null, { timeout: 10000 }).catch(() => {});
     T.check('Save as copy: FL-0002 under the name asked, in its own tab, a draft', /^FL-0002 · Order intake — copy$/.test(await tabTitle()) && flowStore.get('FL-0002').flow.copiedFrom === 'FL-0001' && flowStore.get('FL-0002').flow.status === 'draft', await tabTitle());
 
-    T.section('Integrations → Saved flows');
-    await toTab('Integrations');
+    T.section('Page Flows → Saved flows');
+    await toTab('Page Flows');
     await page.click('#intTabSaved');
     await page.waitForSelector('#intFlowsGrid', { timeout: 10000 });
     await settle(page, 600);

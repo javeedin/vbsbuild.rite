@@ -1,7 +1,7 @@
 define(['resources/js/integrationDiagram'], function (D) {
   'use strict';
 
-  // Saved flows (Application → Integrations → Saved flows): a page's integration flow saved under a name, then edited —
+  // Saved flows (Application → Page Flows → Saved flows): a page's integration flow saved under a name, then edited —
   // its steps reworded for a business reader, notes, steps and actions added by hand, systems (lanes) named — and checked
   // against the app later. Pure (no DOM, no server): the pages and the tests use the same functions.
   //
