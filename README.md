@@ -347,6 +347,18 @@ A **saved flow** has:
   *Sticky notes on the whole flow* puts one at the top of the diagram. On the diagram a note sits under its lane's steps,
   clear of the arrows; it is in the PDF too, with where it sits. A note on an action that is removed stays, on the whole
   flow.
+- **▶ Run** — each step's call sent for real to the app's backend, with the app's login (through the API tester, as in
+  Application pages → Test). **Run** on a step opens its panel under it: where the call goes and as whom, its
+  parameters (each filled from the value you used last, its default, or one an earlier answer gave — an id from a list,
+  with the others to pick), more parameters, its body. A call that only reads is sent at once: its status, time, size
+  and rows, the rows as a table, the answer itself, and a chip beside the step (click it to open the panel again). A
+  step that runs a BI Publisher report runs the page's report (its path and parameters read from the page's code), its
+  rows decoded. **A call that changes data is never sent by itself**: its panel says so and where it would go, and only
+  **Send — it changes data** sends it, after you confirm. **Run** on an action runs its steps in order, each read with
+  the values the steps before it gave; **Run the flow** (on the Flow tab) runs every step, shows what it did in words and
+  a **Last run** chip per step (a chip opens its panel). Neither ever sends a call that changes data, and a step added by
+  hand has no call to run. Runs are not saved with the flow (answers hold live data); the values used are kept on this
+  PC for the next run.
 - **Details** — name, purpose, area, owner, Jira story, tags, where it came from.
 - **Comments** — on the whole flow or one step (shown with its words), resolved and reopened, removed; kept at once.
 - **History** — every version (who, when, what changed): view an earlier one, or restore it into the editor; and what

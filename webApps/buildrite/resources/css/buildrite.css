@@ -924,7 +924,7 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-sfp-dirty { color: #8a5a00; font-weight: 700; font-size: 12.5px; }
 .nx-sfp-note { flex: 0 1 260px !important; width: auto !important; }
 .nx-sfp-purpose { margin: 0 0 10px; font-size: 13.5px; color: #26323e; max-width: 980px; }
-.nx-sfp-stepgrid { display: grid; grid-template-columns: 60px minmax(180px, 1.2fr) minmax(260px, 2.2fr) minmax(130px, 1fr) minmax(160px, 1.3fr) 110px; border-top: 1px solid #e4e9ef; }
+.nx-sfp-stepgrid { display: grid; grid-template-columns: 60px minmax(180px, 1.2fr) minmax(260px, 2.2fr) minmax(130px, 1fr) minmax(160px, 1.3fr) 170px; border-top: 1px solid #e4e9ef; }
 .nx-sfp-notecell { color: #8a5a00; }
 .nx-sfp-lanes { display: grid; gap: 8px; }
 .nx-sfp-lane { display: grid; grid-template-columns: minmax(200px, 1.4fr) minmax(170px, 1fr) auto; gap: 8px; align-items: center; padding: 6px 8px 6px 10px; border: 1px solid #e1e7ee; border-left: 5px solid #8a97a5; border-radius: 8px; background: #fff; }
@@ -964,7 +964,7 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-int-sfgrid .nx-int-id { white-space: nowrap; }
 
 /* A saved flow: sticky notes, descriptions in their automatic wording */
-.nx-sfp-ahead { grid-template-columns: auto minmax(0, 1fr) auto auto auto auto !important; }
+.nx-sfp-ahead { grid-template-columns: auto minmax(0, 1fr) auto auto auto auto auto !important; }
 .nx-sfp-auto { color: #3b4a58; font-style: italic; }
 .nx-sfp-flowhead { align-items: flex-start; }
 .nx-sfp-flowhead .nx-sfp-purpose { flex: 1 1 520px; }
@@ -984,3 +984,56 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-sfp-stickies { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
 .nx-sfp-sopts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; }
 .nx-sfp-sopts .nx-iconbtn { justify-self: end; }
+
+/* Saved flow — steps run for real (▶ Run on a step, an action, the flow; the API tester sends each call) */
+.nx-sfp-stepwrap { display: grid; gap: 0; }
+.nx-sfp-runbtn, .nx-sfp-runall { color: #11704b; border-color: #9fd3bb; background: #f1faf5; font-weight: 600; white-space: nowrap; }
+.nx-sfp-runbtn:hover:not(:disabled), .nx-sfp-runall:hover:not(:disabled) { background: #dcf3e7; }
+.nx-sfp-runbtn:disabled, .nx-sfp-runall:disabled { color: #8a97a5; border-color: #dfe5eb; background: #f6f8fa; cursor: not-allowed; }
+.nx-sfp-runbtn { margin-left: 6px; }
+.nx-sfp-rchip { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 10px; border: 1px solid transparent; font: 600 11px/1.6 inherit; font-family: inherit; cursor: pointer; white-space: nowrap; vertical-align: middle; }
+.nx-sfp-rchip--ok { background: #e3f5ea; color: #11704b; border-color: #b5e0c6; }
+.nx-sfp-rchip--warn { background: #fff4d6; color: #8a5a00; border-color: #f0d68f; }
+.nx-sfp-rchip--fail { background: #fde8e8; color: #b42318; border-color: #f4b8b3; }
+.nx-sfp-rchip--held { background: #f3eefe; color: #5b3fb5; border-color: #d6c9f6; }
+.nx-sfp-rchip--skip, .nx-sfp-rchip--busy { background: #eef1f4; color: #55616d; border-color: #dbe1e7; }
+.nx-sfp-rchipline { display: block; line-height: 1; }
+.nx-sfp-rchipline .nx-sfp-rchip { margin-left: 0; }
+.nx-sfp-rchip .oj-ux-ico-play { font-size: 10px; }
+.nx-sfp-lastrun { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.nx-sfp-lastrun .nx-sfp-rchip { margin-left: 0; }
+.nx-sfp-runsum { margin: 0 0 10px; padding: 8px 12px; border-radius: 8px; background: #e9f7ef; color: #0f5e3f; border: 1px solid #bfe3cf; font-weight: 600; }
+.nx-sfp-runsum--bad { background: #fdeceb; color: #a12a1e; border-color: #f2c1bc; }
+.nx-sfp-run { margin: 0 0 4px 18px; padding: 10px 12px 12px; border: 1px solid #cfe6da; border-left: 4px solid #1baf7a; border-radius: 0 0 8px 8px; background: #fbfdfc; display: grid; gap: 8px; }
+.nx-sfp-rhead { display: flex; align-items: center; gap: 8px; }
+.nx-sfp-rico { color: #11704b; }
+.nx-sfp-rcall { font-size: 13px; overflow-wrap: anywhere; }
+.nx-sfp-rkind { padding: 1px 8px; border-radius: 10px; background: #e6f0fc; color: #1d4f91; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.nx-sfp-rkind--write { background: #fbe9e0; color: #a8461b; }
+.nx-sfp-rtarget { overflow-wrap: anywhere; }
+.nx-sfp-rmsg { padding: 6px 10px; border-radius: 6px; background: #eef4fb; color: #1d4f91; font-size: 13px; }
+.nx-sfp-rmsg--bad { background: #fdeceb; color: #a12a1e; }
+.nx-sfp-rmsg--warn { background: #fff4d6; color: #8a5a00; }
+.nx-sfp-rparams { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px 12px; }
+.nx-sfp-rparam, .nx-sfp-rbodyl { display: grid; gap: 3px; min-width: 0; }
+.nx-sfp-rlabel small { color: #6b7783; }
+.nx-sfp-rchoices { display: flex; flex-wrap: wrap; gap: 4px; }
+.nx-sfp-rchoice { padding: 0 7px; border-radius: 9px; border: 1px solid #c8d3de; background: #fff; font: 11px/1.7 inherit; font-family: inherit; cursor: pointer; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-sfp-rchoice:hover { border-color: #2a78d6; color: #1d4f91; }
+.nx-sfp-rbody { min-height: 110px; font-size: 12px; resize: vertical; width: 100%; }
+.nx-sfp-ractions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.nx-sfp-rwrite { color: #fff; background: #c2410c; border-color: #c2410c; font-weight: 600; }
+.nx-sfp-rwrite:hover:not(:disabled) { background: #9a3412; }
+.nx-sfp-rres { display: grid; gap: 6px; border-top: 1px dashed #d5e3db; padding-top: 8px; }
+.nx-sfp-rline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.nx-sfp-rstatus { padding: 1px 9px; border-radius: 10px; font-weight: 700; font-size: 13px; }
+.nx-sfp-rstatus--ok { background: #e3f5ea; color: #11704b; } .nx-sfp-rstatus--warn { background: #fff4d6; color: #8a5a00; } .nx-sfp-rstatus--fail { background: #fde8e8; color: #b42318; }
+.nx-sfp-rurl { font-size: 12px; color: #55616d; overflow-wrap: anywhere; }
+.nx-sfp-rtablewrap { overflow-x: auto; border: 1px solid #e1e7ee; border-radius: 6px; }
+.nx-sfp-rtable { display: table; border-collapse: collapse; width: 100%; font-size: 12px; }
+.nx-sfp-rtr { display: table-row; }
+.nx-sfp-rtd { display: table-cell; padding: 4px 8px; border-bottom: 1px solid #edf1f5; text-align: left; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.nx-sfp-rtr--head .nx-sfp-rtd { background: #f4f7fa; font-weight: 600; color: #3a4652; }
+.nx-sfp-ranswer summary { cursor: pointer; font-weight: 600; color: #1d4f91; }
+.nx-sfp-ranswer pre { margin: 6px 0 0; max-height: 320px; overflow: auto; padding: 8px 10px; background: #f6f8fa; border-radius: 6px; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 1000px) { .nx-sfp-run { margin-left: 0; } }

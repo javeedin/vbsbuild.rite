@@ -49,12 +49,14 @@
         <div class="nx-sc-head nx-sfp-flowhead">
           <oj-bind-if test="[[ !!$variables.flow.purpose ]]"><p class="nx-sfp-purpose" id="sfpPurposeShow"><oj-bind-text value="[[ $variables.flow.purpose ]]"></oj-bind-text></p></oj-bind-if>
           <span class="nx-min-flex"></span>
+          <button type="button" class="nx-btn nx-btn--sm nx-sfp-runall" id="sfpRunFlow" data-act="runFlow" on-click="[[ $listeners.onAct ]]" :disabled="[[ !!$variables.runBusy ]]" title="Run every step in order against the app's backend — each read with the values the steps before it gave; a call that changes data is never sent from here"><span class="oj-ux-ico-play" aria-hidden="true"></span> <oj-bind-text value="[[ $functions.runAllText($variables.runBusy, 'flow') ]]"></oj-bind-text></button>
           <button type="button" class="nx-btn nx-btn--sm nx-sfp-addnote" id="sfpAddNoteFlow" data-act="addSticky" on-click="[[ $listeners.onAct ]]" title="A sticky note on the flow — write it, then place it on an action and a lane"><span class="oj-ux-ico-note" aria-hidden="true"></span> Sticky note</button>
         </div>
+        <oj-bind-if test="[[ !!$variables.runSum ]]"><div :class="[[ 'nx-sfp-runsum' + ($variables.runSum.ok ? '' : ' nx-sfp-runsum--bad') ]]" id="sfpRunSum"><oj-bind-text value="[[ $variables.runSum.text ]]"></oj-bind-text></div></oj-bind-if>
         <iframe class="nx-int-frame" id="sfpDia" title="The flow" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.flow, $variables.plain) ]]" :srcdoc="[[ $functions.diaDoc($variables.flow, $variables.plain) ]]"></iframe>
         <h3 class="nx-int-h3">Step by step</h3>
         <div class="nx-sfp-stepgrid" id="sfpSteps" role="table" aria-label="The flow step by step">
-          <div class="nx-int-row nx-int-row--head" role="row"><span>Step</span><span>When</span><span>What happens</span><span>System</span><span>Note</span><span></span></div>
+          <div class="nx-int-row nx-int-row--head" role="row"><span>Step</span><span>When</span><span>What happens</span><span>System</span><span>Note</span><span>Last run</span></div>
           <oj-bind-for-each data="[[ $functions.stepRows($variables.flow, $variables.plain) ]]"><template data-oj-as="r">
             <div :class="[[ 'nx-int-row' + (r.data.first ? ' nx-int-row--first' : '') ]]" role="row" :data-key="[[ r.data.key ]]">
               <span class="nx-int-id"><oj-bind-text value="[[ r.data.num ]]"></oj-bind-text></span>
@@ -62,7 +64,7 @@
               <span><oj-bind-text value="[[ r.data.says ]]"></oj-bind-text><oj-bind-if test="[[ !!r.data.tech ]]"><small class="nx-int-mono"><oj-bind-text value="[[ r.data.tech ]]"></oj-bind-text></small></oj-bind-if></span>
               <span><oj-bind-text value="[[ r.data.system ]]"></oj-bind-text></span>
               <span class="nx-sfp-notecell"><oj-bind-text value="[[ r.data.note ]]"></oj-bind-text></span>
-              <span><oj-bind-if test="[[ !!r.data.comments ]]"><button type="button" class="nx-linkbtn" data-act="tab" data-key="comments" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ r.data.comments ]]"></oj-bind-text></button></oj-bind-if></span>
+              <span class="nx-sfp-lastrun"><oj-bind-if test="[[ $functions.hasRunChip($variables.runs, r.data.key) ]]"><button type="button" :class="[[ $functions.runChip($variables.runs, r.data.key).cls ]]" data-act="runOpen" :data-key="[[ r.data.key ]]" on-click="[[ $listeners.onAct ]]" :title="[[ $functions.runChip($variables.runs, r.data.key).title ]]"><oj-bind-text value="[[ $functions.runChip($variables.runs, r.data.key).text ]]"></oj-bind-text></button></oj-bind-if><oj-bind-if test="[[ !!r.data.comments ]]"><button type="button" class="nx-linkbtn" data-act="tab" data-key="comments" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ r.data.comments ]]"></oj-bind-text></button></oj-bind-if></span>
             </div>
           </template></oj-bind-for-each>
         </div>
@@ -115,11 +117,13 @@
         </div>
       </div>
       <div id="sfpActions">
+        <oj-bind-if test="[[ !!$variables.runSum ]]"><div :class="[[ 'nx-sfp-runsum' + ($variables.runSum.ok ? '' : ' nx-sfp-runsum--bad') ]]" id="sfpRunSumEdit"><oj-bind-text value="[[ $variables.runSum.text ]]"></oj-bind-text></div></oj-bind-if>
         <oj-bind-for-each data="[[ $functions.actionRows($variables.flow) ]]"><template data-oj-as="a">
           <div class="nx-card nx-sc-sec nx-sfp-action" :data-id="[[ a.data.id ]]">
             <div class="nx-sfp-ahead">
               <b class="nx-sfp-anum"><oj-bind-text value="[[ 'Action ' + a.data.n ]]"></oj-bind-text></b>
               <input :class="[[ 'nx-cm-input nx-sfp-atitle' + (a.data.auto ? ' nx-sfp-auto' : '') ]]" :data-field="[[ 'a.' + a.data.id + '.title' ]]" :value="[[ a.data.val ]]" :placeholder="[[ a.data.ph ]]" on-change="[[ $listeners.onField ]]" aria-label="When it happens" :title="[[ a.data.auto ? 'The automatic wording — edit it to put it in your words' : 'Your words (clear it to go back to the automatic wording)' ]]">
+              <button type="button" class="nx-btn nx-btn--sm nx-sfp-runall" data-act="runAction" :data-key="[[ a.data.id ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ !!$variables.runBusy ]]" title="Run this action's steps in order — each read with the values the steps before it gave; a call that changes data is held until you send it from its own panel"><span class="oj-ux-ico-play" aria-hidden="true"></span> <oj-bind-text value="[[ $functions.runAllText($variables.runBusy, a.data.id) ]]"></oj-bind-text></button>
               <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-sfp-addnote" data-act="addSticky" :data-key="[[ a.data.id ]]" on-click="[[ $listeners.onAct ]]" title="A sticky note on this action"><span class="oj-ux-ico-note" aria-hidden="true"></span> Sticky note</button>
               <button type="button" class="nx-iconbtn" data-act="moveAction" :data-key="[[ a.data.id ]]" data-value="-1" on-click="[[ $listeners.onAct ]]" :disabled="[[ a.data.first ]]" title="Move up" aria-label="Move up"><span class="oj-ux-ico-arrow-up" aria-hidden="true"></span></button>
               <button type="button" class="nx-iconbtn" data-act="moveAction" :data-key="[[ a.data.id ]]" data-value="1" on-click="[[ $listeners.onAct ]]" :disabled="[[ a.data.last ]]" title="Move down" aria-label="Move down"><span class="oj-ux-ico-arrow-down" aria-hidden="true"></span></button>
@@ -129,6 +133,7 @@
             <input class="nx-cm-input nx-sfp-anote" :data-field="[[ 'a.' + a.data.id + '.note' ]]" :value="[[ a.data.note ]]" placeholder="A note on this action (optional)" on-change="[[ $listeners.onField ]]" aria-label="A note on this action">
             <div class="nx-sfp-steps">
               <oj-bind-for-each data="[[ a.data.steps ]]"><template data-oj-as="s">
+               <div class="nx-sfp-stepwrap" :data-id="[[ s.data.id ]]">
                 <div class="nx-sfp-step" :data-id="[[ s.data.id ]]" :style="[[ { borderLeftColor: s.data.color } ]]">
                   <span class="nx-int-id nx-sfp-snum"><oj-bind-text value="[[ s.data.n ]]"></oj-bind-text></span>
                   <select class="nx-cm-input nx-sfp-slane" :data-field="[[ 's.' + s.data.id + '.system' ]]" on-change="[[ $listeners.onField ]]" aria-label="Its system">
@@ -137,6 +142,7 @@
                   <div class="nx-sfp-swords">
                     <input :class="[[ 'nx-cm-input' + (s.data.auto ? ' nx-sfp-auto' : '') ]]" :data-field="[[ 's.' + s.data.id + '.text' ]]" :value="[[ s.data.val ]]" :placeholder="[[ s.data.ph ]]" on-change="[[ $listeners.onField ]]" aria-label="What happens, in your words" :title="[[ s.data.auto ? 'The automatic wording — edit it to put it in your words' : 'Your words (clear it to go back to the automatic wording)' ]]">
                     <small class="nx-int-mono"><oj-bind-text value="[[ s.data.tech ]]"></oj-bind-text></small>
+                    <oj-bind-if test="[[ $functions.hasRunChip($variables.runs, s.data.id) ]]"><span class="nx-sfp-rchipline"><button type="button" :class="[[ $functions.runChip($variables.runs, s.data.id).cls ]]" data-act="runOpen" :data-key="[[ s.data.id ]]" on-click="[[ $listeners.onAct ]]" :title="[[ $functions.runChip($variables.runs, s.data.id).title ]]"><span class="oj-ux-ico-play" aria-hidden="true"></span> <oj-bind-text value="[[ $functions.runChip($variables.runs, s.data.id).text ]]"></oj-bind-text></button></span></oj-bind-if>
                   </div>
                   <oj-bind-if test="[[ s.data.manual ]]">
                     <select class="nx-cm-input nx-sfp-sdir" :data-field="[[ 's.' + s.data.id + '.direction' ]]" on-change="[[ $listeners.onField ]]" aria-label="Reads or writes">
@@ -148,8 +154,63 @@
                     <button type="button" class="nx-iconbtn" data-act="moveStep" :data-key="[[ s.data.id ]]" data-value="-1" on-click="[[ $listeners.onAct ]]" :disabled="[[ s.data.first ]]" title="Move up" aria-label="Move up"><span class="oj-ux-ico-arrow-up" aria-hidden="true"></span></button>
                     <button type="button" class="nx-iconbtn" data-act="moveStep" :data-key="[[ s.data.id ]]" data-value="1" on-click="[[ $listeners.onAct ]]" :disabled="[[ s.data.last ]]" title="Move down" aria-label="Move down"><span class="oj-ux-ico-arrow-down" aria-hidden="true"></span></button>
                     <button type="button" class="nx-iconbtn" data-act="removeStep" :data-key="[[ s.data.id ]]" on-click="[[ $listeners.onAct ]]" title="Remove this step" aria-label="Remove this step"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+                    <button type="button" class="nx-btn nx-btn--sm nx-sfp-runbtn" data-act="runStep" :data-key="[[ s.data.id ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ !s.data.runnable ]]" :title="[[ s.data.runWhy ]]"><span class="oj-ux-ico-play" aria-hidden="true"></span> <oj-bind-text value="[[ $functions.runBtnText($variables.runs, s.data.id) ]]"></oj-bind-text></button>
                   </span>
                 </div>
+                <!-- the step run for real: where its call goes, its values, its answer -->
+                <oj-bind-for-each data="[[ $functions.runPanels($variables.runs, s.data.id) ]]"><template data-oj-as="p">
+                  <div class="nx-sfp-run" :id="[[ p.data.domId ]]">
+                    <div class="nx-sfp-rhead">
+                      <span class="oj-ux-ico-play nx-sfp-rico" aria-hidden="true"></span>
+                      <b class="nx-int-mono nx-sfp-rcall"><oj-bind-text value="[[ p.data.head ]]"></oj-bind-text></b>
+                      <oj-bind-if test="[[ !!p.data.kind ]]"><span :class="[[ p.data.kindCls ]]"><oj-bind-text value="[[ p.data.kind ]]"></oj-bind-text></span></oj-bind-if>
+                      <span class="nx-min-flex"></span>
+                      <button type="button" class="nx-iconbtn" data-act="runClose" :data-key="[[ p.data.id ]]" on-click="[[ $listeners.onAct ]]" title="Close" aria-label="Close"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+                    </div>
+                    <oj-bind-if test="[[ !!p.data.target ]]"><div class="nx-note nx-sfp-rtarget">Goes to <span class="nx-int-mono"><oj-bind-text value="[[ p.data.target ]]"></oj-bind-text></span><oj-bind-text value="[[ p.data.login ? ' · as ' + p.data.login : '' ]]"></oj-bind-text></div></oj-bind-if>
+                    <oj-bind-if test="[[ !!p.data.msg ]]"><div :class="[[ p.data.msgCls ]]"><oj-bind-text value="[[ p.data.msg ]]"></oj-bind-text></div></oj-bind-if>
+                    <oj-bind-if test="[[ p.data.loading ]]"><div class="nx-note">Reading what its call sends…</div></oj-bind-if>
+                    <oj-bind-if test="[[ p.data.ready ]]">
+                      <div class="nx-sfp-rparams">
+                        <oj-bind-for-each data="[[ p.data.params ]]"><template data-oj-as="q">
+                          <label class="nx-sfp-rparam">
+                            <span class="nx-sfp-rlabel"><b class="nx-int-mono"><oj-bind-text value="[[ q.data.label ]]"></oj-bind-text></b> <small><oj-bind-text value="[[ q.data.where + (q.data.from ? ' · ' + q.data.from : '') ]]"></oj-bind-text></small></span>
+                            <input class="nx-cm-input" :data-run-param="[[ q.data.name ]]" :data-field="[[ q.data.field ]]" :value="[[ q.data.value ]]" on-change="[[ $listeners.onField ]]" :title="[[ q.data.hint ]]" :placeholder="[[ q.data.hint || q.data.name ]]">
+                            <oj-bind-if test="[[ q.data.choices.length > 0 ]]"><span class="nx-sfp-rchoices"><oj-bind-for-each data="[[ q.data.choices ]]"><template data-oj-as="c"><button type="button" class="nx-sfp-rchoice" data-act="runPick" :data-key="[[ p.data.id ]]" :data-value="[[ c.data.key ]]" on-click="[[ $listeners.onAct ]]" :title="[[ c.data.title ]]"><oj-bind-text value="[[ c.data.text ]]"></oj-bind-text></button></template></oj-bind-for-each></span></oj-bind-if>
+                          </label>
+                        </template></oj-bind-for-each>
+                        <label class="nx-sfp-rparam"><span class="nx-sfp-rlabel"><b>More parameters</b> <small>a=1&amp;b=2</small></span><input class="nx-cm-input" data-run-extra="1" :data-field="[[ p.data.extraField ]]" :value="[[ p.data.extra ]]" on-change="[[ $listeners.onField ]]" placeholder="optional"></label>
+                      </div>
+                      <oj-bind-if test="[[ p.data.hasBody ]]">
+                        <label class="nx-sfp-rbodyl"><span class="nx-sfp-rlabel"><b>Body</b></span><textarea class="nx-cm-input nx-int-mono nx-sfp-rbody" data-run-body="1" :data-field="[[ p.data.bodyField ]]" :value="[[ p.data.body ]]" on-change="[[ $listeners.onField ]]" spellcheck="false"></textarea></label>
+                      </oj-bind-if>
+                      <div class="nx-sfp-ractions">
+                        <oj-bind-if test="[[ !p.data.writes ]]"><button type="button" class="nx-btn nx-btn--sm nx-btn--primary" data-act="runSend" :data-key="[[ p.data.id ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ p.data.busy ]]"><span class="oj-ux-ico-play" aria-hidden="true"></span> <oj-bind-text value="[[ p.data.sendText ]]"></oj-bind-text></button></oj-bind-if>
+                        <oj-bind-if test="[[ p.data.writes ]]"><button type="button" class="nx-btn nx-btn--sm nx-sfp-rwrite" data-act="runConfirm" :data-key="[[ p.data.id ]]" on-click="[[ $listeners.onAct ]]" :disabled="[[ p.data.busy ]]" title="Sent once you confirm: it changes data on the backend"><span class="oj-ux-ico-play" aria-hidden="true"></span> <oj-bind-text value="[[ p.data.busy ? 'Sending…' : 'Send — it changes data' ]]"></oj-bind-text></button></oj-bind-if>
+                        <span class="nx-note">The values used are kept on this PC for the next run (also for Application pages → Test).</span>
+                      </div>
+                    </oj-bind-if>
+                    <oj-bind-if test="[[ p.data.res ]]">
+                      <div class="nx-sfp-rres">
+                        <div class="nx-sfp-rline"><span :class="[[ p.data.statusCls ]]"><oj-bind-text value="[[ p.data.status ]]"></oj-bind-text></span> <span class="nx-note"><oj-bind-text value="[[ p.data.facts + (p.data.at ? ' · ' + p.data.at : '') ]]"></oj-bind-text></span></div>
+                        <div class="nx-int-mono nx-sfp-rurl"><oj-bind-text value="[[ p.data.url ]]"></oj-bind-text></div>
+                        <oj-bind-if test="[[ !!p.data.problem ]]"><div class="nx-sfp-rmsg nx-sfp-rmsg--bad"><oj-bind-text value="[[ p.data.problem ]]"></oj-bind-text></div></oj-bind-if>
+                        <oj-bind-if test="[[ !!p.data.shape ]]"><div class="nx-sfp-rmsg nx-sfp-rmsg--warn"><oj-bind-text value="[[ p.data.shape ]]"></oj-bind-text></div></oj-bind-if>
+                        <oj-bind-if test="[[ p.data.hasTable ]]">
+                          <div class="nx-sfp-rtablewrap"><div class="nx-sfp-rtable" role="table">
+                            <div class="nx-sfp-rtr nx-sfp-rtr--head" role="row"><oj-bind-for-each data="[[ p.data.cols ]]"><template data-oj-as="c"><span class="nx-sfp-rtd" role="columnheader"><oj-bind-text value="[[ c.data.t ]]"></oj-bind-text></span></template></oj-bind-for-each></div>
+                            <oj-bind-for-each data="[[ p.data.rows ]]"><template data-oj-as="w"><div class="nx-sfp-rtr" role="row"><oj-bind-for-each data="[[ w.data.cells ]]"><template data-oj-as="c"><span class="nx-sfp-rtd" role="cell"><oj-bind-text value="[[ c.data.t ]]"></oj-bind-text></span></template></oj-bind-for-each></div></template></oj-bind-for-each>
+                          </div></div>
+                          <div class="nx-note"><oj-bind-text value="[[ p.data.from + (p.data.more ? ' · ' + p.data.more + ' not shown' : '') ]]"></oj-bind-text></div>
+                        </oj-bind-if>
+                        <oj-bind-if test="[[ !!p.data.pretty ]]">
+                          <details class="nx-sfp-ranswer"><summary><oj-bind-text value="[[ 'The answer' + (p.data.cut ? ' (the first part)' : '') ]]"></oj-bind-text></summary><pre class="nx-int-mono"><oj-bind-text value="[[ p.data.pretty ]]"></oj-bind-text></pre></details>
+                        </oj-bind-if>
+                      </div>
+                    </oj-bind-if>
+                  </div>
+                </template></oj-bind-for-each>
+               </div>
               </template></oj-bind-for-each>
             </div>
             <oj-bind-if test="[[ a.data.stickies.length > 0 ]]">

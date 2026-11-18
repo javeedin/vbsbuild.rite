@@ -1,4 +1,4 @@
-define(['resources/js/shellBus', 'resources/js/theme', 'resources/js/look', 'resources/js/warmup', 'resources/js/jiraFeed'], (bus, theme, look, warmup, jiraFeed) => {
+define(['resources/js/shellBus', 'resources/js/theme', 'resources/js/look', 'resources/js/warmup', 'resources/js/jiraFeed', 'resources/js/textareaSync'], (bus, theme, look, warmup, jiraFeed, textareaSync) => {
   'use strict';
 
   // The shell's page module: the line from the screens in the tabs (shellBus) to the shell's chains, the keyboard
@@ -44,6 +44,8 @@ define(['resources/js/shellBus', 'resources/js/theme', 'resources/js/look', 'res
       // Once the first screen is up, the components the other screens use are loaded while nothing else happens, so a tab
       // opened later shows at once (resources/js/warmup.js).
       warmup.start('buildrite');
+      // a text box drawn in a list keeps its text when drawn again (resources/js/textareaSync.js)
+      textareaSync.start();
       // The look (Redwood or Current) last chosen on this computer, until the shell knows whose it is (lookChain).
       look.apply(look.load(''));
       const helper = context && typeof context.getEventHelper === 'function' ? context.getEventHelper() : null;

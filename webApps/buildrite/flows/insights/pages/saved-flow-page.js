@@ -1,4 +1,4 @@
-define(['resources/js/integrationDiagram', 'resources/js/flowModel', 'resources/js/integrationReport'], (D, FM, R) => {
+define(['resources/js/integrationDiagram', 'resources/js/flowModel', 'resources/js/integrationReport', 'resources/js/flowRun'], (D, FM, R, FR) => {
   'use strict';
 
   // One saved flow: binding helpers (sfChain does the work). No function uses `this`.
@@ -57,13 +57,61 @@ define(['resources/js/integrationDiagram', 'resources/js/flowModel', 'resources/
         first: ai === 0, last: ai === f.actions.length - 1,
         steps: (a.steps || []).map((s, si) => {
           const c = md.actions[ai].calls[si];
-          return { id: s.id, n: (ai + 1) + '.' + (si + 1), text: s.text || '', ph: D.plainStep(c).sentence, val: s.text || (s.manual ? '' : D.plainStep(c).sentence), auto: !s.text && !s.manual,
+          const w = FR.what(s);
+          return { id: s.id, n: (ai + 1) + '.' + (si + 1), text: s.text || '', ph: D.plainStep(c).sentence, runnable: w.ok,
+            runWhy: w.ok ? (s.direction === 'Write' ? 'Run this call — it changes data, so it is sent only once you confirm' : 'Run this call now, against the app\'s backend') : w.why, val: s.text || (s.manual ? '' : D.plainStep(c).sentence), auto: !s.text && !s.manual,
             note: s.note || '', manual: !!s.manual, method: s.method || '',
             tech: s.manual ? 'Added by hand' : (s.method + ' ' + (s.path || s.endpoint)) + (s.object ? ' · ' + s.object : ''), color: kindColor(c.kind),
             lanes: lanes.map((l) => ({ id: l.id, text: l.name, on: l.id === s.system })), dirs: [['Read', 'Reads'], ['Write', 'Writes'], ['Report', 'Report']].map((d) => ({ id: d[0], text: d[1], on: (s.direction || 'Read') === d[0] })),
             first: si === 0 && ai === 0, last: si === a.steps.length - 1 && ai === f.actions.length - 1 };
         })
       }));
+    }
+
+    // ── steps run for real (▶ Run) ──
+    /** A step's last run as a chip (status, rows, time; held, needs a value, not run). */
+    runChip(runs, sid) { const c = FR.chip((runs || {})[sid]); return c ? { text: c.text, title: c.title || 'Show its answer', cls: 'nx-sfp-rchip nx-sfp-rchip--' + c.cls } : { text: '', title: '', cls: '' }; }
+    hasRunChip(runs, sid) { return !!FR.chip((runs || {})[sid]); }
+    runBtnText(runs, sid) { const r = (runs || {})[sid]; return r && r.busy ? 'Running…' : 'Run'; }
+    runAllText(busy, id) { return busy && busy === id ? 'Running…' : (id === 'flow' ? 'Run the flow' : 'Run'); }
+    /** A step's run panel (0 or 1 of them, to bind as a list): where its call goes, its values, its answer. */
+    runPanels(runs, sid) {
+      const r = (runs || {})[sid];
+      if (!r || !r.open) return [];
+      const str = (x) => (x == null ? '' : String(x));
+      const d = r.desc || null;
+      const op = d && d.op;
+      const vals = r.vals || { params: {}, from: {} };
+      const from = vals.from || {};
+      const sug = (d && d.suggest) || {};
+      const k = r.res || null;
+      const t = k && k.table;
+      const b = (d && d.backend) || {};
+      return [{
+        id: sid, domId: 'sfpRun-' + sid, ready: !!op, loading: !op && !!r.busy,
+        head: op ? (op.report ? 'BI Publisher report ' + op.reportName : op.method + ' ' + op.path) : (r.msg ? 'It cannot be run' : 'Reading its call…'),
+        target: op ? (op.report ? str(b.url) + ' · ' + str(op.reportPath) : str(b.url) + str(op.path)) : '',
+        login: op ? str(b.login) : '',
+        kind: op ? (op.report ? 'Runs a report' : op.reads ? 'Only reads' : 'Changes data') : '',
+        kindCls: 'nx-sfp-rkind' + (op && !op.reads ? ' nx-sfp-rkind--write' : ''),
+        writes: !!op && !op.reads,
+        params: op ? (op.params || []).map((p) => ({ name: p.name, label: p.name + (p.required ? ' *' : ''), where: p.in === 'report' ? 'report parameter' : p.in,
+          value: str(vals.params && vals.params[p.name]), field: 'r.' + sid + '.p.' + p.name, from: from[p.name] && from[p.name] !== 'yours' ? from[p.name] : '',
+          hint: str(p.description) || (p.enum && p.enum.length ? 'One of ' + p.enum.join(', ') : ''),
+          choices: (sug[p.name] || []).slice(0, 5).map((x) => ({ text: str(x.value), title: 'Seen in ' + str(x.from), key: p.name + '=' + str(x.value) })) })) : [],
+        noParams: !!op && !(op.params || []).length && !op.body,
+        hasBody: !!(op && op.body), body: str(vals.body), bodyField: 'r.' + sid + '.body', extra: str(vals.extra), extraField: 'r.' + sid + '.extra',
+        busy: !!r.busy, sendText: r.busy ? 'Sending…' : (k ? 'Send again' : 'Send'),
+        msg: r.msg ? str(r.msg.text) : '', msgCls: 'nx-sfp-rmsg' + (r.msg && r.msg.ok ? '' : ' nx-sfp-rmsg--bad'),
+        res: !!k,
+        status: k ? (k.status + (k.statusText ? ' ' + k.statusText : '')) : '', statusCls: 'nx-sfp-rstatus nx-sfp-rstatus--' + (!k ? 'none' : !k.ok ? 'fail' : k.shape === 'differs' ? 'warn' : 'ok'),
+        facts: FR.facts(k), url: k ? k.method + ' ' + k.url : '', at: k && k.at ? 'sent ' + R.when(k.at) : '',
+        problem: k ? (k.fault || k.error) : '', shape: k && k.shape === 'differs' ? 'Its answer differs from the example the page was built with: ' + k.shapeText + '.' : '',
+        hasTable: !!(t && t.columns.length), cols: t ? t.columns.map((c, i) => ({ k: String(i), t: c })) : [],
+        rows: t ? t.rows.map((row, i) => ({ k: String(i), cells: row.map((c, j) => ({ k: String(j), t: c })) })) : [],
+        more: t ? t.more : '', from: k && k.from ? 'Rows from ' + k.from + (k.meta ? ' · ' + k.meta : '') : '',
+        pretty: k ? k.pretty : '', cut: !!(k && k.cut)
+      }];
     }
 
     // ── sticky notes ──

@@ -1,5 +1,5 @@
 {
-  "description": "One saved flow (Page Flows → Saved flows): its details, its diagram (plain English or technical), an editor (reword steps, notes, steps and actions added, moved, removed, systems as lanes), comments, its versions (view, restore) and a check against the app; Save (a new version), Save as copy, PDF, SVG, Remove (desktop/lib/savedFlows.js, resources/js/flowModel.js).",
+  "description": "One saved flow (Page Flows → Saved flows): its details, its diagram (plain English or technical), an editor (reword steps, notes, steps and actions added, moved, removed, systems as lanes), comments, its versions (view, restore), a check against the app and its steps run for real (▶ Run on a step, an action or the whole flow, through the API tester); Save (a new version), Save as copy, PDF, SVG, Remove (desktop/lib/savedFlows.js, resources/js/flowModel.js).",
   "navigation": {
     "embeddable": "enabled"
   },
@@ -80,6 +80,21 @@
     "pdfBusy": {
       "type": "boolean",
       "defaultValue": false
+    },
+    "runs": {
+      "type": "any",
+      "defaultValue": {},
+      "description": "Steps run for real (▶ Run), by step id: { open, busy, desc (what its call sends, from the API tester), vals, res (its answer, kept short), state, msg }. Not saved with the flow."
+    },
+    "runBusy": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "An action's steps (its id) or the whole flow ('flow') being run."
+    },
+    "runSum": {
+      "type": "any",
+      "defaultValue": null,
+      "description": "What the last Run of an action or of the flow did, in words."
     }
   },
   "eventListeners": {
