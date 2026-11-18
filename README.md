@@ -266,6 +266,19 @@ app, it reads the one with the most pages; the header lets you choose another. *
   not in `services/`.
 - **Overview**: the **integration landscape** — the app's flows on the left (the source), the systems on the right (the
   target), a line per flow and system, as thick as its calls — and each system's reads, writes and reports.
+- **System flows** — between systems, not page by page:
+  - **Flow between systems**: the app on one side, each system on the other, and what goes each way **by business
+    object** — what the app **sends** it (writes), what it **returns** (reads) and the BI Publisher **reports** it runs.
+    The business object is read from each call's path: `…/salesOrdersForOrderHub/{id}/child/lines` is *Sales orders for
+    order hub › lines*; `…/requests/{id}/returns/plan` is *Requests › returns*, with *plan* kept as an action on it; an
+    OIC integration is named by its integration; a report by its name.
+  - **Interfaces**: one line per system and business object (IF-001…) — which way the data goes (*Fusion → app*,
+    *app → Fusion*, *app ⇄ Fusion*), read / write / report, its methods, what sets it off (*"Submit" button · when 3
+    pages open*), how many endpoints, calls and pages. **Its rows** opens the data sheet on just that interface.
+  - **Cross-system flows**: one action — a button, a page opening — that calls two or more systems, in the order its
+    code calls them (SF-01…), e.g. *1. reads customers from the shop → 2. runs the customers report in BI Publisher*,
+    with where it happens; and **system to system**: which systems one action calls one after the other, how often,
+    and what goes from the first to the second.
 - **Data sheet**: the integration data sheet, one row per page and endpoint — its ID (INT-0001…), the **source** page
   and its flow, what **sets it off** (*when the page opens*, a button by its label, or the chain or module that runs
   it), the **target** system and its kind (Oracle Fusion Cloud, Oracle Integration Cloud, BI Publisher, APEX / ORDS,
@@ -274,13 +287,14 @@ app, it reads the one with the most pages; the header lets you choose another. *
 - **Endpoints**: each endpoint once, with the pages that call it.
 - **Systems**: one card per system — its base URL, how it signs in (and whether it goes through the proxy), its calls,
   pages and services — with its diagram and its rows in the data sheet.
-- **Diagrams**: the landscape; **a system** (the pages that call it → its endpoints → the system); **a page** (what it
-  calls and where). **Save SVG** keeps the diagram as a file.
+- **Diagrams**: the landscape; **between systems**; the **cross-system flows**; **a system** (the pages that call it →
+  its endpoints → the system); **a page** (what it calls and where). **Save SVG** keeps the diagram as a file.
 
-**PDF** writes the whole report, A4 landscape: a cover with the figures and contents, the landscape, the systems, the
-data sheet, the endpoints, flows × systems, then a section per system with its diagram (and the page diagram shown in
-Diagrams, if any). In the desktop app it is a real PDF; in a browser, Print and choose Save as PDF. **Excel** writes
-the same as a workbook: Summary, Systems, Integrations, Endpoints, Flows x systems.
+**PDF** writes the whole report, A4 landscape: a cover with the figures and contents, the landscape, the flow between
+systems (with system to system), the interfaces, the cross-system flows, the systems, the data sheet, the endpoints,
+flows × systems, then a section per system with its diagram (and the page diagram shown in Diagrams, if any). In the
+desktop app it is a real PDF; in a browser, Print and choose Save as PDF. **Excel** writes the same as a workbook:
+Summary, Interfaces, Cross-system flows, System to system, Systems, Integrations, Endpoints, Flows x systems.
 
 ## Follow-ups: chase stories by email, with your own messages
 

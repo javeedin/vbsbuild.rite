@@ -6,9 +6,13 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
   const hit = (q, parts) => { const w = words(q); const hay = parts.join(' ').toLowerCase(); return w.every((x) => hay.indexOf(x) !== -1); };
   const kindColor = (k) => (D.KINDS[k] || D.KINDS.rest).color;
   const n = (x, one, many) => x + ' ' + (x === 1 ? one : (many || one + 's'));
+  /** A row's object key matches an interface's: the same, or one of the reports a row runs. */
+  const objMatch = (rk, k) => rk === k || (/^report:/.test(rk) && /^report:/.test(k) && rk.slice(7).split(',').indexOf(k.slice(7)) !== -1);
 
   function diagram(m, kind, sys, page) {
     if (!m || !m.ok) return null;
+    if (kind === 'systems') return D.systemFlow(m);
+    if (kind === 'journeys') return D.journeys(m);
     if (kind === 'system') return D.system(m, sys || (m.systems[0] && m.systems[0].id));
     if (kind === 'page') return D.page(m, page || ((m.pages.filter((p) => p.calls)[0] || {}).id));
     return D.landscape(m);
@@ -22,6 +26,8 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
       const t = m.totals;
       const out = [
         { key: 'systems', n: String(t.systems), label: t.systems === 1 ? 'system it talks to' : 'systems it talks to' },
+        { key: 'interfaces', n: String(t.interfaces || 0), label: (t.interfaces === 1 ? 'interface' : 'interfaces') + ' (system × object)' },
+        { key: 'journeys', n: String(t.journeys || 0), label: t.journeys === 1 ? 'cross-system flow' : 'cross-system flows' },
         { key: 'endpoints', n: String(t.endpoints), label: t.endpoints === 1 ? 'endpoint' : 'endpoints' },
         { key: 'calls', n: String(t.calls), label: (t.calls === 1 ? 'call' : 'calls') + ' (page × endpoint)' },
         { key: 'pages', n: t.pagesWith + ' / ' + t.pages, label: 'pages with integrations' },
@@ -53,16 +59,18 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
       return [['all', 'All ' + rows.length], ['Read', 'Read ' + rows.filter((r) => r.direction === 'Read').length], ['Write', 'Write ' + rows.filter((r) => r.direction === 'Write').length], ['Report', 'Report ' + rows.filter((r) => r.direction === 'Report').length]]
         .map((c) => ({ key: c[0], text: c[1], cls: 'nx-sc-chip' + ((cur || 'all') === c[0] ? ' nx-sc-chip--on' : '') }));
     }
-    sheetAll(m, q, sys, dir, flow) {
-      return ((m && m.rows) || []).filter((r) => (!sys || r.system === sys) && (!flow || r.flow === flow) && (!dir || dir === 'all' || r.direction === dir)
-        && (!q || hit(q, [r.id, r.pageLabel, r.page, r.flow, r.trigger, r.systemName, r.method, r.path, r.endpoint, r.summary, (r.via || []).join(' '), (r.params || []).join(' '), r.report])));
+    /** obj: one business object (an interface's key) — a row running several reports matches each of them. */
+    sheetAll(m, q, sys, dir, flow, obj) {
+      return ((m && m.rows) || []).filter((r) => (!sys || r.system === sys) && (!flow || r.flow === flow) && (!dir || dir === 'all' || r.direction === dir) && (!obj || objMatch(r.objectKey, obj))
+        && (!q || hit(q, [r.id, r.pageLabel, r.page, r.flow, r.trigger, r.systemName, r.method, r.path, r.endpoint, r.summary, r.object, r.action, (r.via || []).join(' '), (r.params || []).join(' '), r.report])));
     }
-    sheetRows(m, q, sys, dir, flow, limit) { return PageModule.prototype.sheetAll(m, q, sys, dir, flow).slice(0, limit || 200); }
-    sheetCount(m, q, sys, dir, flow, limit) {
-      const all = PageModule.prototype.sheetAll(m, q, sys, dir, flow).length;
+    sheetRows(m, q, sys, dir, flow, limit, obj) { return PageModule.prototype.sheetAll(m, q, sys, dir, flow, obj).slice(0, limit || 200); }
+    sheetCount(m, q, sys, dir, flow, limit, obj) {
+      const all = PageModule.prototype.sheetAll(m, q, sys, dir, flow, obj).length;
       return Math.min(all, limit || 200) + ' shown of ' + all + (all !== ((m && m.rows) || []).length ? ' (of ' + m.rows.length + ' in all)' : '');
     }
-    hasMore(m, q, sys, dir, flow, limit) { return PageModule.prototype.sheetAll(m, q, sys, dir, flow).length > (limit || 200); }
+    hasMore(m, q, sys, dir, flow, limit, obj) { return PageModule.prototype.sheetAll(m, q, sys, dir, flow, obj).length > (limit || 200); }
+    targetNote(r) { return [r.object ? r.object + (r.action ? ' (' + r.action + ')' : '') : '', r.kindLabel].filter(Boolean).join(' · '); }
     dirClass(d) { return 'nx-int-dir nx-int-dir--' + String(d || '').toLowerCase(); }
     methodText(r) { return r.method || ''; }
     endpointNote(r) { return r.endpoint + (r.report ? ' · report ' + r.report : '') + ((r.params || []).length ? ' · sends ' + r.params.join(', ') : ''); }
@@ -73,8 +81,37 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
     }
     systemCards(m) { return ((m && m.systems) || []).map((s) => Object.assign({}, s, { color: kindColor(s.kind), figures: D.figures(s), pagesText: n(s.pages.length, 'page'), servicesText: s.services.join(', ') })); }
 
+    // ── between systems, not page by page ──
+    /** One sentence: how many interfaces, which way the data goes, the cross-system flows. */
+    flowsSummary(m) {
+      if (!m || !m.ok) return '';
+      const t = m.totals, sf = m.systemFlows || [];
+      const reads = sf.filter((s) => s.returns.length || s.reports.length).length, writes = sf.filter((s) => s.sends.length).length;
+      return n(t.interfaces || 0, 'interface') + ' with ' + n(t.systems, 'system') + ': the app reads from ' + n(reads, 'system') + ' and sends data to ' + n(writes, 'system')
+        + '. ' + ((t.journeys || 0) ? n(t.journeys, 'cross-system flow') + ' — ' + n(t.crossActions, 'action') + ' calling two or more systems one after the other.' : 'No single action calls more than one system.');
+    }
+    ifaceAll(m, q, sys) {
+      return ((m && m.interfaces) || []).filter((x) => (!sys || x.system === sys) && (!q || hit(q, [x.id, x.systemName, x.kindLabel, x.object, x.ops.join(' '), x.direction, x.methods.join(' '), x.setOffBy, x.pageLabels.join(' '), x.flows.join(' '), x.endpoints.join(' ')])));
+    }
+    ifaceRows(m, q, sys) {
+      return PageModule.prototype.ifaceAll(m, q, sys).map((x) => ({ id: x.id, system: x.system, kind: x.kind, flowText: R.flowText(x, m.appName || m.app), object: x.object, ops: x.ops.join(', '),
+        dirs: x.dirs.map((dd) => ({ text: dd, cls: 'nx-int-dir nx-int-dir--' + dd.toLowerCase() })), methods: x.methods.join(', '), setOffBy: x.setOffBy || '—',
+        use: n(x.endpoints.length, 'endpoint') + ' · ' + n(x.calls, 'call') + ' · ' + n(x.pages.length, 'page'), pagesText: x.pageLabels.slice(0, 4).join(', ') + (x.pageLabels.length > 4 ? ' and ' + (x.pageLabels.length - 4) + ' more' : '') }));
+    }
+    ifaceCount(m, q, sys) { const k = PageModule.prototype.ifaceAll(m, q, sys).length; return k + ' shown of ' + (((m && m.interfaces) || []).length); }
+    journeyRows(m, q, sys) {
+      return ((m && m.journeys) || []).filter((j) => (!sys || j.steps.some((st) => st.system === sys)) && (!q || hit(q, [j.id, j.path, j.steps.map((st) => st.objects.join(' ')).join(' '), j.actions.map((a) => a.pageLabel + ' ' + a.trigger + ' ' + a.chain).join(' ')])))
+        .map((j) => ({ id: j.id, page: (j.actions[0] || {}).page, steps: j.steps.map((st, i) => ({ n: i + 1, name: st.systemName, color: kindColor(st.kind), what: st.direction.toLowerCase() + ': ' + st.objects.slice(0, 3).join(', ') + (st.objects.length > 3 ? ' +' + (st.objects.length - 3) : ''), last: i === j.steps.length - 1 })),
+          actions: n(j.actions.length, 'action') + ' · ' + n(j.pages.length, 'page'), where: j.actions.slice(0, 3).map((a) => a.pageLabel + (a.trigger ? ' — ' + a.trigger : '')).join('; ') + (j.actions.length > 3 ? '; and ' + (j.actions.length - 3) + ' more' : '') }));
+    }
+    handoffRows(m, sys) {
+      return ((m && m.handoffs) || []).filter((h) => !sys || h.from === sys || h.to === sys).map((h) => ({ from: h.fromName, to: h.toName, fromColor: kindColor(h.fromKind), toColor: kindColor(h.toKind), actions: n(h.actions, 'action'),
+        fromObjects: h.fromObjects.slice(0, 4).join(', ') + (h.fromObjects.length > 4 ? ' +' + (h.fromObjects.length - 4) : ''), toObjects: h.toObjects.slice(0, 4).join(', ') + (h.toObjects.length > 4 ? ' +' + (h.toObjects.length - 4) : ''),
+        pages: h.pages.slice(0, 3).join(', ') + (h.pages.length > 3 ? ' and ' + (h.pages.length - 3) + ' more' : '') }));
+    }
+
     // ── diagrams ──
-    diaChips(cur) { return [['landscape', 'Landscape'], ['system', 'A system'], ['page', 'A page']].map((c) => ({ key: c[0], text: c[1], cls: 'nx-sc-chip' + (cur === c[0] ? ' nx-sc-chip--on' : '') })); }
+    diaChips(cur) { return [['landscape', 'Landscape'], ['systems', 'Between systems'], ['journeys', 'Cross-system flows'], ['system', 'A system'], ['page', 'A page']].map((c) => ({ key: c[0], text: c[1], cls: 'nx-sc-chip' + (cur === c[0] ? ' nx-sc-chip--on' : '') })); }
     pageOptions(m, sel) {
       const ps = ((m && m.pages) || []).filter((p) => p.calls);
       const cur = sel || (ps[0] && ps[0].id);
@@ -86,7 +123,9 @@ define(['resources/js/integrationDiagram', 'resources/js/integrationReport'], (D
     diaTitle(m, kind, sys, page) {
       const d = diagram(m, kind, sys, page);
       if (!d) return '';
-      return kind === 'system' ? 'System: ' + d.title + ' — the pages that call it, its endpoints, and it' : kind === 'page' ? 'Page: ' + d.title + ' — what it calls and where' : 'The app\'s flows (the source) and the systems they call (the target)';
+      return kind === 'system' ? 'System: ' + d.title + ' — the pages that call it, its endpoints, and it' : kind === 'page' ? 'Page: ' + d.title + ' — what it calls and where'
+        : kind === 'systems' ? 'Between systems: what the app sends each system, what each returns, its reports — by business object'
+          : kind === 'journeys' ? 'Cross-system flows: each action that calls two or more systems, in the order its code calls them' : 'The app\'s flows (the source) and the systems they call (the target)';
     }
   }
   return PageModule;

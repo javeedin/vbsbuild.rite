@@ -3,8 +3,9 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
     'use strict';
 
     // Integrations: scan the app (load | rescan | app (key)), the tabs (tab), the data sheet's filters (field q / fSystem /
-    // fFlow, dir (key), more), the diagrams (dia (key), field diaSystem / diaPage, showSystem (key), showPage (key),
-    // svg), the exports (pdf, excel, print); open a page's sheet (openPage (key)).
+    // fFlow, dir (key), more, clearObject), between systems (field sq / sSystem, sheetIf (an interface's id): its rows in
+    // the data sheet), the diagrams (dia (key), field diaSystem / diaPage, showSystem (key), showPage (key), svg (key: a
+    // diagram, else the one shown)), the exports (pdf, excel, print); open a page's sheet (openPage (key)).
     class intChain extends ActionChain {
       async run(context, { act, key, value }) {
         const v = context.$page.variables;
@@ -25,7 +26,7 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         if (act === 'field') {
           const val = String(value == null ? '' : value);
           if (key === 'app') { await scan(val); return; }
-          if (['q', 'fSystem', 'fFlow', 'diaSystem', 'diaPage'].indexOf(key) !== -1) { v[key] = val; if (key !== 'diaSystem' && key !== 'diaPage') v.limit = 200; }
+          if (['q', 'fSystem', 'fFlow', 'diaSystem', 'diaPage', 'sq', 'sSystem'].indexOf(key) !== -1) { v[key] = val; if (['q', 'fSystem', 'fFlow'].indexOf(key) !== -1) v.limit = 200; }
           return;
         }
         if (act === 'dir') { v.fDir = String(key || 'all'); v.limit = 200; return; }
@@ -34,12 +35,21 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         if (act === 'dia') { v.dia = String(key || 'landscape'); return; }
         if (act === 'showSystem') { v.dia = 'system'; v.diaSystem = String(key || ''); v.tab = 'diagrams'; return; }
         if (act === 'showPage') { v.dia = 'page'; v.diaPage = String(key || ''); v.tab = 'diagrams'; return; }
-        if (act === 'sheetFor') { v.fSystem = String(key || ''); v.fDir = 'all'; v.q = ''; v.limit = 200; v.tab = 'sheet'; return; }
+        if (act === 'sheetFor') { v.fSystem = String(key || ''); v.fDir = 'all'; v.q = ''; v.fObject = ''; v.fObjectLabel = ''; v.limit = 200; v.tab = 'sheet'; return; }
+        // an interface: the data-sheet rows behind it (its system, its business object)
+        if (act === 'sheetIf') {
+          const x = ((v.m && v.m.interfaces) || []).filter((y) => y.id === key)[0];
+          if (x) { v.fSystem = x.system; v.fObject = x.objectKey; v.fObjectLabel = x.id + ' · ' + x.object; v.fDir = 'all'; v.fFlow = ''; v.q = ''; v.limit = 200; v.tab = 'sheet'; }
+          return;
+        }
+        if (act === 'clearObject') { v.fObject = ''; v.fObjectLabel = ''; v.limit = 200; return; }
         if (act === 'openPage') { if (key) bus.focus('app-pages', { id: String(key) }); return; }
         if (!v.m || !v.m.ok) return;
         if (act === 'svg') {
-          const d = v.dia === 'system' ? D.system(v.m, v.diaSystem || v.m.systems[0].id) : v.dia === 'page' ? D.page(v.m, v.diaPage || ((v.m.pages.filter((p) => p.calls)[0] || {}).id)) : D.landscape(v.m);
-          const name = 'integrations-' + v.m.app + '-' + (v.dia === 'landscape' ? 'landscape' : String(d.title || v.dia).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')) + '.svg';
+          const kind = key || v.dia;
+          const d = kind === 'system' ? D.system(v.m, v.diaSystem || v.m.systems[0].id) : kind === 'page' ? D.page(v.m, v.diaPage || ((v.m.pages.filter((p) => p.calls)[0] || {}).id))
+            : kind === 'systems' ? D.systemFlow(v.m) : kind === 'journeys' ? D.journeys(v.m) : D.landscape(v.m);
+          const name = 'integrations-' + v.m.app + '-' + (kind === 'landscape' ? 'landscape' : String(d.title || kind).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')) + '.svg';
           exportKit.download(name, 'image/svg+xml', d.svg);
           say({ ok: true }, 'Saved ' + name + '.');
           return;

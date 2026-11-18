@@ -2,7 +2,9 @@
 'use strict';
 /*
  * Integrations, in a browser: Application → Integrations scans your working folder's app (the sample shop) and shows
- * every system it talks to and every call it makes — figures, the integration landscape, calls by system; the
+ * every system it talks to and every call it makes — figures, the integration landscape, calls by system; between
+ * systems, not page by page (System flows): the app ⇄ each system by business object, the interfaces (each opens its
+ * rows in the data sheet), system → system and the cross-system flows (an action calling two systems, in order); the
  * integration data sheet (source page → target system, set off by, method, endpoint, direction) with a search, a system,
  * a flow and a direction; the endpoints; the systems (base URL, sign-in, services); the diagrams (landscape, a system,
  * a page) and Save SVG; the Excel workbook and a real PDF (Chromium, as the desktop app prints with Electron).
@@ -37,7 +39,7 @@ const count = (page, sel) => page.$$eval(sel, (l) => l.length).catch(() => 0);
     const head = await text(page, '#intBar');
     T.check('the app scanned: shop, when, pages read', /shop/.test(head) && /Scanned .* · 6 pages read/.test(head), head);
     const kpis = await env.text('#intKpis');
-    T.check('figures: 2 systems, 6 endpoints, 7 calls, 5 / 6 pages, reads, writes, a BI Publisher report; nothing unresolved', /2 systems it talks to/.test(kpis) && /6 endpoints/.test(kpis) && /7 calls/.test(kpis)
+    T.check('figures: 2 systems, 4 interfaces, 1 cross-system flow, 6 endpoints, 7 calls, 5 / 6 pages, reads, writes, a BI Publisher report; nothing unresolved', /2 systems it talks to/.test(kpis) && /4 interfaces \(system × object\)/.test(kpis) && /1 cross-system flow\b/.test(kpis) && /6 endpoints/.test(kpis) && /7 calls/.test(kpis)
       && /5 \/ 6 pages with integrations/.test(kpis) && /5 reads/.test(kpis) && /1 write \(changes data\)/.test(kpis) && /1 BI Publisher report\b/.test(kpis) && !/not in services/.test(kpis), kpis);
     const land = (await page.getAttribute('#intLand', 'srcdoc')) || '';
     T.check('the landscape: the flows (source) → the systems (target), as an SVG in a frame where nothing runs', /<svg/.test(land) && /customers/.test(land) && /orders/.test(land) && /shop/.test(land) && /BI Publisher/.test(land)
@@ -45,6 +47,50 @@ const count = (page, sel) => page.$$eval(sel, (l) => l.length).catch(() => 0);
     const bars = await text(page, '#intBySystem');
     T.check('calls by system: each with its kind and reads / writes / reports in words', /The shop's REST backend/.test(bars) && /REST/.test(bars) && /Oracle BI Publisher/.test(bars) && /reads/.test(bars) && /writes/.test(bars) && /reports/.test(bars), bars);
     await env.shot('integrations-overview.png');
+
+    T.section('between systems, not page by page');
+    await page.click('#intTabFlows');
+    await page.waitForSelector('#intIfGrid', { timeout: 10000 });
+    const sum = await env.text('#intFlowsSummary');
+    T.check('the summary: 4 interfaces with 2 systems, which way the data goes, 1 cross-system flow', /^4 interfaces with 2 systems: the app reads from 2 systems and sends data to 1 system\. 1 cross-system flow — 1 action calling two or more systems one after the other\.$/.test(sum), sum);
+    const sfd = (await page.getAttribute('#intSysDia', 'srcdoc')) || '';
+    T.check('the flow between systems: the app ⇄ each system — what it sends, what comes back, the reports — by business object', /<svg/.test(sfd) && />Sends<\/tspan> Orders</.test(sfd) && />Returns 3<\/tspan> Orders · Customers · Invoices</.test(sfd)
+      && />Reports<\/tspan> Customers report \(CUSTOMERS_RP\)</.test(sfd), sfd.slice(0, 160));
+    T.check('interfaces: one per system and business object (4), counted', (await count(page, '#intIfGrid .nx-int-row:not(.nx-int-row--head)')) === 4 && /^4 shown of 4/.test(await env.text('#intIfCount')));
+    const if1 = await env.text('#intIfGrid .nx-int-row[data-id="IF-001"]');
+    T.check('IF-001: shop ⇄ the REST backend, Orders, read and write, GET and POST, set off by the Submit button and 3 pages opening, 3 endpoints · 4 calls · 4 pages', /shop ⇄ The shop's REST backend/.test(if1) && /Orders/.test(if1)
+      && /Read/.test(if1) && /Write/.test(if1) && /GET, POST/.test(if1) && /"Submit" button · when 3 pages open/.test(if1) && /3 endpoints · 4 calls · 4 pages/.test(if1), if1);
+    T.check('…a report: BI Publisher → shop, the customers report', /Oracle BI Publisher \(SOAP\) → shop/.test(await env.text('#intIfGrid .nx-int-row[data-id="IF-004"]')) && /Customers report \(CUSTOMERS_RP\)/.test(await env.text('#intIfGrid .nx-int-row[data-id="IF-004"]')));
+    await page.fill('#intSq', 'invoices');
+    await settle(page);
+    T.check('find: invoices — one interface', (await count(page, '#intIfGrid .nx-int-row:not(.nx-int-row--head)')) === 1 && /Invoices/.test(await env.text('#intIfGrid')));
+    await page.fill('#intSq', '');
+    await page.selectOption('#intSSystem', 'bipService');
+    await settle(page);
+    T.check('a system: BI Publisher — its one interface, its cross-system flow still shown', (await count(page, '#intIfGrid .nx-int-row:not(.nx-int-row--head)')) === 1 && !!(await page.$('#intJList .nx-int-journey[data-id="SF-01"]')));
+    await page.selectOption('#intSSystem', '');
+    await settle(page);
+    const ho = await env.text('#intHandoffs');
+    T.check('system to system: the shop → BI Publisher, 1 action, customers from the first, the report to the second, on New Order', /The shop's REST backend/.test(ho) && /Oracle BI Publisher \(SOAP\)/.test(ho) && /1 action/.test(ho) && /Customers/.test(ho) && /New Order/.test(ho), ho);
+    const j1 = await env.text('#intJList .nx-int-journey[data-id="SF-01"]');
+    T.check('SF-01: 1. the shop (read: Customers) → 2. BI Publisher (report), on New Order when the page opens', /SF-01/.test(j1) && /1\. The shop's REST backend read: Customers/.test(j1) && /2\. Oracle BI Publisher \(SOAP\) report: Customers report \(CUSTOMERS_RP\)/.test(j1)
+      && j1.indexOf('1. The shop') < j1.indexOf('2. Oracle') && /New Order — when the page opens/.test(j1), j1);
+    await env.shot('integrations-flows.png');
+    await page.$eval('#intIfaces', (e) => e.scrollIntoView());
+    await env.shot('integrations-flows-interfaces.png');
+    await page.$eval('#intJourneys', (e) => e.scrollIntoView());
+    await env.shot('integrations-flows-cross.png');
+    const [sfs] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }), page.click('#intSysSvg')]);
+    T.check('Save SVG: the flow between systems', sfs.suggestedFilename() === 'integrations-shop-flow-between-systems.svg', sfs.suggestedFilename());
+    await page.click('#intIfGrid .nx-int-row[data-id="IF-001"] [data-act="sheetIf"]');
+    await page.waitForSelector('#intGrid', { timeout: 10000 });
+    T.check('"Its rows": the data sheet with IF-001\'s rows only — Orders on the shop (4), said in a chip', (await count(page, '#intGrid .nx-int-row:not(.nx-int-row--head)')) === 4 && /Interface IF-001 · Orders/.test(await env.text('#intObjChip'))
+      && (await page.$eval('#intFSystem', (e) => e.value)) === 'shop' && /Orders/.test(await env.text('#intGrid')), await env.text('#intSheetCount'));
+    await page.click('#intObjChip');
+    await settle(page);
+    T.check('…the chip clears it: every object of the shop again', !(await page.$('#intObjChip')) && (await count(page, '#intGrid .nx-int-row:not(.nx-int-row--head)')) === 6);
+    await page.selectOption('#intFSystem', '');
+    await settle(page);
 
     T.section('the integration data sheet');
     await page.click('#intTabSheet');
@@ -113,6 +159,12 @@ const count = (page, sel) => page.$$eval(sel, (l) => l.length).catch(() => 0);
     const svgFile = path.join(dir, 'page.svg');
     await svg.saveAs(svgFile);
     T.check('Save SVG: the diagram as a file', /^integrations-shop-.*\.svg$/.test(svg.suggestedFilename()) && /^<svg[\s\S]*<\/svg>\s*$/.test(fs.readFileSync(svgFile, 'utf8').trim()), svg.suggestedFilename());
+    await page.click('#intDiaChips [data-key="systems"]');
+    await settle(page);
+    T.check('Between systems, in Diagrams too', /^Between systems:/.test(await text(page, '#intDiaTitle')) && />Returns 3<\/tspan>/.test((await page.getAttribute('#intDia', 'srcdoc')) || ''));
+    await page.click('#intDiaChips [data-key="journeys"]');
+    await settle(page);
+    T.check('…and the cross-system flows', /^Cross-system flows:/.test(await text(page, '#intDiaTitle')) && /SF-01/.test((await page.getAttribute('#intDia', 'srcdoc')) || ''));
     await page.click('#intDiaChips [data-key="landscape"]');
     await settle(page);
     T.check('the landscape again', /flows \(the source\)/.test(await text(page, '#intDiaTitle')));
@@ -123,7 +175,7 @@ const count = (page, sel) => page.$$eval(sel, (l) => l.length).catch(() => 0);
     await xl.saveAs(xlFile);
     const xlBytes = fs.readFileSync(xlFile);
     T.check('Excel: a workbook (zip) with the summary, systems, integrations, endpoints, flows × systems', /^integrations-shop-.*\.xlsx$/.test(xl.suggestedFilename()) && xlBytes.slice(0, 2).toString() === 'PK'
-      && ['Summary', 'Systems', 'Integrations', 'Endpoints', 'Flows x systems'].every((n) => xlBytes.indexOf(n) !== -1), xl.suggestedFilename());
+      && ['Summary', 'Interfaces', 'Cross-system flows', 'System to system', 'Systems', 'Integrations', 'Endpoints', 'Flows x systems'].every((n) => xlBytes.indexOf(n) !== -1), xl.suggestedFilename());
     const [pdf] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), page.click('#intPdf')]);
     const pdfFile = path.join(dir, 'int.pdf');
     await pdf.saveAs(pdfFile);

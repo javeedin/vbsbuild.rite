@@ -6,7 +6,7 @@
     <div>
       <div class="nx-kicker">Build.Rite · Application</div>
       <h1 id="intTitle">Integrations</h1>
-      <div class="nx-sub">Every system your app talks to and every call it makes — read from its code (its pages, chains and services): the integration data sheet, source → target, its diagrams, and a PDF or Excel copy.</div>
+      <div class="nx-sub">Every system your app talks to and every call it makes — read from its code (its pages, chains and services): the flow between systems, the integration data sheet (source → target), its diagrams, and a PDF or Excel copy.</div>
     </div>
   </div>
 
@@ -39,6 +39,7 @@
     <oj-bind-if test="[[ !!$variables.m ]]">
       <div class="nx-sc-tabs" role="tablist" id="intTabs">
         <button type="button" role="tab" id="intTabOverview" :aria-selected="[[ $variables.tab === 'overview' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'overview' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="overview" on-click="[[ $listeners.onAct ]]">Overview</button>
+        <button type="button" role="tab" id="intTabFlows" :aria-selected="[[ $variables.tab === 'flows' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'flows' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="flows" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'System flows (' + ($variables.m.totals.interfaces || 0) + ')' ]]"></oj-bind-text></button>
         <button type="button" role="tab" id="intTabSheet" :aria-selected="[[ $variables.tab === 'sheet' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'sheet' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="sheet" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'Data sheet (' + $variables.m.totals.calls + ')' ]]"></oj-bind-text></button>
         <button type="button" role="tab" id="intTabEndpoints" :aria-selected="[[ $variables.tab === 'endpoints' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'endpoints' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="endpoints" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'Endpoints (' + $variables.m.totals.endpoints + ')' ]]"></oj-bind-text></button>
         <button type="button" role="tab" id="intTabSystems" :aria-selected="[[ $variables.tab === 'systems' ? 'true' : 'false' ]]" :class="[[ 'nx-sc-tab' + ($variables.tab === 'systems' ? ' nx-sc-tab--on' : '') ]]" data-act="tab" data-key="systems" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'Systems (' + $variables.m.totals.systems + ')' ]]"></oj-bind-text></button>
@@ -65,11 +66,84 @@
         </div>
       </oj-bind-if>
 
+      <!-- between systems, not page by page: the app ⇄ each system by business object; interfaces; cross-system flows -->
+      <oj-bind-if test="[[ $variables.tab === 'flows' ]]">
+        <div class="nx-card nx-sc-sec" id="intSysFlow">
+          <div class="nx-sc-head"><div><h2>Flow between systems</h2><span class="nx-note" id="intFlowsSummary"><oj-bind-text value="[[ $functions.flowsSummary($variables.m) ]]"></oj-bind-text></span></div>
+            <span class="nx-min-flex"></span><button type="button" class="nx-btn nx-btn--sm" id="intSysSvg" data-act="svg" data-key="systems" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> Save SVG</button></div>
+          <iframe class="nx-int-frame" id="intSysDia" title="Flow between systems" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.m, 'systems', '', '') ]]" :srcdoc="[[ $functions.diaDoc($variables.m, 'systems', '', '') ]]"></iframe>
+        </div>
+
+        <div class="nx-card nx-sc-sec" id="intIfaces">
+          <div class="nx-sc-head">
+            <div><h2>Interfaces</h2><span class="nx-note" id="intIfCount"><oj-bind-text value="[[ $functions.ifaceCount($variables.m, $variables.sq, $variables.sSystem) + ' — one per system and business object, not per page' ]]"></oj-bind-text></span></div>
+            <span class="nx-min-flex"></span>
+            <input type="search" class="nx-cm-input nx-int-q" id="intSq" placeholder="Find: object, system, page, button…" data-field="sq" :value="[[ $variables.sq ]]" on-input="[[ $listeners.onField ]]">
+            <select class="nx-cm-input" id="intSSystem" data-field="sSystem" on-change="[[ $listeners.onField ]]" aria-label="System">
+              <oj-bind-for-each data="[[ $functions.systemOptions($variables.m, $variables.sSystem, '') ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+            </select>
+          </div>
+          <div class="nx-int-ifgrid" id="intIfGrid" role="table" aria-label="Interfaces">
+            <div class="nx-int-row nx-int-row--head" role="row"><span>ID</span><span>Data (from → to)</span><span>Business object</span><span>Direction</span><span>Methods</span><span>Set off by</span><span>Uses</span><span></span></div>
+            <oj-bind-for-each data="[[ $functions.ifaceRows($variables.m, $variables.sq, $variables.sSystem) ]]"><template data-oj-as="x">
+              <div class="nx-int-row" role="row" :data-id="[[ x.data.id ]]">
+                <span class="nx-int-id"><oj-bind-text value="[[ x.data.id ]]"></oj-bind-text></span>
+                <span><span class="nx-int-sys"><span class="nx-int-dot" :style="[[ $functions.dotStyle(x.data.kind) ]]"></span><oj-bind-text value="[[ x.data.flowText ]]"></oj-bind-text></span></span>
+                <span><b><oj-bind-text value="[[ x.data.object ]]"></oj-bind-text></b><oj-bind-if test="[[ !!x.data.ops ]]"><small><oj-bind-text value="[[ x.data.ops ]]"></oj-bind-text></small></oj-bind-if></span>
+                <span class="nx-int-dirs"><oj-bind-for-each data="[[ x.data.dirs ]]"><template data-oj-as="d"><span :class="[[ d.data.cls ]]"><oj-bind-text value="[[ d.data.text ]]"></oj-bind-text></span></template></oj-bind-for-each></span>
+                <span class="nx-int-method"><oj-bind-text value="[[ x.data.methods ]]"></oj-bind-text></span>
+                <span class="nx-note"><oj-bind-text value="[[ x.data.setOffBy ]]"></oj-bind-text></span>
+                <span><oj-bind-text value="[[ x.data.use ]]"></oj-bind-text><small :title="[[ x.data.pagesText ]]"><oj-bind-text value="[[ x.data.pagesText ]]"></oj-bind-text></small></span>
+                <span><button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="sheetIf" :data-key="[[ x.data.id ]]" on-click="[[ $listeners.onAct ]]" title="Its rows in the data sheet">Its rows</button></span>
+              </div>
+            </template></oj-bind-for-each>
+          </div>
+        </div>
+
+        <div class="nx-card nx-sc-sec" id="intJourneys">
+          <div class="nx-sc-head"><div><h2>Cross-system flows</h2><span class="nx-note">One action — a button, a page opening — that calls two or more systems, in the order its code calls them; the app passes data from one to the next.</span></div>
+            <span class="nx-min-flex"></span><button type="button" class="nx-btn nx-btn--sm" id="intJourSvg" data-act="svg" data-key="journeys" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span> Save SVG</button></div>
+          <oj-bind-if test="[[ $functions.handoffRows($variables.m, $variables.sSystem).length > 0 ]]">
+            <h3 class="nx-int-h3">System to system</h3>
+            <div class="nx-int-hogrid" id="intHandoffs" role="table" aria-label="System to system">
+              <div class="nx-int-row nx-int-row--head" role="row"><span>From</span><span>To</span><span>How often</span><span>From the first</span><span>To the second</span><span>Pages</span></div>
+              <oj-bind-for-each data="[[ $functions.handoffRows($variables.m, $variables.sSystem) ]]"><template data-oj-as="h">
+                <div class="nx-int-row" role="row">
+                  <span><span class="nx-int-sys"><span class="nx-int-dot" :style="[[ { background: h.data.fromColor } ]]"></span><oj-bind-text value="[[ h.data.from ]]"></oj-bind-text></span></span>
+                  <span><span class="nx-int-sys"><span class="nx-int-dot" :style="[[ { background: h.data.toColor } ]]"></span><oj-bind-text value="[[ h.data.to ]]"></oj-bind-text></span></span>
+                  <span><b><oj-bind-text value="[[ h.data.actions ]]"></oj-bind-text></b></span>
+                  <span class="nx-note"><oj-bind-text value="[[ h.data.fromObjects ]]"></oj-bind-text></span>
+                  <span class="nx-note"><oj-bind-text value="[[ h.data.toObjects ]]"></oj-bind-text></span>
+                  <span class="nx-note"><oj-bind-text value="[[ h.data.pages ]]"></oj-bind-text></span>
+                </div>
+              </template></oj-bind-for-each>
+            </div>
+          </oj-bind-if>
+          <h3 class="nx-int-h3">Each flow</h3>
+          <div class="nx-int-jlist" id="intJList">
+            <oj-bind-for-each data="[[ $functions.journeyRows($variables.m, $variables.sq, $variables.sSystem) ]]"><template data-oj-as="j">
+              <div class="nx-int-journey" :data-id="[[ j.data.id ]]">
+                <div class="nx-int-jhead"><b><oj-bind-text value="[[ j.data.id ]]"></oj-bind-text></b><span class="nx-note"><oj-bind-text value="[[ j.data.actions ]]"></oj-bind-text></span>
+                  <span class="nx-min-flex"></span><button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="showPage" :data-key="[[ j.data.page ]]" on-click="[[ $listeners.onAct ]]">Its page's diagram</button></div>
+                <div class="nx-int-jsteps">
+                  <oj-bind-for-each data="[[ j.data.steps ]]"><template data-oj-as="st">
+                    <span class="nx-int-jstep" :style="[[ { borderLeftColor: st.data.color } ]]"><b><oj-bind-text value="[[ st.data.n + '. ' + st.data.name ]]"></oj-bind-text></b><small><oj-bind-text value="[[ st.data.what ]]"></oj-bind-text></small></span>
+                    <oj-bind-if test="[[ !st.data.last ]]"><span class="nx-int-jarrow" aria-hidden="true">→</span></oj-bind-if>
+                  </template></oj-bind-for-each>
+                </div>
+                <div class="nx-note"><oj-bind-text value="[[ j.data.where ]]"></oj-bind-text></div>
+              </div>
+            </template></oj-bind-for-each>
+            <oj-bind-if test="[[ $functions.journeyRows($variables.m, $variables.sq, $variables.sSystem).length === 0 ]]"><p class="nx-note" id="intJNone">No single action calls more than one system<oj-bind-text value="[[ ($variables.sq || $variables.sSystem) ? ' among the ones shown' : '' ]]"></oj-bind-text>.</p></oj-bind-if>
+          </div>
+        </div>
+      </oj-bind-if>
+
       <!-- the integration data sheet: one row per page × endpoint, source → target -->
       <oj-bind-if test="[[ $variables.tab === 'sheet' ]]">
         <div class="nx-card nx-sc-sec" id="intSheet">
           <div class="nx-sc-head">
-            <div><h2>Integration data sheet</h2><span class="nx-note" id="intSheetCount"><oj-bind-text value="[[ $functions.sheetCount($variables.m, $variables.q, $variables.fSystem, $variables.fDir, $variables.fFlow, $variables.limit) ]]"></oj-bind-text></span></div>
+            <div><h2>Integration data sheet</h2><span class="nx-note" id="intSheetCount"><oj-bind-text value="[[ $functions.sheetCount($variables.m, $variables.q, $variables.fSystem, $variables.fDir, $variables.fFlow, $variables.limit, $variables.fObject) ]]"></oj-bind-text></span></div>
             <span class="nx-min-flex"></span>
             <input type="search" class="nx-cm-input nx-int-q" id="intQ" placeholder="Find: page, endpoint, system, chain…" data-field="q" :value="[[ $variables.q ]]" on-input="[[ $listeners.onField ]]">
             <select class="nx-cm-input" id="intFSystem" data-field="fSystem" on-change="[[ $listeners.onField ]]" aria-label="System">
@@ -81,22 +155,23 @@
           </div>
           <div class="nx-sc-listbar" id="intDirChips">
             <oj-bind-for-each data="[[ $functions.dirChips($variables.m, $variables.fDir) ]]"><template data-oj-as="c"><button type="button" :class="[[ c.data.cls ]]" data-act="dir" :data-key="[[ c.data.key ]]" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ c.data.text ]]"></oj-bind-text></button></template></oj-bind-for-each>
+            <oj-bind-if test="[[ !!$variables.fObject ]]"><button type="button" class="nx-sc-chip nx-sc-chip--on nx-int-objchip" id="intObjChip" data-act="clearObject" on-click="[[ $listeners.onAct ]]" title="Show every business object"><oj-bind-text value="[[ 'Interface ' + $variables.fObjectLabel + '  ✕' ]]"></oj-bind-text></button></oj-bind-if>
           </div>
           <div class="nx-int-grid" id="intGrid" role="table" aria-label="Integration data sheet">
             <div class="nx-int-row nx-int-row--head" role="row"><span>ID</span><span>Source (page)</span><span>Set off by</span><span>Target system</span><span>Method</span><span>Endpoint</span><span>Direction</span></div>
-            <oj-bind-for-each data="[[ $functions.sheetRows($variables.m, $variables.q, $variables.fSystem, $variables.fDir, $variables.fFlow, $variables.limit) ]]"><template data-oj-as="r">
+            <oj-bind-for-each data="[[ $functions.sheetRows($variables.m, $variables.q, $variables.fSystem, $variables.fDir, $variables.fFlow, $variables.limit, $variables.fObject) ]]"><template data-oj-as="r">
               <div class="nx-int-row" role="row" :data-id="[[ r.data.id ]]">
                 <span class="nx-int-id"><oj-bind-text value="[[ r.data.id ]]"></oj-bind-text></span>
                 <span><button type="button" class="nx-linkbtn nx-int-page" data-act="showPage" :data-key="[[ r.data.page ]]" on-click="[[ $listeners.onAct ]]" title="Its diagram"><oj-bind-text value="[[ r.data.pageLabel ]]"></oj-bind-text></button><small><oj-bind-text value="[[ r.data.flow ]]"></oj-bind-text></small></span>
                 <span class="nx-note"><oj-bind-text value="[[ r.data.trigger ]]"></oj-bind-text></span>
-                <span><span class="nx-int-sys"><span class="nx-int-dot" :style="[[ $functions.dotStyle(r.data.kind) ]]"></span><oj-bind-text value="[[ r.data.systemName ]]"></oj-bind-text></span><small><oj-bind-text value="[[ r.data.kindLabel ]]"></oj-bind-text></small></span>
+                <span><span class="nx-int-sys"><span class="nx-int-dot" :style="[[ $functions.dotStyle(r.data.kind) ]]"></span><oj-bind-text value="[[ r.data.systemName ]]"></oj-bind-text></span><small><oj-bind-text value="[[ $functions.targetNote(r.data) ]]"></oj-bind-text></small></span>
                 <span class="nx-int-method"><oj-bind-text value="[[ r.data.method ]]"></oj-bind-text></span>
                 <span><code class="nx-int-path" :title="[[ r.data.url ]]"><oj-bind-text value="[[ r.data.path || r.data.endpoint ]]"></oj-bind-text></code><small><oj-bind-text value="[[ (r.data.summary ? r.data.summary + ' · ' : '') + $functions.endpointNote(r.data) ]]"></oj-bind-text></small></span>
                 <span><span :class="[[ $functions.dirClass(r.data.direction) ]]"><oj-bind-text value="[[ r.data.direction ]]"></oj-bind-text></span></span>
               </div>
             </template></oj-bind-for-each>
           </div>
-          <oj-bind-if test="[[ $functions.hasMore($variables.m, $variables.q, $variables.fSystem, $variables.fDir, $variables.fFlow, $variables.limit) ]]">
+          <oj-bind-if test="[[ $functions.hasMore($variables.m, $variables.q, $variables.fSystem, $variables.fDir, $variables.fFlow, $variables.limit, $variables.fObject) ]]">
             <div class="nx-fx-row nx-int-more"><button type="button" class="nx-btn nx-btn--sm" id="intMore" data-act="more" on-click="[[ $listeners.onAct ]]">Show 300 more</button><span class="nx-note">All of them are in the Excel and the PDF.</span></div>
           </oj-bind-if>
         </div>
@@ -176,7 +251,7 @@
           </div>
           <p class="nx-note" id="intDiaTitle"><oj-bind-text value="[[ $functions.diaTitle($variables.m, $variables.dia, $variables.diaSystem, $variables.diaPage) ]]"></oj-bind-text></p>
           <iframe class="nx-int-frame" id="intDia" title="Integration diagram" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.m, $variables.dia, $variables.diaSystem, $variables.diaPage) ]]" :srcdoc="[[ $functions.diaDoc($variables.m, $variables.dia, $variables.diaSystem, $variables.diaPage) ]]"></iframe>
-          <p class="nx-note">The PDF holds the landscape, every system's diagram and, when a page is shown here, its diagram too.</p>
+          <p class="nx-note">The PDF holds the landscape, the flow between systems, the cross-system flows, every system's diagram and, when a page is shown here, its diagram too.</p>
         </div>
       </oj-bind-if>
     </oj-bind-if>

@@ -7,6 +7,9 @@ define([], function () {
   //   landscape(m)      the app's flows (the source) → the systems they call (the targets); a line's thickness = calls
   //   system(m, id)     one system: the pages that call it → its endpoints (method, path) → the system
   //   page(m, id)       one page: the page → the endpoints it calls → their systems
+  //   systemFlow(m)     between systems, not page by page: the app ⇄ each system — what the app sends it (writes),
+  //                     what it returns (reads) and the reports it runs, by business object
+  //   journeys(m)       cross-system flows: each action that calls two or more systems, its systems in order
   //   each → { svg, w, h, title }     doc(d) → a small HTML document showing it (for a sandboxed iframe)
   //   KINDS: a system's kind → its colour and name (the categorical order: blue, orange, aqua, yellow, magenta, green,
   //   violet, red — identity is never colour alone: every box says its kind)
@@ -249,10 +252,126 @@ define([], function () {
     return { svg: wrap(W, H, out.join(''), p.label), w: W, h: H, title: p.label };
   }
 
+  // which way data goes between the app and a system: what the app sends (writes), what comes back (reads, reports)
+  var LANES = [
+    { key: 'sends', verb: 'Sends', out: true, ink: '#a8461b', tip: 'the app sends (writes)' },
+    { key: 'returns', verb: 'Returns', out: false, ink: '#1d4f91', tip: 'the system returns (reads)' },
+    { key: 'reports', verb: 'Reports', out: false, ink: '#11704b', tip: 'BI Publisher reports the app runs' }
+  ];
+  /** Items joined with " · " to about `px` wide, "+n more" for the rest. */
+  function listFit(items, px, size) {
+    var per = (size || 12) * 0.56, out = '', shown = 0;
+    for (var i = 0; i < items.length; i++) {
+      var next = (out ? out + ' · ' : '') + items[i];
+      var room = px - (items.length - i - 1 ? 70 : 0);
+      if (next.length * per > room) { if (!shown) { out = fit(items[i], room, size); shown = 1; } break; }
+      out = next; shown++;
+    }
+    return out + (items.length > shown ? ' +' + (items.length - shown) + ' more' : '');
+  }
+  function lane(x, y, w, verb, ink, list, title) {
+    return '<g><title>' + esc(title) + '</title><text x="' + x + '" y="' + y + '" font-family="' + FONT + '" font-size="12" fill="#26323e"><tspan font-weight="700" fill="' + ink + '">' + esc(verb) + '</tspan> '
+      + esc(list) + '</text></g>';
+  }
+
+  /** Between systems: the app ⇄ each system, what goes each way, by business object. */
+  function systemFlow(m) {
+    var W = 1100, AX = 24, AW = 218, SX = 852, SW = 224, MX = AX + AW, top = 50, RH = 30, LG = 16;
+    var flows = (m.systemFlows || []).filter(function (s) { return s.interfaces; });
+    var lanes = flows.map(function (s) { var rows = LANES.filter(function (L) { return (s[L.key] || []).length; }); return { s: s, rows: rows, h: Math.max(76, rows.length * RH + 24) }; });
+    var y = top;
+    lanes.forEach(function (l) { l.y = y; y += l.h + LG; });
+    var H0 = Math.max(90, y - top - LG);
+    var out = [arrowDefs(LANES.map(function (L) { return L.ink; }))];
+    out.push(text(AX, 26, 'The app', { size: 13, weight: 700, fill: '#3b4a58' }));
+    out.push(text(MX + 30, 26, 'What goes between them (by business object)', { size: 13, weight: 700, fill: '#3b4a58' }));
+    out.push(text(SX, 26, 'The systems', { size: 13, weight: 700, fill: '#3b4a58' }));
+    var T = m.totals || {};
+    out.push('<g><title>' + esc((m.appName || m.app) + ': ' + (T.interfaces || 0) + ' interfaces with ' + (T.systems || 0) + ' systems') + '</title>' + box(AX, top, AW, H0, { fill: '#f6f9fb', stroke: '#2e6fd8', sw: 2, r: 12 })
+      + text(AX + AW / 2, top + H0 / 2 - 10, fit(m.appName || m.app, AW - 20, 15), { size: 15, weight: 700, anchor: 'middle' })
+      + text(AX + AW / 2, top + H0 / 2 + 10, (T.interfaces || 0) + ' interfaces · ' + (T.systems || 0) + ' systems', { size: 11, fill: '#5b6876', anchor: 'middle' })
+      + text(AX + AW / 2, top + H0 / 2 + 26, (T.calls || 0) + ' calls from ' + (T.pagesWith || 0) + ' pages', { size: 11, fill: '#5b6876', anchor: 'middle' }) + '</g>');
+    lanes.forEach(function (l) {
+      var s = l.s, K = kindOf(s.kind);
+      var rows0 = l.y + (l.h - l.rows.length * RH) / 2;
+      l.rows.forEach(function (L, i) {
+        var items = s[L.key] || [];
+        var ly = rows0 + i * RH + RH - 6;
+        var li = LANES.indexOf(L);
+        out.push(L.out ? '<line x1="' + (MX + 4) + '" y1="' + ly + '" x2="' + (SX - 3) + '" y2="' + ly + '" stroke="' + L.ink + '" stroke-width="1.6" stroke-opacity="0.75" marker-end="url(#ar' + li + ')"/>'
+          : '<line x1="' + (SX - 4) + '" y1="' + ly + '" x2="' + (MX + 3) + '" y2="' + ly + '" stroke="' + L.ink + '" stroke-width="1.6" stroke-opacity="0.75" marker-end="url(#ar' + li + ')"/>');
+        out.push(lane(MX + 18, ly - 7, SX - MX - 36, L.verb + (items.length > 1 ? ' ' + items.length : ''), L.ink, listFit(items, SX - MX - 110, 12), s.name + ' — ' + L.tip + ': ' + items.join(', ')));
+      });
+      out.push('<g><title>' + esc(s.name + ' — ' + s.kindLabel + ': ' + s.interfaces + ' interfaces, ' + s.calls + ' calls') + '</title>' + box(SX, l.y, SW, l.h)
+        + '<rect x="' + SX + '" y="' + l.y + '" width="6" height="' + l.h + '" rx="3" fill="' + K.color + '"/>'
+        + text(SX + 18, l.y + l.h / 2 - 8, fit(s.name, SW - 30, 13), { size: 13, weight: 700 })
+        + text(SX + 18, l.y + l.h / 2 + 9, fit(s.kindLabel, SW - 30, 11), { size: 11, fill: '#5b6876' })
+        + text(SX + 18, l.y + l.h / 2 + 25, s.interfaces + ' interface' + (s.interfaces === 1 ? '' : 's') + ' · ' + s.calls + ' call' + (s.calls === 1 ? '' : 's'), { size: 11, fill: '#26323e' }) + '</g>');
+    });
+    if (!lanes.length) out.push(text(MX + 30, top + 50, 'The app calls no system.', { size: 13, fill: '#6b7889' }));
+    var y0 = top + H0 + 30, x = 24;
+    LANES.forEach(function (L, i) {
+      out.push('<line x1="' + x + '" y1="' + (y0 - 4) + '" x2="' + (x + 26) + '" y2="' + (y0 - 4) + '" stroke="' + L.ink + '" stroke-width="1.6" marker-end="url(#ar' + i + ')"/>' + text(x + 32, y0, L.verb + ': ' + L.tip, { size: 11, fill: '#3b4a58' }));
+      x += 52 + (L.verb + ': ' + L.tip).length * 6.1;
+    });
+    var kinds = flows.map(function (s) { return s.kind; }).filter(function (k, i, a) { return a.indexOf(k) === i; });
+    var lg = legend(kinds, y0 + 22, W, '');
+    out.push(lg.svg);
+    var H = lg.y + 18;
+    return { svg: wrap(W, H, out.join(''), 'Flow between systems'), w: W, h: H, title: 'Flow between systems' };
+  }
+
+  var VERB = { Read: { word: 'reads', ink: '#1d4f91' }, Write: { word: 'writes', ink: '#a8461b' }, Report: { word: 'report', ink: '#11704b' } };
+  var MAX_JOURNEYS = 40;
+  /** Cross-system flows: each action that calls two or more systems — its systems in the order its code calls them. */
+  function journeys(m) {
+    var W = 1100, LX = 24, BX = 176, BW = 186, GAP = 46, BH = 74, PER = 4, top = 40;
+    var all = m.journeys || [];
+    var js = all.slice(0, MAX_JOURNEYS);
+    var out = [arrowDefs(['#8a97a5'])];
+    out.push(text(LX, 24, 'Cross-system flows', { size: 13, weight: 700, fill: '#3b4a58' }));
+    out.push(text(BX, 24, 'One action (a button, a page opening) that calls two or more systems — in the order its code calls them; the app passes data between them.', { size: 11, fill: '#6b7889' }));
+    var y = top;
+    js.forEach(function (j) {
+      var lines = Math.ceil(j.steps.length / PER);
+      var h = lines * (BH + 16) + 22;
+      out.push(box(LX - 8, y - 6, W - 2 * (LX - 8), h, { fill: '#fbfcfd', stroke: '#e4e9ef', r: 10 }));
+      out.push(text(LX + 4, y + 20, j.id, { size: 14, weight: 700, fill: '#00506c' }));
+      out.push(text(LX + 4, y + 38, j.actions.length + ' action' + (j.actions.length === 1 ? '' : 's'), { size: 11, fill: '#26323e' }));
+      out.push(text(LX + 4, y + 53, j.pages.length + ' page' + (j.pages.length === 1 ? '' : 's'), { size: 11, fill: '#5b6876' }));
+      j.steps.forEach(function (st, i) {
+        var line = Math.floor(i / PER), col = i % PER;
+        var bx = BX + col * (BW + GAP), by = y + line * (BH + 16);
+        var K = kindOf(st.kind);
+        if (col > 0) out.push('<line x1="' + (bx - GAP + 4) + '" y1="' + (by + BH / 2) + '" x2="' + (bx - 4) + '" y2="' + (by + BH / 2) + '" stroke="#8a97a5" stroke-width="1.6" marker-end="url(#ar0)"/>');
+        else if (line > 0) out.push(text(bx - 22, by + BH / 2 + 5, '↳', { size: 16, fill: '#8a97a5' }));
+        var dirs = ['Read', 'Write', 'Report'].filter(function (d) { return (st.dirs || []).indexOf(d) !== -1; }).map(function (d) { return VERB[d]; });
+        var dx = bx + 14;
+        var badges = dirs.map(function (v) { var t = text(dx, by + 40, v.word, { size: 11, weight: 700, fill: v.ink }); dx += v.word.length * 7 + 8; return t; }).join('');
+        out.push('<g><title>' + esc((i + 1) + '. ' + st.systemName + ' — ' + st.direction + ': ' + st.objects.join(', ')) + '</title>' + box(bx, by, BW, BH)
+          + '<rect x="' + bx + '" y="' + by + '" width="6" height="' + BH + '" rx="3" fill="' + K.color + '"/>'
+          + text(bx + 14, by + 20, fit((i + 1) + '. ' + st.systemName, BW - 22, 12.5), { size: 12.5, weight: 700 }) + badges
+          + text(bx + 14, by + 60, listFit(st.objects, BW - 20, 11), { size: 11, fill: '#3b4a58' }) + '</g>');
+      });
+      var a0 = j.actions[0] || {};
+      var eg = 'e.g. ' + a0.pageLabel + (a0.trigger ? ' — ' + a0.trigger : '') + (a0.chain ? ' (' + a0.chain + ')' : '') + (j.actions.length > 1 ? ' · and ' + (j.actions.length - 1) + ' more' : '');
+      out.push(text(BX, y + lines * (BH + 16) + 4, fit(eg, W - BX - 30, 11), { size: 11, fill: '#5b6876' }));
+      y += h + 14;
+    });
+    if (!js.length) { out.push(text(BX, top + 30, 'No single action calls more than one system: each action talks to one system.', { size: 13, fill: '#6b7889' })); y = top + 50; }
+    if (all.length > js.length) { out.push(text(BX, y + 6, '+ ' + (all.length - js.length) + ' more cross-system flows (all of them are in the Excel)', { size: 11.5, fill: '#5b6876' })); y += 20; }
+    var kinds = [];
+    js.forEach(function (j) { j.steps.forEach(function (st) { if (kinds.indexOf(st.kind) === -1) kinds.push(st.kind); }); });
+    var lg = legend(kinds, y + 16, W, '');
+    out.push(lg.svg);
+    var H = lg.y + 18;
+    return { svg: wrap(W, H, out.join(''), 'Cross-system flows'), w: W, h: H, title: 'Cross-system flows' };
+  }
+
   /** A small document showing a diagram, scaled to its frame (for a sandboxed iframe). */
   function doc(d) {
     return '<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#fff}svg{display:block;width:100%;height:auto}</style>' + (d && d.svg ? d.svg : '');
   }
 
-  return { landscape: landscape, system: system, page: page, doc: doc, KINDS: KINDS, DIR: DIR, esc: esc, fit: fit, figures: figures, commonPrefix: commonPrefix };
+  return { landscape: landscape, system: system, page: page, systemFlow: systemFlow, journeys: journeys, listFit: listFit, doc: doc, KINDS: KINDS, DIR: DIR, esc: esc, fit: fit, figures: figures, commonPrefix: commonPrefix };
 });

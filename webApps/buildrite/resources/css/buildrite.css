@@ -848,3 +848,19 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-int-diachips { margin: 0; }
 .nx-int-pagesel { max-width: 420px; }
 @media (max-width: 900px) { .nx-int-grid { grid-template-columns: 74px minmax(130px, 1fr) minmax(140px, 1.4fr) 76px; } .nx-int-grid .nx-int-row > span:nth-child(3), .nx-int-grid .nx-int-row > span:nth-child(4), .nx-int-grid .nx-int-row > span:nth-child(5) { display: none; } .nx-int-sysbar { grid-template-columns: 1fr; } }
+
+/* Integrations › System flows: interfaces (system × business object), system → system, cross-system flows */
+.nx-int-h3 { margin: 14px 0 6px; font-size: 13px; color: #3b4a58; }
+.nx-int-ifgrid { display: grid; grid-template-columns: 70px minmax(170px, 1.2fr) minmax(170px, 1.3fr) 128px 86px minmax(150px, 1.1fr) minmax(170px, 1.1fr) 84px; border-top: 1px solid #e4e9ef; }
+.nx-int-hogrid { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) 96px minmax(160px, 1.3fr) minmax(160px, 1.3fr) minmax(140px, 1fr); border-top: 1px solid #e4e9ef; }
+.nx-int-dirs { flex-direction: row !important; flex-wrap: wrap; align-items: center; justify-content: flex-start !important; gap: 4px !important; }
+.nx-int-objchip { font-weight: 600; }
+.nx-int-jlist { display: grid; gap: 10px; }
+.nx-int-journey { border: 1px solid #e4e9ef; border-radius: 10px; padding: 10px 12px; background: #fbfcfd; display: grid; gap: 6px; }
+.nx-int-jhead { display: flex; align-items: center; gap: 10px; } .nx-int-jhead b { color: #00506c; font-size: 14px; }
+.nx-int-jhead .nx-min-flex { flex: 1; }
+.nx-int-jsteps { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; }
+.nx-int-jstep { display: grid; gap: 2px; padding: 6px 10px; border: 1px solid #dfe6ed; border-left: 5px solid #8a97a5; border-radius: 8px; background: #fff; min-width: 150px; max-width: 260px; font-size: 12.5px; }
+.nx-int-jstep small { color: #5b6876; font-size: 11.5px; overflow-wrap: anywhere; }
+.nx-int-jarrow { align-self: center; color: #8a97a5; font-size: 18px; font-weight: 700; }
+@media (max-width: 900px) { .nx-int-ifgrid { grid-template-columns: 60px minmax(140px, 1fr) minmax(140px, 1fr) 110px 80px; } .nx-int-ifgrid .nx-int-row > span:nth-child(5), .nx-int-ifgrid .nx-int-row > span:nth-child(6), .nx-int-ifgrid .nx-int-row > span:nth-child(7) { display: none; } }

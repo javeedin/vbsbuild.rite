@@ -1,5 +1,5 @@
 {
-  "description": "Integrations: every system your workspace's app talks to and every call it makes, read from its code — the integration data sheet (source → target), the endpoints, the systems, the diagrams (landscape, a system, a page), exported as a PDF or an Excel workbook (desktop/lib/integrations.js, /__pages/integrations).",
+  "description": "Integrations: every system your workspace's app talks to and every call it makes, read from its code — between systems (the app ⇄ each system by business object, interfaces, cross-system flows), the integration data sheet (source → target), the endpoints, the systems, the diagrams (landscape, a system, a page), exported as a PDF or an Excel workbook (desktop/lib/integrations.js, /__pages/integrations).",
   "navigation": {
     "embeddable": "enabled"
   },
@@ -20,7 +20,7 @@
     "tab": {
       "type": "string",
       "defaultValue": "overview",
-      "description": "overview | sheet | endpoints | systems | diagrams"
+      "description": "overview | flows | sheet | endpoints | systems | diagrams"
     },
     "q": {
       "type": "string",
@@ -39,15 +39,33 @@
       "defaultValue": "all",
       "description": "all | Read | Write | Report"
     },
+    "fObject": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "The data sheet shows one business object (an interface's objectKey) — from \"Its rows\" on an interface."
+    },
+    "fObjectLabel": {
+      "type": "string",
+      "defaultValue": ""
+    },
     "limit": {
       "type": "number",
       "defaultValue": 200,
       "description": "How many data-sheet rows are shown (More shows the next ones)."
     },
+    "sq": {
+      "type": "string",
+      "defaultValue": "",
+      "description": "System flows: find an interface or a cross-system flow."
+    },
+    "sSystem": {
+      "type": "string",
+      "defaultValue": ""
+    },
     "dia": {
       "type": "string",
       "defaultValue": "landscape",
-      "description": "landscape | system | page"
+      "description": "landscape | systems | journeys | system | page"
     },
     "diaSystem": {
       "type": "string",
@@ -64,13 +82,40 @@
   },
   "eventListeners": {
     "vbEnter": {
-      "chains": [{ "chain": "intChain", "parameters": { "act": "load", "key": "", "value": "" } }]
+      "chains": [
+        {
+          "chain": "intChain",
+          "parameters": {
+            "act": "load",
+            "key": "",
+            "value": ""
+          }
+        }
+      ]
     },
     "onAct": {
-      "chains": [{ "chain": "intChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "key": "{{ $event.currentTarget.dataset.key || '' }}", "value": "" } }]
+      "chains": [
+        {
+          "chain": "intChain",
+          "parameters": {
+            "act": "{{ $event.currentTarget.dataset.act }}",
+            "key": "{{ $event.currentTarget.dataset.key || '' }}",
+            "value": ""
+          }
+        }
+      ]
     },
     "onField": {
-      "chains": [{ "chain": "intChain", "parameters": { "act": "field", "key": "{{ $event.currentTarget.dataset.field }}", "value": "{{ $event.currentTarget.value }}" } }]
+      "chains": [
+        {
+          "chain": "intChain",
+          "parameters": {
+            "act": "field",
+            "key": "{{ $event.currentTarget.dataset.field }}",
+            "value": "{{ $event.currentTarget.value }}"
+          }
+        }
+      ]
     }
   },
   "imports": {
