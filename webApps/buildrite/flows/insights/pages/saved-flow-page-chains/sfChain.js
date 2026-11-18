@@ -36,18 +36,27 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
           const k = String(key || ''), val = String(value == null ? '' : value);
           if (['note', 'newLane', 'newLaneKind', 'cText', 'cStep'].indexOf(k) !== -1) { v[k] = val; return; }
           if (k.indexOf('flow.') === 0) { ed('set', { what: k.slice(5), value: val }); if (k === 'flow.name') retitle(); return; }
-          if (/^[asl]\./.test(k)) ed('set', { what: k, value: val });
+          if (/^[asln]\./.test(k)) ed('set', { what: k, value: val }); // an action, a step, a lane, a sticky note
           return;
         }
         // the editor: each change gives a new flow (FM.edit); nothing is kept until Save
         if (['moveStep', 'moveAction'].indexOf(act) !== -1) { ed(act, { id: key, by: Number(value) || 1 }); return; }
         if (['removeStep', 'removeAction', 'removeLane'].indexOf(act) !== -1) {
+          if (act === 'removeStep' && !window.confirm('Remove this step?')) return;
           if (act === 'removeAction' && !window.confirm('Remove this action and its steps?')) return;
           ed(act, { id: key });
           return;
         }
         if (act === 'addStep') { ed('addStep', { action: key }); return; }
         if (act === 'addAction') { ed('addAction', {}); return; }
+        // sticky notes: on an action (key) or the whole flow (no key); from the Flow tab, then on to Edit steps to write it
+        if (act === 'addSticky') {
+          ed('addSticky', { action: key || '', lane: '', color: 'yellow', text: '' });
+          if (v.tab !== 'edit') { v.tab = 'edit'; bus.toast('A sticky note was added — write it under "Sticky notes on the whole flow".', 'info'); }
+          return;
+        }
+        if (act === 'removeSticky') { ed('removeSticky', { id: key }); return; }
+        if (act === 'stickyColor') { ed('set', { what: 'n.' + key + '.color', value: value }); return; }
         if (act === 'addLane') {
           if (!String(v.newLane || '').trim()) { bus.toast('Name the system first (e.g. E-mail, SFTP, a person).', 'info'); return; }
           ed('addLane', { name: v.newLane, kind: v.newLaneKind || 'other' });
@@ -112,7 +121,7 @@ define(['vb/action/actionChain', 'resources/js/pagesClient', 'resources/js/shell
         if (act === 'restoreVersion') {
           const old = (v.flow.versions || []).filter((x) => x.v === Number(key))[0];
           if (!old) return;
-          v.flow = Object.assign({}, v.flow, { name: old.name || v.flow.name, lanes: clone(old.lanes || []), actions: clone(old.actions || []) });
+          v.flow = Object.assign({}, v.flow, { name: old.name || v.flow.name, lanes: clone(old.lanes || []), actions: clone(old.actions || []), stickies: clone(old.stickies || []) });
           v.viewV = 0;
           v.tab = 'edit';
           v.note = 'Back to version ' + old.v;

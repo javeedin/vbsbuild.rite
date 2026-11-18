@@ -5,7 +5,7 @@ define(['resources/js/integrationDiagram', 'resources/js/flowModel', 'resources/
   const n = (x, one, many) => x + ' ' + (x === 1 ? one : (many || one + 's'));
   const kindColor = (k) => (D.KINDS[k] || D.KINDS.rest).color;
   // what is compared to tell unsaved changes: its details and its steps (not comments, history, versions)
-  const body = (f) => (f ? JSON.stringify([f.name, f.purpose, f.area, f.owner, f.status, f.story, f.tags, f.lanes, f.actions]) : '');
+  const body = (f) => (f ? JSON.stringify([f.name, f.purpose, f.area, f.owner, f.status, f.story, f.tags, f.lanes, f.actions, f.stickies || []]) : '');
   const stepLabel = (flow) => {
     const out = {};
     (flow && flow.actions || []).forEach((a, ai) => (a.steps || []).forEach((s, si) => { out[s.id] = (ai + 1) + '.' + (si + 1); }));
@@ -52,17 +52,34 @@ define(['resources/js/integrationDiagram', 'resources/js/flowModel', 'resources/
       const lanes = (f.lanes || []);
       const md = FM.toModel(f);
       return (f.actions || []).map((a, ai) => ({
-        id: a.id, n: ai + 1, title: a.title || '', ph: D.plainTrigger(a.trigger || '') || 'When …', trigger: a.trigger ? 'From the app: ' + a.trigger + (a.chain ? ' (' + a.chain + ')' : '') : 'Added by hand', note: a.note || '',
+        id: a.id, n: ai + 1, title: a.title || '', ph: D.plainTrigger(a.trigger || '') || 'When …', val: a.title || (a.trigger ? D.plainTrigger(a.trigger) : ''),
+        auto: !a.title && !!a.trigger, stickies: PageModule.prototype.stickyRows(f, a.id), trigger: a.trigger ? 'From the app: ' + a.trigger + (a.chain ? ' (' + a.chain + ')' : '') : 'Added by hand', note: a.note || '',
         first: ai === 0, last: ai === f.actions.length - 1,
         steps: (a.steps || []).map((s, si) => {
           const c = md.actions[ai].calls[si];
-          return { id: s.id, n: (ai + 1) + '.' + (si + 1), text: s.text || '', ph: D.plainStep(c).sentence, note: s.note || '', manual: !!s.manual, method: s.method || '',
+          return { id: s.id, n: (ai + 1) + '.' + (si + 1), text: s.text || '', ph: D.plainStep(c).sentence, val: s.text || (s.manual ? '' : D.plainStep(c).sentence), auto: !s.text && !s.manual,
+            note: s.note || '', manual: !!s.manual, method: s.method || '',
             tech: s.manual ? 'Added by hand' : (s.method + ' ' + (s.path || s.endpoint)) + (s.object ? ' · ' + s.object : ''), color: kindColor(c.kind),
             lanes: lanes.map((l) => ({ id: l.id, text: l.name, on: l.id === s.system })), dirs: [['Read', 'Reads'], ['Write', 'Writes'], ['Report', 'Report']].map((d) => ({ id: d[0], text: d[1], on: (s.direction || 'Read') === d[0] })),
             first: si === 0 && ai === 0, last: si === a.steps.length - 1 && ai === f.actions.length - 1 };
         })
       }));
     }
+
+    // ── sticky notes ──
+    /** The sticky notes of an action ('' = the whole flow): their text, colour, where they sit. */
+    stickyRows(f, actionId) {
+      if (!f) return [];
+      const lanes = f.lanes || [];
+      return (f.stickies || []).filter((x) => (x.action || '') === (actionId || '') || (!actionId && !(f.actions || []).some((a) => a.id === x.action))).map((x) => ({
+        id: x.id, text: x.text || '', cls: 'nx-sfp-sticky nx-sfp-sticky--' + (x.color || 'yellow'),
+        laneOpts: [{ id: '', text: 'The page\'s lane', on: !x.lane }].concat(lanes.map((l) => ({ id: l.id, text: l.name, on: l.id === x.lane }))),
+        actionOpts: [{ id: '', text: 'The whole flow (at the top)', on: !x.action }].concat((f.actions || []).map((a, i) => ({ id: a.id, text: 'Action ' + (i + 1) + ' — ' + (a.title || D.plainTrigger(a.trigger || '') || 'When …').slice(0, 50), on: a.id === x.action }))),
+        colors: FM.STICKY_COLORS.map((c) => ({ id: c[0], text: c[1], cls: 'nx-sfp-swatch nx-sfp-swatch--' + c[0] + ((x.color || 'yellow') === c[0] ? ' nx-sfp-swatch--on' : '') }))
+      }));
+    }
+    stickyCount(f) { return ((f && f.stickies) || []).length; }
+    historyLabel(f) { const k = ((f && f.versions) || []).length + 1; return 'History (' + k + (k === 1 ? ' version' : ' versions') + ')'; }
 
     // ── comments ──
     commentRows(f, showResolved) {
@@ -92,7 +109,7 @@ define(['resources/js/integrationDiagram', 'resources/js/flowModel', 'resources/
     }
     versionDoc(f, v, plain) {
       const x = ((f && f.versions) || []).filter((y) => y.v === v)[0];
-      return x ? D.doc(D.flowSwim(FM.toModel(Object.assign({}, f, { name: x.name || f.name, status: x.status || f.status, version: x.v, lanes: x.lanes, actions: x.actions })), { plain: plain })) : '';
+      return x ? D.doc(D.flowSwim(FM.toModel(Object.assign({}, f, { name: x.name || f.name, status: x.status || f.status, version: x.v, lanes: x.lanes, actions: x.actions, stickies: x.stickies || [] })), { plain: plain })) : '';
     }
     historyRows(f) { return ((f && f.history) || []).slice().reverse().map((h, i) => ({ key: String(i), at: R.when(h.at), by: h.by || '', what: h.what, note: h.note || '' })); }
 

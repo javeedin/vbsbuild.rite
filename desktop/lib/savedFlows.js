@@ -6,7 +6,7 @@
  * A flow: id (FL-0001, given on the first save), name, purpose, area, owner, status (draft | review | approved |
  *   retired), story (Jira), tags, app, source { kind page | blank, page, pageLabel, flow, scannedAt }, lanes (its
  *   systems), actions (what sets each off, its steps — each a call of the app or a step added by hand, with its own words
- *   and a note), version (1, 2…), versions (the earlier ones: their lanes and actions, who saved them, the note),
+ *   and a note), stickies (sticky notes on an action and a lane, or on the whole flow), version (1, 2…), versions (the earlier ones: their lanes and actions, who saved them, the note),
  *   comments [{ id, at, by, text, step, resolved }], history [{ at, by, what, note }], created / updated (+ by).
  *
  *   open({ dir: string | () => string, now }) → store
@@ -18,7 +18,7 @@ const fs = require('fs');
 const path = require('path');
 
 const STATUSES = { draft: 'Draft', review: 'In review', approved: 'Approved', retired: 'Retired' };
-const MAX = { lanes: 40, actions: 200, steps: 800, versions: 30, comments: 500, history: 300 };
+const MAX = { lanes: 40, actions: 200, steps: 800, stickies: 100, versions: 30, comments: 500, history: 300 };
 
 const str = (v) => (v === undefined || v === null ? '' : String(v));
 const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -40,9 +40,12 @@ function cleanBody(f) {
       id: idOf(s.id, 20) || 's', system: idOf(s.system), method: cut(s.method, 10), path: cut(s.path, 500), endpoint: cut(s.endpoint, 200), object: cut(s.object, 200),
       action: cut(s.action, 100), direction: ['Read', 'Write', 'Report'].indexOf(s.direction) !== -1 ? s.direction : 'Read', summary: cut(s.summary, 300), via: cut(s.via, 100),
       row: cut(s.row, 20), text: cut(s.text, 500), note: cut(s.note, 2000), manual: !!s.manual })) }));
-  return { lanes, actions };
+  // sticky notes: on an action and a lane, or on the whole flow
+  const stickies = (Array.isArray(f.stickies) ? f.stickies : []).filter(isObj).slice(0, MAX.stickies).map((n) => ({
+    id: idOf(n.id, 20) || 'n', text: cut(n.text, 1500), color: ['yellow', 'pink', 'green', 'blue'].indexOf(n.color) !== -1 ? n.color : 'yellow', action: idOf(n.action, 20), lane: idOf(n.lane) }));
+  return { lanes, actions, stickies };
 }
-const sameBody = (a, b) => JSON.stringify({ l: a.lanes, a: a.actions }) === JSON.stringify({ l: b.lanes, a: b.actions });
+const sameBody = (a, b) => JSON.stringify({ l: a.lanes, a: a.actions, n: a.stickies || [] }) === JSON.stringify({ l: b.lanes, a: b.actions, n: b.stickies || [] });
 
 function open(opts) {
   const o = opts || {};
@@ -96,12 +99,12 @@ function open(opts) {
         name, purpose: cut(flow.purpose, 4000), area: cut(flow.area, 120), owner: cut(flow.owner, 120), status: STATUSES[flow.status] ? flow.status : 'draft',
         story: cut(str(flow.story).trim(), 40), tags: (Array.isArray(flow.tags) ? flow.tags : []).slice(0, 20).map((t) => cut(str(t).trim(), 40)).filter(Boolean),
         app: cut(flow.app, 60), source: isObj(flow.source) ? { kind: flow.source.kind === 'page' ? 'page' : 'blank', page: cut(flow.source.page, 200), pageLabel: cut(flow.source.pageLabel, 200), flow: cut(flow.source.flow, 100), scannedAt: cut(flow.source.scannedAt, 40) } : { kind: 'blank' },
-        lanes: body.lanes, actions: body.actions, updated: at, updatedBy: str(by)
+        lanes: body.lanes, actions: body.actions, stickies: body.stickies, updated: at, updatedBy: str(by)
       });
       if (old) {
         // the version before, kept (when its steps or details changed)
         if (!sameBody(old, fl) || old.name !== fl.name || old.status !== fl.status || old.purpose !== fl.purpose) {
-          fl.versions = (old.versions || []).concat([{ v: old.version || 1, at: old.updated || old.created, by: old.updatedBy || old.createdBy, note: old.lastNote || '', name: old.name, status: old.status, lanes: old.lanes, actions: old.actions }]).slice(-MAX.versions);
+          fl.versions = (old.versions || []).concat([{ v: old.version || 1, at: old.updated || old.created, by: old.updatedBy || old.createdBy, note: old.lastNote || '', name: old.name, status: old.status, lanes: old.lanes, actions: old.actions, stickies: old.stickies || [] }]).slice(-MAX.versions);
           fl.version = (old.version || 1) + 1;
           fl.lastNote = cut(op.note, 300);
           const said = [];

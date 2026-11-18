@@ -39,14 +39,18 @@
       <button type="button" role="tab" id="sfpTabEdit" :aria-selected="[[ $functions.tabSel($variables.tab, 'edit') ]]" :class="[[ $functions.tabCls($variables.tab, 'edit') ]]" data-act="tab" data-key="edit" on-click="[[ $listeners.onAct ]]">Edit steps</button>
       <button type="button" role="tab" id="sfpTabDetails" :aria-selected="[[ $functions.tabSel($variables.tab, 'details') ]]" :class="[[ $functions.tabCls($variables.tab, 'details') ]]" data-act="tab" data-key="details" on-click="[[ $listeners.onAct ]]">Details</button>
       <button type="button" role="tab" id="sfpTabComments" :aria-selected="[[ $functions.tabSel($variables.tab, 'comments') ]]" :class="[[ $functions.tabCls($variables.tab, 'comments') ]]" data-act="tab" data-key="comments" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'Comments (' + $functions.openComments($variables.flow) + ')' ]]"></oj-bind-text></button>
-      <button type="button" role="tab" id="sfpTabHistory" :aria-selected="[[ $functions.tabSel($variables.tab, 'history') ]]" :class="[[ $functions.tabCls($variables.tab, 'history') ]]" data-act="tab" data-key="history" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ 'History (' + (($variables.flow.versions || []).length + 1) + ' versions)' ]]"></oj-bind-text></button>
+      <button type="button" role="tab" id="sfpTabHistory" :aria-selected="[[ $functions.tabSel($variables.tab, 'history') ]]" :class="[[ $functions.tabCls($variables.tab, 'history') ]]" data-act="tab" data-key="history" on-click="[[ $listeners.onAct ]]"><oj-bind-text value="[[ $functions.historyLabel($variables.flow) ]]"></oj-bind-text></button>
       <button type="button" role="tab" id="sfpTabCheck" :aria-selected="[[ $functions.tabSel($variables.tab, 'check') ]]" :class="[[ $functions.tabCls($variables.tab, 'check') ]]" data-act="tab" data-key="check" on-click="[[ $listeners.onAct ]]">Check against the app</button>
     </div>
 
     <!-- the flow: the diagram and its steps -->
     <oj-bind-if test="[[ $variables.tab === 'flow' ]]">
       <div class="nx-card nx-sc-sec" id="sfpFlow">
-        <oj-bind-if test="[[ !!$variables.flow.purpose ]]"><p class="nx-sfp-purpose" id="sfpPurposeShow"><oj-bind-text value="[[ $variables.flow.purpose ]]"></oj-bind-text></p></oj-bind-if>
+        <div class="nx-sc-head nx-sfp-flowhead">
+          <oj-bind-if test="[[ !!$variables.flow.purpose ]]"><p class="nx-sfp-purpose" id="sfpPurposeShow"><oj-bind-text value="[[ $variables.flow.purpose ]]"></oj-bind-text></p></oj-bind-if>
+          <span class="nx-min-flex"></span>
+          <button type="button" class="nx-btn nx-btn--sm nx-sfp-addnote" id="sfpAddNoteFlow" data-act="addSticky" on-click="[[ $listeners.onAct ]]" title="A sticky note on the flow — write it, then place it on an action and a lane"><span class="oj-ux-ico-note" aria-hidden="true"></span> Sticky note</button>
+        </div>
         <iframe class="nx-int-frame" id="sfpDia" title="The flow" sandbox="allow-same-origin" :style="[[ $functions.diaStyle($variables.flow, $variables.plain) ]]" :srcdoc="[[ $functions.diaDoc($variables.flow, $variables.plain) ]]"></iframe>
         <h3 class="nx-int-h3">Step by step</h3>
         <div class="nx-sfp-stepgrid" id="sfpSteps" role="table" aria-label="The flow step by step">
@@ -89,12 +93,34 @@
           </div>
         </div>
       </div>
+      <div class="nx-card nx-sc-sec" id="sfpStickies">
+        <div class="nx-sc-head"><div><h2>Sticky notes on the whole flow</h2><span class="nx-note">Shown at the top of the diagram. A note can also sit on an action, in any lane — use <b>Sticky note</b> on an action, or move one here with its action and lane.</span></div>
+          <span class="nx-min-flex"></span><button type="button" class="nx-btn nx-btn--sm nx-sfp-addnote" id="sfpAddNote" data-act="addSticky" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span> Sticky note</button></div>
+        <div class="nx-sfp-stickies" id="sfpStickyList">
+          <oj-bind-for-each data="[[ $functions.stickyRows($variables.flow, '') ]]"><template data-oj-as="n">
+              <div :class="[[ n.data.cls ]]" :data-id="[[ n.data.id ]]">
+                <textarea class="nx-sfp-stext" :data-field="[[ 'n.' + n.data.id + '.text' ]]" :value="[[ n.data.text ]]" on-change="[[ $listeners.onField ]]" placeholder="Write the note…" aria-label="The note"></textarea>
+                <div class="nx-sfp-sopts">
+                  <select class="nx-cm-input" :data-field="[[ 'n.' + n.data.id + '.action' ]]" on-change="[[ $listeners.onField ]]" aria-label="On which action">
+                    <oj-bind-for-each data="[[ n.data.actionOpts ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+                  </select>
+                  <select class="nx-cm-input" :data-field="[[ 'n.' + n.data.id + '.lane' ]]" on-change="[[ $listeners.onField ]]" aria-label="In which lane">
+                    <oj-bind-for-each data="[[ n.data.laneOpts ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+                  </select>
+                  <span class="nx-sfp-swatches"><oj-bind-for-each data="[[ n.data.colors ]]"><template data-oj-as="c"><button type="button" :class="[[ c.data.cls ]]" data-act="stickyColor" :data-key="[[ n.data.id ]]" :data-value="[[ c.data.id ]]" on-click="[[ $listeners.onAct ]]" :title="[[ c.data.text ]]" :aria-label="[[ c.data.text ]]"></button></template></oj-bind-for-each></span>
+                  <button type="button" class="nx-iconbtn" data-act="removeSticky" :data-key="[[ n.data.id ]]" on-click="[[ $listeners.onAct ]]" title="Remove this sticky note" aria-label="Remove this sticky note"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+                </div>
+              </div>
+          </template></oj-bind-for-each>
+        </div>
+      </div>
       <div id="sfpActions">
         <oj-bind-for-each data="[[ $functions.actionRows($variables.flow) ]]"><template data-oj-as="a">
           <div class="nx-card nx-sc-sec nx-sfp-action" :data-id="[[ a.data.id ]]">
             <div class="nx-sfp-ahead">
               <b class="nx-sfp-anum"><oj-bind-text value="[[ 'Action ' + a.data.n ]]"></oj-bind-text></b>
-              <input class="nx-cm-input nx-sfp-atitle" :data-field="[[ 'a.' + a.data.id + '.title' ]]" :value="[[ a.data.title ]]" :placeholder="[[ a.data.ph ]]" on-change="[[ $listeners.onField ]]" aria-label="When it happens">
+              <input :class="[[ 'nx-cm-input nx-sfp-atitle' + (a.data.auto ? ' nx-sfp-auto' : '') ]]" :data-field="[[ 'a.' + a.data.id + '.title' ]]" :value="[[ a.data.val ]]" :placeholder="[[ a.data.ph ]]" on-change="[[ $listeners.onField ]]" aria-label="When it happens" :title="[[ a.data.auto ? 'The automatic wording — edit it to put it in your words' : 'Your words (clear it to go back to the automatic wording)' ]]">
+              <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-sfp-addnote" data-act="addSticky" :data-key="[[ a.data.id ]]" on-click="[[ $listeners.onAct ]]" title="A sticky note on this action"><span class="oj-ux-ico-note" aria-hidden="true"></span> Sticky note</button>
               <button type="button" class="nx-iconbtn" data-act="moveAction" :data-key="[[ a.data.id ]]" data-value="-1" on-click="[[ $listeners.onAct ]]" :disabled="[[ a.data.first ]]" title="Move up" aria-label="Move up"><span class="oj-ux-ico-arrow-up" aria-hidden="true"></span></button>
               <button type="button" class="nx-iconbtn" data-act="moveAction" :data-key="[[ a.data.id ]]" data-value="1" on-click="[[ $listeners.onAct ]]" :disabled="[[ a.data.last ]]" title="Move down" aria-label="Move down"><span class="oj-ux-ico-arrow-down" aria-hidden="true"></span></button>
               <button type="button" class="nx-iconbtn" data-act="removeAction" :data-key="[[ a.data.id ]]" on-click="[[ $listeners.onAct ]]" title="Remove this action" aria-label="Remove this action"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
@@ -109,7 +135,7 @@
                     <oj-bind-for-each data="[[ s.data.lanes ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
                   </select>
                   <div class="nx-sfp-swords">
-                    <input class="nx-cm-input" :data-field="[[ 's.' + s.data.id + '.text' ]]" :value="[[ s.data.text ]]" :placeholder="[[ s.data.ph ]]" on-change="[[ $listeners.onField ]]" aria-label="What happens, in your words">
+                    <input :class="[[ 'nx-cm-input' + (s.data.auto ? ' nx-sfp-auto' : '') ]]" :data-field="[[ 's.' + s.data.id + '.text' ]]" :value="[[ s.data.val ]]" :placeholder="[[ s.data.ph ]]" on-change="[[ $listeners.onField ]]" aria-label="What happens, in your words" :title="[[ s.data.auto ? 'The automatic wording — edit it to put it in your words' : 'Your words (clear it to go back to the automatic wording)' ]]">
                     <small class="nx-int-mono"><oj-bind-text value="[[ s.data.tech ]]"></oj-bind-text></small>
                   </div>
                   <oj-bind-if test="[[ s.data.manual ]]">
@@ -126,11 +152,30 @@
                 </div>
               </template></oj-bind-for-each>
             </div>
+            <oj-bind-if test="[[ a.data.stickies.length > 0 ]]">
+              <div class="nx-sfp-stickies nx-sfp-stickies--in">
+                <oj-bind-for-each data="[[ a.data.stickies ]]"><template data-oj-as="n">
+              <div :class="[[ n.data.cls ]]" :data-id="[[ n.data.id ]]">
+                <textarea class="nx-sfp-stext" :data-field="[[ 'n.' + n.data.id + '.text' ]]" :value="[[ n.data.text ]]" on-change="[[ $listeners.onField ]]" placeholder="Write the note…" aria-label="The note"></textarea>
+                <div class="nx-sfp-sopts">
+                  <select class="nx-cm-input" :data-field="[[ 'n.' + n.data.id + '.action' ]]" on-change="[[ $listeners.onField ]]" aria-label="On which action">
+                    <oj-bind-for-each data="[[ n.data.actionOpts ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+                  </select>
+                  <select class="nx-cm-input" :data-field="[[ 'n.' + n.data.id + '.lane' ]]" on-change="[[ $listeners.onField ]]" aria-label="In which lane">
+                    <oj-bind-for-each data="[[ n.data.laneOpts ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.text ]]"></oj-bind-text></option></template></oj-bind-for-each>
+                  </select>
+                  <span class="nx-sfp-swatches"><oj-bind-for-each data="[[ n.data.colors ]]"><template data-oj-as="c"><button type="button" :class="[[ c.data.cls ]]" data-act="stickyColor" :data-key="[[ n.data.id ]]" :data-value="[[ c.data.id ]]" on-click="[[ $listeners.onAct ]]" :title="[[ c.data.text ]]" :aria-label="[[ c.data.text ]]"></button></template></oj-bind-for-each></span>
+                  <button type="button" class="nx-iconbtn" data-act="removeSticky" :data-key="[[ n.data.id ]]" on-click="[[ $listeners.onAct ]]" title="Remove this sticky note" aria-label="Remove this sticky note"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+                </div>
+              </div>
+                </template></oj-bind-for-each>
+              </div>
+            </oj-bind-if>
             <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-sfp-addstep" data-act="addStep" :data-key="[[ a.data.id ]]" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span> Add a step</button>
           </div>
         </template></oj-bind-for-each>
         <button type="button" class="nx-btn nx-btn--sm" id="sfpAddAction" data-act="addAction" on-click="[[ $listeners.onAct ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span> Add an action</button>
-        <p class="nx-note">Leave a step's words empty to keep the plain-English sentence shown in grey. Changes are kept when you press Save (a new version; the one before stays in History).</p>
+        <p class="nx-note">Each step and action starts with its description — edit it to put it in your words; clear it to go back to the automatic wording. Changes are kept when you press Save (a new version; the one before stays in History).</p>
       </div>
     </oj-bind-if>
 

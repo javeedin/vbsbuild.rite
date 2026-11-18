@@ -92,6 +92,8 @@ const setField = async (page, sel, value) => { const el = vis(page, sel); await 
     await page.waitForSelector('#sfpActions .nx-sfp-action:visible', { timeout: 5000 });
     T.check('the editor: its systems (lanes), each action with what sets it off (in words, as a placeholder) and its steps', (await count(page, '#sfpLanes .nx-sfp-lane:not(.nx-sfp-lane--new)')) === 2 && (await count(page, '#sfpActions .nx-sfp-action')) === 2
       && (await vis(page, '[data-field="a.a1.title"]').getAttribute('placeholder')) === 'When the page opens' && (await vis(page, '[data-field="s.s1.text"]').getAttribute('placeholder')) === 'Reads the customers from The shop\'s REST backend');
+    T.check('each step and action starts with its description (the automatic wording), to edit — not an empty box', (await vis(page, '[data-field="s.s1.text"]').inputValue()) === 'Reads the customers from The shop\'s REST backend'
+      && (await vis(page, '[data-field="a.a1.title"]').inputValue()) === 'When the page opens' && (await vis(page, '[data-field="s.s3.text"]').inputValue()) === 'Creates the orders in The shop\'s REST backend');
     await setField(page, '[data-field="a.a1.title"]', 'When a clerk opens a new order');
     await setField(page, '[data-field="s.s1.text"]', 'Looks up the customer list');
     await setField(page, '[data-field="s.s2.note"]', 'Credit status comes from this report');
@@ -106,17 +108,34 @@ const setField = async (page, sel, value) => { const el = vis(page, sel); await 
     await vis(page, '[data-field="s.s4.system"]').selectOption('e-mail');
     await setField(page, '[data-field="s.s4.text"]', 'E-mails the order confirmation to the customer');
     T.check('a step added by hand in it', (await count(page, '.nx-sfp-action[data-id="a2"] .nx-sfp-step')) === 2 && /Added by hand/.test(await text(page, '.nx-sfp-step[data-id="s4"]')));
+    // sticky notes: one on action 1 in BI Publisher's lane, one on the whole flow (from the Flow tab)
+    await vis(page, '.nx-sfp-action[data-id="a1"] [data-act="addSticky"]').click();
+    await settle(page);
+    await setField(page, '[data-field="n.n1.text"]', 'BI Publisher is slow at month end — the page waits for it.');
+    await vis(page, '[data-field="n.n1.lane"]').selectOption('bipService');
+    await settle(page);
+    await vis(page, '.nx-sfp-sticky[data-id="n1"] [data-act="stickyColor"][data-value="pink"]').click();
+    await settle(page);
+    T.check('a sticky note on action 1: written, put in BI Publisher\'s lane, pink', (await count(page, '.nx-sfp-action[data-id="a1"] .nx-sfp-sticky--pink')) === 1 && (await vis(page, '[data-field="n.n1.lane"]').inputValue()) === 'bipService');
+    await vis(page, '#sfpTabFlow').click();
+    await settle(page);
+    await vis(page, '#sfpAddNoteFlow').click();
+    await settle(page, 600);
+    T.check('Sticky note on the Flow tab: a note on the whole flow, on to Edit steps to write it', /Edit steps/.test(await text(page, '#sfpTabs .nx-sc-tab--on')) && (await count(page, '#sfpStickyList .nx-sfp-sticky')) === 1);
+    await setField(page, '[data-field="n.n2.text"]', 'Reviewed with the sales team on 18 Nov.');
     await env.shot('saved-flow-edit.png');
     await setField(page, '#sfpNote', 'Business wording and the e-mail step');
     await vis(page, '#sfpSave').click();
     await page.waitForFunction(() => /version 2/.test((document.querySelector('#sfpSub') || {}).textContent || ''), null, { timeout: 10000 }).catch(() => {});
     const st1 = flowStore.get('FL-0001').flow;
     T.check('Save: version 2, what changed kept, the version before kept', st1.version === 2 && st1.versions.length === 1 && /Business wording and the e-mail step/.test(st1.history[st1.history.length - 1].note) && !(await page.$('#sfpDirty:visible'))
-      && st1.actions[1].steps[1].manual && st1.actions[1].steps[1].system === 'e-mail' && st1.actions[0].title === 'When a clerk opens a new order', JSON.stringify(st1.history));
+      && st1.actions[1].steps[1].manual && st1.actions[1].steps[1].system === 'e-mail' && st1.actions[0].title === 'When a clerk opens a new order'
+      && st1.actions[1].steps[0].text === '' && st1.stickies.length === 2 && st1.stickies[0].lane === 'bipService' && st1.stickies[0].color === 'pink', JSON.stringify(st1.history));
     await vis(page, '#sfpTabFlow').click();
     await settle(page);
     const fd2 = (await vis(page, '#sfpDia').getAttribute('srcdoc')) || '';
     T.check('the diagram follows: the reworded action and step, the E-mail lane and its step, the note', />When a clerk opens a new</.test(fd2) && />Looks up the customer list</.test(fd2) && />E-mail</.test(fd2) && />E-mails the order</.test(fd2) && /Note: Credit status comes from this/.test(fd2));
+    T.check('…and the sticky notes (pink, in its lane; the whole flow\'s at the top)', /<title>Sticky note: BI Publisher is slow at month end/.test(fd2) && /fill="#ffdbe4"/.test(fd2) && /<title>Sticky note: Reviewed with the sales team/.test(fd2));
     await env.shot('saved-flow-v2.png');
 
     T.section('comments');
@@ -140,6 +159,7 @@ const setField = async (page, sel, value) => { const el = vis(page, sel); await 
     T.section('history');
     await vis(page, '#sfpTabHistory').click();
     await page.waitForSelector('#sfpVersions:visible', { timeout: 5000 });
+    T.check('History says "2 versions"', /^History \(2 versions\)$/.test(await text(page, '#sfpTabHistory')));
     T.check('its versions: v2 (current, what changed) and v1', (await count(page, '#sfpVersions .nx-int-row:not(.nx-int-row--head)')) === 2 && /v2 current/.test(await text(page, '#sfpVersions .nx-int-row[data-v="2"]')) && /Business wording/.test(await text(page, '#sfpVersions .nx-int-row[data-v="2"]')));
     await vis(page, '#sfpVersions .nx-int-row[data-v="1"] [data-act="viewVersion"]').click();
     await page.waitForSelector('#sfpVDia:visible', { timeout: 5000 });

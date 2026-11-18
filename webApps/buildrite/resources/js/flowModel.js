@@ -8,20 +8,25 @@ define(['resources/js/integrationDiagram'], function (D) {
   //   A flow: { id (FL-0001, given by the store), name, purpose, area, owner, status (draft | review | approved |
   //     retired), story, tags [], app, source { kind: 'page' | 'blank', page, pageLabel, flow, scannedAt }, lanes [{ id,
   //     name, kind, kindLabel, host }], actions [{ id, trigger, title, note, chain, chains, steps [{ id, system (a lane
-  //     id), method, path, endpoint, object, action, direction, summary, via, row, text, note, manual }] }], comments,
+  //     id), method, path, endpoint, object, action, direction, summary, via, row, text, note, manual }] }], stickies
+  //     [{ id, text, color (yellow | pink | green | blue), action (an action's id; '' = the whole flow), lane (a lane's
+  //     id; '' = the page's lane) }], comments,
   //     versions, history, version, created / updated (+ by) }
   //   fromPage(m, page, details)  a new flow from a page of the scan (its steps as the app makes them)
   //   blank(details)               a new flow with nothing in it (to draw by hand)
   //   toModel(flow)                the drawing's model (D.flowSwim) — a step's own words and notes shown
-  //   edit(flow, op, args)         a new flow with one change: set (a field of the flow, an action, a step, a lane),
-  //                                moveStep / removeStep / addStep, moveAction / removeAction / addAction, addLane /
-  //                                removeLane
+  //   edit(flow, op, args)         a new flow with one change: set (a field of the flow, an action, a step, a lane, a
+  //                                sticky note), moveStep / removeStep / addStep, moveAction / removeAction /
+  //                                addAction, addLane / removeLane, addSticky / removeSticky. A step's words or an
+  //                                action's set to its automatic wording are kept empty (the wording follows the app)
+  //   autoText(flow, stepId) / autoTitle(flow, actionId)  the automatic wording of a step / an action
   //   check(flow, m)               the flow against the app now: { ok, pageGone, missing (its steps the page no longer
   //                                makes), added (calls the page makes that the flow does not have), same }
   //   addFromApp(flow, m)          the calls the page makes now that the flow lacks, added under the action that
   //                                makes them
   //   html(flow, { plain, by })    a printable document (PDF): its details, the diagram, its steps, its comments
 
+  var STICKY_COLORS = [['yellow', 'Yellow'], ['pink', 'Pink'], ['green', 'Green'], ['blue', 'Blue']];
   var STATUSES = [['draft', 'Draft'], ['review', 'In review'], ['approved', 'Approved'], ['retired', 'Retired']];
   var statusText = function (k) { var s = STATUSES.filter(function (x) { return x[0] === k; })[0]; return s ? s[1] : 'Draft'; };
   var KIND_OPTIONS = Object.keys(D.KINDS).filter(function (k) { return k !== 'unknown'; }).map(function (k) { return [k, D.KINDS[k].label]; })
@@ -73,6 +78,10 @@ define(['resources/js/integrationDiagram'], function (D) {
       actions: (f.actions || []).map(function (a) {
         return { trigger: a.trigger || a.title || 'When …', title: a.title || '', note: a.note || '', chain: a.chain || '', chains: a.chains || [],
           calls: (a.steps || []).map(function (s) { return Object.assign({}, s, { systemName: nameOf(s.system), kind: kindOf(s.system) }); }) };
+      }),
+      // sticky notes: on an action (its index) in a lane ('' = the page's), or on the whole flow (action -1)
+      stickies: (f.stickies || []).map(function (n) {
+        return { id: n.id, text: n.text || '', color: n.color || 'yellow', action: (f.actions || []).map(function (a) { return a.id; }).indexOf(n.action), lane: lanes.some(function (l) { return l.id === n.lane; }) ? n.lane : '' };
       }) };
   }
 
@@ -81,7 +90,14 @@ define(['resources/js/integrationDiagram'], function (D) {
   var nextId = function (prefix, ids) { var n = ids.reduce(function (m, id) { var k = Number(String(id).replace(prefix, '')); return isNaN(k) ? m : Math.max(m, k); }, 0); return prefix + (n + 1); };
   var findStep = function (f, sid) { for (var i = 0; i < f.actions.length; i++) { var j = (f.actions[i].steps || []).map(function (s) { return s.id; }).indexOf(sid); if (j !== -1) return { a: i, s: j }; } return null; };
   var slug = function (t) { return str(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30) || 'system'; };
-  var FIELDS = { flow: ['name', 'purpose', 'area', 'owner', 'status', 'story', 'tags'], a: ['title', 'note', 'trigger'], s: ['text', 'note', 'system', 'method', 'object', 'direction'], l: ['name', 'kind', 'host'] };
+  var FIELDS = { flow: ['name', 'purpose', 'area', 'owner', 'status', 'story', 'tags'], a: ['title', 'note', 'trigger'], s: ['text', 'note', 'system', 'method', 'object', 'direction'], l: ['name', 'kind', 'host'], n: ['text', 'color', 'action', 'lane'] };
+  /** A step's automatic wording (its plain-English sentence) and an action's (when it happens, in words). */
+  function autoText(flow, sid) {
+    var md = toModel(flow);
+    for (var i = 0; i < md.actions.length; i++) { var c = md.actions[i].calls.filter(function (x) { return x.id === sid; })[0]; if (c) return c.manual ? '' : D.plainStep(c).sentence; }
+    return '';
+  }
+  function autoTitle(flow, aid) { var a = ((flow && flow.actions) || []).filter(function (x) { return x.id === aid; })[0]; return a && a.trigger ? D.plainTrigger(a.trigger) : ''; }
 
   function edit(flow, op, args) {
     var f = clone(flow || {});
@@ -96,14 +112,18 @@ define(['resources/js/integrationDiagram'], function (D) {
         else f[p[0]] = p[0] === 'status' ? details({ status: x.value }).status : str(x.value);
       } else if (p[0] === 'a' && FIELDS.a.indexOf(p[2]) !== -1) {
         var a = f.actions.filter(function (y) { return y.id === p[1]; })[0];
-        if (a) a[p[2]] = str(x.value);
+        // its automatic wording left as it was: kept empty, so it follows the app
+        if (a) a[p[2]] = p[2] === 'title' && str(x.value).trim() === autoTitle(f, a.id) ? '' : str(x.value);
       } else if (p[0] === 's' && FIELDS.s.indexOf(p[2]) !== -1) {
         var at = findStep(f, p[1]);
         if (at) {
           var st = f.actions[at.a].steps[at.s];
-          st[p[2]] = str(x.value);
+          st[p[2]] = p[2] === 'text' && !st.manual && str(x.value).trim() === autoText(f, st.id) ? '' : str(x.value);
           if (p[2] === 'method' && st.manual) st.direction = /^(GET|HEAD)$/i.test(st.method) ? 'Read' : st.method ? 'Write' : st.direction;
         }
+      } else if (p[0] === 'n' && FIELDS.n.indexOf(p[2]) !== -1) {
+        var nt = (f.stickies || []).filter(function (y) { return y.id === p[1]; })[0];
+        if (nt) nt[p[2]] = p[2] === 'color' ? (STICKY_COLORS.some(function (c) { return c[0] === x.value; }) ? x.value : 'yellow') : str(x.value);
       } else if (p[0] === 'l' && FIELDS.l.indexOf(p[2]) !== -1) {
         var l = f.lanes.filter(function (y) { return y.id === p[1]; })[0];
         if (l) { l[p[2]] = str(x.value); if (p[2] === 'kind') l.kindLabel = kindLabelOf(l.kind); }
@@ -133,7 +153,12 @@ define(['resources/js/integrationDiagram'], function (D) {
     if (op === 'moveAction' || op === 'removeAction') {
       var i = f.actions.map(function (y) { return y.id; }).indexOf(x.id);
       if (i === -1) return f;
-      if (op === 'removeAction') { f.actions.splice(i, 1); return f; }
+      if (op === 'removeAction') {
+        // its sticky notes stay, on the whole flow
+        (f.stickies || []).forEach(function (n) { if (n.action === x.id) n.action = ''; });
+        f.actions.splice(i, 1);
+        return f;
+      }
       var j = i + (Number(x.by) || 0);
       if (j >= 0 && j < f.actions.length) { var t1 = f.actions[j]; f.actions[j] = f.actions[i]; f.actions[i] = t1; }
       return f;
@@ -152,8 +177,16 @@ define(['resources/js/integrationDiagram'], function (D) {
     if (op === 'removeLane') {
       if (allSteps(f).some(function (s) { return s.system === x.id; })) return f; // a lane with steps stays
       f.lanes = f.lanes.filter(function (y) { return y.id !== x.id; });
+      (f.stickies || []).forEach(function (n) { if (n.lane === x.id) n.lane = ''; }); // its sticky notes: the page's lane
       return f;
     }
+    if (op === 'addSticky') {
+      f.stickies = f.stickies || [];
+      f.stickies.push({ id: nextId('n', f.stickies.map(function (y) { return y.id; })), text: str(x.text), color: STICKY_COLORS.some(function (c) { return c[0] === x.color; }) ? x.color : 'yellow',
+        action: f.actions.some(function (a) { return a.id === x.action; }) ? x.action : '', lane: f.lanes.some(function (l) { return l.id === x.lane; }) ? x.lane : '' });
+      return f;
+    }
+    if (op === 'removeSticky') { f.stickies = (f.stickies || []).filter(function (y) { return y.id !== x.id; }); return f; }
     return f;
   }
   /** Can this lane go (no step is in it)? */
@@ -238,10 +271,14 @@ define(['resources/js/integrationDiagram'], function (D) {
       + '<h2 class="brk">Its steps</h2><table><thead><tr><th>#</th><th>When</th><th>What happens</th><th>System</th>' + (opt.plain ? '' : '<th>Technical</th>') + '<th>Note</th></tr></thead><tbody>'
       + rs.map(function (r) { return '<tr><td>' + r.action + '.' + r.step + '</td><td>' + (r.step === 1 ? esc(r.when) : '') + '</td><td>' + esc(r.says) + '</td><td>' + esc(r.system) + '</td>' + (opt.plain ? '' : '<td>' + esc(r.technical) + '</td>') + '<td class="note">' + esc(r.note) + '</td></tr>'; }).join('')
       + '</tbody></table>'
+      + ((f.stickies || []).length ? '<h2>Sticky notes</h2><table><tbody>' + f.stickies.map(function (n) {
+        var a = (f.actions || []).map(function (y) { return y.id; }).indexOf(n.action), l = (f.lanes || []).filter(function (y) { return y.id === n.lane; })[0];
+        return '<tr><td style="width:220px" class="muted">' + esc(a === -1 ? 'On the whole flow' : 'Action ' + (a + 1) + (l ? ' · ' + l.name : ' · the page')) + '</td><td>' + esc(n.text) + '</td></tr>';
+      }).join('') + '</tbody></table>' : '')
       + (comments.length ? '<h2>Comments</h2><table><tbody>' + comments.map(function (c) { return '<tr><td style="width:180px" class="muted">' + esc((c.by || '') + ' · ' + str(c.at).slice(0, 16).replace('T', ' ')) + '</td><td>' + esc(c.text) + '</td></tr>'; }).join('') + '</tbody></table>' : '')
       + '</body></html>';
   }
 
-  return { STATUSES: STATUSES, statusText: statusText, KIND_OPTIONS: KIND_OPTIONS, kindLabelOf: kindLabelOf, details: details, fromPage: fromPage, blank: blank, toModel: toModel, edit: edit, laneUsed: laneUsed,
+  return { STICKY_COLORS: STICKY_COLORS, autoText: autoText, autoTitle: autoTitle, STATUSES: STATUSES, statusText: statusText, KIND_OPTIONS: KIND_OPTIONS, kindLabelOf: kindLabelOf, details: details, fromPage: fromPage, blank: blank, toModel: toModel, edit: edit, laneUsed: laneUsed,
     check: check, addFromApp: addFromApp, rows: rows, html: html, keyOf: keyOf };
 });

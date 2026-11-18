@@ -340,6 +340,13 @@ A **saved flow** has:
   where it comes from in the app and a note; each step's system, its words (empty keeps the plain sentence), a note,
   moved up or down (into the next or previous action at the ends), removed; **Add a step** (by hand: reads or writes),
   **Add an action**.
+  Each step and action **starts with its description** (the automatic wording) — edit it to put it in your words; left
+  as it is, or cleared, it keeps following the app's wording.
+- **Sticky notes** — anything you want to write on the flow: **Sticky note** on an action puts one on it (choose its
+  lane — the page's or a system's — and a colour: yellow, pink, green, blue); **Sticky note** on the Flow tab or under
+  *Sticky notes on the whole flow* puts one at the top of the diagram. On the diagram a note sits under its lane's steps,
+  clear of the arrows; it is in the PDF too, with where it sits. A note on an action that is removed stays, on the whole
+  flow.
 - **Details** — name, purpose, area, owner, Jira story, tags, where it came from.
 - **Comments** — on the whole flow or one step (shown with its words), resolved and reopened, removed; kept at once.
 - **History** — every version (who, when, what changed): view an earlier one, or restore it into the editor; and what

@@ -962,3 +962,25 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-sfp-ck { margin: 4px 0 10px; padding-left: 18px; display: grid; gap: 4px; font-size: 12.5px; }
 @media (max-width: 1000px) { .nx-sfp-step { grid-template-columns: 40px 1fr; } }
 .nx-int-sfgrid .nx-int-id { white-space: nowrap; }
+
+/* A saved flow: sticky notes, descriptions in their automatic wording */
+.nx-sfp-ahead { grid-template-columns: auto minmax(0, 1fr) auto auto auto auto !important; }
+.nx-sfp-auto { color: #3b4a58; font-style: italic; }
+.nx-sfp-flowhead { align-items: flex-start; }
+.nx-sfp-flowhead .nx-sfp-purpose { flex: 1 1 520px; }
+.nx-sfp-addnote .oj-ux-ico-note, .nx-sfp-addnote .oj-ux-ico-plus { color: #b48a00; }
+.nx-sfp-stickies { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.nx-sfp-stickies--in { margin: 10px 0 2px; }
+.nx-sfp-sticky { display: grid; gap: 6px; padding: 10px 10px 8px; border: 1px solid #e2c55a; border-radius: 4px 4px 4px 14px; background: #fff3b0; box-shadow: 0 2px 6px rgba(60, 50, 0, .12); }
+.nx-sfp-sticky--pink { background: #ffdbe4; border-color: #e3a1b4; } .nx-sfp-sticky--green { background: #d8f3de; border-color: #97cfa5; } .nx-sfp-sticky--blue { background: #dbeaff; border-color: #9cbfe9; }
+.nx-sfp-stext { width: 100%; min-height: 64px; resize: vertical; border: 0; background: transparent; font: inherit; font-size: 13px; color: #2b2a1f; outline: none; }
+.nx-sfp-stext:focus { background: rgba(255, 255, 255, .45); border-radius: 4px; }
+.nx-sfp-sopts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto; gap: 6px; align-items: center; }
+.nx-sfp-sopts .nx-cm-input { width: 100%; height: 30px; font-size: 12px; background: rgba(255, 255, 255, .7); }
+.nx-sfp-swatches { display: inline-flex; gap: 4px; }
+.nx-sfp-swatch { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .25); cursor: pointer; padding: 0; }
+.nx-sfp-swatch--yellow { background: #fff3b0; } .nx-sfp-swatch--pink { background: #ffdbe4; } .nx-sfp-swatch--green { background: #d8f3de; } .nx-sfp-swatch--blue { background: #dbeaff; }
+.nx-sfp-swatch--on { outline: 2px solid #26323e; outline-offset: 1px; }
+.nx-sfp-stickies { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
+.nx-sfp-sopts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; }
+.nx-sfp-sopts .nx-iconbtn { justify-self: end; }

@@ -565,10 +565,24 @@ define([], function () {
       actions: pf.steps.map(function (st) { return { trigger: st.trigger, chain: st.chain, chains: st.chains || [], calls: st.calls }; }) };
   }
 
+  // sticky notes: a light paper colour each (named in the editor, never told apart by colour alone — each holds its text)
+  var STICKY = { yellow: ['#fff3b0', '#e2c55a'], pink: ['#ffdbe4', '#e3a1b4'], green: ['#d8f3de', '#97cfa5'], blue: ['#dbeaff', '#9cbfe9'] };
+  var stickyH = function (n, w) { return 18 + wrapLines(n.text || 'An empty note', w - 22, 11.5, 8).length * 15; };
+  function sticky(x, y, w, n) {
+    var c = STICKY[n.color] || STICKY.yellow, h = stickyH(n, w), f = 12;
+    var lines = wrapLines(n.text || 'An empty note', w - 22, 11.5, 8);
+    return '<g><title>' + esc('Sticky note: ' + (n.text || '')) + '</title>'
+      + '<path d="M' + x + ' ' + y + ' H' + (x + w) + ' V' + (y + h - f) + ' L' + (x + w - f) + ' ' + (y + h) + ' H' + x + ' Z" fill="' + c[0] + '" stroke="' + c[1] + '" stroke-width="1"/>'
+      + '<path d="M' + (x + w) + ' ' + (y + h - f) + ' L' + (x + w - f) + ' ' + (y + h - f) + ' L' + (x + w - f) + ' ' + (y + h) + ' Z" fill="' + c[1] + '" fill-opacity="0.55"/>'
+      + lines.map(function (l, i) { return text(x + 11, y + 18 + i * 15, l, { size: 11.5, fill: n.text ? '#2b2a1f' : '#8a8a7a' }); }).join('') + '</g>';
+  }
+
   /** A flow in swimlanes (a page's, or one saved and edited): the page's lane (what sets each action off) and a lane
    *  per system; each action goes down step by step, every call in the lane of its system; a darker arrow where it
    *  moves on to another system. opts.plain: in plain English (a sentence per call, what sets it off in words, no
-   *  paths or chains); a step's or an action's note is shown under it. */
+   *  paths or chains); a step's or an action's note is shown under it. model.stickies: sticky notes — on an action (its
+   *  index) in a lane ('' = the page's), placed under that lane's steps clear of the arrows; on the whole flow (action
+   *  -1) in a band at the top. */
   function flowSwim(model, opts) {
     var o = opts || {};
     var plain = !!o.plain;
@@ -579,6 +593,23 @@ define([], function () {
     systems.forEach(function (s, i) { laneX[s.id] = X0 + PW + i * LW; });
     var BX = 18, BW = LW - 2 * BX, SH = 48, SG = 22, HEAD = 64, top = HEAD + 14;
     var pre = commonPrefix([].concat.apply([], (model.actions || []).map(function (st) { return st.calls.map(function (c) { return c.path; }); })));
+    // sticky notes on the whole flow: a band at the top, side by side
+    var nAll = (model.stickies || []).filter(function (n) { return !(n.action >= 0 && n.action < (model.actions || []).length); });
+    var topNotes = [], NW = 230, NG = 14;
+    if (nAll.length) {
+      var nx = X0 + 12, ny = top + 12, rowH = 0;
+      nAll.forEach(function (n) {
+        if (nx + NW > W - X0) { nx = X0 + 12; ny += rowH + NG; rowH = 0; }
+        var hh = stickyH(n, NW);
+        topNotes.push({ n: n, x: nx, y: ny, w: NW });
+        rowH = Math.max(rowH, hh);
+        nx += NW + NG;
+      });
+      top = ny + rowH + 14;
+    }
+    var laneIdx = function (id) { return id ? systems.map(function (s0) { return s0.id; }).indexOf(id) : -1; };
+    var laneLeft = function (id) { return id && laneX[id] != null ? laneX[id] + BX : X0 + 12; };
+    var laneW = function (id) { return id && laneX[id] != null ? BW : PW - 24; };
     // layout: each action a band; its steps one under the other (cut at MAX_CALLS calls)
     var bands = [], y = top, left = MAX_CALLS, more = 0;
     (model.actions || []).forEach(function (st) {
@@ -591,8 +622,35 @@ define([], function () {
       var chainLine = !plain && st.chain;
       var pillH = Math.max(SH, lines.length * 16 + (chainLine ? 16 : 0) + noteLines.length * 14 + 14);
       var stepsH = Math.max(SH, calls.length * (SH + SG) - SG);
-      var h = Math.max(pillH, stepsH) + 24;
-      bands.push({ st: st, calls: calls, lines: lines, noteLines: noteLines, chainLine: chainLine, y: y, h: h, pillH: pillH });
+      // its sticky notes: under its steps in their lane (the page's: under what sets it off), clear of the arrows that
+      // cross that lane (the first one across from what sets it off, each move to another system)
+      var ai = (model.actions || []).indexOf(st);
+      var cross = [];
+      calls.forEach(function (c, i) {
+        var li = laneIdx(c.system);
+        if (i === 0) cross.push({ y: SH / 2, a: -1, b: li });
+        else { var lp = laneIdx(calls[i - 1].system); if (lp !== li) cross.push({ y: i * (SH + SG) - SG / 2, a: lp, b: li }); }
+      });
+      var bottom = {}, notes = [];
+      (model.stickies || []).filter(function (n) { return n.action === ai; }).forEach(function (n) {
+        var lane = n.lane && laneX[n.lane] != null ? n.lane : '';
+        var L = laneIdx(lane);
+        if (bottom[lane] == null) {
+          bottom[lane] = lane ? calls.reduce(function (m, c, i) { return c.system === lane ? Math.max(m, i * (SH + SG) + SH) : m; }, 0) : pillH;
+        }
+        var w0 = laneW(lane), hh = stickyH(n, w0);
+        var yy = bottom[lane] ? bottom[lane] + 14 : 0;
+        for (var k = 0; k < 30; k++) {
+          var hit = cross.filter(function (x0) { return Math.min(x0.a, x0.b) <= L && L <= Math.max(x0.a, x0.b) && x0.y >= yy - 8 && x0.y <= yy + hh + 8; })[0];
+          if (!hit) break;
+          yy = hit.y + 12;
+        }
+        notes.push({ n: n, x: laneLeft(lane), y: yy, w: w0, h: hh });
+        bottom[lane] = yy + hh;
+      });
+      var notesH = notes.reduce(function (m, x0) { return Math.max(m, x0.y + x0.h); }, 0);
+      var h = Math.max(pillH, stepsH, notesH) + 24;
+      bands.push({ st: st, calls: calls, lines: lines, noteLines: noteLines, chainLine: chainLine, y: y, h: h, pillH: pillH, notes: notes });
       y += h;
     });
     var H0 = Math.max(60, y - top + (more ? 26 : 0));
@@ -673,6 +731,9 @@ define([], function () {
         prev = { x: cx, y: by + SH, lane: li, right: false };
       });
     });
+    // the sticky notes, over everything
+    topNotes.forEach(function (t) { out.push(sticky(t.x, t.y, t.w, t.n)); });
+    bands.forEach(function (b) { (b.notes || []).forEach(function (t) { out.push(sticky(t.x, b.y + 12 + t.y, t.w, t.n)); }); });
     if (!bands.length) out.push(text(X0 + PW + 18, top + 30, 'No steps yet.', { size: 12, fill: '#8a97a5' }));
     if (more) out.push(text(X0 + PW + 14, top + H0 - 8, '+ ' + more + ' more calls (every one is in the data sheet)', { size: 11.5, fill: '#5b6876' }));
     var y1 = top + H0 + 34;

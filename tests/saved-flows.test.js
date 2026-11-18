@@ -73,6 +73,34 @@ const swT = D.flowSwim(M.toModel(f), {}).svg, swP = D.flowSwim(M.toModel(f), { p
 T.check('drawn: the step added by hand in its own lane (E-mail), its own words (two lines); the note shown; the reworded action', />E-mail</.test(swT) && />E-mails the order</.test(swT) && />confirmation to the customer</.test(swT)
   && /<title>Note: Credit status comes from this report<\/title>/.test(swT) && />Note: Credit status comes from this/.test(swP) && />Looks up the customer list</.test(swP) && />When a clerk opens a new</.test(swP) && />order</.test(swP), swP.slice(0, 200));
 
+T.section('descriptions and sticky notes');
+T.eq('a step\'s and an action\'s automatic wording', M.autoText(f0, 's1') + ' | ' + M.autoTitle(f0, 'a2'), 'Reads the customers from The shop\'s REST backend | When the user clicks "Submit"');
+let w = M.edit(f0, 'set', { what: 's.s1.text', value: 'Reads the customers from The shop\'s REST backend' });
+w = M.edit(w, 'set', { what: 'a.a2.title', value: 'When the user clicks "Submit"' });
+T.check('a description left as it started (the automatic wording): kept empty, so it follows the app', w.actions[0].steps[0].text === '' && w.actions[1].title === '');
+w = M.edit(w, 'set', { what: 's.s1.text', value: 'Reads the customer list (with their credit)' });
+T.check('…edited: kept in your words', w.actions[0].steps[0].text === 'Reads the customer list (with their credit)');
+let sn = M.edit(f0, 'addSticky', { action: 'a1', lane: 'bipService', text: 'BI Publisher is slow at month end — the page waits for it.' });
+sn = M.edit(sn, 'addSticky', { action: '', text: 'Reviewed with the sales team.', color: 'blue' });
+sn = M.edit(sn, 'set', { what: 'n.n1.color', value: 'pink' });
+sn = M.edit(sn, 'set', { what: 'n.n2.color', value: 'purple' });
+T.check('sticky notes: one on an action in a lane, one on the whole flow; a colour set (an unknown one: yellow)', sn.stickies.length === 2 && sn.stickies[0].action === 'a1' && sn.stickies[0].lane === 'bipService' && sn.stickies[0].color === 'pink'
+  && sn.stickies[1].action === '' && sn.stickies[1].color === 'yellow' && !f0.stickies, JSON.stringify(sn.stickies));
+const sw = D.flowSwim(M.toModel(sn), { plain: true }).svg;
+const at = (t) => { const mm = new RegExp('<title>Sticky note: ' + t + '[^<]*</title><path d="M(\\d+(?:\\.\\d+)?) (\\d+(?:\\.\\d+)?)').exec(sw); return mm ? { x: Number(mm[1]), y: Number(mm[2]) } : null; };
+const n1 = at('BI Publisher is slow'), n2 = at('Reviewed with');
+const firstPill = Number((/<rect x="36" y="(\d+(?:\.\d+)?)" width="196"/.exec(sw) || [])[1]);
+T.check('drawn: the action\'s note in BI Publisher\'s lane (under its step), the whole flow\'s at the top, above the first action; the text and the colour', !!n1 && !!n2 && n1.x >= 660 && n2.y < firstPill && n1.y > firstPill
+  && /fill="#ffdbe4"/.test(sw) && />BI Publisher is slow at month end/.test(sw), JSON.stringify({ n1, n2, firstPill }));
+T.check('…in the technical drawing too', /<title>Sticky note: BI Publisher is slow/.test(D.flowSwim(M.toModel(sn), {}).svg));
+const gone = M.edit(sn, 'removeAction', { id: 'a1' });
+T.check('an action removed: its sticky note stays, on the whole flow', gone.stickies.length === 2 && gone.stickies[0].action === '');
+let ln = M.edit(M.edit(f0, 'addLane', { name: 'Fax' }), 'addSticky', { action: 'a1', lane: 'fax', text: 'x' });
+ln = M.edit(ln, 'removeLane', { id: 'fax' });
+T.check('a lane removed: its sticky notes move to the page\'s lane', ln.stickies[0].lane === '' && ln.lanes.length === 2);
+T.check('…removed', M.edit(sn, 'removeSticky', { id: 'n1' }).stickies.map((x) => x.id).join() === 'n2');
+T.check('…printed: Sticky notes, where each sits', /<h2>Sticky notes<\/h2>/.test(M.html(sn, {})) && /Action 1 · Oracle BI Publisher \(SOAP\)/.test(M.html(sn, {})) && /On the whole flow/.test(M.html(sn, {})));
+
 T.section('checked against the app');
 T.check('the flow just made: matches the app', M.check(f0, m).ok && M.check(f0, m).same === 3);
 const less = M.edit(f0, 'removeStep', { id: 's3' });
@@ -114,6 +142,9 @@ try {
   T.check('…searched: words in its name, systems, tags, page', st.list('draft b').flows.length === 1 && st.list('e-mail').flows.length === 2 && st.list('intake orders').flows.length === 2 && st.list('nothing-like-it').flows.length === 0);
   T.check('a saved flow that is gone: said so', !st.save(Object.assign({}, f0, { id: 'FL-0099' }), 'x').ok && !st.get('FL-0099').ok);
   T.check('removed', st.remove('FL-0002').ok && st.list('').flows.length === 1);
+  const withNotes = st.save(Object.assign({}, st.get('FL-0001').flow, { stickies: sn.stickies }), 'Priya Raman', { note: 'sticky notes' });
+  T.check('sticky notes kept (a new version: they count as a change), in the version before too', withNotes.ok && withNotes.flow.stickies.length === 2 && withNotes.flow.stickies[0].color === 'pink' && withNotes.flow.version === 3
+    && withNotes.flow.versions[withNotes.flow.versions.length - 1].stickies.length === 0, JSON.stringify(withNotes.flow.stickies));
   T.check('no workspace: said so', !SF.open({ dir: '' }).list('').ok);
 } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 T.report();
