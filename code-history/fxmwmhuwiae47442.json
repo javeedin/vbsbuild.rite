@@ -1,0 +1,312 @@
+{
+ "id": "fxmwmhuwiae47442",
+ "images": [],
+ "page": "vbredwoodapp/customer-portal/project-create-request",
+ "app": "vbredwoodapp",
+ "label": "Create Equipment Request",
+ "request": "i want change the title from create equipment request to  New Request",
+ "kind": "enhance",
+ "refine": "",
+ "parent": "",
+ "at": "2026-11-18T19:08:16.018Z",
+ "by": "rite.user",
+ "provider": "Claude (Anthropic)",
+ "model": "claude-opus-4-8",
+ "ms": 8303,
+ "retried": false,
+ "workspace": "Equiprite_Rebuild_v1 ▸ DEV",
+ "refs": {
+  "jira": "",
+  "issue": ""
+ },
+ "sent": {
+  "files": [
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.json",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/AddressSuggestionSelectedChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/AgreementSelectedChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureContractChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureExternalContactChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureFallbackCustomerChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureInvOrgLocationChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureProjectNameChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/CaptureShipToSiteChain.js",
+   "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page-chains/ClearAgreementContextChain.js"
+  ],
+  "chars": 169110
+ },
+ "newPage": null,
+ "newPageAsked": null,
+ "knowledge": "",
+ "markdown": "## Summary\nChange the page header title from \"Create Equipment Request\" to \"New Request\" by editing the template's `page-title` attribute.\n\n## How it works today\nThe page uses the `oj-sp-general-overview-page` template, whose `page-title` attribute is set to \"Create Equipment Request\". That string is drawn by the template as the page header title.\n\n## What changes\nThe `page-title` text is updated to \"New Request\".\n\n## The change\n- `webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html` — change the `page-title` attribute value from \"Create Equipment Request\" to \"New Request\".\n\n## After the change\nWhen the person opens the create-request page (via the dashboard or from an agreement), the header at the top will read \"New Request\" instead of \"Create Equipment Request\". Everything else on the page behaves exactly as before.\n\n## Risks\nNone known — `page-title` is a display-only attribute and is not referenced anywhere else.\n\n## How to test\n1. Open the app and navigate to /vp/shell/customer-portal/project-create-request (the Create Equipment Request page).\n2. Confirm the header title now reads \"New Request\".\n3. Confirm the form, Next button, and all fields still work as before.\n\n## Questions\nNone.",
+ "questions": "",
+ "problems": [],
+ "checks": [
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "already": false,
+   "name": "no oj-bind-for-each inside a table or select",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "already": true,
+   "name": "no String()/Number()/Boolean() or inline functions in bindings",
+   "ok": false,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "already": false,
+   "name": "no regex literals in bindings",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "already": false,
+   "name": "every listener the HTML uses is declared in the page JSON",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "already": false,
+   "name": "every oj- component used is imported",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "already": false,
+   "name": "every chain the page runs is in its chains folder",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "already": false,
+   "name": "markup inside the Redwood page template sits in one of its slots (it is drawn)",
+   "ok": true,
+   "detail": ""
+  }
+ ],
+ "files": [
+  "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html"
+ ],
+ "diff": [
+  {
+   "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+   "created": false,
+   "added": 9,
+   "removed": 1,
+   "hunks": [
+    {
+     "rows": [
+      {
+       "t": " ",
+       "s": "",
+       "o": "1",
+       "n": "1"
+      },
+      {
+       "t": "-",
+       "s": "<oj-sp-general-overview-page id=\"projectCreateRequestPage\" page-title=\"Create Equipment Request\"",
+       "o": "2",
+       "n": ""
+      },
+      {
+       "t": "+",
+       "s": "<!-- Build.Rite change fxmwmhuwiae47442 — Create Equipment Request",
+       "o": "",
+       "n": "2"
+      },
+      {
+       "t": "+",
+       "s": "     Request:      i want change the title from create equipment request to New Request (Enhance)",
+       "o": "",
+       "n": "3"
+      },
+      {
+       "t": "+",
+       "s": "     Requested by: rite.user on 19 Nov 2026 at 00:38 (UTC+05:30)",
+       "o": "",
+       "n": "4"
+      },
+      {
+       "t": "+",
+       "s": "     Changed by:   rite.user on 19 Nov 2026 at 00:38 (UTC+05:30) — approved and applied in Code fix, in the workspace's working folder",
+       "o": "",
+       "n": "5"
+      },
+      {
+       "t": "+",
+       "s": "     Proposed by:  Claude (Anthropic) (claude-opus-4-8)",
+       "o": "",
+       "n": "6"
+      },
+      {
+       "t": "+",
+       "s": "     Issue:        —",
+       "o": "",
+       "n": "7"
+      },
+      {
+       "t": "+",
+       "s": "     Jira story:   — -->",
+       "o": "",
+       "n": "8"
+      },
+      {
+       "t": "+",
+       "s": "<oj-sp-general-overview-page id=\"projectCreateRequestPage\" page-title=\"New Request\"",
+       "o": "",
+       "n": "9"
+      },
+      {
+       "t": " ",
+       "s": "  primary-action='[[ {\"label\": \"Next\", \"display\": \"on\"} ]]' on-sp-primary-action=\"[[ $listeners.nextToCatalog ]]\"",
+       "o": "3",
+       "n": "10"
+      },
+      {
+       "t": " ",
+       "s": "  display-options.responsive-padding=\"on\" display-mode=\"mixed\">",
+       "o": "4",
+       "n": "11"
+      },
+      {
+       "t": "+",
+       "s": "<!-- end of Build.Rite change fxmwmhuwiae47442 -->",
+       "o": "",
+       "n": "12"
+      },
+      {
+       "t": " ",
+       "s": "  <div class=\"oj-flex\" slot=\"main\">",
+       "o": "5",
+       "n": "13"
+      },
+      {
+       "t": " ",
+       "s": "    <div class=\"oj-flex-item\" style=\"flex: 1 1 100%; width: 100%; max-width: 100%; padding: 0; margin: 0; box-sizing: border-box;\">",
+       "o": "6",
+       "n": "14"
+      },
+      {
+       "t": " ",
+       "s": "      <oj-bind-if",
+       "o": "7",
+       "n": "15"
+      }
+     ],
+     "head": "line 1"
+    }
+   ]
+  }
+ ],
+ "status": "applied",
+ "events": [
+  {
+   "at": "2026-11-18T19:08:16.018Z",
+   "what": "asked",
+   "by": "rite.user",
+   "detail": "i want change the title from create equipment request to  New Request"
+  },
+  {
+   "at": "2026-11-18T19:08:16.021Z",
+   "what": "proposed",
+   "by": "Claude (Anthropic)",
+   "detail": "1 file(s), +1 −1"
+  },
+  {
+   "at": "2026-11-18T19:08:58.634Z",
+   "what": "approved and applied",
+   "by": "rite.user",
+   "detail": "in C:\\javeed\\equiprite-rebuild-v1-dev\\working (buildrite-working) · In your workspace's working folder (Equiprite_Rebuild_v1 ▸ DEV): nothing pulled — Get latest is in its project's tab. · 1 change note(s) written in the code"
+  },
+  {
+   "at": "2026-11-18T19:08:58.649Z",
+   "what": "tested",
+   "by": "rite.user",
+   "detail": "nothing broke (checks only)"
+  }
+ ],
+ "updatedAt": "2026-11-18T19:08:58.649Z",
+ "applied": {
+  "at": "2026-11-18T19:08:58.632Z",
+  "by": "rite.user",
+  "branch": "buildrite-working",
+  "upstream": "",
+  "pull": {
+   "done": false,
+   "workspace": true,
+   "text": "In your workspace's working folder (Equiprite_Rebuild_v1 ▸ DEV): nothing pulled — Get latest is in its project's tab."
+  },
+  "live": false,
+  "workspace": "Equiprite_Rebuild_v1 ▸ DEV",
+  "folder": "C:\\javeed\\equiprite-rebuild-v1-dev\\working",
+  "notes": 1
+ },
+ "baseline": [],
+ "tests": {
+  "at": "2026-11-18T19:08:58.649Z",
+  "ok": true,
+  "checks": [
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+    "already": false,
+    "name": "no oj-bind-for-each inside a table or select",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+    "already": true,
+    "name": "no String()/Number()/Boolean() or inline functions in bindings",
+    "ok": false,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+    "already": false,
+    "name": "no regex literals in bindings",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+    "already": false,
+    "name": "every listener the HTML uses is declared in the page JSON",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+    "already": false,
+    "name": "every oj- component used is imported",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+    "already": false,
+    "name": "every chain the page runs is in its chains folder",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/customer-portal/pages/project-create-request-page.html",
+    "already": false,
+    "name": "markup inside the Redwood page template sits in one of its slots (it is drawn)",
+    "ok": true,
+    "detail": ""
+   }
+  ],
+  "unit": [],
+  "e2eFiles": [],
+  "none": true
+ }
+}
