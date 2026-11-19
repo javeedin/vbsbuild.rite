@@ -262,6 +262,22 @@ function open(opts) {
     return { ok: true, file: file, shot: shot, sheet: sh };
   }
 
+  /** One of a page's screenshots as a self-contained data: URL (the first, or the one named): for callers that embed it
+   *  elsewhere, e.g. a process flow. { ok, data, mime } or { ok: false, error }. */
+  function shotBytes(id, which) {
+    const sh = readSheet(id);
+    if (!sh) return { ok: false, error: 'This page has no technical sheet yet.' };
+    const shots = shotsOf(sh);
+    if (!shots.length) return { ok: false, error: 'This page has no screenshot yet.' };
+    const shot = (which ? shots.filter((x) => x.id === which)[0] : shots[0]) || shots[0];
+    if (!shot || !shot.file) return { ok: false, error: 'This page has no screenshot yet.' };
+    try {
+      const buf = fs.readFileSync(path.join(resDir, shot.file));
+      const mime = /\.png$/i.test(shot.file) ? 'image/png' : /\.webp$/i.test(shot.file) ? 'image/webp' : 'image/jpeg';
+      return { ok: true, id: shot.id, data: 'data:' + mime + ';base64,' + buf.toString('base64'), mime };
+    } catch (e) { return { ok: false, error: 'The screenshot could not be read.' }; }
+  }
+
   function removeShot(id, shotId) {
     const sh = readSheet(id);
     if (!sh) return { ok: false, error: 'This page has no sheet.' };
@@ -436,7 +452,7 @@ function open(opts) {
   function rescan() { const cat = catalog(true); writeCatalog(cat); return { ok: true, pages: cat.pages.length }; }
 
   return {
-    remove: remove, restore: restore, removeShot: removeShot,
+    remove: remove, restore: restore, removeShot: removeShot, shotBytes: shotBytes,
     rootNow: rootNow, // the folder the pages are read from (your workspace's working folder, else the project)
     catalog: catalog, rescan: rescan, sheet: sheet, facts: (id) => scan.analyze(rootNow(), str(id)), texts: texts, code: code, codeFile: codeFile, shotImages: shotImages, build: build, assign: assign, unassign: unassign, forStory: forStory,
     saveShot: saveShot, capture: capture, saveAi: saveAi, canCapture: () => typeof o.capture === 'function', run: run, canRun: () => typeof o.run === 'function',

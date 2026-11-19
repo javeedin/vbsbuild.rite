@@ -2,9 +2,10 @@ define([
   'vb/action/actionChain',
   'resources/js/processFlowClient',
   'resources/js/pagesClient',
+  'resources/js/scenarioClient',
   'resources/js/exportKit',
   'resources/js/shellBus',
-], (ActionChain, PC, PagesPC, exportKit, bus) => {
+], (ActionChain, PC, PagesPC, SC, exportKit, bus) => {
   'use strict';
 
   // Process Flows: one screen — a list of flows and an editor. Ops (data-op):
@@ -17,6 +18,23 @@ define([
   const byId = (id) => { try { return document.getElementById(id); } catch (e) { return null; } };
   const val = (id) => { const el = byId(id); return el ? String(el.value || '') : ''; };
   const copy = (x) => (x == null ? x : JSON.parse(JSON.stringify(x)));
+  /** A page's APIs (scenarioClient) as the list the editor and the document show: method, name, path, writes. */
+  function mapApis(apis) {
+    return (apis || []).map((a) => {
+      const st = a.step || {};
+      const m = st.report ? 'REPORT' : ((st.api && st.api.method) || a.method || (st.writes ? 'POST' : 'GET'));
+      return { method: m, name: st.name || a.name || a.key || '', path: st.report ? (st.report.path || '') : ((st.api && st.api.path) || st.endpoint || a.path || ''), writes: !!st.writes };
+    });
+  }
+  /** A page's APIs, from the cache (v.pageApis) or fetched once and cached there. */
+  async function apisForPage(v, pageId) {
+    if (!pageId) return [];
+    if (v.pageApis && v.pageApis[pageId] && v.pageApis[pageId].list) return v.pageApis[pageId].list;
+    const r = await SC.apis(pageId);
+    const list = r.ok ? mapApis(r.body.apis) : [];
+    v.pageApis = Object.assign({}, v.pageApis || {}, { [pageId]: { loading: false, list, error: r.ok ? '' : ((r.body && r.body.error) || 'Could not read the APIs.') } });
+    return list;
+  }
 
   // The flow being edited (pages are authoritative here, not in the DOM).
   let MODEL = null;
@@ -29,10 +47,28 @@ define([
     const pages = (f.pages || []).map((p, i) => {
       const name = String(p.name || '').trim();
       const page = pagesByLabel[name.toLowerCase()] || p.page || '';
-      return { id: p.id || 'p' + (i + 1), page, name, note: String(p.note || '') };
+      const out = { id: p.id || 'p' + (i + 1), page, name, note: String(p.note || '') };
+      if (p.shot && p.shot.data) out.shot = p.shot;
+      return out;
     });
     return Object.assign({}, f, { name: val('pf-name'), area: val('pf-area'), owner: val('pf-owner'),
       status: val('pf-status') || f.status || 'draft', description: val('pf-desc'), pages });
+  }
+  /** Read the page rows' inputs from the DOM into MODEL (name / note, and the matched catalog page). pedit keeps MODEL
+   *  current on every keystroke, but this is called before any structural change or save so MODEL always matches what is
+   *  on screen, whatever the timing of pedit's action chain. The rows match MODEL 1-to-1 here (no re-render yet). */
+  function foldRows(v) {
+    if (!MODEL || !MODEL.pages) return;
+    const byLabel = {};
+    (v.pages || []).forEach((p) => { byLabel[String(p.label || '').toLowerCase()] = p.id; });
+    Array.prototype.slice.call(document.querySelectorAll('#pfEditor .nx-pf-prow')).forEach((row) => {
+      const p = MODEL.pages[Number(row.getAttribute('data-idx'))];
+      if (!p) return;
+      const nm = row.querySelector('.nx-pf-pname');
+      if (nm) { p.name = String(nm.value || ''); p.page = byLabel[p.name.trim().toLowerCase()] || p.page || ''; }
+      const nt = row.querySelector('.nx-pf-pnote');
+      if (nt) p.note = String(nt.value || '');
+    });
   }
   const dirty = (v) => MODEL && v.saved && JSON.stringify(readEditor(v)) !== JSON.stringify(v.saved);
   /** After a re-render, force each page row's inputs to MODEL (oj reuses loop nodes, so a reused node keeps its old value). */
@@ -70,7 +106,14 @@ define([
       // a row input changed — keep MODEL current (no re-render: the DOM already holds the typed value)
       if (op === 'pedit') {
         if (!MODEL || !MODEL.pages || !MODEL.pages[i]) return;
-        MODEL.pages[i][String(key) === 'note' ? 'note' : 'name'] = String(input || '');
+        const field = String(key) === 'note' ? 'note' : 'name';
+        MODEL.pages[i][field] = String(input || '');
+        if (field === 'name') {
+          // match the typed name to a catalog page, so "From the page" and the APIs list know which page it is
+          const nm = String(input || '').trim().toLowerCase();
+          const hit = (v.pages || []).filter((p) => String(p.label || '').toLowerCase() === nm)[0];
+          MODEL.pages[i].page = hit ? hit.id : '';
+        }
         return;
       }
       if (op === 'load') {
@@ -90,7 +133,7 @@ define([
       if (op === 'search') { v.q = String(input || ''); await loadList(); return; }
       if (op === 'new') {
         MODEL = { id: '', name: '', description: '', area: '', owner: '', status: 'draft', pages: [newPage()] };
-        v.saved = copy(MODEL); v.doc = null; v.ai = null;
+        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {};
         render(v);
         setTimeout(() => { const el = byId('pf-name'); if (el) el.focus(); }, 80);
         return;
@@ -100,7 +143,7 @@ define([
         if (!r.ok) { say(false, (r.body && r.body.error) || 'It could not be opened.'); return; }
         MODEL = Object.assign({ pages: [] }, copy(r.body.flow));
         if (!MODEL.pages.length) MODEL.pages = [newPage()];
-        v.saved = copy(MODEL); v.doc = null; v.ai = null;
+        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {};
         render(v);
         return;
       }
@@ -116,8 +159,9 @@ define([
         return;
       }
       if (op === 'back') {
+        if (MODEL) foldRows(v);
         if (dirty(v) && !window.confirm('Leave without saving? Your changes to this process flow are lost.')) return;
-        MODEL = null; v.flow = null; v.saved = null; v.doc = null; v.ai = null;
+        MODEL = null; v.flow = null; v.saved = null; v.doc = null; v.ai = null; v.apisOpen = {};
         await loadList();
         return;
       }
@@ -125,6 +169,7 @@ define([
       // ── the editor ──
       if (op === 'addPage') {
         if (!MODEL) return;
+        foldRows(v);
         MODEL.pages = (MODEL.pages || []).concat([newPage()]);
         render(v, true);
         setTimeout(() => { const rows = document.querySelectorAll('#pfEditor .nx-pf-prow .nx-pf-pname'); const last = rows[rows.length - 1]; if (last) last.focus(); }, 90);
@@ -132,6 +177,7 @@ define([
       }
       if (op === 'removePage') {
         if (!MODEL) return;
+        foldRows(v);
         MODEL.pages = (MODEL.pages || []).filter((_, k) => k !== i);
         if (!MODEL.pages.length) MODEL.pages = [newPage()];
         render(v, true);
@@ -139,6 +185,7 @@ define([
       }
       if (op === 'moveUp' || op === 'moveDown') {
         if (!MODEL) return;
+        foldRows(v);
         const p = (MODEL.pages || []).slice();
         const j = op === 'moveUp' ? i - 1 : i + 1;
         if (j < 0 || j >= p.length) return;
@@ -147,7 +194,58 @@ define([
         render(v, true);
         return;
       }
+
+      // ── a page's screenshot: from the page's code, pasted/dropped/uploaded, or removed ──
+      if (op === 'shotFromPage') {
+        if (!MODEL || !MODEL.pages[i]) return;
+        foldRows(v);
+        const pageId = MODEL.pages[i].page;
+        if (!pageId) { say(false, 'Type a page name that matches one of your pages first — then its screenshot can be fetched.'); return; }
+        v.busy = 'shot:' + i;
+        try {
+          const r = await PagesPC.shotData(pageId);
+          const data = (r.ok && r.body && r.body.data) || '';
+          if (!/^data:image\//.test(data)) { say(false, (r.body && r.body.error) || 'This page has no screenshot yet (capture one in Application pages).'); return; }
+          MODEL.pages[i].shot = { src: 'page', data };
+          render(v, true);
+          say(true, 'Screenshot taken from the page.');
+        } finally { v.busy = ''; }
+        return;
+      }
+      if (op === 'shotPaste') {
+        const img = (typeof window !== 'undefined' && window.__nxPfImg) || null;
+        if (typeof window !== 'undefined') window.__nxPfImg = null;
+        if (!MODEL || !img) return;
+        const r = Number(img.row);
+        if (!MODEL.pages[r] || !/^data:image\//.test(String(img.data || ''))) return;
+        MODEL.pages[r].shot = { src: 'pasted', data: String(img.data) };
+        render(v, true);
+        return;
+      }
+      if (op === 'shotRemove') {
+        if (MODEL && MODEL.pages[i]) { delete MODEL.pages[i].shot; render(v, true); }
+        return;
+      }
+
+      // ── a page's APIs: show / hide, fetched once from its code (scenarioClient) and cached ──
+      if (op === 'apisToggle') {
+        if (!MODEL || !MODEL.pages[i]) return;
+        foldRows(v);
+        const rowId = MODEL.pages[i].id;
+        const pageId = MODEL.pages[i].page;
+        const open = Object.assign({}, v.apisOpen || {});
+        open[rowId] = !open[rowId];
+        v.apisOpen = open;
+        if (!open[rowId]) return;
+        if (!pageId) { say(false, 'Type a page name that matches one of your pages first — then its APIs can be listed.'); return; }
+        if (v.pageApis && v.pageApis[pageId] && v.pageApis[pageId].list) return;
+        v.pageApis = Object.assign({}, v.pageApis || {}, { [pageId]: { loading: true, list: null, error: '' } });
+        const r = await SC.apis(pageId);
+        v.pageApis = Object.assign({}, v.pageApis || {}, { [pageId]: { loading: false, list: r.ok ? mapApis(r.body.apis) : [], error: r.ok ? '' : ((r.body && r.body.error) || 'Could not read the APIs.') } });
+        return;
+      }
       if (op === 'save') {
+        foldRows(v);
         const f = readEditor(v);
         if (!f.name.trim()) { say(false, 'Give the process flow a name first.'); const el = byId('pf-name'); if (el) el.focus(); return; }
         v.busy = 'save';
@@ -163,9 +261,14 @@ define([
         return;
       }
 
+      // the flow for the document: the pages with their screenshots (already on MODEL) and their APIs (resolved now)
+      const withApisAsync = async (f) => Object.assign({}, f, {
+        pages: await Promise.all((f.pages || []).map(async (p) => Object.assign({}, p, { apis: p.page ? await apisForPage(v, p.page) : [] }))) });
+
       // ── the document ──
       if (op === 'generate') {
-        const f = readEditor(v);
+        foldRows(v);
+        const f = await withApisAsync(readEditor(v));
         const r = await PC.document(f, v.appLabel);
         if (!r.ok) { say(false, (r.body && r.body.error) || 'The document could not be made.'); return; }
         v.doc = { name: f.name, html: r.body.html };
@@ -182,9 +285,10 @@ define([
       }
       if (op === 'pdf') {
         if (!MODEL || v.busy) return;
+        foldRows(v);
         v.busy = 'pdf';
         try {
-          const r = await PC.pdf(readEditor(v), v.appLabel);
+          const r = await PC.pdf(await withApisAsync(readEditor(v)), v.appLabel);
           const b = r.body || {};
           if (r.ok && b.base64) {
             const bin = atob(b.base64);
@@ -199,6 +303,7 @@ define([
 
       // ── draft the description with AI ──
       if (op === 'ai') {
+        foldRows(v);
         const f = readEditor(v);
         if (!f.name.trim()) { say(false, 'Give the process flow a name first — the AI drafts from it.'); return; }
         v.busy = 'ai';

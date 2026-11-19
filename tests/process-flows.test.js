@@ -50,6 +50,21 @@ const T = H.makeAsserter();
   T.check('everything is escaped: no raw tag from the name, description or a page gets through', !/<script>x<\/script>/.test(danger) && !/<b>P<\/b>/.test(danger) && /&lt;script&gt;/.test(danger) && /a &amp; b &lt;tag&gt;/.test(danger));
   T.check('no pages / no description: said, still valid HTML', /No pages yet\./.test(P.renderDocument({ name: 'Empty' }, {})) && /No description\./.test(P.renderDocument({ name: 'Empty' }, {})));
 
+  T.section('screenshots and APIs on a page');
+  const img = 'data:image/png;base64,iVBORw0KGgo=';
+  const withShot = P.cleanFlow({ name: 'Shots', pages: [
+    { name: 'A', shot: { src: 'page', data: img } },
+    { name: 'B', shot: { src: 'pasted', data: 'not-an-image' } },
+    { name: 'C', shot: { src: 'pasted', data: img }, apis: [{ method: 'GET', name: 'List', path: '/x', writes: false }] }] });
+  T.check('cleanFlow keeps a valid screenshot (src + data: URL) and drops a non-image one', withShot.pages[0].shot && withShot.pages[0].shot.src === 'page' && withShot.pages[0].shot.data === img && !withShot.pages[1].shot, JSON.stringify(withShot.pages.map((p) => !!p.shot)));
+  T.check('cleanFlow drops APIs unless asked (not stored by default)', !withShot.pages[2].apis);
+  const withApis = P.cleanFlow({ name: 'Shots', pages: [{ name: 'C', apis: [{ method: 'GET', name: 'List', path: '/x' }, { junk: 1 }] }] }, '', null, { keepApis: true });
+  T.check('cleanFlow keeps APIs for the document when keepApis, within shape', withApis.pages[0].apis && withApis.pages[0].apis.length === 1 && withApis.pages[0].apis[0].method === 'GET' && withApis.pages[0].apis[0].name === 'List');
+  const over = P.cleanFlow({ name: 'Big', pages: [{ name: 'A', shot: { src: 'pasted', data: 'data:image/png;base64,' + 'A'.repeat(7000000) } }] });
+  T.check('an over-size screenshot is dropped (kept within the limit)', !over.pages[0].shot);
+  const docS = P.renderDocument({ name: 'Doc', pages: [{ name: 'A', page: 'app/a', shot: { src: 'page', data: img }, apis: [{ method: 'GET', name: 'getThings', path: '/things', writes: true }] }] }, {});
+  T.check('the document embeds the screenshot and lists the page\'s APIs', /class="st-shot"/.test(docS) && docS.indexOf(img) !== -1 && /class="st-apis"/.test(docS) && /getThings/.test(docS) && /\/things/.test(docS) && /changes data/.test(docS));
+
   T.section('the AI prompt');
   const prompt = P.aiPrompt(flow);
   T.check('names the process and the pages in order, carries the author\'s text, forbids invention', /Equipment rental v2/.test(prompt) && /1\. Catalog/.test(prompt) && /3\. Checkout/.test(prompt) && /rents an item/.test(prompt) && /Do not invent/.test(prompt));

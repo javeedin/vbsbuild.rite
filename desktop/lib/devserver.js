@@ -912,6 +912,7 @@ function createDevServer(o) {
           if (pathname === '/__pages/git/pull' && post) return jsonP(200, ps.gitPull ? await ps.gitPull() : { ok: true, merged: false });
           if (pathname === '/__pages/catalog' && req.method === 'GET') return jsonP(200, Object.assign({ ok: true }, ps.catalog()));
           if (pathname === '/__pages/sheet' && req.method === 'GET') return jsonP(200, ps.sheet(u.searchParams.get('id') || ''));
+          if (pathname === '/__pages/shot/data' && req.method === 'GET') return jsonP(200, ps.shotBytes ? ps.shotBytes(u.searchParams.get('id') || '', u.searchParams.get('which') || '') : { ok: false, error: 'Not supported.' });
           if (pathname === '/__pages/code' && req.method === 'GET') return jsonP(200, ps.code ? ps.code(u.searchParams.get('id') || '') : { ok: false, error: 'Not here.' });
           if (pathname === '/__pages/code/file' && req.method === 'GET') return jsonP(200, ps.codeFile ? ps.codeFile(u.searchParams.get('id') || '', u.searchParams.get('path') || '') : { ok: false, error: 'Not here.' });
           if (pathname === '/__pages/git/status' && req.method === 'GET') return jsonP(200, Object.assign({ ok: true }, await ps.gitStatus()));

@@ -147,6 +147,9 @@ const ID = 'shop/orders/order-list';
   T.check('several screenshots: an upload is added (the capture kept), each its own file and caption', up.ok && up2.ok && list.length === 3 && list.map((x) => x.id).join() === 's1,s2,s3'
     && list[1].caption === 'Filters open' && list[1].file.endsWith('.2.png') && list.every((x) => fs.existsSync(path.join(tmp, P.RES, x.file))));
   T.check('the page table counts them', JSON.parse(fs.readFileSync(path.join(tmp, P.RES, 'catalog.json'), 'utf8')).pages.filter((x) => x.id === ID)[0].sheet.screenshots === 3);
+  const bytes = store.shotBytes(ID);
+  const bytes2 = store.shotBytes(ID, 's2');
+  T.check('shotBytes gives a screenshot as a data: URL (for embedding elsewhere, e.g. a process flow)', bytes.ok && /^data:image\/[a-z]+;base64,/.test(bytes.data) && bytes.id === 's1' && bytes2.ok && /^data:image\/png;base64,/.test(bytes2.data) && store.shotBytes('no/such').ok === false);
   const delShot = store.removeShot(ID, 's2');
   T.check('one deleted: its file gone, the others kept', delShot.ok && store.sheet(ID).sheet.screenshots.map((x) => x.id).join() === 's1,s3' && !fs.existsSync(path.join(tmp, P.RES, up.file)) && !store.removeShot(ID, 's9').ok);
   const s4 = store.saveShot(ID, { base64: Buffer.from('x').toString('base64'), mime: 'image/jpeg' });

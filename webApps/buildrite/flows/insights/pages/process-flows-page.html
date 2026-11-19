@@ -85,18 +85,63 @@
           <section class="nx-card nx-pf-pages">
             <div class="nx-card-head"><h2 class="nx-h2">The pages, in order</h2><span class="nx-note">Start at the top; drag with ↑ ↓.</span></div>
             <datalist id="pfPageList"><oj-bind-for-each data="[[ $variables.pages ]]"><template data-oj-as="p"><option :value="[[ p.data.label ]]"></option></template></oj-bind-for-each></datalist>
+            <input type="file" id="pfShotFile" accept="image/*" style="display:none">
             <oj-bind-if test="[[ ($variables.flow.pages || []).length === 0 ]]"><div class="nx-empty" id="pfNoPages">No page yet. Add the start page below.</div></oj-bind-if>
-            <oj-bind-for-each data="[[ $functions.pageRows($variables.flow) ]]"><template data-oj-as="p">
+            <oj-bind-for-each data="[[ $functions.pageRows($variables.flow, $variables.pageApis, $variables.apisOpen) ]]"><template data-oj-as="p">
               <div class="nx-pf-prow" :data-idx="[[ p.data.idx ]]">
-                <span class="nx-pf-num"><oj-bind-text value="[[ p.data.label ]]"></oj-bind-text></span>
-                <div class="nx-pf-pin">
-                  <input type="text" class="nx-pf-pname" list="pfPageList" :value="[[ p.data.name ]]" placeholder="Page name" data-op="pedit" data-key="name" :data-idx="[[ p.data.idx ]]" on-input="[[ $listeners.onPf ]]">
-                  <input type="text" class="nx-pf-pnote" :value="[[ p.data.note ]]" placeholder="What the user does here (optional)" data-op="pedit" data-key="note" :data-idx="[[ p.data.idx ]]" on-input="[[ $listeners.onPf ]]">
+                <div class="nx-pf-prowtop">
+                  <span class="nx-pf-num"><oj-bind-text value="[[ p.data.label ]]"></oj-bind-text></span>
+                  <div class="nx-pf-pin">
+                    <input type="text" class="nx-pf-pname" list="pfPageList" :value="[[ p.data.name ]]" placeholder="Page name" data-op="pedit" data-key="name" :data-idx="[[ p.data.idx ]]" on-input="[[ $listeners.onPf ]]">
+                    <input type="text" class="nx-pf-pnote" :value="[[ p.data.note ]]" placeholder="What the user does here (optional)" data-op="pedit" data-key="note" :data-idx="[[ p.data.idx ]]" on-input="[[ $listeners.onPf ]]">
+                  </div>
+                  <div class="nx-pf-pacts">
+                    <button type="button" :class="[[ 'nx-iconbtn nx-iconbtn--sm nx-pf-apisbtn' + (p.data.apisOpen ? ' nx-pf-apisbtn--on' : '') ]]" data-op="apisToggle" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" :title="[[ 'List this page\'s APIs' ]]"><span class="oj-ux-ico-code" aria-hidden="true"></span><oj-bind-if test="[[ p.data.apisCount !== null ]]"><span class="nx-pf-apisn"><oj-bind-text value="[[ p.data.apisCount ]]"></oj-bind-text></span></oj-bind-if></button>
+                    <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-op="moveUp" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" :disabled="[[ p.data.first ]]" title="Up"><span class="oj-ux-ico-arrow-up" aria-hidden="true"></span></button>
+                    <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-op="moveDown" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" :disabled="[[ p.data.last ]]" title="Down"><span class="oj-ux-ico-arrow-down" aria-hidden="true"></span></button>
+                    <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-flib-del" data-op="removePage" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" title="Remove"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+                  </div>
                 </div>
-                <div class="nx-pf-pacts">
-                  <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-op="moveUp" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" :disabled="[[ p.data.first ]]" title="Up"><span class="oj-ux-ico-arrow-up" aria-hidden="true"></span></button>
-                  <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-op="moveDown" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" :disabled="[[ p.data.last ]]" title="Down"><span class="oj-ux-ico-arrow-down" aria-hidden="true"></span></button>
-                  <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-flib-del" data-op="removePage" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" title="Remove"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+                <div class="nx-pf-prowdetail">
+                  <!-- the page's screenshot: taken from its code, pasted/dropped, or uploaded -->
+                  <div class="nx-pf-shot">
+                    <oj-bind-if test="[[ p.data.hasShot ]]">
+                      <div class="nx-pf-shotframe">
+                        <img class="nx-pf-shotimg" :src="[[ p.data.shotData ]]" alt="Screenshot">
+                        <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-pf-shotx" data-op="shotRemove" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" title="Remove the screenshot"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+                        <span class="nx-pf-shottag"><oj-bind-text value="[[ p.data.shotSrc === 'page' ? 'from the page' : 'pasted' ]]"></oj-bind-text></span>
+                      </div>
+                    </oj-bind-if>
+                    <oj-bind-if test="[[ !p.data.hasShot ]]">
+                      <div class="nx-pf-shotbox" :data-idx="[[ p.data.idx ]]" tabindex="0">
+                        <div class="nx-pf-shothint">Screenshot — click then paste, drop an image, or:</div>
+                        <div class="nx-pf-shotacts">
+                          <button type="button" class="nx-btn nx-btn--sm" data-op="shotFromPage" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" :disabled="[[ $variables.busy === 'shot:' + p.data.idx ]]"><span class="oj-ux-ico-camera" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'shot:' + p.data.idx ? 'Fetching…' : 'From the page' ]]"></oj-bind-text></button>
+                          <button type="button" class="nx-btn nx-btn--sm nx-pf-shotpick" :data-idx="[[ p.data.idx ]]"><span class="oj-ux-ico-upload" aria-hidden="true"></span>Upload</button>
+                        </div>
+                      </div>
+                    </oj-bind-if>
+                  </div>
+                  <!-- the APIs this page makes (read from its code) -->
+                  <oj-bind-if test="[[ p.data.apisOpen ]]">
+                    <div class="nx-pf-apis">
+                      <oj-bind-if test="[[ p.data.apisLoading ]]"><div class="nx-note">Reading the page's APIs…</div></oj-bind-if>
+                      <oj-bind-if test="[[ !!p.data.apisError ]]"><div class="nx-sc-err"><oj-bind-text value="[[ p.data.apisError ]]"></oj-bind-text></div></oj-bind-if>
+                      <oj-bind-if test="[[ !p.data.apisLoading && !p.data.apisError && p.data.apis.length === 0 ]]"><div class="nx-note nx-pf-apiempty"><oj-bind-text value="[[ p.data.matched ? 'This page makes no API calls.' : 'Type a page name that matches one of your pages to list its APIs.' ]]"></oj-bind-text></div></oj-bind-if>
+                      <oj-bind-if test="[[ p.data.apis.length > 0 ]]">
+                        <div class="nx-pf-apihead"><oj-bind-text value="[[ p.data.apis.length + (p.data.apis.length === 1 ? ' API on this page' : ' APIs on this page') ]]"></oj-bind-text></div>
+                        <ul class="nx-pf-apilist">
+                          <oj-bind-for-each data="[[ p.data.apis ]]"><template data-oj-as="a">
+                            <li class="nx-pf-apirow">
+                              <span :class="[[ 'nx-pg-method nx-sc-apim nx-pg-method--' + (a.data.method || '').toLowerCase() ]]"><oj-bind-text value="[[ a.data.method ]]"></oj-bind-text></span>
+                              <span class="nx-pf-apiname"><b><oj-bind-text value="[[ a.data.name ]]"></oj-bind-text></b><code><oj-bind-text value="[[ a.data.path ]]"></oj-bind-text></code></span>
+                              <oj-bind-if test="[[ a.data.writes ]]"><span class="nx-sc-wchip">changes data</span></oj-bind-if>
+                            </li>
+                          </template></oj-bind-for-each>
+                        </ul>
+                      </oj-bind-if>
+                    </div>
+                  </oj-bind-if>
                 </div>
               </div>
             </template></oj-bind-for-each>

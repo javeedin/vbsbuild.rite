@@ -56,6 +56,8 @@ define([], function () {
 
   /** The screenshot's address (as the app serves it), with a stamp so a new one is not cached. */
   function shotUrl(base, shot) { return shot && shot.file ? rel(base, 'resources/pages/' + shot.file) + '?t=' + encodeURIComponent(shot.at || '') : ''; }
+  /** A page's screenshot as a self-contained data: URL (read from this PC's catalog), for embedding elsewhere. { ok, data }. */
+  function shotData(id, which) { return call('shot/data?id=' + encodeURIComponent(id || '') + (which ? '&which=' + encodeURIComponent(which) : '')); }
 
   /** A File (from <input type="file">) → base64. */
   function readFile(file) {
@@ -68,7 +70,7 @@ define([], function () {
   }
 
   return {
-    info: info, catalog: catalog, sheet: sheet, shotUrl: shotUrl, readFile: readFile, fileOf: fileOf,
+    info: info, catalog: catalog, sheet: sheet, shotUrl: shotUrl, shotData: shotData, readFile: readFile, fileOf: fileOf,
     build: function (id, commit) { return call('build', 'POST', { id: id, commit: !!commit }); },
     // Page Flows (Application → Page Flows): the app's systems and calls, read from its code; its report as a PDF
     integrations: function (app) { return call('integrations?app=' + encodeURIComponent(app || '')); },

@@ -5,7 +5,10 @@
  * document (print-ready HTML → PDF). Kept per VB Studio project in this app's data folder (one JSON file per flow).
  *
  * A flow: { id (PF-0001, given on the first save), name, description, area, owner, status (draft|review|approved|retired),
- *   pages: [{ id, page (a catalog page id, optional), name, note }], created / createdBy / at, updated / updatedBy }
+ *   pages: [{ id, page (a catalog page id, optional), name, note, shot }], created / createdBy / at, updated / updatedBy }
+ *   A page's shot: { src: 'page' (fetched from the page's catalog screenshot) | 'pasted' (pasted/uploaded), data (a
+ *   data:image/… URL kept with the flow so the document is self-contained) }. APIs are not stored — the page lists them
+ *   live (and attaches them per page, as `apis`, only when it asks for the document: cleanFlow keeps them for that).
  *
  *   open({ dir: string | () => string, now }) → store
  *     list(q)            the flows (newest code first), each slimmed for a list (no description/notes)
@@ -20,7 +23,7 @@ const fs = require('fs');
 const path = require('path');
 
 const STATUSES = { draft: 'Draft', review: 'In review', approved: 'Approved', retired: 'Retired' };
-const MAX = { pages: 60, name: 200, note: 4000, desc: 20000 };
+const MAX = { pages: 60, name: 200, note: 4000, desc: 20000, shot: 6000000, apis: 60, apiText: 400 };
 
 const str = (v) => (v === undefined || v === null ? '' : String(v));
 const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -31,14 +34,32 @@ const slug = (id) => str(id).replace(/[^A-Za-z0-9_-]/g, '');
 const idOf = (v, n) => cut(str(v).replace(/[^A-Za-z0-9_.:/-]/g, ''), n || 120);
 const esc = (s) => str(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/** A page's screenshot, kept as a data:image/… URL (so the document is self-contained), within size, or null. */
+function cleanShot(s) {
+  if (!isObj(s)) return null;
+  const data = str(s.data);
+  if (!/^data:image\/[a-zA-Z0-9.+-]+;base64,/.test(data) || data.length > MAX.shot) return null;
+  return { src: s.src === 'page' ? 'page' : 'pasted', data };
+}
+/** A page's APIs (only kept for the document, when opts.keepApis): method, name, path, each within size. */
+function cleanApis(a) {
+  return (Array.isArray(a) ? a : []).filter(isObj).slice(0, MAX.apis)
+    .map((x) => ({ method: cut(x.method, 12), name: cut(x.name, MAX.name), path: cut(x.path, MAX.apiText), writes: !!x.writes }))
+    .filter((x) => x.name || x.path);
+}
 /** A flow with every field within its size and shape (what the page or a person sent is never kept as is). */
-function cleanFlow(flow, by, old) {
+function cleanFlow(flow, by, old, opts) {
   const f = isObj(flow) ? flow : {};
+  const keepApis = !!(opts && opts.keepApis);
   const status = STATUSES[f.status] ? f.status : 'draft';
   let n = 0;
-  const pages = (Array.isArray(f.pages) ? f.pages : []).filter(isObj).map((p) => ({
-    id: idOf(p.id, 20) || 'p' + (++n), page: idOf(p.page), name: cut(p.name, MAX.name).trim(), note: cut(p.note, MAX.note) }))
-    .filter((p) => p.name || p.page).slice(0, MAX.pages);
+  const pages = (Array.isArray(f.pages) ? f.pages : []).filter(isObj).map((p) => {
+    const out = { id: idOf(p.id, 20) || 'p' + (++n), page: idOf(p.page), name: cut(p.name, MAX.name).trim(), note: cut(p.note, MAX.note) };
+    const shot = cleanShot(p.shot);
+    if (shot) out.shot = shot;
+    if (keepApis) { const apis = cleanApis(p.apis); if (apis.length) out.apis = apis; }
+    return out;
+  }).filter((p) => p.name || p.page).slice(0, MAX.pages);
   const at = (old && old.createdAt) || null;
   return {
     id: old ? old.id : str(f.id),
@@ -74,6 +95,15 @@ ol.steps>li::before{content:counter(s);position:absolute;left:-17px;top:0;width:
 .st-tag.end{background:#8a4b00}
 .st-page{font-size:9pt;color:#6b7886;margin-top:1px}
 .st-note{margin-top:5px;white-space:pre-wrap}
+.st-shot{margin-top:7px}
+.st-shot img{max-width:100%;max-height:300px;border:1px solid #dde3ea;border-radius:6px}
+.st-apis{margin-top:7px}
+.st-apis-h{font-size:8pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6b7886;margin-bottom:3px}
+.st-apis ul{list-style:none;margin:0;padding:0;font-size:9pt}
+.st-apis li{padding:2px 0;border-top:1px solid #f0f2f5;display:flex;gap:7px;align-items:baseline;flex-wrap:wrap}
+.st-apis li:first-child{border-top:0}
+.st-m{display:inline-block;font-size:7.5pt;font-weight:700;color:#13315c;background:#e8eefb;border-radius:3px;padding:1px 5px;min-width:42px;text-align:center}
+.st-apis code{font-size:8.5pt;color:#6b7886;overflow-wrap:anywhere}
 .foot{margin-top:28px;padding-top:8px;border-top:1px solid #dde3ea;font-size:8.5pt;color:#6b7886}
 .empty{color:#6b7886;font-style:italic}`;
 
@@ -85,8 +115,14 @@ function paras(text) {
 /** The whole document: cover + control table + description + the flow strip + the numbered steps. */
 function renderDocument(flow, opts) {
   const o = opts || {};
-  const f = cleanFlow(flow, flow && flow.updatedBy, flow);
+  const f = cleanFlow(flow, flow && flow.updatedBy, flow, { keepApis: true });
   const pages = f.pages;
+  const apiList = (p) => (p.apis && p.apis.length
+    ? '<div class="st-apis"><div class="st-apis-h">APIs on this page (' + p.apis.length + ')</div><ul>'
+      + p.apis.map((a) => '<li><span class="st-m">' + esc(a.method || 'CALL') + '</span><b>' + esc(a.name || '') + '</b>'
+        + (a.path ? ' <code>' + esc(a.path) + '</code>' : '') + (a.writes ? ' <span class="st-tag">changes data</span>' : '') + '</li>').join('')
+      + '</ul></div>' : '');
+  const shotImg = (p) => (p.shot && p.shot.data ? '<div class="st-shot"><img src="' + p.shot.data + '" alt="Screenshot of ' + esc(p.name || p.page) + '"></div>' : '');
   const row = (k, v) => (v ? '<tr><td class="k">' + esc(k) + '</td><td>' + esc(v) + '</td></tr>' : '');
   const strip = pages.length
     ? '<div class="strip">' + pages.map((p, i) => '<span class="box">' + (i === 0 ? '<span class="lbl">Start</span>' : i === pages.length - 1 ? '<span class="lbl">End</span>' : '') + esc(p.name || p.page) + '</span>' + (i < pages.length - 1 ? '<span class="arr">→</span>' : '')).join('')
@@ -95,7 +131,8 @@ function renderDocument(flow, opts) {
     ? '<ol class="steps">' + pages.map((p, i) => '<li><span class="st-name">' + esc(p.name || p.page) + '</span>'
       + (i === 0 ? '<span class="st-tag">Start</span>' : i === pages.length - 1 ? '<span class="st-tag end">End</span>' : '')
       + (p.page && p.page !== p.name ? '<div class="st-page">' + esc(p.page) + '</div>' : '')
-      + (p.note ? '<div class="st-note">' + esc(p.note).replace(/\n/g, '<br>') + '</div>' : '') + '</li>').join('') + '</ol>'
+      + (p.note ? '<div class="st-note">' + esc(p.note).replace(/\n/g, '<br>') + '</div>' : '')
+      + shotImg(p) + apiList(p) + '</li>').join('') + '</ol>'
     : '<p class="empty">No pages yet.</p>';
   const date = o.date || new Date().toISOString().slice(0, 10);
   return '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(f.name) + '</title><style>' + CSS + '</style></head><body>'

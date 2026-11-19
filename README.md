@@ -264,19 +264,29 @@ fixed requests (each opens it).
 **Application → Process Flows** is where you write a business or user process the way you walk it — page by page.
 Press **New process flow**, give it a name (Equipment rental, Order to cash…), an area, an owner and a status
 (draft · in review · approved · retired), and write a **description** of what the process is for and what happens from
-start to end. Then list **the pages it goes through, in order**: the first row is the **Start**, the last is the **End**,
-every row in between is numbered. Each page is picked from your app's own page catalog (the same list the Application
-pages screen builds, so the names match), and each gets a short **note** — what the user does on that page. Add pages,
-move them up and down, or remove them; the Start / End labels follow the order.
+start to end — the header card sits on top, and **the pages are listed below it** (a master–detail layout). List **the
+pages it goes through, in order**: the first row is the **Start**, the last is the **End**, every row in between is
+numbered. Each page is picked from your app's own page catalog (the same list the Application pages screen builds, so the
+names match), and each gets a short **note** — what the user does on that page. Add pages, move them up and down, or
+remove them; the Start / End labels follow the order.
+
+For each page you can also:
+
+- **add a screenshot** — **From the page** takes it straight from the code (the screenshot the Application pages catalog
+  captured for that page), or you can **paste** an image (click the box, Ctrl+V), **drop** one, or **upload** a file. The
+  picture is kept with the flow.
+- **list its APIs** — the code icon on a row shows every API that page makes (the method, the call and its path, and
+  whether it changes data), read from the code the same way API Scenarios reads them.
 
 Don't want to write the description yourself? **Draft with AI** sends the name and the pages to the AI you chose in AI
 settings and drafts a plain-English description from them (it is told to describe only the pages you listed, never to
 invent steps). You review the draft and press **Use it**, or discard it.
 
 **Generate document** turns the flow into a print-ready document: a cover with the name, area, owner, status and date;
-your description; a **flow strip** (the pages as boxes with arrows, Start → … → End); and the **numbered steps** with
-each page's note. **Download PDF**, download the **HTML**, or **Print** it. Everything is kept per VB Studio project on
-this PC (so each workspace has its own process flows), and the list shows each flow with its pages and page count.
+your description; a **flow strip** (the pages as boxes with arrows, Start → … → End); and the **numbered steps**, each
+with its note, **its screenshot**, and **the APIs that page makes**. **Download PDF**, download the **HTML**, or
+**Print** it. Everything is kept per VB Studio project on this PC (so each workspace has its own process flows), and the
+list shows each flow with its pages and page count.
 
 ## Page Flows: how each page works with other systems — flows, data sheet, diagrams
 
