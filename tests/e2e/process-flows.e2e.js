@@ -23,8 +23,10 @@ const settle = (page, ms) => page.waitForTimeout(ms || 300);
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 
 (async () => {
-  const pg = await E.pagesSandbox();
-  // give one real page a screenshot so "From the page" has something to fetch
+  // a capture stub, so "From the page" can take a live screenshot (like Application pages); its result is a PNG
+  const captured = [];
+  const pg = await E.pagesSandbox({ capture: async (app, url) => { captured.push(app + ' ' + url); return { ok: true, base64: PNG.toString('base64'), mime: 'image/png' }; } });
+  // also give one real page a screenshot already, so the fallback (no live capture) path has something to read
   pg.store.saveShot('shop/orders/order-list', { base64: PNG.toString('base64'), mime: 'image/png', source: 'upload', by: 'rite.user' });
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'br-pf-e2e-'));
   const store = P.open({ dir });
@@ -94,7 +96,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     // a screenshot fetched from the page's code
     await page.click(prow(0) + ' [data-op="shotFromPage"]');
     await page.waitForSelector(prow(0) + ' .nx-pf-shotimg', { timeout: 10000 });
-    T.check('"From the page" fetches the page\'s screenshot as a self-contained image', /^data:image\//.test(await page.getAttribute(prow(0) + ' .nx-pf-shotimg', 'src') || ''));
+    T.check('"From the page" captures the page live (runs it) and keeps the screenshot as a self-contained image', /^data:image\//.test(await page.getAttribute(prow(0) + ' .nx-pf-shotimg', 'src') || '') && captured.length >= 1);
     // uploading an image to another page, then removing it
     await page.click(prow(1) + ' .nx-pf-shotpick');
     await page.waitForSelector(prow(1) + ' .nx-pf-shotimg', { timeout: 10000 });

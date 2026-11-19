@@ -195,17 +195,37 @@ define([
         return;
       }
 
-      // ── a page's screenshot: from the page's code, pasted/dropped/uploaded, or removed ──
+      // ── a page's screenshot: taken from the page (captured live, like Application pages, else the one already on its
+      //    sheet), or pasted/dropped/uploaded, or removed ──
       if (op === 'shotFromPage') {
         if (!MODEL || !MODEL.pages[i]) return;
         foldRows(v);
         const pageId = MODEL.pages[i].page;
-        if (!pageId) { say(false, 'Type a page name that matches one of your pages first — then its screenshot can be fetched.'); return; }
+        if (!pageId) { say(false, 'Type a page name that matches one of your pages first — then its screenshot can be taken.'); return; }
         v.busy = 'shot:' + i;
         try {
-          const r = await PagesPC.shotData(pageId);
-          const data = (r.ok && r.body && r.body.data) || '';
-          if (!/^data:image\//.test(data)) { say(false, (r.body && r.body.error) || 'This page has no screenshot yet (capture one in Application pages).'); return; }
+          let data = '';
+          let capErr = '';
+          // capture it live (runs the page like Application pages does) when this app can; otherwise use a screenshot
+          // already on the page's technical sheet
+          const info = await PagesPC.info();
+          if (info.canCapture) {
+            const cap = await PagesPC.capture(pageId);
+            if (cap.ok) {
+              const sid = cap.body && cap.body.shot && cap.body.shot.id;
+              const r = await PagesPC.shotData(pageId, sid);
+              data = (r.ok && r.body && r.body.data) || '';
+            } else capErr = (cap.body && cap.body.error) || '';
+          }
+          if (!/^data:image\//.test(data)) {
+            const r = await PagesPC.shotData(pageId);
+            data = (r.ok && r.body && r.body.data) || '';
+          }
+          if (!/^data:image\//.test(data)) {
+            say(false, capErr || (info.canCapture ? 'The screenshot could not be captured — Upload an image instead.'
+              : 'This page has no screenshot yet. Capture one in Application pages, or Upload an image here.'));
+            return;
+          }
           MODEL.pages[i].shot = { src: 'page', data };
           render(v, true);
           say(true, 'Screenshot taken from the page.');

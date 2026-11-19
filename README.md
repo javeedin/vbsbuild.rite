@@ -272,9 +272,9 @@ remove them; the Start / End labels follow the order.
 
 For each page you can also:
 
-- **add a screenshot** — **From the page** takes it straight from the code (the screenshot the Application pages catalog
-  captured for that page), or you can **paste** an image (click the box, Ctrl+V), **drop** one, or **upload** a file. The
-  picture is kept with the flow.
+- **add a screenshot** — **From the page** captures it live the same way Application pages does (it runs the matched page
+  and takes the shot; if this app can't capture, it uses the screenshot already on that page's technical sheet), or you
+  can **paste** an image (click the box, Ctrl+V), **drop** one, or **upload** a file. The picture is kept with the flow.
 - **list its APIs** — the code icon on a row shows every API that page makes (the method, the call and its path, and
   whether it changes data), read from the code the same way API Scenarios reads them.
 
