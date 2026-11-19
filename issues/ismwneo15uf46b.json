@@ -9,7 +9,7 @@
  "title": "change the title from dashboard to   'My Dashboard'",
  "by": "rite.user",
  "at": "2026-11-19T10:26:42.786Z",
- "status": "written",
+ "status": "analyzed",
  "images": [],
  "jira": null,
  "events": [
@@ -24,6 +24,12 @@
    "what": "written up",
    "by": "Claude (Anthropic)",
    "detail": "Change Customer Dashboard title from 'Dashboard' to 'My Dashboard'"
+  },
+  {
+   "at": "2026-11-19T10:27:01.282Z",
+   "what": "analyzed",
+   "by": "Claude (Anthropic)",
+   "detail": "Fix on this page · 1 file(s) to change"
   }
  ],
  "comments": [],
@@ -44,7 +50,7 @@
   "notify": [],
   "aiWhy": ""
  },
- "updatedAt": "2026-11-19T10:26:46.902Z",
+ "updatedAt": "2026-11-19T10:27:01.282Z",
  "formatted": {
   "title": "Change Customer Dashboard title from 'Dashboard' to 'My Dashboard'",
   "summary": "On the Customer Dashboard page, the title currently reads 'Dashboard'. The request is to change it to 'My Dashboard'.",
@@ -58,5 +64,10 @@
   "questions": [
    "Does this apply to the page heading, browser tab title, or both?"
   ]
+ },
+ "fixId": "fxmwneoffg68539b",
+ "verdict": {
+  "code": "fix-here",
+  "text": "Fix on this page — the title text \"Customer Dashboard\" is hard-coded in this page's HTML, in the `page-title` attribute of the `oj-sp-general-overview-page` template."
  }
 }
