@@ -22,7 +22,7 @@ T.section('the groups and their screens');
 T.eq('four groups, in order', N.GROUPS.map((g) => g.label).join(' | '), 'Workspace | Work | Application | Tools');
 T.eq('Workspace', N.GROUPS[0].items.map((i) => i.label).join(', '), 'Organizations & projects, Run console');
 T.eq('Work', N.GROUPS[1].items.map((i) => i.label).join(', '), 'Issues, Jira stories, Standup minutes, Follow-ups');
-T.eq('Application', N.GROUPS[2].items.map((i) => i.label).join(', '), 'Application pages, API Scenarios, Change requests, Page Flows, FDD library, Flows explained');
+T.eq('Application', N.GROUPS[2].items.map((i) => i.label).join(', '), 'Application pages, API Scenarios, Change requests, Page Flows, Process Flows, FDD library, Flows explained');
 T.eq('Tools', N.GROUPS[3].items.map((i) => i.label).join(', '), 'AI Assistant, SQL, Fusion SQL, BIP Reporting, AI settings');
 const items = N.GROUPS.reduce((a, g) => a.concat(g.items), []);
 T.check('every item: an id, an icon, keywords, and a page that exists in its flow', items.every((i) => i.id && /^oj-ux-ico-/.test(i.icon) && i.keywords && exists(i.route)),

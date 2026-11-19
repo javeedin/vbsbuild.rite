@@ -59,6 +59,10 @@ define([], function () {
       // (source → target), the diagrams, a PDF / Excel copy (flows/insights integrations; desktop/lib/integrations.js)
       { id: 'integrations', label: 'Page Flows', icon: 'oj-ux-ico-link', route: { flow: 'insights', page: 'integrations' },
         keywords: 'page flows integrations interfaces saved flows plain english systems source target data sheet rest services endpoints fusion oic bip ords jira diagram landscape pdf excel' },
+      // Process Flows: a user/business process across the app's pages, written by hand (name, description, the pages in
+      // order with a note) and turned into a document (flows/insights process-flows; desktop/lib/processFlows.js)
+      { id: 'process-flows', label: 'Process Flows', icon: 'oj-ux-ico-network-flow-diagram', route: { flow: 'insights', page: 'process-flows' },
+        keywords: 'process flow flows build user journey business process pages in order start next document pdf describe description generate steps map' },
       // The FDD documents "Analyze with AI" reads (flows/fdd library): uploaded into the project's data and pushed to
       // git, so every user has them; one is the latest.
       { id: 'fdd-library', label: 'FDD library', icon: 'oj-ux-ico-upload', route: { flow: 'fdd', page: 'library' },

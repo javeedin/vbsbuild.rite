@@ -938,6 +938,57 @@ function createDevServer(o) {
         })().catch((e) => jsonP(200, { ok: false, error: e.message }));
         return undefined;
       }
+      if (pathname.startsWith('/__pflow/')) {
+        // Process Flows (lib/processFlows.js, Application → Process Flows): a user process across the app's pages, written
+        // by hand — a name, a description, the pages in order — and turned into a document (HTML → PDF; the description can
+        // be drafted by the AI chosen in AI settings). This PC only, by its own name, and only the app's own page (it sends
+        // X-Build-Rite-PFLOW, which a page of another site cannot send without a preflight this server never allows).
+        const host = String(req.headers.host || '').replace(/:\d+$/, '');
+        if (!isLoopback(req.socket.remoteAddress) || !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(host)) {
+          return send(res, 404, 'text/plain; charset=utf-8', 'Not found');
+        }
+        const jsonPf = (status, body) => send(res, status, 'application/json', JSON.stringify(body), { 'Cache-Control': 'no-store' });
+        if (!o.processFlowStore) return jsonPf(200, { ok: false, unavailable: true, error: 'Process Flows run in the Build.Rite desktop app.' });
+        const origin = req.headers.origin;
+        if (req.headers['x-build-rite-pflow'] !== '1' || (origin && origin !== `http://${req.headers.host}`)) {
+          return send(res, 403, 'application/json', JSON.stringify({ error: 'Refused: not from Build.Rite on this PC.' }));
+        }
+        const pf = o.processFlowStore;
+        const PFL = require('./processFlows');
+        const post = req.method === 'POST';
+        const get = (k) => u.searchParams.get(k) || '';
+        const by = () => { try { const id = o.getIdentity && o.getIdentity(); return (id && (id.displayName || id.username)) || ''; } catch (e) { return ''; } };
+        const bodyOf = () => new Promise((resolve, reject) => {
+          const chunks = [];
+          let size = 0;
+          req.on('data', (c) => { size += c.length; if (size <= 8 * 1024 * 1024) chunks.push(c); });
+          req.on('end', () => (size > 8 * 1024 * 1024 ? reject(new Error('Too large.')) : resolve(Buffer.concat(chunks).toString('utf8'))));
+          req.on('error', reject);
+        });
+        (async () => {
+          const b = post ? JSON.parse((await bodyOf()) || '{}') : {};
+          if (pathname === '/__pflow/list' && !post) return jsonPf(200, pf.list(get('q')));
+          if (pathname === '/__pflow/get' && !post) return jsonPf(200, pf.get(get('id')));
+          if (pathname === '/__pflow/save' && post) { const r = pf.save(b.flow, by()); if (r.ok) log(`Process flow ${r.flow.id}: ${r.flow.name}`); return jsonPf(200, r); }
+          if (pathname === '/__pflow/remove' && post) { const r = pf.remove(b.id); if (r.ok) log(`Process flow ${b.id} removed`); return jsonPf(200, r); }
+          if (pathname === '/__pflow/document' && post) return jsonPf(200, { ok: true, html: PFL.renderDocument(b.flow || {}, { app: String(b.app || ""), date: new Date().toISOString().slice(0, 10) }) });
+          if (pathname === '/__pflow/pdf' && post) {
+            if (typeof o.htmlToPdf !== 'function') return jsonPf(200, { ok: false, noPdf: true, error: 'Saving a PDF needs the desktop app: use Print and choose Save as PDF.' });
+            const html = PFL.renderDocument(b.flow || {}, { app: String(b.app || ""), date: new Date().toISOString().slice(0, 10) });
+            try { const pdf = await o.htmlToPdf(html); return jsonPf(200, { ok: true, base64: Buffer.from(pdf).toString('base64'), size: pdf.length }); }
+            catch (e) { return jsonPf(200, { ok: false, error: 'The PDF could not be made: ' + String((e && e.message) || e) }); }
+          }
+          if (pathname === '/__pflow/ai' && post) {
+            const ai = o.aiStore;
+            if (!ai || typeof ai.chat !== 'function') return jsonPf(200, { ok: false, needsSetup: true, error: 'Set up AI first (Tools → AI settings).' });
+            const r = await ai.chat({ feature: 'pages', system: 'You write clear, factual process documentation. No preamble, no markdown headings, no lists — plain paragraphs only.', user: PFL.aiPrompt(b.flow || {}), maxTokens: 2000 });
+            log(`Process flow AI draft -> ${r && r.ok ? 'ok' : (r && r.error) || 'no answer'}`);
+            return jsonPf(200, r && r.ok ? { ok: true, text: String(r.text || '').trim(), provider: r.provider || '' } : { ok: false, error: (r && r.error) || 'The AI did not answer.', needsSetup: !!(r && r.needsSetup) });
+          }
+          return jsonPf(404, { error: 'Not found' });
+        })().catch((e) => jsonPf(200, { ok: false, error: e.message }));
+        return undefined;
+      }
       if (pathname.startsWith('/__fix/')) {
         // Code Fix (lib/codeFix.js), the Code fix tab of Application pages: the AI proposes a change to a page; it is
         // written into the project's code only when approved (after git pull), then tested, committed or undone. This PC

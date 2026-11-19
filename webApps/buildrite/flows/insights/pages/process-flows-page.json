@@ -1,0 +1,28 @@
+{
+  "description": "Process Flows (Application → Process Flows): build a user/business process across the app's pages by hand — name it, write a description, and list the pages it goes through in order (start → next → …), each with a note — then generate a process-flow document (print-ready HTML → PDF; the description can be drafted by the AI chosen in AI settings). Kept per VB Studio project on this PC (desktop/lib/processFlows.js at /__pflow/*).",
+  "navigation": { "embeddable": "enabled" },
+  "variables": {
+    "checked": { "type": "boolean", "defaultValue": false },
+    "available": { "type": "boolean", "defaultValue": true, "description": "The local server has Process Flows (the desktop app)." },
+    "flows": { "type": "any[]", "defaultValue": [], "description": "The saved process flows (lib/processFlows.js list)." },
+    "q": { "type": "string", "defaultValue": "" },
+    "flow": { "type": "any", "defaultValue": null, "description": "The flow being edited: { id, name, description, area, owner, status, pages: [{ id, page, name, note }] }." },
+    "saved": { "type": "any", "defaultValue": null, "description": "The flow as last saved (to tell unsaved changes)." },
+    "pages": { "type": "any[]", "defaultValue": [], "description": "The app's page catalog, for the page-name list ({ id, label })." },
+    "appLabel": { "type": "string", "defaultValue": "", "description": "The app the pages belong to, named on the document." },
+    "busy": { "type": "string", "defaultValue": "", "description": "save | pdf | html | ai, while it runs." },
+    "doc": { "type": "any", "defaultValue": null, "description": "The generated document to preview: { html }." },
+    "ai": { "type": "any", "defaultValue": null, "description": "A description drafted by AI, to use or discard: { text, provider }." }
+  },
+  "eventListeners": {
+    "vbEnter": { "chains": [ { "chain": "pfChain", "parameters": { "op": "load", "idx": "", "key": "", "value": "", "input": "" } } ] },
+    "onPf": { "chains": [ { "chain": "pfChain", "parameters": { "op": "{{ $event.currentTarget.dataset.op }}", "idx": "{{ $event.currentTarget.dataset.idx || '' }}", "key": "{{ $event.currentTarget.dataset.key || '' }}", "value": "{{ $event.currentTarget.dataset.value !== undefined ? $event.currentTarget.dataset.value : '' }}", "input": "{{ $event.currentTarget.value || '' }}" } } ] }
+  },
+  "imports": {
+    "components": {
+      "oj-bind-for-each": { "path": "ojs/ojknockout" },
+      "oj-bind-if": { "path": "ojs/ojknockout" },
+      "oj-bind-text": { "path": "ojs/ojknockout" }
+    }
+  }
+}

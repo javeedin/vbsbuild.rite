@@ -366,6 +366,7 @@ async function buildRiteOptions() {
     scenarioStore: scenarioStore(),
     crStore: crStore(), // Change requests: a change asked of a page, made with Code Fix
     flowStore: flowStore(), // Saved flows: integration flows saved under a name, edited, commented on, checked against the app
+    processFlowStore: processFlowStore(), // Process Flows: a user process across the pages, written by hand, as a document
     assistantStore: await assistantStore(), // AI Assistant: questions about the app answered from the workspace; conversations on this PC
     htmlToPdf: htmlToPdf, // Create the functional design: the document printed to PDF
     fusionSqlStore: fusionSqlStore(), // Fusion SQL: read-only SQL on a Fusion pod through its BI Publisher runner
@@ -772,6 +773,12 @@ function crStore() {
   return crStoreInst;
 }
 // Saved flows (Application → Page Flows → Saved flows, lib/savedFlows.js): kept per VB Studio project on this PC
+// Process Flows (lib/processFlows.js): a user process across the app's pages, written by hand and turned into a document
+let processFlowInst = null;
+function processFlowStore() {
+  if (!processFlowInst) processFlowInst = require('./lib/processFlows').open({ dir: () => { const c = currentWorkspace(); return c ? path.join(app.getPath('userData'), 'process-flows', spaceOf(c)) : ''; } });
+  return processFlowInst;
+}
 let flowStoreInst = null;
 function flowStore() {
   if (!flowStoreInst) flowStoreInst = require('./lib/savedFlows').open({ dir: () => { const c = currentWorkspace(); return c ? path.join(app.getPath('userData'), 'saved-flows', spaceOf(c)) : ''; } });

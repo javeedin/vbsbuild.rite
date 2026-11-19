@@ -1,0 +1,129 @@
+<!-- Process Flows: build a process across the app's pages by hand (name, description, the pages in order with a note each),
+     then generate a document (print-ready HTML → PDF). The desktop app keeps them and makes the document (desktop/lib/processFlows.js
+     at /__pflow/*); the page-name list comes from the Application pages catalog (resources/js/pagesClient.js). -->
+<div class="nx-page nx-pf" id="page-process-flows">
+  <div class="nx-pagehead">
+    <div>
+      <div class="nx-kicker">Application</div>
+      <h1 id="pfTitle">Process Flows</h1>
+      <div class="nx-sub">Write a user process across your pages: name it, describe it, list the pages in order — then generate a process-flow document.</div>
+    </div>
+    <div class="nx-pagehead-actions">
+      <button type="button" class="nx-btn nx-btn--cta" id="pfNew" data-op="new" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span>New process flow</button>
+    </div>
+  </div>
+
+  <oj-bind-if test="[[ $variables.checked && !$variables.available ]]">
+    <div class="nx-empty" id="pfUnavailable">Process Flows run in the Build.Rite desktop app: they are kept per VB Studio project on this PC.</div>
+  </oj-bind-if>
+
+  <oj-bind-if test="[[ $variables.available ]]">
+    <!-- ── the list ── -->
+    <oj-bind-if test="[[ !$variables.flow ]]">
+      <div class="nx-pf-list" id="pfList">
+        <div class="nx-pf-bar">
+          <input type="search" id="pfSearch" class="nx-fsql-filter" placeholder="Search process flows" autocomplete="off" :value="[[ $variables.q ]]" data-op="search" on-input="[[ $listeners.onPf ]]">
+          <span class="nx-note"><oj-bind-text value="[[ $variables.flows.length + ($variables.flows.length === 1 ? ' process flow' : ' process flows') ]]"></oj-bind-text></span>
+        </div>
+        <oj-bind-if test="[[ $variables.flows.length === 0 ]]"><div class="nx-empty" id="pfEmpty">No process flow yet. Press <b>New process flow</b> to build one.</div></oj-bind-if>
+        <div class="nx-pf-cards">
+          <oj-bind-for-each data="[[ $variables.flows ]]"><template data-oj-as="f">
+            <section class="nx-card nx-pf-card" :data-id="[[ f.data.id ]]">
+              <button type="button" class="nx-pf-open" data-op="open" :data-value="[[ f.data.id ]]" on-click="[[ $listeners.onPf ]]">
+                <div class="nx-pf-cardhead"><b><oj-bind-text value="[[ f.data.name ]]"></oj-bind-text></b><span class="nx-badge"><oj-bind-text value="[[ f.data.id ]]"></oj-bind-text></span>
+                  <span :class="[[ 'nx-pf-pill nx-pf-pill--' + f.data.status ]]"><oj-bind-text value="[[ $functions.statusLabel(f.data.status) ]]"></oj-bind-text></span></div>
+                <div class="nx-pf-chips"><oj-bind-text value="[[ $functions.chainText(f.data.names) ]]"></oj-bind-text></div>
+                <div class="nx-note"><oj-bind-text value="[[ $functions.cardMeta(f.data) ]]"></oj-bind-text></div>
+              </button>
+              <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-flib-del nx-pf-del" data-op="remove" :data-value="[[ f.data.id ]]" on-click="[[ $listeners.onPf ]]" title="Remove"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+            </section>
+          </template></oj-bind-for-each>
+        </div>
+      </div>
+    </oj-bind-if>
+
+    <!-- ── the editor ── -->
+    <oj-bind-if test="[[ !!$variables.flow ]]">
+      <div class="nx-pf-edit" id="pfEditor">
+        <div class="nx-pf-editbar">
+          <button type="button" class="nx-btn nx-btn--plain" id="pfBack" data-op="back" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-chevron-left" aria-hidden="true"></span>All process flows</button>
+          <span class="nx-min-flex"></span>
+          <oj-bind-if test="[[ !!$variables.flow.id ]]"><span class="nx-badge"><oj-bind-text value="[[ $variables.flow.id ]]"></oj-bind-text></span></oj-bind-if>
+          <button type="button" class="nx-btn nx-btn--cta" id="pfSave" data-op="save" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]"><span class="oj-ux-ico-save" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'save' ? 'Saving…' : 'Save' ]]"></oj-bind-text></button>
+          <button type="button" class="nx-btn" id="pfGenerate" data-op="generate" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-file-text" aria-hidden="true"></span>Generate document</button>
+        </div>
+
+        <div class="nx-pf-grid">
+          <section class="nx-card nx-pf-form">
+            <div class="nx-fsql-fields">
+              <label class="nx-pf-wide">Name<input type="text" id="pf-name" class="nx-pf-in" :value="[[ $variables.flow.name ]]" placeholder="Equipment rental, Order to cash…"></label>
+              <label>Area<input type="text" id="pf-area" class="nx-pf-in" :value="[[ $variables.flow.area ]]" placeholder="Rentals, Finance…"></label>
+              <label>Owner<input type="text" id="pf-owner" class="nx-pf-in" :value="[[ $variables.flow.owner ]]"></label>
+              <label>Status
+                <select id="pf-status" class="nx-fsql-select nx-pf-in">
+                  <oj-bind-for-each data="[[ $functions.statusRows($variables.flow.status) ]]"><template data-oj-as="s">
+                    <option :value="[[ s.data.id ]]" :selected="[[ s.data.on ]]"><oj-bind-text value="[[ s.data.label ]]"></oj-bind-text></option>
+                  </template></oj-bind-for-each>
+                </select></label>
+            </div>
+            <label class="nx-pf-wide nx-pf-desc-l">Description
+              <textarea id="pf-desc" class="nx-pf-desc" rows="6" :value="[[ $variables.flow.description ]]" placeholder="What the process is for, who runs it, what happens from start to end…"></textarea></label>
+            <div class="nx-pf-descacts">
+              <button type="button" class="nx-btn nx-btn--sm" id="pfAi" data-op="ai" on-click="[[ $listeners.onPf ]]" :disabled="[[ $variables.busy === 'ai' ]]" title="Let the AI chosen in AI settings draft a description from the name and the pages"><span class="oj-ux-ico-chat" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'ai' ? 'Drafting…' : 'Draft with AI' ]]"></oj-bind-text></button>
+              <span class="nx-note">The AI drafts from the name and the pages; you review it before it goes in.</span>
+            </div>
+            <oj-bind-if test="[[ !!$variables.ai ]]">
+              <div class="nx-card nx-pf-aidraft" id="pfAiDraft">
+                <div class="nx-pf-aihead"><b>AI draft</b><span class="nx-note"><oj-bind-text value="[[ $variables.ai.provider ]]"></oj-bind-text></span><span class="nx-min-flex"></span>
+                  <button type="button" class="nx-btn nx-btn--sm nx-btn--cta" id="pfAiUse" data-op="aiUse" on-click="[[ $listeners.onPf ]]">Use it</button>
+                  <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-op="aiClose" on-click="[[ $listeners.onPf ]]">Discard</button></div>
+                <div class="nx-pf-aitext"><oj-bind-text value="[[ $variables.ai.text ]]"></oj-bind-text></div>
+              </div>
+            </oj-bind-if>
+          </section>
+
+          <section class="nx-card nx-pf-pages">
+            <div class="nx-card-head"><h2 class="nx-h2">The pages, in order</h2><span class="nx-note">Start at the top; drag with ↑ ↓.</span></div>
+            <datalist id="pfPageList"><oj-bind-for-each data="[[ $variables.pages ]]"><template data-oj-as="p"><option :value="[[ p.data.label ]]"></option></template></oj-bind-for-each></datalist>
+            <oj-bind-if test="[[ ($variables.flow.pages || []).length === 0 ]]"><div class="nx-empty" id="pfNoPages">No page yet. Add the start page below.</div></oj-bind-if>
+            <oj-bind-for-each data="[[ $functions.pageRows($variables.flow) ]]"><template data-oj-as="p">
+              <div class="nx-pf-prow" :data-idx="[[ p.data.idx ]]">
+                <span class="nx-pf-num"><oj-bind-text value="[[ p.data.label ]]"></oj-bind-text></span>
+                <div class="nx-pf-pin">
+                  <input type="text" class="nx-pf-pname" list="pfPageList" :value="[[ p.data.name ]]" placeholder="Page name" data-op="pedit" data-key="name" :data-idx="[[ p.data.idx ]]" on-input="[[ $listeners.onPf ]]">
+                  <input type="text" class="nx-pf-pnote" :value="[[ p.data.note ]]" placeholder="What the user does here (optional)" data-op="pedit" data-key="note" :data-idx="[[ p.data.idx ]]" on-input="[[ $listeners.onPf ]]">
+                </div>
+                <div class="nx-pf-pacts">
+                  <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-op="moveUp" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" :disabled="[[ p.data.first ]]" title="Up"><span class="oj-ux-ico-arrow-up" aria-hidden="true"></span></button>
+                  <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-op="moveDown" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" :disabled="[[ p.data.last ]]" title="Down"><span class="oj-ux-ico-arrow-down" aria-hidden="true"></span></button>
+                  <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-flib-del" data-op="removePage" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" title="Remove"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+                </div>
+              </div>
+            </template></oj-bind-for-each>
+            <button type="button" class="nx-btn nx-btn--sm nx-pf-addpage" id="pfAddPage" data-op="addPage" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span>Add a page</button>
+          </section>
+        </div>
+      </div>
+    </oj-bind-if>
+  </oj-bind-if>
+
+  <!-- the generated document -->
+  <oj-bind-if test="[[ !!$variables.doc ]]">
+    <div class="nx-modal" id="pfDoc">
+      <button type="button" class="nx-modal-scrim" aria-label="Close" data-op="docClose" on-click="[[ $listeners.onPf ]]"></button>
+      <div class="nx-dialog nx-pf-docdlg" role="dialog" aria-modal="true" aria-label="Process flow document">
+        <div class="nx-dialog-head"><div class="nx-dialog-titles"><div class="nx-kicker">Process flow document</div><h2 class="nx-dialog-title"><oj-bind-text value="[[ $variables.doc.name ]]"></oj-bind-text></h2></div>
+          <div class="nx-pf-docacts">
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--cta" id="pfPdf" data-op="pdf" on-click="[[ $listeners.onPf ]]" :disabled="[[ $variables.busy === 'pdf' ]]"><span class="oj-ux-ico-file-pdf" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'pdf' ? 'Saving…' : 'Download PDF' ]]"></oj-bind-text></button>
+            <button type="button" class="nx-btn nx-btn--sm" id="pfHtml" data-op="html" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span>HTML</button>
+            <button type="button" class="nx-btn nx-btn--sm" id="pfPrint" data-op="print" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-print" aria-hidden="true"></span>Print</button>
+            <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-op="docClose" on-click="[[ $listeners.onPf ]]" title="Close"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <div class="nx-dialog-body nx-pf-docbody">
+          <iframe id="pfDocFrame" class="nx-pf-docframe" title="Document preview" sandbox=""></iframe>
+        </div>
+      </div>
+    </div>
+  </oj-bind-if>
+</div>

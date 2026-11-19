@@ -21,6 +21,7 @@
     "sql": { "path": "pages/sql-page" },
     "fusion-sql": { "path": "pages/fusion-sql-page" },
     "bip": { "path": "pages/bip-page" },
+    "process-flows": { "path": "pages/process-flows-page" },
     "ai": { "path": "pages/ai-page" },
     "api-scenarios": { "path": "pages/api-scenarios-page" },
     "change-requests": { "path": "pages/change-requests-page" },

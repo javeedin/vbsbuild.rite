@@ -259,6 +259,25 @@ the first try, the lines and files changed, what is overdue; where they are (sta
 fixed them, for which customers, who asks, by area (the app's flows); the files changed most; and the overdue and latest
 fixed requests (each opens it).
 
+## Process Flows: a user process across your pages, written by hand, as a document
+
+**Application → Process Flows** is where you write a business or user process the way you walk it — page by page.
+Press **New process flow**, give it a name (Equipment rental, Order to cash…), an area, an owner and a status
+(draft · in review · approved · retired), and write a **description** of what the process is for and what happens from
+start to end. Then list **the pages it goes through, in order**: the first row is the **Start**, the last is the **End**,
+every row in between is numbered. Each page is picked from your app's own page catalog (the same list the Application
+pages screen builds, so the names match), and each gets a short **note** — what the user does on that page. Add pages,
+move them up and down, or remove them; the Start / End labels follow the order.
+
+Don't want to write the description yourself? **Draft with AI** sends the name and the pages to the AI you chose in AI
+settings and drafts a plain-English description from them (it is told to describe only the pages you listed, never to
+invent steps). You review the draft and press **Use it**, or discard it.
+
+**Generate document** turns the flow into a print-ready document: a cover with the name, area, owner, status and date;
+your description; a **flow strip** (the pages as boxes with arrows, Start → … → End); and the **numbered steps** with
+each page's note. **Download PDF**, download the **HTML**, or **Print** it. Everything is kept per VB Studio project on
+this PC (so each workspace has its own process flows), and the list shows each flow with its pages and page count.
+
 ## Page Flows: how each page works with other systems — flows, data sheet, diagrams
 
 **Application → Page Flows** (it was called Integrations) reads your workspace's app — every page, its chains and modules, and its services
