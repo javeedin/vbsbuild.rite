@@ -9,7 +9,7 @@
  "title": "change the title from dashboard to   'My Dashboard'",
  "by": "rite.user",
  "at": "2026-11-19T10:26:42.786Z",
- "status": "awaiting-approval",
+ "status": "approved",
  "images": [],
  "jira": null,
  "events": [
@@ -36,6 +36,12 @@
    "what": "sent for approval",
    "by": "rite.user",
    "detail": "email to imamuddinjaveed.shaik@rite.digital (BR-FF242)"
+  },
+  {
+   "at": "2026-11-19T10:28:53.511Z",
+   "what": "approved",
+   "by": "rite.user",
+   "detail": "in Build.Rite"
   }
  ],
  "comments": [],
@@ -56,7 +62,7 @@
   "notify": [],
   "aiWhy": ""
  },
- "updatedAt": "2026-11-19T10:28:34.933Z",
+ "updatedAt": "2026-11-19T10:28:53.511Z",
  "formatted": {
   "title": "Change Customer Dashboard title from 'Dashboard' to 'My Dashboard'",
   "summary": "On the Customer Dashboard page, the title currently reads 'Dashboard'. The request is to change it to 'My Dashboard'.",
@@ -88,6 +94,12 @@
     "to": "imamuddinjaveed.shaik@rite.digital",
     "error": ""
    }
+  },
+  "decision": {
+   "approved": true,
+   "by": "rite.user",
+   "at": "2026-11-19T10:28:53.511Z",
+   "via": "app"
   }
  }
 }
