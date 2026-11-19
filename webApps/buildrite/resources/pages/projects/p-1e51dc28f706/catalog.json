@@ -1,5 +1,5 @@
 {
- "scannedAt": "2026-11-18T17:32:43.027Z",
+ "scannedAt": "2026-11-19T10:28:06.125Z",
  "pages": [
   {
    "id": "vbredwoodapp//shell",
@@ -75,7 +75,15 @@
    ],
    "menu": "Customer Dashboard",
    "stories": [],
-   "sheet": null
+   "sheet": {
+    "at": "2026-11-19T10:28:06.091Z",
+    "by": "rite.user",
+    "codeHash": "9817dc1243317488",
+    "screenshots": 1,
+    "ai": false,
+    "rest": 3,
+    "chains": 9
+   }
   },
   {
    "id": "vbredwoodapp/customer-portal/customer-my-billing",
@@ -195,7 +203,7 @@
    "appName": "vbredwoodapp",
    "flow": "customer-portal",
    "page": "project-create-request",
-   "label": "Create Equipment Request",
+   "label": "New Request",
    "route": {
     "url": "/vp/shell/customer-portal/project-create-request",
     "menu": "",
