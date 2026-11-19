@@ -9,7 +9,7 @@
  "title": "change the title from dashboard to   'My Dashboard'",
  "by": "rite.user",
  "at": "2026-11-19T10:26:42.786Z",
- "status": "analyzed",
+ "status": "awaiting-approval",
  "images": [],
  "jira": null,
  "events": [
@@ -30,6 +30,12 @@
    "what": "analyzed",
    "by": "Claude (Anthropic)",
    "detail": "Fix on this page · 1 file(s) to change"
+  },
+  {
+   "at": "2026-11-19T10:28:34.933Z",
+   "what": "sent for approval",
+   "by": "rite.user",
+   "detail": "email to imamuddinjaveed.shaik@rite.digital (BR-FF242)"
   }
  ],
  "comments": [],
@@ -50,7 +56,7 @@
   "notify": [],
   "aiWhy": ""
  },
- "updatedAt": "2026-11-19T10:27:01.282Z",
+ "updatedAt": "2026-11-19T10:28:34.933Z",
  "formatted": {
   "title": "Change Customer Dashboard title from 'Dashboard' to 'My Dashboard'",
   "summary": "On the Customer Dashboard page, the title currently reads 'Dashboard'. The request is to change it to 'My Dashboard'.",
@@ -69,5 +75,19 @@
  "verdict": {
   "code": "fix-here",
   "text": "Fix on this page — the title text \"Customer Dashboard\" is hard-coded in this page's HTML, in the `page-title` attribute of the `oj-sp-general-overview-page` template."
+ },
+ "approval": {
+  "requested": {
+   "at": "2026-11-19T10:28:34.278Z",
+   "by": "rite.user",
+   "code": "BR-FF242",
+   "fingerprint": "36b1214ae535",
+   "email": {
+    "wanted": true,
+    "sent": true,
+    "to": "imamuddinjaveed.shaik@rite.digital",
+    "error": ""
+   }
+  }
  }
 }
