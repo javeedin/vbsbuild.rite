@@ -1,0 +1,42 @@
+{
+ "id": "ismwneo15uf46b",
+ "key": "BR-EO15U",
+ "page": "vbredwoodapp/customer-portal/customer-dashboard",
+ "label": "Customer Dashboard",
+ "app": "vbredwoodapp",
+ "kind": "enhancement",
+ "text": "change the title from dashboard to   'My Dashboard'",
+ "title": "change the title from dashboard to   'My Dashboard'",
+ "by": "rite.user",
+ "at": "2026-11-19T10:26:42.786Z",
+ "status": "new",
+ "images": [],
+ "jira": null,
+ "events": [
+  {
+   "at": "2026-11-19T10:26:42.787Z",
+   "what": "logged",
+   "by": "rite.user",
+   "detail": "change the title from dashboard to   'My Dashboard'"
+  }
+ ],
+ "comments": [],
+ "details": {
+  "severity": "critical",
+  "priority": "p2",
+  "environment": "DEV",
+  "foundIn": "",
+  "fixVersion": "",
+  "customer": "ciabro",
+  "customerRef": "",
+  "reportedBy": "rite.user",
+  "reporterEmail": "",
+  "raisedOn": "2026-11-19",
+  "assignee": "",
+  "dueDate": "",
+  "notify": [],
+  "ai": [],
+  "aiWhy": ""
+ },
+ "updatedAt": "2026-11-19T10:26:42.787Z"
+}
