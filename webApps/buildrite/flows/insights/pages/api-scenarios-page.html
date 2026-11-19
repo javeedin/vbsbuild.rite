@@ -604,14 +604,31 @@
           <ol class="nx-sc-jaseq" id="scJaSeq">
             <oj-bind-for-each data="[[ $functions.jaSequence($variables.journeyApis, $variables.sc, $variables.run) ]]"><template data-oj-as="q">
               <li :class="[[ 'nx-sc-jaq' + (q.data.state ? ' nx-sc-jaq--' + q.data.state : '') ]]">
-                <span class="nx-sc-jaseqn"><oj-bind-text value="[[ q.data.seq ]]"></oj-bind-text></span>
-                <span :class="[[ 'nx-pg-method nx-sc-apim nx-pg-method--' + q.data.mclass ]]"><oj-bind-text value="[[ q.data.method ]]"></oj-bind-text></span>
-                <span class="nx-sc-janame"><b><oj-bind-text value="[[ q.data.name ]]"></oj-bind-text></b>
-                  <code><oj-bind-text value="[[ q.data.call ]]"></oj-bind-text></code></span>
-                <oj-bind-if test="[[ !!q.data.lov ]]"><span class="nx-sc-lovchip"><oj-bind-text value="[[ q.data.lov ]]"></oj-bind-text></span></oj-bind-if>
-                <oj-bind-if test="[[ q.data.writes ]]"><span class="nx-sc-wchip">changes data</span></oj-bind-if>
-                <span class="nx-sc-jastate"><oj-bind-text value="[[ q.data.stateText ]]"></oj-bind-text></span>
-                <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="jGo" :data-key="[[ q.data.id ]]" on-click="[[ $listeners.onAct ]]" :title="[[ 'Step ' + q.data.n + ' of the scenario' ]]"><oj-bind-text value="[[ 'Step ' + q.data.n ]]"></oj-bind-text></button>
+                <div class="nx-sc-jaqmain">
+                  <span class="nx-sc-jaseqn"><oj-bind-text value="[[ q.data.seq ]]"></oj-bind-text></span>
+                  <span :class="[[ 'nx-pg-method nx-sc-apim nx-pg-method--' + q.data.mclass ]]"><oj-bind-text value="[[ q.data.method ]]"></oj-bind-text></span>
+                  <span class="nx-sc-janame"><b><oj-bind-text value="[[ q.data.name ]]"></oj-bind-text></b>
+                    <code><oj-bind-text value="[[ q.data.call ]]"></oj-bind-text></code></span>
+                  <oj-bind-if test="[[ !!q.data.lov ]]"><span class="nx-sc-lovchip"><oj-bind-text value="[[ q.data.lov ]]"></oj-bind-text></span></oj-bind-if>
+                  <oj-bind-if test="[[ q.data.writes ]]"><span class="nx-sc-wchip">changes data</span></oj-bind-if>
+                  <span :class="[[ 'nx-sc-jast nx-sc-jast--' + (q.data.state || 'none') ]]" :title="[[ q.data.facts ]]"><oj-bind-if test="[[ !!q.data.icon ]]"><b class="nx-sc-jasti"><oj-bind-text value="[[ q.data.icon ]]"></oj-bind-text></b></oj-bind-if><oj-bind-text value="[[ q.data.stateText ]]"></oj-bind-text></span>
+                  <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-act="jGo" :data-key="[[ q.data.id ]]" on-click="[[ $listeners.onAct ]]" :title="[[ 'Step ' + q.data.n + ' of the scenario' ]]"><oj-bind-text value="[[ 'Step ' + q.data.n ]]"></oj-bind-text></button>
+                </div>
+                <oj-bind-if test="[[ q.data.params.length || !!q.data.reqUrl ]]">
+                  <div class="nx-sc-jadetail">
+                    <oj-bind-if test="[[ q.data.params.length ]]">
+                      <div class="nx-sc-japarams">
+                        <span class="nx-sc-japlabel">Parameters</span>
+                        <oj-bind-for-each data="[[ q.data.params ]]"><template data-oj-as="p">
+                          <span class="nx-sc-japaram"><b><oj-bind-text value="[[ p.data.k ]]"></oj-bind-text></b> = <span><oj-bind-text value="[[ p.data.v ]]"></oj-bind-text></span></span>
+                        </template></oj-bind-for-each>
+                      </div>
+                    </oj-bind-if>
+                    <oj-bind-if test="[[ !!q.data.reqUrl ]]">
+                      <div class="nx-sc-jacall"><span class="nx-sc-japlabel">Called</span> <code><oj-bind-text value="[[ q.data.reqUrl ]]"></oj-bind-text></code><oj-bind-if test="[[ !!q.data.facts ]]"><span class="nx-note"> · <oj-bind-text value="[[ q.data.facts ]]"></oj-bind-text></span></oj-bind-if></div>
+                    </oj-bind-if>
+                  </div>
+                </oj-bind-if>
               </li>
             </template></oj-bind-for-each>
           </ol>

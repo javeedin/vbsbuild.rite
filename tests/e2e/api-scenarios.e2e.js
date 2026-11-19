@@ -240,11 +240,15 @@ const EXAMPLE = JSON.parse(fs.readFileSync(path.join(E.FIXTURE, 'services/shopAp
     // the APIs dialog of the linked page
     await page.click('#scSteps .nx-sc-pagehead .nx-sc-papis');
     await page.waitForSelector('#scJApis #scJaList .nx-sc-jaapi', { timeout: 15000 });
-    const jaSeq = await page.$$eval('#scJaSeq .nx-sc-jaq', (a) => a.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    const jaSeq = await page.$$eval('#scJaSeq .nx-sc-jaq', (a) => a.map((x) => ({ t: (x.querySelector('.nx-sc-jaqmain') || x).textContent.replace(/\s+/g, ' ').trim(),
+      ok: !!x.querySelector('.nx-sc-jast--ok'), tick: ((x.querySelector('.nx-sc-jasti') || {}).textContent || '').trim(),
+      params: x.querySelectorAll('.nx-sc-japaram').length, called: !!x.querySelector('.nx-sc-jacall') })));
     const jaList = await page.$$eval('#scJaList .nx-sc-jaapi', (a) => a.map((x) => ({ key: x.getAttribute('data-key'), t: x.textContent.replace(/\s+/g, ' ').trim(), add: !!x.querySelector('[data-act="jAdd"]') })));
     T.check('the APIs icon: a dialog — page 2 of the flow, Order, its path; its calls in this scenario in the order they run (getOrderById, step 2, passed)',
       /Page 2 of the journey/.test(await text(page, '#scJApis .nx-kicker')) && (await text(page, '#scJaTitle')) === 'Order' && /shop\/orders\/order-detail/.test(await text(page, '#scJApis .nx-sub'))
-      && jaSeq.length === 1 && /^1 GET .*shopApi\/getOrderById.*Step 2$/.test(jaSeq[0]) && /passed/.test(jaSeq[0]), jaSeq.join(' | '));
+      && jaSeq.length === 1 && /^1 GET .*shopApi\/getOrderById.*Step 2/.test(jaSeq[0].t) && /passed/.test(jaSeq[0].t), JSON.stringify(jaSeq));
+    T.check('…each ran API shows its run status as a tick (✓), and the real call it made is shown under the row',
+      jaSeq[0].ok && jaSeq[0].tick === '✓' && jaSeq[0].called, JSON.stringify(jaSeq));
     T.check('…and every API of the page in the order the page makes them, each marked with its step here (none to add)',
       jaList.length === 1 && jaList[0].key === 'shopApi/getOrderById' && /Step 2$/.test(jaList[0].t) && !jaList[0].add && /Every API of the page \(1\)/.test(await text(page, '#scJApis')), JSON.stringify(jaList));
     T.check('…with Open in a tab (a linked page)', !!(await page.$('#scJaTab')));

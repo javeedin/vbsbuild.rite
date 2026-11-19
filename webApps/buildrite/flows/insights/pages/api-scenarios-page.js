@@ -350,9 +350,14 @@ define(['resources/js/shellBus', 'resources/js/scenarioClient', 'resources/js/sc
         if ((st.page || sc.page) !== ja.page) return;
         const r = res[st.id];
         const m = st.report ? 'REPORT' : ((st.api && st.api.method) || (st.writes ? 'POST' : 'GET'));
+        // the values this step sends (report P_NAME = value, or a REST call's name = value); the run shows what it was really called with
+        const params = Object.keys(st.params || {}).map((k) => ({ k, v: String(st.params[k]) }));
         out.push({ id: st.id, n: String(i + 1), seq: String(out.length + 1), name: st.name, call: st.report ? 'report ' + st.report.path : st.endpoint, method: m, mclass: m.toLowerCase(),
           writes: !!st.writes, lov: st.lov ? st.lov.field : '', state: r ? (r.state === 'skip' ? 'skip' : r.state === 'fail' ? 'bad' : 'ok') : '',
-          stateText: r ? (r.state === 'skip' ? 'skipped' : r.state === 'fail' ? '✗ ' + (r.status || 'failed') : '✓ passed' + (r.status ? ' · ' + r.status : '')) : 'not run' });
+          ran: !!r, icon: r ? (r.state === 'skip' ? '–' : r.state === 'fail' ? '✗' : '✓') : '',
+          params, reqUrl: r && r.request ? ((r.request.method || '') + ' ' + (r.request.url || '')).trim() : '',
+          facts: r ? [r.status, r.ms != null ? r.ms + ' ms' : '', r.rows != null ? r.rows + ' row(s)' : ''].filter(Boolean).join(' · ') : '',
+          stateText: r ? (r.state === 'skip' ? 'skipped' : r.state === 'fail' ? (r.status ? 'failed · ' + r.status : 'failed') : 'passed' + (r.status ? ' · ' + r.status : '')) : 'not run' });
       });
       return out;
     }

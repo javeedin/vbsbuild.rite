@@ -524,12 +524,14 @@ button.nx-fsu-kpi:hover { border-color: #9db6d8; }
 .nx-sc-punlink:hover { color: #b42318; }
 .nx-sc-step--flash { animation: nx-sc-flash 1.6s ease-out; }
 @keyframes nx-sc-flash { 0% { box-shadow: 0 0 0 3px #2e6fd8; } 100% { box-shadow: 0 0 0 0 transparent; } }
-.nx-sc-jadlg { width: min(900px, 100%); max-height: 88vh; display: flex; flex-direction: column; }
+.nx-sc-jadlg { width: min(1140px, 100%); max-height: 88vh; display: flex; flex-direction: column; }
 .nx-sc-jadlg #scJaTab { margin-left: auto; margin-right: 8px; align-self: center; }
 .nx-sc-jabody { overflow: auto; }
 .nx-sc-jah { font-size: 13px; margin: 6px 0 8px; color: var(--nx-ink, #1d2b36); }
 .nx-sc-jaseq { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 4px; }
-.nx-sc-jaq, .nx-sc-jaapi { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--nx-line, #e3e8ee); border-radius: 8px; flex-wrap: wrap; }
+.nx-sc-jaapi { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--nx-line, #e3e8ee); border-radius: 8px; flex-wrap: wrap; }
+.nx-sc-jaq { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 6px 8px; border: 1px solid var(--nx-line, #e3e8ee); border-radius: 8px; }
+.nx-sc-jaqmain { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .nx-sc-jaq--ok { border-left: 3px solid #2f9e5b; }
 .nx-sc-jaq--bad { border-left: 3px solid #c0392b; }
 .nx-sc-jaq--skip { border-left: 3px solid #9aa9b8; }
@@ -537,6 +539,21 @@ button.nx-fsu-kpi:hover { border-color: #9db6d8; }
 .nx-sc-janame { display: grid; gap: 1px; flex: 1 1 280px; min-width: 0; }
 .nx-sc-janame code { font-size: 11.5px; overflow-wrap: anywhere; color: var(--nx-muted, #4a5865); }
 .nx-sc-jastate { font-size: 12px; color: var(--nx-muted, #4a5865); white-space: nowrap; }
+/* the run status pill in the APIs dialog: a clear tick / cross / dash and the result */
+.nx-sc-jast { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; white-space: nowrap; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--nx-line, #e3e8ee); background: var(--nx-head, #eef2f6); color: var(--nx-muted, #4a5865); }
+.nx-sc-jasti { font-size: 12.5px; line-height: 1; }
+.nx-sc-jast--ok { background: #e7f5ec; border-color: #bfe3cc; color: #1f7a45; }
+.nx-sc-jast--bad { background: #fdecea; border-color: #f3c6bf; color: #b23121; }
+.nx-sc-jast--skip { background: #eef2f6; border-color: #dbe2ea; color: #6a7684; }
+.nx-sc-jast--none { background: transparent; border-style: dashed; }
+/* the parameters each API sent, and the real call made, shown under the row */
+.nx-sc-jadetail { display: grid; gap: 5px; padding: 6px 8px 2px 30px; }
+.nx-sc-japarams { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+.nx-sc-japlabel { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--nx-muted, #4a5865); margin-right: 2px; }
+.nx-sc-japaram { font-size: 11.5px; padding: 2px 8px; border-radius: 6px; background: var(--nx-head, #eef2f6); border: 1px solid var(--nx-line, #e3e8ee); overflow-wrap: anywhere; }
+.nx-sc-japaram b { color: var(--nx-ink, #1b2733); font-weight: 700; }
+.nx-sc-jacall { font-size: 11.5px; color: var(--nx-muted, #4a5865); overflow-wrap: anywhere; }
+.nx-sc-jacall code { font-size: 11px; overflow-wrap: anywhere; }
 .nx-sc-jalist { display: grid; gap: 4px; }
 .nx-sc-jaapi--in { background: #f3fbf5; border-color: #b7e0c4; }
 .nx-sc-jain { font-size: 12px; font-weight: 600; color: #1d5b33; white-space: nowrap; }
