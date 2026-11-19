@@ -55,6 +55,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     T.section('build one');
     await page.click('#pfNew');
     await page.waitForSelector('#pf-name', { timeout: 10000 });
+    await settle(page, 200);
     T.check('the editor: one page row, labelled Start', (await page.$$('#pfEditor .nx-pf-prow')).length === 1 && /Start/i.test(await text('#pfEditor .nx-pf-num')));
     await page.fill('#pf-name', 'Equipment rental');
     await page.fill('#pf-area', 'Rentals');
@@ -118,7 +119,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await page.waitForSelector('#pfPreview #pfDocFrame', { timeout: 10000 });
     await page.waitForFunction(() => { const f = document.getElementById('pfDocFrame'); return f && /class="cover"/.test(f.getAttribute('srcdoc') || ''); }, null, { timeout: 10000 });
     const doc = await page.evaluate(() => { const f = document.getElementById('pfDocFrame'); return f ? f.getAttribute('srcdoc') : ''; });
-    T.check('the editor hides and the preview shows the card document (cover, numbered cards, Start/End)', !(await page.$('#pf-name')) && /class="cover"/.test(doc) && /class="cards"/.test(doc) && (doc.match(/class="card"/g) || []).length === 3 && /class="badge start"/.test(doc) && /class="tag start">Start/.test(doc) && /class="tag end">End/.test(doc) && /Browse items/.test(doc) && /Checkout/.test(doc));
+    T.check('the preview keeps the real name and description (not "Untitled"), with the card document', !(await page.$('#pf-name')) && /class="cover"/.test(doc) && />Equipment rental</.test(doc) && !/Untitled process flow/.test(doc) && /rents an item/.test(doc) && /class="cards"/.test(doc) && (doc.match(/class="card"/g) || []).length === 3 && /class="badge start"/.test(doc) && /class="tag start">Start/.test(doc) && /class="tag end">End/.test(doc) && /Browse items/.test(doc) && /Checkout/.test(doc));
     T.check('…each card embeds the page\'s screenshot and lists its APIs', /class="shot"/.test(doc) && /data:image\//.test(doc) && /class="apis"/.test(doc) && /orders/i.test(doc), doc.slice(0, 60));
     await page.click('#pfPdf');
     await page.waitForFunction(() => !/Saving…/.test((document.getElementById('pfPdf') || {}).textContent || ''), null, { timeout: 10000 });

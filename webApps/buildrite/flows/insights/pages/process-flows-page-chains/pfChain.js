@@ -39,7 +39,9 @@ define([
   // The flow being edited (pages are authoritative here, not in the DOM).
   let MODEL = null;
 
-  /** The editor as it is on screen → a flow object: the top fields from the DOM, the pages from MODEL (matched to the catalog). */
+  // a top field: the live input when the form is on screen (edit view), else MODEL's value (preview, where the form is gone)
+  const top = (id, fallback) => (byId(id) ? val(id) : String(fallback || ''));
+  /** The editor as it is → a flow object: the top fields (from the form, or MODEL in preview), the pages from MODEL. */
   function readEditor(v) {
     const f = MODEL || v.flow || {};
     const pagesByLabel = {};
@@ -51,8 +53,8 @@ define([
       if (p.shot && p.shot.data) out.shot = p.shot;
       return out;
     });
-    return Object.assign({}, f, { name: val('pf-name'), area: val('pf-area'), owner: val('pf-owner'),
-      status: val('pf-status') || f.status || 'draft', description: val('pf-desc'), pages });
+    return Object.assign({}, f, { name: top('pf-name', f.name), area: top('pf-area', f.area), owner: top('pf-owner', f.owner),
+      status: (byId('pf-status') ? val('pf-status') : '') || f.status || 'draft', description: top('pf-desc', f.description), pages });
   }
   /** Read the page rows' inputs from the DOM into MODEL (name / note, and the matched catalog page). pedit keeps MODEL
    *  current on every keystroke, but this is called before any structural change or save so MODEL always matches what is
@@ -69,6 +71,12 @@ define([
       const nt = row.querySelector('.nx-pf-pnote');
       if (nt) p.note = String(nt.value || '');
     });
+    // the top fields too (only while the form is on screen), so Preview / PDF read them from MODEL when it is hidden
+    if (byId('pf-name')) MODEL.name = val('pf-name');
+    if (byId('pf-area')) MODEL.area = val('pf-area');
+    if (byId('pf-owner')) MODEL.owner = val('pf-owner');
+    if (byId('pf-status')) MODEL.status = val('pf-status') || MODEL.status || 'draft';
+    if (byId('pf-desc')) MODEL.description = val('pf-desc');
   }
   const dirty = (v) => MODEL && v.saved && JSON.stringify(readEditor(v)) !== JSON.stringify(v.saved);
   /** After a re-render, force each page row's inputs to MODEL (oj reuses loop nodes, so a reused node keeps its old value). */
@@ -288,9 +296,9 @@ define([
       // ── the document: Edit / Preview (the card document, shown inline and exported) ──
       if (op === 'view') {
         const to = String(key) === 'preview' ? 'preview' : 'edit';
-        v.view = to;
-        if (to !== 'preview') return;
-        foldRows(v);
+        if (to !== 'preview') { v.view = 'edit'; return; }
+        foldRows(v);                        // read the form (still on screen) into MODEL
+        v.view = 'preview';                 // now the form is hidden; readEditor falls back to MODEL
         const f = await withApisAsync(readEditor(v));
         const r = await PC.document(f, v.appLabel);
         if (!r.ok) { say(false, (r.body && r.body.error) || 'The document could not be made.'); v.view = 'edit'; return; }
