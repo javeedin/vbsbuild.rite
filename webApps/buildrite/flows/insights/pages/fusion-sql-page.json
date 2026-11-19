@@ -30,6 +30,8 @@
     "callOpen": { "type": "number", "defaultValue": -1 },
     "setups": { "type": "any", "defaultValue": { "loading": false, "error": "", "pod": "", "modules": [], "tasks": [], "totals": {}, "starterMissing": 0, "module": "", "filter": "all", "q": "", "busy": {}, "run": null, "stop": false },
       "description": "Fusion Setups: the checklist of the pod in use (lib/fusionSetups.js list), the module, filter and search chosen, the checks running." },
+    "connInfo": { "type": "any", "defaultValue": { "runner": null, "ai": null, "aiTest": null, "aiBusy": false, "cache": null, "podBusy": "" },
+      "description": "Connection's cards: the runner settings of the pod in use being edited, the AI chosen for SQL (AI settings) and its test, the schema cache, the pod being tested." },
     "setupDlg": { "type": "any", "defaultValue": null, "description": "A setup task being added or changed: { code, module, name, fsm, description, sql, minRows, mandatory, busy, test }." },
     "setupData": { "type": "any", "defaultValue": null, "description": "The records behind a task: { task, busy, res, view, grid }." }
   },

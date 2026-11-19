@@ -1378,6 +1378,7 @@ function createDevServer(o) {
             if (pathname === '/__fsql/calls' && !post) return fq.calls(false);
             if (pathname === '/__fsql/calls/clear' && post) return fq.calls(true);
             if (pathname === '/__fsql/schema/clear' && post) return fq.clearCache(b.pod);
+            if (pathname === '/__fsql/schema/cache' && !post) return fq.cacheInfo(get('pod'));
             if (pathname === '/__fsql/queries' && !post) return fq.queries();
             if (pathname === '/__fsql/queries/save' && post) return fq.saveQuery(Object.assign({}, b, { by: who() }));
             if (pathname === '/__fsql/queries/remove' && post) return fq.removeQuery(b.id);

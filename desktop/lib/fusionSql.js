@@ -18,13 +18,14 @@
  *     appLogin   () → { user, password } | null: your app's login (File → Sign in for your app…), for pods set to use it
  *     appPod     () → 'https://….oraclecloud.com' | '': the pod your workspace's app calls, suggested for a new pod
  *
- *   settings()                       { pods (never a password), active, suggest: { url, appUser }, defaults }
+ *   settings()                       { pods (never a password; each with its last test), active, suggest: { url, appUser }, defaults, runnerSql }
  *   savePod(p) / removePod(id) / setActive(id)
  *   execute({ sql, rowLimit, pod, check, timeoutMs })   { ok, rows, columns, rowCount, capped, ms, warning } | { ok: false, error, raw, decoded }
  *   test(pod)                        SELECT 1 AS n FROM dual → { ok, ms, user, origin, error, hint }
  *   deploy(pod)                      the runner's folder, data model and report through CatalogService, then the test → { ok, steps, error, raw }
  *   calls(clear)                     the last 30 SOAP calls, passwords as ***
  *   owners / objects / search / detail / clearCache   the schema browser (cached per pod until Refresh)
+ *   cacheInfo(pod)                   what the schema cache of a pod holds: { owners, lists, details, bytes, at }
  *   queries() / saveQuery(q) / removeQuery(id) / importQueries(list) / ranQuery(id)   saved queries, on this PC
  *   ask({ question, history, editorSql, pod, askId }, chat)   Ask AI (below) → { ok, text, sql, checked, checkError, steps }
  *   progress(askId)                  the steps of an Ask AI still running
@@ -382,7 +383,8 @@ function open(opts) {
     return { id: x.id, name: x.name, url: x.url, login: x.login === 'own' ? 'own' : 'app', username: x.login === 'own' ? str(x.username) : (app ? app.user : ''),
       hasPassword: x.login === 'own' ? !!(x.password || memPw[x.id]) : !!app, passwordKept: x.login === 'own' ? (x.password ? 'keychain' : memPw[x.id] ? 'this run' : 'none') : 'app',
       reportPath: x.reportPath, dataModelPath: x.dataModelPath, folderPath: x.folderPath, dataSource: x.dataSource, rowLimit: x.rowLimit, timeoutMs: x.timeoutMs,
-      active: x.id === active, deployedAt: str(x.deployedAt), testedAt: str(x.testedAt), testOk: x.testOk === true };
+      active: x.id === active, deployedAt: str(x.deployedAt), testedAt: str(x.testedAt), testOk: x.testOk === true, testMs: Number(x.testMs) || 0, testUser: str(x.testUser),
+      testError: str(x.testError) };
   }
   function podOf(id) {
     const d = read();
@@ -400,7 +402,7 @@ function open(opts) {
     const active = d.active && d.pods.some((p) => p.id === d.active) ? d.active : (d.pods[0] || {}).id || '';
     const app = appLogin();
     return { ok: true, active, pods: d.pods.map((p) => publicPod(p, active)), suggest: { url: appPod(), appUser: app ? app.user : '' }, defaults: Object.assign({}, DEFAULTS),
-      keychain: !!o.encrypt };
+      keychain: !!o.encrypt, runnerSql: RUNNER_SQL };
   }
   function savePod(input) {
     const b = input || {};
@@ -544,7 +546,8 @@ function open(opts) {
     if (!rec) return { ok: false, error: 'Add a Fusion pod first.' };
     const r = await execute({ sql: 'SELECT 1 AS n FROM dual', rowLimit: 1, pod: rec.id });
     const good = r.ok && r.rowCount === 1 && String(r.rows[0].N) === '1';
-    markPod(rec.id, { testedAt: now().toISOString(), testOk: good });
+    markPod(rec.id, { testedAt: now().toISOString(), testOk: good, testMs: r.ms || 0, testUser: str(r.user),
+      testError: good ? '' : cut(str(r.ok ? 'The runner answered, but not with N = 1.' : r.error).split('\n')[0], 300) });
     if (good) return { ok: true, ms: r.ms, user: r.user, pod: r.pod, origin: rec.url };
     return { ok: false, ms: r.ms, user: r.user, error: r.ok ? 'The runner answered, but not with N = 1: is Report path the DBMS_XMLGEN runner?' : r.error, needsLogin: r.needsLogin, raw: r.raw, decoded: r.decoded };
   }
@@ -690,6 +693,20 @@ function open(opts) {
     out.at = now().toISOString();
     cacheSet(p, key, out);
     return Object.assign({ ok: true, cached: false }, out);
+  }
+  /** What the schema cache of a pod holds (Connection → Schema cache). */
+  function cacheInfo(id) {
+    const rec = podOf(id);
+    if (!rec) return { ok: false, error: 'There is no such pod.' };
+    const p = full(rec);
+    const f = cacheFile(p);
+    let st = null;
+    try { st = f ? fs.statSync(f) : null; } catch (e) { st = null; }
+    if (!st) return { ok: true, pod: rec.name, owners: 0, lists: 0, details: 0, bytes: 0, at: '' };
+    const c = cacheRead(p);
+    const keys = Object.keys(c);
+    return { ok: true, pod: rec.name, owners: (c.owners || []).length, lists: keys.filter((k) => k.indexOf('schema.') === 0).length,
+      details: keys.filter((k) => k.indexOf('detail.') === 0).length, bytes: st.size, at: st.mtime.toISOString() };
   }
   function clearCache(id) {
     const rec = podOf(id);
@@ -897,7 +914,7 @@ function open(opts) {
   }
 
   return { settings, savePod, removePod, setActive, execute, test, deploy, calls: (clear) => { if (clear) callLog.length = 0; return { ok: true, calls: callLog.slice() }; },
-    owners, objects, search, detail, clearCache, queries, saveQuery, removeQuery, ranQuery, importQueries, ask, progress, KINDS };
+    owners, objects, search, detail, clearCache, cacheInfo, queries, saveQuery, removeQuery, ranQuery, importQueries, ask, progress, KINDS };
 }
 
 module.exports = { open, validate, capSql, checkSql, runReportEnvelope, catalogEnvelope, readSoap, parseRows, parseCsv, coerce, columnsOf, diagnose,

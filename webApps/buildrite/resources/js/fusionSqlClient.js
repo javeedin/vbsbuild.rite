@@ -31,6 +31,7 @@ define([], function () {
     search: function (pod, owner, kind, q) { return call('schema/search?' + qs({ pod: pod, owner: owner, kind: kind, q: q })); },
     detail: function (pod, owner, kind, name, refresh) { return call('schema/detail?' + qs({ pod: pod, owner: owner, kind: kind, name: name, refresh: refresh ? 1 : '' })); },
     clearCache: function (pod) { return call('schema/clear', { pod: pod }); },
+    cacheInfo: function (pod) { return call('schema/cache?' + qs({ pod: pod })); },
     queries: function () { return call('queries'); },
     saveQuery: function (q) { return call('queries/save', q); },
     removeQuery: function (id) { return call('queries/remove', { id: id }); },

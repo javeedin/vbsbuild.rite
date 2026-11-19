@@ -103,6 +103,54 @@ define(['resources/js/exportKit', 'resources/js/fusionSqlKit', 'resources/js/fus
       var icon = { hints: '🧭', ai: '✨', lookup: '🔎', check: '🧪', checked: s.ok ? '✓' : '✗' }[s.kind] || '•';
       return icon + ' ' + s.label;
     }
+    // Connection: the five tiles on top, a pod's test pill, the runner settings shown, the AI chosen for SQL, the cache
+    connStats(st, ci) {
+      var p = ((st && st.pods) || []).filter(function (x) { return x.active; })[0];
+      var info = ci || {};
+      var ai = info.ai;
+      var host = function (u) { try { return new URL(u).host; } catch (e) { return u || ''; } };
+      if (!p) {
+        return [{ key: 'pod', icon: 'oj-ux-ico-database', label: 'Pod', value: 'No pod yet', sub: 'Add one below', state: 'warn' },
+          { key: 'instance', icon: 'oj-ux-ico-layers', label: 'Instance', value: '—', sub: '', state: '' },
+          { key: 'user', icon: 'oj-ux-ico-lock', label: 'Runs as', value: '—', sub: '', state: '' },
+          { key: 'runner', icon: 'oj-ux-ico-file-code', label: 'Runner report', value: (st && st.defaults && st.defaults.reportPath) || '', sub: 'Not deployed yet', state: '' },
+          { key: 'ai', icon: 'oj-ux-ico-chat', label: 'AI assistant', value: this.aiSqlText(ai), sub: '', state: this.aiSqlReady(ai) ? 'ok' : 'warn' }];
+      }
+      var appPod = st.suggest && st.suggest.url && st.suggest.url === p.url;
+      var tested = p.testedAt ? (p.testOk ? 'Answers' + (p.testMs ? ' in ' + p.testMs + ' ms' : '') : 'Test failed') + ' · ' + ago(p.testedAt) : 'Not tested yet';
+      return [
+        { key: 'pod', icon: 'oj-ux-ico-database', label: 'Pod', value: host(p.url), sub: p.url.indexOf('https:') === 0 ? 'https' : 'http', state: 'ok' },
+        { key: 'instance', icon: 'oj-ux-ico-layers', label: 'Instance', value: p.name, sub: (appPod ? 'Your app\'s pod · ' : '') + st.pods.length + (st.pods.length === 1 ? ' pod' : ' pods') + ' on this PC', state: 'ok' },
+        { key: 'user', icon: 'oj-ux-ico-lock', label: 'Runs as', value: p.username || 'No login yet', sub: p.login === 'app' ? 'Your app\'s login' : (p.hasPassword ? 'Its own user · ' + (p.passwordKept === 'keychain' ? 'keychain' : 'this run only') : 'No password on this PC'), state: p.username && p.hasPassword ? 'ok' : 'warn' },
+        { key: 'runner', icon: 'oj-ux-ico-file-code', label: 'Runner report', value: p.reportPath, sub: tested, state: p.testedAt ? (p.testOk ? 'ok' : 'bad') : '' },
+        { key: 'ai', icon: 'oj-ux-ico-chat', label: 'AI assistant', value: this.aiSqlText(ai), sub: ai ? (this.aiSqlReady(ai) ? 'For Ask AI' : 'Set it up in AI settings') : '', state: this.aiSqlReady(ai) ? 'ok' : 'warn' }];
+    }
+    podState(p, busy) {
+      if (busy === p.id) return { cls: 'busy', text: 'Testing…', title: '' };
+      if (!p.testedAt) return { cls: 'none', text: 'Not tested', title: 'Press Test' };
+      return p.testOk ? { cls: 'ok', text: 'Connected' + (p.testMs ? ' · ' + p.testMs + ' ms' : ''), title: 'Tested ' + ago(p.testedAt) + (p.testUser ? ' as ' + p.testUser : '') }
+        : { cls: 'bad', text: 'Failed', title: (p.testError || 'The test failed') + ' · ' + ago(p.testedAt) };
+    }
+    /** The runner settings shown in Deploy's manual steps: those being edited, else the pod's, else the defaults. */
+    runnerOf(ci, st) {
+      var p = ((st && st.pods) || []).filter(function (x) { return x.active; })[0];
+      return (ci && ci.runner) || p || (st && st.defaults) || {};
+    }
+    aiSqlText(ai) {
+      if (!ai || !ai.providers) return 'Not set up yet';
+      var id = (ai.uses && ai.uses.sql) || ai.active;
+      var p = id ? ai.providers[id] : null;
+      var label = ((ai.catalog || []).filter(function (c) { return c.id === id; })[0] || {}).label || id;
+      return p ? label + (p.model ? ' · ' + p.model : '') : 'Not set up yet';
+    }
+    aiSqlReady(ai) { var id = ai && ((ai.uses && ai.uses.sql) || ai.active); return !!(id && ai.providers && ai.providers[id] && ai.providers[id].ready !== false); }
+    cacheRows(c) {
+      if (!c) return [{ k: 'Pod', v: '—' }];
+      var size = c.bytes >= 1048576 ? (c.bytes / 1048576).toFixed(1) + ' MB' : c.bytes >= 1024 ? Math.round(c.bytes / 1024) + ' KB' : c.bytes + ' bytes';
+      return [{ k: 'Pod', v: c.pod || '' }, { k: 'Owners', v: String(c.owners) }, { k: 'Object lists', v: String(c.lists) }, { k: 'Column sets', v: String(c.details) },
+        { k: 'Size', v: c.bytes ? size : 'empty' }, { k: 'Updated', v: c.at ? ago(c.at) : '—' }];
+    }
+
     // Fusion Setups
     setupFilters() { return SK.FILTERS; }
     setupRows(su) { return SK.taskRows(su); }

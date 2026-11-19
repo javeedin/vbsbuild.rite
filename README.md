@@ -486,6 +486,16 @@ app's Fusion SQL module.
 - **Pods.** Add one or more (PROD, TEST…) under **Connection**. For each, choose how to sign in: **your app's login**
   (File → Sign in for your app…), or **a Fusion user of its own**. The password is kept in the PC's keychain and is
   never sent back to the screen. The address of the pod your workspace's app calls is offered for you.
+- **Connection** shows five tiles at a glance: **Pod**, **Instance**, **Runs as**, **Runner report** (with its last
+  test) and **AI assistant**. **Test connection** checks the pod in use and **API Inspector** opens the last SOAP calls.
+  Below are cards for:
+  - **Pods**: each pod with a **Test** button and a pill showing Connected (with the time it took) or Failed (with the
+    pod's error under it).
+  - **Runner settings** of the pod in use: catalog folder, data model, report path, data source, default rows and time
+    limit. **Save settings** keeps the password.
+  - **Deploy the query runner**, with the manual setup steps and the runner's SQL to copy.
+  - **AI assistant**: which AI Ask AI uses (the one chosen for SQL in AI settings), with **Test**.
+  - **Schema cache**: owners, object lists, column sets and size, with **Clear cache**.
 - **Deploy the runner.** If the pod has no runner yet, one click puts the folder, data model and report in the BI
   catalog (`/Custom/BuildRite/…`, through BI Publisher's CatalogService; needs BI Author once) and tests it. A pod that
   already has a DBMS_XMLGEN runner just needs its **Report path** set.
@@ -512,7 +522,7 @@ app's Fusion SQL module.
   the pod, or **Ask AI to write it** (the AI looks the tables up and Build.Rite checks its SQL on the pod). Changing a
   task's SQL drops its old result. Results are kept on this PC **per pod**, so PROD and TEST each have their own.
   The checklist exports to Excel or PDF.
-- **API calls** shows the last 30 SOAP calls as sent and answered, with passwords as `***`.
+- **API Inspector** shows the last 30 SOAP calls as sent and answered, with passwords as `***`.
 
 Not ported yet from the WMS module: Flows, Watchdogs, Knowledge, Format Results, Datasets and Pipelines (they need the
 WMS app's APEX tables and services).

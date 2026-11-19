@@ -24,7 +24,7 @@ define(['resources/js/fusionSqlClient', 'resources/js/fusionSqlKit', 'resources/
     if (r.body && r.body.unavailable) { v.available = false; return null; }
     v.available = true;
     var b = r.body || {};
-    v.st = { pods: b.pods || [], active: b.active || '', suggest: b.suggest || {}, defaults: b.defaults || {}, keychain: !!b.keychain };
+    v.st = { pods: b.pods || [], active: b.active || '', suggest: b.suggest || {}, defaults: b.defaults || {}, keychain: !!b.keychain, runnerSql: b.runnerSql || '' };
     var p = activePod(v);
     if (p && !v.rowLimitSet) v.rowLimit = p.rowLimit || 100;
     return v.st;
