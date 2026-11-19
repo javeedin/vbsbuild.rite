@@ -42,6 +42,18 @@
    "what": "approved",
    "by": "rite.user",
    "detail": "in Build.Rite"
+  },
+  {
+   "at": "2026-11-19T10:29:02.196Z",
+   "what": "agent started",
+   "by": "rite.user",
+   "detail": "branch fix/BR-EO15U"
+  },
+  {
+   "at": "2026-11-19T10:29:02.199Z",
+   "what": "agent failed",
+   "by": "agent",
+   "detail": "This change is for your workspace (Equiprite_Rebuild_v1 ▸ DEV): it is applied in its working folder, not on a branch pushed from here. Open the page in Application pages → Code fix to approve it. To send it to VB Studio: Apply to main, then Push, in its project's tab."
   }
  ],
  "comments": [],
@@ -62,7 +74,7 @@
   "notify": [],
   "aiWhy": ""
  },
- "updatedAt": "2026-11-19T10:28:53.511Z",
+ "updatedAt": "2026-11-19T10:29:02.199Z",
  "formatted": {
   "title": "Change Customer Dashboard title from 'Dashboard' to 'My Dashboard'",
   "summary": "On the Customer Dashboard page, the title currently reads 'Dashboard'. The request is to change it to 'My Dashboard'.",
@@ -101,5 +113,87 @@
    "at": "2026-11-19T10:28:53.511Z",
    "via": "app"
   }
+ },
+ "agentRun": {
+  "ok": true,
+  "running": false,
+  "done": true,
+  "okRun": false,
+  "error": "This change is for your workspace (Equiprite_Rebuild_v1 ▸ DEV): it is applied in its working folder, not on a branch pushed from here. Open the page in Application pages → Code fix to approve it. To send it to VB Studio: Apply to main, then Push, in its project's tab.",
+  "started": "2026-11-19T10:29:02.196Z",
+  "seconds": 0,
+  "log": [],
+  "steps": [
+   {
+    "key": "fetch",
+    "label": "Get the latest code",
+    "state": "pending",
+    "detail": "",
+    "seconds": 0
+   },
+   {
+    "key": "branch",
+    "label": "Make its own branch",
+    "state": "pending",
+    "detail": "",
+    "seconds": 0
+   },
+   {
+    "key": "check",
+    "label": "Check the change still fits the code",
+    "state": "pending",
+    "detail": "",
+    "seconds": 0
+   },
+   {
+    "key": "before",
+    "label": "Run the related tests, before the change",
+    "state": "pending",
+    "detail": "",
+    "seconds": 0
+   },
+   {
+    "key": "write",
+    "label": "Write the change",
+    "state": "pending",
+    "detail": "",
+    "seconds": 0
+   },
+   {
+    "key": "after",
+    "label": "Run the tests again, with the change",
+    "state": "pending",
+    "detail": "",
+    "seconds": 0
+   },
+   {
+    "key": "commit",
+    "label": "Commit it",
+    "state": "pending",
+    "detail": "",
+    "seconds": 0
+   },
+   {
+    "key": "push",
+    "label": "Push the branch",
+    "state": "pending",
+    "detail": "",
+    "seconds": 0
+   },
+   {
+    "key": "pr",
+    "label": "The pull request",
+    "state": "pending",
+    "detail": "",
+    "seconds": 0
+   }
+  ]
+ },
+ "lastError": "This change is for your workspace (Equiprite_Rebuild_v1 ▸ DEV): it is applied in its working folder, not on a branch pushed from here. Open the page in Application pages → Code fix to approve it. To send it to VB Studio: Apply to main, then Push, in its project's tab.",
+ "lastRun": {
+  "at": "2026-11-19T10:29:02.199Z",
+  "broke": false,
+  "stale": false,
+  "tests": null
  }
 }
