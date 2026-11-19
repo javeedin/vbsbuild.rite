@@ -9,7 +9,7 @@
  "title": "change the title from dashboard to   'My Dashboard'",
  "by": "rite.user",
  "at": "2026-11-19T10:26:42.786Z",
- "status": "new",
+ "status": "written",
  "images": [],
  "jira": null,
  "events": [
@@ -18,10 +18,17 @@
    "what": "logged",
    "by": "rite.user",
    "detail": "change the title from dashboard to   'My Dashboard'"
+  },
+  {
+   "at": "2026-11-19T10:26:46.902Z",
+   "what": "written up",
+   "by": "Claude (Anthropic)",
+   "detail": "Change Customer Dashboard title from 'Dashboard' to 'My Dashboard'"
   }
  ],
  "comments": [],
  "details": {
+  "ai": [],
   "severity": "critical",
   "priority": "p2",
   "environment": "DEV",
@@ -35,8 +42,21 @@
   "assignee": "",
   "dueDate": "",
   "notify": [],
-  "ai": [],
   "aiWhy": ""
  },
- "updatedAt": "2026-11-19T10:26:42.787Z"
+ "updatedAt": "2026-11-19T10:26:46.902Z",
+ "formatted": {
+  "title": "Change Customer Dashboard title from 'Dashboard' to 'My Dashboard'",
+  "summary": "On the Customer Dashboard page, the title currently reads 'Dashboard'. The request is to change it to 'My Dashboard'.",
+  "steps": [
+   "Open the Customer Dashboard page (vbredwoodapp/customer-portal/customer-dashboard)",
+   "View the page title"
+  ],
+  "expected": "The title should read 'My Dashboard'.",
+  "actual": "The title reads 'Dashboard'.",
+  "impact": "Minor labeling change on the Customer Dashboard page.",
+  "questions": [
+   "Does this apply to the page heading, browser tab title, or both?"
+  ]
+ }
 }
