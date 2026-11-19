@@ -1395,6 +1395,15 @@ button.nx-fsu-kpi:hover { border-color: #9db6d8; }
 .nx-pf-pill { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #eef1f4; color: #4a5865; }
 .nx-pf-pill--approved { background: #e3f4e8; color: #1f6b37; } .nx-pf-pill--review { background: #e5eefc; color: #1d4f9c; } .nx-pf-pill--retired { background: #f1f1f4; color: #7a7a86; }
 .nx-pf-editbar { display: flex; gap: 8px; align-items: center; margin: 0 0 12px; }
+/* Edit | Preview segmented toggle */
+.nx-pf-viewtog { display: inline-flex; border: 1px solid var(--nx-line, #d3dce6); border-radius: 8px; overflow: hidden; background: var(--nx-surface, #fff); }
+.nx-pf-vtab { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 600; color: var(--nx-muted, #4a5865); padding: 6px 14px; cursor: pointer; }
+.nx-pf-vtab + .nx-pf-vtab { border-left: 1px solid var(--nx-line, #e3e8ee); }
+.nx-pf-vtab--on { background: #2e6fd8; color: #fff; }
+/* the inline preview: the exported document in an iframe, with export buttons */
+.nx-pf-preview { display: grid; gap: 10px; }
+.nx-pf-prevbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nx-pf-prevframe { width: 100%; height: 72vh; border: 1px solid var(--nx-line, #e3e8ee); border-radius: 12px; background: #fff; box-shadow: 0 1px 3px rgba(16,32,64,.06); }
 /* master–detail: the header (form) on top, the pages below */
 .nx-pf-grid { display: grid; grid-template-columns: 1fr; gap: 12px; align-items: start; }
 .nx-pf-form { padding: 14px; display: grid; gap: 10px; }

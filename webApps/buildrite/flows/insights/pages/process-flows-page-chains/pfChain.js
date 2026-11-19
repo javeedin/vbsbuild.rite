@@ -133,7 +133,7 @@ define([
       if (op === 'search') { v.q = String(input || ''); await loadList(); return; }
       if (op === 'new') {
         MODEL = { id: '', name: '', description: '', area: '', owner: '', status: 'draft', pages: [newPage()] };
-        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {};
+        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.view = 'edit';
         render(v);
         setTimeout(() => { const el = byId('pf-name'); if (el) el.focus(); }, 80);
         return;
@@ -143,7 +143,7 @@ define([
         if (!r.ok) { say(false, (r.body && r.body.error) || 'It could not be opened.'); return; }
         MODEL = Object.assign({ pages: [] }, copy(r.body.flow));
         if (!MODEL.pages.length) MODEL.pages = [newPage()];
-        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {};
+        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.view = 'edit';
         render(v);
         return;
       }
@@ -161,7 +161,7 @@ define([
       if (op === 'back') {
         if (MODEL) foldRows(v);
         if (dirty(v) && !window.confirm('Leave without saving? Your changes to this process flow are lost.')) return;
-        MODEL = null; v.flow = null; v.saved = null; v.doc = null; v.ai = null; v.apisOpen = {};
+        MODEL = null; v.flow = null; v.saved = null; v.doc = null; v.ai = null; v.apisOpen = {}; v.view = 'edit'; v.view = 'edit';
         await loadList();
         return;
       }
@@ -285,17 +285,19 @@ define([
       const withApisAsync = async (f) => Object.assign({}, f, {
         pages: await Promise.all((f.pages || []).map(async (p) => Object.assign({}, p, { apis: p.page ? await apisForPage(v, p.page) : [] }))) });
 
-      // ── the document ──
-      if (op === 'generate') {
+      // ── the document: Edit / Preview (the card document, shown inline and exported) ──
+      if (op === 'view') {
+        const to = String(key) === 'preview' ? 'preview' : 'edit';
+        v.view = to;
+        if (to !== 'preview') return;
         foldRows(v);
         const f = await withApisAsync(readEditor(v));
         const r = await PC.document(f, v.appLabel);
-        if (!r.ok) { say(false, (r.body && r.body.error) || 'The document could not be made.'); return; }
+        if (!r.ok) { say(false, (r.body && r.body.error) || 'The document could not be made.'); v.view = 'edit'; return; }
         v.doc = { name: f.name, html: r.body.html };
         setTimeout(() => { const fr = byId('pfDocFrame'); if (fr) fr.srcdoc = r.body.html; }, 60);
         return;
       }
-      if (op === 'docClose') { v.doc = null; return; }
       if (op === 'print') { if (v.doc) exportKit.printDocument(v.doc.html); return; }
       if (op === 'html') {
         if (!v.doc) return;

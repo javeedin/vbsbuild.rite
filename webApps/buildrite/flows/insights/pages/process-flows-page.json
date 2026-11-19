@@ -11,6 +11,7 @@
     "pages": { "type": "any[]", "defaultValue": [], "description": "The app's page catalog, for the page-name list ({ id, label })." },
     "appLabel": { "type": "string", "defaultValue": "", "description": "The app the pages belong to, named on the document." },
     "busy": { "type": "string", "defaultValue": "", "description": "save | pdf | html | ai, while it runs." },
+    "view": { "type": "string", "defaultValue": "edit", "description": "The editor view: edit (the form + pages) or preview (the card document, exportable to PDF)." },
     "doc": { "type": "any", "defaultValue": null, "description": "The generated document to preview: { html }." },
     "ai": { "type": "any", "defaultValue": null, "description": "A description drafted by AI, to use or discard: { text, provider }." },
     "pageApis": { "type": "any", "defaultValue": {}, "description": "A page's APIs, cached by catalog page id: { loading, list: [{ method, name, path, writes }], error }." },

@@ -61,13 +61,16 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await page.fill('#pf-desc', 'A customer rents an item and returns it.');
     await page.fill(prow(0) + ' .nx-pf-pname', 'Order Workbench');
     await page.fill(prow(0) + ' .nx-pf-pnote', 'Browse items');
+    await settle(page, 120);
     await page.click('#pfAddPage');
     await page.waitForFunction(() => document.querySelectorAll('#pfEditor .nx-pf-prow').length === 2, null, { timeout: 5000 });
     await page.fill(prow(1) + ' .nx-pf-pname', 'Cart');
+    await settle(page, 120);
     await page.click('#pfAddPage');
     await page.waitForFunction(() => document.querySelectorAll('#pfEditor .nx-pf-prow').length === 3, null, { timeout: 5000 });
     await page.fill(prow(2) + ' .nx-pf-pname', 'Checkout');
     await page.fill(prow(2) + ' .nx-pf-pnote', 'Pay');
+    await settle(page, 120);
     T.check('three pages; the last is labelled End', (await page.$$('#pfEditor .nx-pf-prow')).length === 3 && /End/i.test(await text(prow(2) + ' .nx-pf-num')));
 
     T.section('reorder');
@@ -110,18 +113,19 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     const saved2 = store.get('PF-0001').flow;
     T.check('the screenshot is kept with the flow (a data: URL, source "page")', saved2.pages[0].shot && saved2.pages[0].shot.src === 'page' && /^data:image\//.test(saved2.pages[0].shot.data || ''), JSON.stringify(saved2.pages[0].shot && saved2.pages[0].shot.src));
 
-    T.section('the document');
-    await page.click('#pfGenerate');
-    await page.waitForSelector('#pfDocFrame', { timeout: 10000 });
-    await settle(page, 500);
+    T.section('the Preview — a card document, exported to PDF');
+    await page.click('#pfViewPreview');
+    await page.waitForSelector('#pfPreview #pfDocFrame', { timeout: 10000 });
+    await page.waitForFunction(() => { const f = document.getElementById('pfDocFrame'); return f && /class="cover"/.test(f.getAttribute('srcdoc') || ''); }, null, { timeout: 10000 });
     const doc = await page.evaluate(() => { const f = document.getElementById('pfDocFrame'); return f ? f.getAttribute('srcdoc') : ''; });
-    T.check('the document has the name, the flow strip (Start→End) and the numbered steps with notes', /Equipment rental/.test(doc) && /class="strip"/.test(doc) && /class="steps"/.test(doc) && /Browse items/.test(doc) && /class="st-tag">Start/.test(doc) && /Checkout/.test(doc));
-    T.check('…and it embeds each page\'s screenshot and lists its APIs', /class="st-shot"/.test(doc) && /data:image\//.test(doc) && /class="st-apis"/.test(doc) && /orders/i.test(doc), doc.slice(0, 60));
+    T.check('the editor hides and the preview shows the card document (cover, numbered cards, Start/End)', !(await page.$('#pf-name')) && /class="cover"/.test(doc) && /class="cards"/.test(doc) && (doc.match(/class="card"/g) || []).length === 3 && /class="badge start"/.test(doc) && /class="tag start">Start/.test(doc) && /class="tag end">End/.test(doc) && /Browse items/.test(doc) && /Checkout/.test(doc));
+    T.check('…each card embeds the page\'s screenshot and lists its APIs', /class="shot"/.test(doc) && /data:image\//.test(doc) && /class="apis"/.test(doc) && /orders/i.test(doc), doc.slice(0, 60));
     await page.click('#pfPdf');
     await page.waitForFunction(() => !/Saving…/.test((document.getElementById('pfPdf') || {}).textContent || ''), null, { timeout: 10000 });
     T.eq('no browser error from the PDF download', errs().join(' | ').slice(0, 300), '');
-    await page.click('#pfDoc .nx-iconbtn[data-op="docClose"]');
-    await page.waitForSelector('#pfDoc', { state: 'detached', timeout: 5000 });
+    await page.click('#pfViewEdit');
+    await page.waitForSelector('#pf-name', { timeout: 5000 });
+    T.check('Edit comes back to the form', (await page.inputValue('#pf-name')) === 'Equipment rental');
 
     T.section('draft the description with AI');
     await page.fill('#pf-desc', '');

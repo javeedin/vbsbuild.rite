@@ -43,12 +43,12 @@ const T = H.makeAsserter();
   const flow = s.get('PF-0001').flow;
   const html = P.renderDocument(flow, { app: 'Acme Rentals', date: '2026-11-19' });
   T.check('print-ready HTML with the name, code, area, status, application', html.startsWith('<!doctype html>') && /Equipment rental v2/.test(html) && /PF-0001/.test(html) && /Rentals/.test(html) && /In review/.test(html) && /Acme Rentals/.test(html));
+  T.check('a cover banner and a facts grid', /class="cover"/.test(html) && /class="facts"/.test(html) && /class="pill review"/.test(html));
   T.check('the description in paragraphs', /<p>A customer rents an item\.<\/p>/.test(html) && /<p>They return it later\.<\/p>/.test(html));
-  T.check('the flow strip: boxes with arrows, Start and End labels', /class="strip"/.test(html) && (html.match(/class="arr"/g) || []).length === 2 && /Start/.test(html) && /End/.test(html));
-  T.check('the numbered steps with their notes and the catalog page id', /class="steps"/.test(html) && /Browse items/.test(html) && /class="st-tag">Start/.test(html) && /class="st-tag end">End/.test(html) && /app\/orders\/checkout/.test(html));
+  T.check('the pages as a card timeline: numbered badges, Start / End tags, the catalog page id', /class="cards"/.test(html) && (html.match(/class="card"/g) || []).length === 3 && /class="badge start"/.test(html) && /class="tag start">Start/.test(html) && /class="tag end">End/.test(html) && /Browse items/.test(html) && /app\/orders\/checkout/.test(html));
   const danger = P.renderDocument({ name: '<script>x</script>', description: 'a & b <tag>', pages: [{ name: '<b>P</b>', note: '"q" & <i>' }] }, {});
   T.check('everything is escaped: no raw tag from the name, description or a page gets through', !/<script>x<\/script>/.test(danger) && !/<b>P<\/b>/.test(danger) && /&lt;script&gt;/.test(danger) && /a &amp; b &lt;tag&gt;/.test(danger));
-  T.check('no pages / no description: said, still valid HTML', /No pages yet\./.test(P.renderDocument({ name: 'Empty' }, {})) && /No description\./.test(P.renderDocument({ name: 'Empty' }, {})));
+  T.check('no pages / no description: said, still valid HTML', /No pages yet\./.test(P.renderDocument({ name: 'Empty' }, {})) && /No description yet\./.test(P.renderDocument({ name: 'Empty' }, {})));
 
   T.section('screenshots and APIs on a page');
   const img = 'data:image/png;base64,iVBORw0KGgo=';
@@ -63,7 +63,7 @@ const T = H.makeAsserter();
   const over = P.cleanFlow({ name: 'Big', pages: [{ name: 'A', shot: { src: 'pasted', data: 'data:image/png;base64,' + 'A'.repeat(7000000) } }] });
   T.check('an over-size screenshot is dropped (kept within the limit)', !over.pages[0].shot);
   const docS = P.renderDocument({ name: 'Doc', pages: [{ name: 'A', page: 'app/a', shot: { src: 'page', data: img }, apis: [{ method: 'GET', name: 'getThings', path: '/things', writes: true }] }] }, {});
-  T.check('the document embeds the screenshot and lists the page\'s APIs', /class="st-shot"/.test(docS) && docS.indexOf(img) !== -1 && /class="st-apis"/.test(docS) && /getThings/.test(docS) && /\/things/.test(docS) && /changes data/.test(docS));
+  T.check('the document embeds the screenshot and lists the page\'s APIs', /class="shot"/.test(docS) && docS.indexOf(img) !== -1 && /class="apis"/.test(docS) && /getThings/.test(docS) && /\/things/.test(docS) && /changes data/.test(docS));
 
   T.section('the AI prompt');
   const prompt = P.aiPrompt(flow);

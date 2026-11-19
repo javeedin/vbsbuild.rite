@@ -49,10 +49,27 @@
           <button type="button" class="nx-btn nx-btn--plain" id="pfBack" data-op="back" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-chevron-left" aria-hidden="true"></span>All process flows</button>
           <span class="nx-min-flex"></span>
           <oj-bind-if test="[[ !!$variables.flow.id ]]"><span class="nx-badge"><oj-bind-text value="[[ $variables.flow.id ]]"></oj-bind-text></span></oj-bind-if>
+          <div class="nx-pf-viewtog" role="tablist" aria-label="View">
+            <button type="button" role="tab" id="pfViewEdit" :class="[[ 'nx-pf-vtab' + ($variables.view !== 'preview' ? ' nx-pf-vtab--on' : '') ]]" :aria-selected="[[ $variables.view !== 'preview' ? 'true' : 'false' ]]" data-op="view" data-key="edit" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-edit" aria-hidden="true"></span>Edit</button>
+            <button type="button" role="tab" id="pfViewPreview" :class="[[ 'nx-pf-vtab' + ($variables.view === 'preview' ? ' nx-pf-vtab--on' : '') ]]" :aria-selected="[[ $variables.view === 'preview' ? 'true' : 'false' ]]" data-op="view" data-key="preview" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-document" aria-hidden="true"></span>Preview</button>
+          </div>
           <button type="button" class="nx-btn nx-btn--cta" id="pfSave" data-op="save" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]"><span class="oj-ux-ico-save" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'save' ? 'Saving…' : 'Save' ]]"></oj-bind-text></button>
-          <button type="button" class="nx-btn" id="pfGenerate" data-op="generate" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-file-text" aria-hidden="true"></span>Generate document</button>
         </div>
 
+        <oj-bind-if test="[[ $variables.view === 'preview' ]]">
+          <div class="nx-pf-preview" id="pfPreview">
+            <div class="nx-pf-prevbar">
+              <span class="nx-note">A clean, card-by-card document — exactly what the PDF looks like.</span>
+              <span class="nx-min-flex"></span>
+              <button type="button" class="nx-btn nx-btn--sm nx-btn--cta" id="pfPdf" data-op="pdf" on-click="[[ $listeners.onPf ]]" :disabled="[[ $variables.busy === 'pdf' ]]"><span class="oj-ux-ico-file-pdf" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'pdf' ? 'Saving…' : 'Download PDF' ]]"></oj-bind-text></button>
+              <button type="button" class="nx-btn nx-btn--sm" id="pfHtml" data-op="html" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span>HTML</button>
+              <button type="button" class="nx-btn nx-btn--sm" id="pfPrint" data-op="print" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-print" aria-hidden="true"></span>Print</button>
+            </div>
+            <iframe id="pfDocFrame" class="nx-pf-prevframe" title="Process flow document" sandbox=""></iframe>
+          </div>
+        </oj-bind-if>
+
+        <oj-bind-if test="[[ $variables.view !== 'preview' ]]">
         <div class="nx-pf-grid">
           <section class="nx-card nx-pf-form">
             <div class="nx-fsql-fields">
@@ -148,27 +165,8 @@
             <button type="button" class="nx-btn nx-btn--sm nx-pf-addpage" id="pfAddPage" data-op="addPage" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span>Add a page</button>
           </section>
         </div>
+        </oj-bind-if>
       </div>
     </oj-bind-if>
-  </oj-bind-if>
-
-  <!-- the generated document -->
-  <oj-bind-if test="[[ !!$variables.doc ]]">
-    <div class="nx-modal" id="pfDoc">
-      <button type="button" class="nx-modal-scrim" aria-label="Close" data-op="docClose" on-click="[[ $listeners.onPf ]]"></button>
-      <div class="nx-dialog nx-pf-docdlg" role="dialog" aria-modal="true" aria-label="Process flow document">
-        <div class="nx-dialog-head"><div class="nx-dialog-titles"><div class="nx-kicker">Process flow document</div><h2 class="nx-dialog-title"><oj-bind-text value="[[ $variables.doc.name ]]"></oj-bind-text></h2></div>
-          <div class="nx-pf-docacts">
-            <button type="button" class="nx-btn nx-btn--sm nx-btn--cta" id="pfPdf" data-op="pdf" on-click="[[ $listeners.onPf ]]" :disabled="[[ $variables.busy === 'pdf' ]]"><span class="oj-ux-ico-file-pdf" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'pdf' ? 'Saving…' : 'Download PDF' ]]"></oj-bind-text></button>
-            <button type="button" class="nx-btn nx-btn--sm" id="pfHtml" data-op="html" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span>HTML</button>
-            <button type="button" class="nx-btn nx-btn--sm" id="pfPrint" data-op="print" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-print" aria-hidden="true"></span>Print</button>
-            <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-op="docClose" on-click="[[ $listeners.onPf ]]" title="Close"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
-          </div>
-        </div>
-        <div class="nx-dialog-body nx-pf-docbody">
-          <iframe id="pfDocFrame" class="nx-pf-docframe" title="Document preview" sandbox=""></iframe>
-        </div>
-      </div>
-    </div>
   </oj-bind-if>
 </div>

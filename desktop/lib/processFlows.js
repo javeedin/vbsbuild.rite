@@ -72,77 +72,88 @@ function cleanFlow(flow, by, old, opts) {
 }
 
 // ── The document ──────────────────────────────────────────────────────────────────────────────────────────────────
+// A modern, card-based process-flow document: a cover banner, a facts grid, the description, then the pages as a
+// vertical timeline of cards (a numbered badge + a connecting line, Start / End tags, screenshot and APIs per card).
 const CSS = `*{box-sizing:border-box}
-@page{size:A4;margin:16mm 14mm}
-body{font:11pt/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1d2b36;margin:0}
-h1{font-size:22pt;margin:0 0 2px}
-h2{font-size:14pt;margin:22px 0 8px;padding-bottom:4px;border-bottom:2px solid #2e6fd8;color:#13315c}
-.kick{font-size:9pt;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2e6fd8;margin-bottom:4px}
-.ctl{border-collapse:collapse;width:100%;margin:14px 0 4px;font-size:10pt}
-.ctl td{border:1px solid #dde3ea;padding:5px 9px;vertical-align:top}
-.ctl td.k{background:#f5f7fa;font-weight:600;width:150px;color:#4a5865}
-.desc p{margin:0 0 8px}
-.strip{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:6px 0 14px}
-.box{border:1.5px solid #2e6fd8;border-radius:8px;padding:5px 10px;font-size:9.5pt;font-weight:600;background:#f3f7fe;color:#13315c;max-width:200px}
-.box .lbl{display:block;font-size:7pt;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6b7886}
-.arr{color:#2e6fd8;font-weight:700;font-size:12pt}
-ol.steps{list-style:none;counter-reset:s;padding:0;margin:0}
-ol.steps>li{counter-increment:s;position:relative;padding:0 0 14px 44px;border-left:2px solid #e3e8ee;margin-left:16px}
-ol.steps>li:last-child{border-left-color:transparent}
-ol.steps>li::before{content:counter(s);position:absolute;left:-17px;top:0;width:32px;height:32px;border-radius:50%;background:#2e6fd8;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:11pt}
-.st-name{font-weight:700;font-size:12pt}
-.st-tag{display:inline-block;font-size:7.5pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:#2e9d57;border-radius:4px;padding:1px 6px;margin-left:8px;vertical-align:2px}
-.st-tag.end{background:#8a4b00}
-.st-page{font-size:9pt;color:#6b7886;margin-top:1px}
-.st-note{margin-top:5px;white-space:pre-wrap}
-.st-shot{margin-top:7px}
-.st-shot img{max-width:100%;max-height:300px;border:1px solid #dde3ea;border-radius:6px}
-.st-apis{margin-top:7px}
-.st-apis-h{font-size:8pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6b7886;margin-bottom:3px}
-.st-apis ul{list-style:none;margin:0;padding:0;font-size:9pt}
-.st-apis li{padding:2px 0;border-top:1px solid #f0f2f5;display:flex;gap:7px;align-items:baseline;flex-wrap:wrap}
-.st-apis li:first-child{border-top:0}
-.st-m{display:inline-block;font-size:7.5pt;font-weight:700;color:#13315c;background:#e8eefb;border-radius:3px;padding:1px 5px;min-width:42px;text-align:center}
-.st-apis code{font-size:8.5pt;color:#6b7886;overflow-wrap:anywhere}
-.foot{margin-top:28px;padding-top:8px;border-top:1px solid #dde3ea;font-size:8.5pt;color:#6b7886}
+@page{size:A4;margin:14mm 12mm}
+body{font:11pt/1.55 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2a37;margin:0;background:#fff}
+.cover{background:linear-gradient(125deg,#13315c 0%,#1e498f 55%,#2e6fd8 100%);color:#fff;border-radius:16px;padding:26px 30px}
+.cover .kick{font-size:8.5pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.82}
+.cover h1{font-size:25pt;margin:4px 0 10px;line-height:1.15}
+.cover .meta{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:9.5pt;opacity:.95}
+.cover .meta b{opacity:.7;font-weight:600}
+.pill{display:inline-block;font-size:8pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 11px;background:rgba(255,255,255,.18);color:#fff}
+.pill.draft{background:rgba(255,255,255,.2)} .pill.review{background:#2a63c6} .pill.approved{background:#1f8a4c} .pill.retired{background:#6b7280}
+h2{font-size:12.5pt;color:#13315c;margin:26px 0 12px;display:flex;align-items:center;gap:9px}
+h2::before{content:'';width:4px;height:17px;background:#2e6fd8;border-radius:2px;display:inline-block}
+.facts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:16px}
+.fact{border:1px solid #e3e8ee;border-radius:10px;padding:8px 12px;background:#fafbfd}
+.fact .k{font-size:7.5pt;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6b7886}
+.fact .v{font-weight:600;font-size:10.5pt;margin-top:1px;overflow-wrap:anywhere}
+.about p{margin:0 0 9px}
+.cards{margin-top:4px}
+.step{display:grid;grid-template-columns:46px 1fr;gap:14px}
+.rail{display:flex;flex-direction:column;align-items:center}
+.badge{width:40px;height:40px;border-radius:50%;background:#2e6fd8;color:#fff;font-weight:700;font-size:13pt;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(16,32,64,.22)}
+.badge.start{background:#1f8a4c} .badge.end{background:#b06400}
+.line{flex:1;width:2px;background:#d6dee8;margin:5px 0;min-height:14px}
+.card{border:1px solid #e3e8ee;border-radius:14px;padding:13px 16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(16,32,64,.05);break-inside:avoid}
+.card-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.card-head h3{font-size:13pt;margin:0;color:#13315c}
+.tag{font-size:7.5pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:#8792a3;border-radius:999px;padding:2px 9px}
+.tag.start{background:#1f8a4c} .tag.end{background:#b06400}
+.path{font-size:8.5pt;color:#6b7886;margin-top:2px;overflow-wrap:anywhere}
+.note{margin:8px 0 0;white-space:pre-wrap}
+.shot{margin-top:10px}
+.shot img{max-width:100%;max-height:300px;border:1px solid #e3e8ee;border-radius:9px;display:block}
+.apis{margin-top:11px;border-top:1px dashed #e3e8ee;padding-top:9px}
+.apis h4{font-size:7.5pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6b7886;margin:0 0 5px}
+.apis ul{list-style:none;margin:0;padding:0}
+.apis li{display:flex;gap:9px;align-items:baseline;padding:3px 0;border-top:1px solid #f1f3f6;font-size:9.5pt}
+.apis li:first-child{border-top:0}
+.m{display:inline-block;font-size:7.5pt;font-weight:700;color:#13315c;background:#e8eefb;border-radius:5px;padding:2px 6px;min-width:48px;text-align:center}
+.apis code{font-size:8.5pt;color:#6b7886;overflow-wrap:anywhere}
+.chip{font-size:7.5pt;font-weight:700;color:#8a4b00;background:#fdecd2;border-radius:999px;padding:1px 8px}
+.foot{margin-top:30px;padding-top:10px;border-top:1px solid #e3e8ee;font-size:8.5pt;color:#6b7886}
 .empty{color:#6b7886;font-style:italic}`;
 
 function paras(text) {
   const t = str(text).trim();
-  if (!t) return '<p class="empty">No description.</p>';
+  if (!t) return '<p class="empty">No description yet.</p>';
   return t.split(/\n{2,}/).map((p) => '<p>' + esc(p.trim()).replace(/\n/g, '<br>') + '</p>').join('');
 }
-/** The whole document: cover + control table + description + the flow strip + the numbered steps. */
+/** The whole document: a cover banner, a facts grid, the description, then the pages as a vertical card timeline. */
 function renderDocument(flow, opts) {
   const o = opts || {};
   const f = cleanFlow(flow, flow && flow.updatedBy, flow, { keepApis: true });
   const pages = f.pages;
-  const apiList = (p) => (p.apis && p.apis.length
-    ? '<div class="st-apis"><div class="st-apis-h">APIs on this page (' + p.apis.length + ')</div><ul>'
-      + p.apis.map((a) => '<li><span class="st-m">' + esc(a.method || 'CALL') + '</span><b>' + esc(a.name || '') + '</b>'
-        + (a.path ? ' <code>' + esc(a.path) + '</code>' : '') + (a.writes ? ' <span class="st-tag">changes data</span>' : '') + '</li>').join('')
-      + '</ul></div>' : '');
-  const shotImg = (p) => (p.shot && p.shot.data ? '<div class="st-shot"><img src="' + p.shot.data + '" alt="Screenshot of ' + esc(p.name || p.page) + '"></div>' : '');
-  const row = (k, v) => (v ? '<tr><td class="k">' + esc(k) + '</td><td>' + esc(v) + '</td></tr>' : '');
-  const strip = pages.length
-    ? '<div class="strip">' + pages.map((p, i) => '<span class="box">' + (i === 0 ? '<span class="lbl">Start</span>' : i === pages.length - 1 ? '<span class="lbl">End</span>' : '') + esc(p.name || p.page) + '</span>' + (i < pages.length - 1 ? '<span class="arr">→</span>' : '')).join('')
-    + '</div>' : '';
-  const steps = pages.length
-    ? '<ol class="steps">' + pages.map((p, i) => '<li><span class="st-name">' + esc(p.name || p.page) + '</span>'
-      + (i === 0 ? '<span class="st-tag">Start</span>' : i === pages.length - 1 ? '<span class="st-tag end">End</span>' : '')
-      + (p.page && p.page !== p.name ? '<div class="st-page">' + esc(p.page) + '</div>' : '')
-      + (p.note ? '<div class="st-note">' + esc(p.note).replace(/\n/g, '<br>') + '</div>' : '')
-      + shotImg(p) + apiList(p) + '</li>').join('') + '</ol>'
-    : '<p class="empty">No pages yet.</p>';
   const date = o.date || new Date().toISOString().slice(0, 10);
+  const apiList = (p) => (p.apis && p.apis.length
+    ? '<div class="apis"><h4>APIs on this page (' + p.apis.length + ')</h4><ul>'
+      + p.apis.map((a) => '<li><span class="m">' + esc(a.method || 'CALL') + '</span><b>' + esc(a.name || '') + '</b>'
+        + (a.path ? ' <code>' + esc(a.path) + '</code>' : '') + (a.writes ? ' <span class="chip">changes data</span>' : '') + '</li>').join('')
+      + '</ul></div>' : '');
+  const shotImg = (p) => (p.shot && p.shot.data ? '<div class="shot"><img src="' + p.shot.data + '" alt="Screenshot of ' + esc(p.name || p.page) + '"></div>' : '');
+  const fact = (k, v) => (v ? '<div class="fact"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div></div>' : '');
+  const metaBits = [f.area, f.owner ? 'Owner: ' + f.owner : '', date].filter(Boolean).map((x) => esc(x)).join('<b> · </b>');
+  const cards = pages.length
+    ? '<div class="cards">' + pages.map((p, i) => {
+      const start = i === 0; const end = i === pages.length - 1;
+      return '<div class="step"><div class="rail"><span class="badge ' + (start ? 'start' : end ? 'end' : '') + '">' + (i + 1) + '</span>' + (end ? '' : '<span class="line"></span>') + '</div>'
+        + '<div class="card"><div class="card-head"><h3>' + esc(p.name || p.page) + '</h3>'
+        + (start ? '<span class="tag start">Start</span>' : end ? '<span class="tag end">End</span>' : '<span class="tag">Step ' + (i + 1) + '</span>') + '</div>'
+        + (p.page && p.page !== p.name ? '<div class="path">' + esc(p.page) + '</div>' : '')
+        + (p.note ? '<div class="note">' + esc(p.note).replace(/\n/g, '<br>') + '</div>' : '')
+        + shotImg(p) + apiList(p) + '</div></div>';
+    }).join('') + '</div>'
+    : '<p class="empty">No pages yet.</p>';
   return '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(f.name) + '</title><style>' + CSS + '</style></head><body>'
-    + '<div class="kick">Process flow</div><h1>' + esc(f.name) + '</h1>'
-    + '<table class="ctl">' + row('Name', f.name) + row('Code', f.id) + row('Area', f.area) + row('Owner', f.owner)
-    + row('Status', STATUSES[f.status]) + row('Pages', pages.length ? pages.length + ' (' + pages.map((p) => p.name || p.page).join(' → ') + ')' : '')
-    + row('Application', o.app) + row('Written', date) + '</table>'
-    + '<h2>Description</h2><div class="desc">' + paras(f.description) + '</div>'
-    + '<h2>The flow</h2>' + strip
-    + '<h2>The pages, in order</h2>' + steps
+    + '<div class="cover"><div class="kick">Process flow</div><h1>' + esc(f.name) + '</h1>'
+    + '<div class="meta"><span class="pill ' + f.status + '">' + esc(STATUSES[f.status]) + '</span>' + (metaBits ? '<span>' + metaBits + '</span>' : '') + '</div></div>'
+    + '<div class="facts">' + fact('Code', f.id) + fact('Area', f.area) + fact('Owner', f.owner) + fact('Status', STATUSES[f.status])
+    + fact('Pages', String(pages.length)) + fact('Application', o.app) + '</div>'
+    + '<h2>About this process</h2><div class="about">' + paras(f.description) + '</div>'
+    + '<h2>The flow, step by step</h2>' + cards
     + '<div class="foot">Generated by Build.Rite' + (date ? ' on ' + esc(date) : '') + '. A process flow written by the team; review before use.</div>'
     + '</body></html>';
 }

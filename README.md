@@ -282,11 +282,12 @@ Don't want to write the description yourself? **Draft with AI** sends the name a
 settings and drafts a plain-English description from them (it is told to describe only the pages you listed, never to
 invent steps). You review the draft and press **Use it**, or discard it.
 
-**Generate document** turns the flow into a print-ready document: a cover with the name, area, owner, status and date;
-your description; a **flow strip** (the pages as boxes with arrows, Start → … → End); and the **numbered steps**, each
-with its note, **its screenshot**, and **the APIs that page makes**. **Download PDF**, download the **HTML**, or
-**Print** it. Everything is kept per VB Studio project on this PC (so each workspace has its own process flows), and the
-list shows each flow with its pages and page count.
+Switch the editor between **Edit** and **Preview** (top right). **Preview** shows the flow as a polished, card-by-card
+document — a coloured cover with the name and status, a facts grid, your description, then the pages as a **vertical
+timeline of cards** (a numbered badge and a connecting line, Start / End tags, each page's note, its screenshot and the
+APIs it makes). The preview is exactly what the export looks like, so from there you **Download PDF**, download the
+**HTML**, or **Print** it. Everything is kept per VB Studio project on this PC (so each workspace has its own process
+flows), and the list shows each flow with its pages and page count.
 
 ## Page Flows: how each page works with other systems — flows, data sheet, diagrams
 
