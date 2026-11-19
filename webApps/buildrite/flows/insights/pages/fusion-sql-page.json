@@ -1,10 +1,10 @@
 {
-  "description": "Fusion SQL: read-only SQL against an Oracle Fusion Cloud pod from this PC, through one BI Publisher query-runner report (DBMS_XMLGEN) — the SQL editor with {{PARAM}} / :BIND placeholders, the result grid (search, sort, pages, Excel/CSV/print/copy), the schema browser (owners → tables, views, packages… → columns, indexes, foreign keys; cached per pod), saved queries, Ask AI (it looks things up in the data dictionary, then Build.Rite checks its SQL on the pod), pods with their login (your app's, or a Fusion user of its own, the password in the OS keychain), Deploy the runner, and the last SOAP calls. Ported from the WMS app's Fusion SQL module. The desktop app does the calls (desktop/lib/fusionSql.js at /__fsql/*); rules shared with it: resources/js/fusionSqlKit.js.",
+  "description": "Fusion SQL: read-only SQL against an Oracle Fusion Cloud pod from this PC, through one BI Publisher query-runner report (DBMS_XMLGEN) — the SQL editor with {{PARAM}} / :BIND placeholders, the result grid (search, sort, pages, Excel/CSV/print/copy), the schema browser (owners → tables, views, packages… → columns, indexes, foreign keys; cached per pod), saved queries, Ask AI (it looks things up in the data dictionary, then Build.Rite checks its SQL on the pod), pods with their login (your app's, or a Fusion user of its own, the password in the OS keychain), Deploy the runner, the last SOAP calls, and Fusion Setups (a module-by-module setup checklist, each check counted on the pod, its records one click away). Ported from the WMS app's Fusion SQL module. The desktop app does the calls (desktop/lib/fusionSql.js at /__fsql/*); rules shared with it: resources/js/fusionSqlKit.js.",
   "navigation": { "embeddable": "enabled" },
   "variables": {
     "checked": { "type": "boolean", "defaultValue": false },
     "available": { "type": "boolean", "defaultValue": true, "description": "The local server has Fusion SQL (the desktop app)." },
-    "tab": { "type": "string", "defaultValue": "sql", "description": "sql | queries | connection | calls" },
+    "tab": { "type": "string", "defaultValue": "sql", "description": "sql | queries | setups | connection | calls" },
     "st": { "type": "any", "defaultValue": { "pods": [], "active": "", "suggest": {}, "defaults": {} }, "description": "The pods (never a password), the active one, the app's pod and login suggested." },
     "sql": { "type": "string", "defaultValue": "" },
     "rowLimit": { "type": "number", "defaultValue": 100 },
@@ -27,7 +27,11 @@
     "connBusy": { "type": "string", "defaultValue": "", "description": "save | test | deploy, while it runs." },
     "connResult": { "type": "any", "defaultValue": null, "description": "{ ok, title, lines, error, raw }" },
     "calls": { "type": "any[]", "defaultValue": [] },
-    "callOpen": { "type": "number", "defaultValue": -1 }
+    "callOpen": { "type": "number", "defaultValue": -1 },
+    "setups": { "type": "any", "defaultValue": { "loading": false, "error": "", "pod": "", "modules": [], "tasks": [], "totals": {}, "starterMissing": 0, "module": "", "filter": "all", "q": "", "busy": {}, "run": null, "stop": false },
+      "description": "Fusion Setups: the checklist of the pod in use (lib/fusionSetups.js list), the module, filter and search chosen, the checks running." },
+    "setupDlg": { "type": "any", "defaultValue": null, "description": "A setup task being added or changed: { code, module, name, fsm, description, sql, minRows, mandatory, busy, test }." },
+    "setupData": { "type": "any", "defaultValue": null, "description": "The records behind a task: { task, busy, res, view, grid }." }
   },
   "eventListeners": {
     "vbEnter": { "chains": [ { "chain": "loadChain" } ] },
@@ -40,7 +44,8 @@
     "onQueryFile": { "chains": [ { "chain": "queryChain", "parameters": { "op": "import", "id": "", "value": "" } } ] },
     "onConn": { "chains": [ { "chain": "connChain", "parameters": { "op": "{{ $event.currentTarget.dataset.op }}", "id": "{{ $event.currentTarget.dataset.id || '' }}", "value": "{{ $event.currentTarget.dataset.value !== undefined ? $event.currentTarget.dataset.value : ($event.currentTarget.value || '') }}", "input": "{{ $event.currentTarget.value || '' }}" } } ] },
     "onCalls": { "chains": [ { "chain": "callsChain", "parameters": { "op": "{{ $event.currentTarget.dataset.op }}", "index": "{{ $event.currentTarget.dataset.index || '' }}" } } ] },
-    "onExport": { "chains": [ { "chain": "exportChain", "parameters": { "format": "{{ $event.currentTarget.dataset.format }}" } } ] }
+    "onExport": { "chains": [ { "chain": "exportChain", "parameters": { "format": "{{ $event.currentTarget.dataset.format }}" } } ] },
+    "onSetup": { "chains": [ { "chain": "setupChain", "parameters": { "op": "{{ $event.currentTarget.dataset.op }}", "id": "{{ $event.currentTarget.dataset.id || '' }}", "value": "{{ $event.currentTarget.dataset.value !== undefined ? $event.currentTarget.dataset.value : '' }}", "input": "{{ $event.currentTarget.type === 'checkbox' ? $event.currentTarget.checked : ($event.currentTarget.value || '') }}" } } ] }
   },
   "imports": {
     "components": {

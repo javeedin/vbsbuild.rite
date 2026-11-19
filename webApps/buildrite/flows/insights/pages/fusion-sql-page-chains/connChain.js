@@ -53,6 +53,10 @@ define([
         const p = R.activePod(v);
         if (p) v.rowLimit = p.rowLimit || 100;
         await R.schema(v, false);
+        if (v.tab === 'setups' && p) {
+          const s = await C.setups(p.id);
+          if (s.ok) v.setups = Object.assign({}, v.setups, { pod: p.id, modules: s.body.modules || [], tasks: s.body.tasks || [], totals: s.body.totals || {}, starterMissing: s.body.starterMissing || 0 });
+        } else v.setups = Object.assign({}, v.setups, { pod: '' });
         return;
       }
       if (op === 'remove') {

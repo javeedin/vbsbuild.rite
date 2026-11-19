@@ -1384,6 +1384,14 @@ function createDevServer(o) {
             if (pathname === '/__fsql/queries/import' && post) return fq.importQueries(b.queries);
             if (pathname === '/__fsql/queries/ran' && post) return fq.ranQuery(b.id);
             if (pathname === '/__fsql/ask/progress' && !post) return fq.progress(get('id'));
+            // Fusion Setups: the checklist (with the pod's results), a task added / changed / removed, the starter tasks again
+            const fs2 = o.fusionSetupsStore;
+            if (pathname.startsWith('/__fsql/setups') && !fs2) return { ok: false, error: 'Fusion Setups runs in the Build.Rite desktop app.' };
+            const podId = () => get('pod') || b.pod || (fq.settings() || {}).active || '';
+            if (pathname === '/__fsql/setups' && !post) return fs2.list(podId());
+            if (pathname === '/__fsql/setups/save' && post) return fs2.save(b.task, who());
+            if (pathname === '/__fsql/setups/remove' && post) return fs2.remove(b.code);
+            if (pathname === '/__fsql/setups/starter' && post) return fs2.starter();
             return null;
           })();
           if (r) return jsonQ(200, r);
@@ -1393,6 +1401,13 @@ function createDevServer(o) {
             return jsonQ(200, out);
           }
           if (pathname === '/__fsql/test' && post) return jsonQ(200, await fq.test(b.pod));
+          if (pathname === '/__fsql/setups/check' && post) {
+            const pod = b.pod || (fq.settings() || {}).active || '';
+            const out = await o.fusionSetupsStore.check(pod, b.code);
+            const res = out.task && out.task.result;
+            log(`Fusion Setups ${b.code} -> ${out.ok ? res.status + (res.count != null ? ' (' + res.count + ')' : '') : out.error}`);
+            return jsonQ(200, out);
+          }
           if (pathname === '/__fsql/deploy' && post) {
             const out = await fq.deploy(b.pod);
             log(`Fusion SQL deploy -> ${out.ok ? 'done' : out.error}`);

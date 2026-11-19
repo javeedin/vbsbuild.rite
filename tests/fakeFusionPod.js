@@ -6,7 +6,8 @@
  * the runner's data model receives it, and is answered from a tiny data dictionary and an AP_INVOICES_ALL table — a
  * DBMS_XMLGEN ROWSET XML-escaped once inside RESULT (XML output) or with real tags in a CSV field (CSV output).
  *
- *   const pod = await start({ user, password, runner, tables, csvOnly })  →  { url, calls, sql, catalog, close() }
+ *   const pod = await start({ user, password, runner, tables, csvOnly, data })  →  { url, calls, sql, catalog, close() }
+ *     data      { TABLE_NAME: [rows] } more tables it answers (counted, or their rows), e.g. for Fusion Setups' checks
  *     calls     every SOAP call: { service, op, format, sql }
  *     sql       every statement run (decoded)
  *     catalog   { path: { type, entry, xml } } — what deploy uploaded
@@ -105,6 +106,12 @@ function answer(sql, o) {
       const want = cols[1].split(',').map((c) => c.trim().toUpperCase().split(/\s+/).pop());
       rows = rows.map((r) => { const d = {}; want.forEach((c) => { d[c] = r[c] === undefined ? null : r[c]; }); return d; });
     }
+    return { rows: limit(rows) };
+  }
+  const own = Object.keys(o.data || {}).filter((t) => new RegExp('FROM\\s+' + t + '\\b').test(U))[0];
+  if (own) {
+    const rows = o.data[own];
+    if (/^SELECT COUNT\(\*\) AS CNT FROM \(/.test(U.trim())) return { rows: [{ CNT: String(rows.length) }] };
     return { rows: limit(rows) };
   }
   return { error: 'ORA-00942: table or view does not exist' };

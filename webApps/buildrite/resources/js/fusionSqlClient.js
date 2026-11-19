@@ -37,6 +37,11 @@ define([], function () {
     importQueries: function (list) { return call('queries/import', { queries: list }); },
     ranQuery: function (id) { return call('queries/ran', { id: id }); },
     ask: function (b) { return call('ask', b); },
+    setups: function (pod) { return call('setups?' + qs({ pod: pod })); },
+    setupCheck: function (pod, code) { return call('setups/check', { pod: pod, code: code }); },
+    setupSave: function (task) { return call('setups/save', { task: task }); },
+    setupRemove: function (code) { return call('setups/remove', { code: code }); },
+    setupStarter: function () { return call('setups/starter', {}); },
     progress: function (id) { return call('ask/progress?' + qs({ id: id })); }
   };
 });

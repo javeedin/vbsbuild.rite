@@ -298,6 +298,18 @@ function fusionSqlStore() {
   }
   return fusionSqlInst;
 }
+// Fusion Setups (lib/fusionSetups.js): the module-by-module setup checklist of Fusion SQL; each check runs as COUNT(*)
+// through the runner above; the checklist and its results per pod in this app's data folder
+let fusionSetupsInst = null;
+function fusionSetupsStore() {
+  if (!fusionSetupsInst) {
+    fusionSetupsInst = require('./lib/fusionSetups').open({
+      file: path.join(app.getPath('userData'), 'fusion-setups.json'),
+      run: (x) => fusionSqlStore().execute(x),
+    });
+  }
+  return fusionSetupsInst;
+}
 // The Oracle Cloud pod your workspace's app calls (a backend of its services catalog on *.oraclecloud.com), suggested
 // as the address of a new Fusion SQL pod
 function fusionPodOfWorkspace() {
@@ -350,6 +362,7 @@ async function buildRiteOptions() {
     assistantStore: await assistantStore(), // AI Assistant: questions about the app answered from the workspace; conversations on this PC
     htmlToPdf: htmlToPdf, // Create the functional design: the document printed to PDF
     fusionSqlStore: fusionSqlStore(), // Fusion SQL: read-only SQL on a Fusion pod through its BI Publisher runner
+    fusionSetupsStore: fusionSetupsStore(), // Fusion SQL → Fusion Setups: the setup checklist, checked on the pod
     appWindow: () => (runWin && !runWin.isDestroyed() ? { url: runWin.webContents.getURL(), title: runWin.getTitle() } : null), // the page your app's window shows (API Scenarios follows it)
     // …sent to your workspace's backends (its services/catalog.json), with who its app runs as (Run as, Sign in for your app)
     apiProject: () => { const c = currentWorkspace(); if (!c) return null; const p = profileOf(c.working); return { catalogFiles: ((p.services && p.services.catalogs) || []).map((x) => x.file), getIdentity: () => workspaceIdentity() }; },

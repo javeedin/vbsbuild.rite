@@ -29,6 +29,8 @@
       <button type="button" role="tab" id="fsqlTab-sql" :class="[[ 'nx-seg-btn' + ($variables.tab === 'sql' ? ' nx-seg-btn--on' : '') ]]" data-field="tab" data-value="sql" on-click="[[ $listeners.onField ]]">SQL</button>
       <button type="button" role="tab" id="fsqlTab-queries" :class="[[ 'nx-seg-btn' + ($variables.tab === 'queries' ? ' nx-seg-btn--on' : '') ]]" data-field="tab" data-value="queries" on-click="[[ $listeners.onField ]]">
         <oj-bind-text value="[[ 'Saved queries' + ($variables.queries.length ? ' (' + $variables.queries.length + ')' : '') ]]"></oj-bind-text></button>
+      <button type="button" role="tab" id="fsqlTab-setups" :class="[[ 'nx-seg-btn' + ($variables.tab === 'setups' ? ' nx-seg-btn--on' : '') ]]" data-op="open" on-click="[[ $listeners.onSetup ]]">
+        <oj-bind-text value="[[ 'Fusion Setups' + ($variables.setups.totals.total ? ' (' + $variables.setups.totals.done + '/' + $variables.setups.totals.total + ')' : '') ]]"></oj-bind-text></button>
       <button type="button" role="tab" id="fsqlTab-connection" :class="[[ 'nx-seg-btn' + ($variables.tab === 'connection' ? ' nx-seg-btn--on' : '') ]]" data-field="tab" data-value="connection" on-click="[[ $listeners.onField ]]">Connection</button>
       <button type="button" role="tab" id="fsqlTab-calls" :class="[[ 'nx-seg-btn' + ($variables.tab === 'calls' ? ' nx-seg-btn--on' : '') ]]" data-field="tab" data-value="calls" on-click="[[ $listeners.onCalls ]]" data-op="load">API calls</button>
     </div>
@@ -302,6 +304,107 @@
       </section>
     </oj-bind-if>
 
+    <!-- ── Fusion Setups: the module-by-module setup checklist, each task's check SQL counted on the pod ── -->
+    <oj-bind-if test="[[ $variables.tab === 'setups' ]]">
+      <div class="nx-fsu" id="fsqlSetups">
+        <oj-bind-if test="[[ $variables.st.pods.length === 0 ]]">
+          <div class="nx-card nx-fsql-start"><b>Connect a Fusion pod first.</b><span>Each check runs on the pod in use, through the query runner.</span>
+            <button type="button" class="nx-btn nx-btn--cta" data-op="new" on-click="[[ $listeners.onConn ]]">Add a pod</button></div>
+        </oj-bind-if>
+        <section class="nx-card nx-fsu-head">
+          <div class="nx-fsu-kpis">
+            <div class="nx-fsu-kpi nx-fsu-kpi--main" id="fsuDone">
+              <span class="nx-fsu-kpil">Done</span>
+              <b><oj-bind-text value="[[ ($variables.setups.totals.done || 0) + ' / ' + ($variables.setups.totals.total || 0) ]]"></oj-bind-text></b>
+              <span class="nx-fsu-bar"><span :style="[[ { width: $functions.setupPct($variables.setups.totals) + '%' } ]]"></span></span>
+              <span class="nx-note"><oj-bind-text value="[[ $functions.setupPct($variables.setups.totals) + '% of the checklist on ' + $functions.podName($variables.st) ]]"></oj-bind-text></span>
+            </div>
+            <button type="button" class="nx-fsu-kpi nx-fsu-kpi--miss" id="fsuKpiMissing" data-op="filter" data-value="missing" on-click="[[ $listeners.onSetup ]]"><span class="nx-fsu-kpil">Not done</span><b><oj-bind-text value="[[ $variables.setups.totals.missing || 0 ]]"></oj-bind-text></b></button>
+            <button type="button" class="nx-fsu-kpi nx-fsu-kpi--err" id="fsuKpiErrors" data-op="filter" data-value="error" on-click="[[ $listeners.onSetup ]]"><span class="nx-fsu-kpil">Errors</span><b><oj-bind-text value="[[ $variables.setups.totals.errors || 0 ]]"></oj-bind-text></b></button>
+            <button type="button" class="nx-fsu-kpi" id="fsuKpiUnchecked" data-op="filter" data-value="unchecked" on-click="[[ $listeners.onSetup ]]"><span class="nx-fsu-kpil">Not checked</span><b><oj-bind-text value="[[ $variables.setups.totals.unchecked || 0 ]]"></oj-bind-text></b></button>
+          </div>
+          <div class="nx-fsu-tools">
+            <div class="nx-seg nx-fsu-filters" role="group" aria-label="Show">
+              <oj-bind-for-each data="[[ $functions.setupFilters() ]]"><template data-oj-as="f">
+                <button type="button" :class="[[ 'nx-seg-btn' + (($variables.setups.filter || 'all') === f.data.id ? ' nx-seg-btn--on' : '') ]]" :id="[[ 'fsuF-' + f.data.id ]]" data-op="filter" :data-value="[[ f.data.id ]]" on-click="[[ $listeners.onSetup ]]"><oj-bind-text value="[[ f.data.label ]]"></oj-bind-text></button>
+              </template></oj-bind-for-each>
+            </div>
+            <input type="search" id="fsuSearch" class="nx-fsql-filter" placeholder="Search the tasks" autocomplete="off" :value="[[ $variables.setups.q ]]" data-op="search" on-input="[[ $listeners.onSetup ]]">
+            <button type="button" class="nx-iconbtn nx-iconbtn--sm" id="fsuReload" data-op="reload" on-click="[[ $listeners.onSetup ]]" title="Read the checklist again"><span class="oj-ux-ico-refresh" aria-hidden="true"></span></button>
+            <span class="nx-min-flex"></span>
+            <oj-bind-if test="[[ !$variables.setups.run ]]">
+              <button type="button" class="nx-btn nx-btn--cta" id="fsuCheckShown" data-op="checkShown" on-click="[[ $listeners.onSetup ]]" :disabled="[[ $functions.setupShownCount($variables.setups) === 0 || $variables.st.pods.length === 0 ]]">
+                <span class="oj-ux-ico-play" aria-hidden="true"></span><oj-bind-text value="[[ $functions.setupCheckLabel($variables.setups) ]]"></oj-bind-text></button>
+            </oj-bind-if>
+            <oj-bind-if test="[[ !!$variables.setups.run ]]">
+              <button type="button" class="nx-btn" id="fsuStop" data-op="stop" on-click="[[ $listeners.onSetup ]]" :disabled="[[ $variables.setups.stop ]]"><span class="oj-ux-ico-stop" aria-hidden="true"></span>Stop</button>
+            </oj-bind-if>
+            <button type="button" class="nx-btn" id="fsuAdd" data-op="add" on-click="[[ $listeners.onSetup ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span>Add task</button>
+            <button type="button" class="nx-btn nx-btn--plain" id="fsuReportXlsx" data-op="report" data-value="xlsx" on-click="[[ $listeners.onSetup ]]" title="The tasks shown, with their status, as an Excel workbook"><span class="oj-ux-ico-file-excel" aria-hidden="true"></span>Excel</button>
+            <button type="button" class="nx-btn nx-btn--plain" id="fsuReportPdf" data-op="report" data-value="pdf" on-click="[[ $listeners.onSetup ]]" title="Print the tasks shown (Save as PDF)"><span class="oj-ux-ico-file-pdf" aria-hidden="true"></span>PDF</button>
+          </div>
+          <oj-bind-if test="[[ !!$variables.setups.run ]]">
+            <div class="nx-fsu-run" id="fsuRun">
+              <span class="nx-fsu-bar"><span :style="[[ { width: Math.round(100 * $variables.setups.run.done / Math.max(1, $variables.setups.run.total)) + '%' } ]]"></span></span>
+              <span class="nx-note"><oj-bind-text value="[[ $functions.setupRunText($variables.setups) ]]"></oj-bind-text></span>
+            </div>
+          </oj-bind-if>
+          <oj-bind-if test="[[ $variables.setups.starterMissing > 0 ]]">
+            <div class="nx-note nx-fsu-starter">
+              <oj-bind-text value="[[ $variables.setups.starterMissing + ' starter task(s) are not in this checklist (removed, or new in this version).' ]]"></oj-bind-text>
+              <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="fsuStarter" data-op="starter" on-click="[[ $listeners.onSetup ]]">Add them back</button>
+            </div>
+          </oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.setups.error ]]"><div class="nx-fsu-error"><oj-bind-text value="[[ $variables.setups.error ]]"></oj-bind-text></div></oj-bind-if>
+        </section>
+
+        <div class="nx-fsu-work">
+          <aside class="nx-card nx-fsu-mods" id="fsuModules" aria-label="Modules">
+            <oj-bind-for-each data="[[ $functions.setupMods($variables.setups) ]]"><template data-oj-as="m">
+              <button type="button" :class="[[ 'nx-fsu-mod' + (m.data.on ? ' nx-fsu-mod--on' : '') ]]" :id="[[ 'fsuMod-' + (m.data.code || 'ALL') ]]" data-op="module" :data-value="[[ m.data.code ]]" on-click="[[ $listeners.onSetup ]]">
+                <span class="nx-fsu-modname"><oj-bind-text value="[[ m.data.name ]]"></oj-bind-text></span>
+                <span class="nx-fsu-modn"><oj-bind-text value="[[ m.data.done + '/' + m.data.total ]]"></oj-bind-text>
+                  <oj-bind-if test="[[ m.data.errors > 0 ]]"><span class="nx-fsu-dot nx-fsu-dot--err" :title="[[ m.data.errors + ' errors' ]]"></span></oj-bind-if>
+                  <oj-bind-if test="[[ m.data.missing > 0 ]]"><span class="nx-fsu-dot nx-fsu-dot--miss" :title="[[ m.data.missing + ' not done' ]]"></span></oj-bind-if></span>
+                <span class="nx-fsu-bar nx-fsu-bar--thin"><span :style="[[ { width: m.data.pct + '%' } ]]"></span></span>
+              </button>
+            </template></oj-bind-for-each>
+          </aside>
+
+          <section class="nx-card nx-fsu-list" id="fsuList">
+            <oj-bind-if test="[[ $variables.setups.loading ]]"><div class="nx-empty">Reading the checklist…</div></oj-bind-if>
+            <oj-bind-if test="[[ !$variables.setups.loading && $functions.setupShownCount($variables.setups) === 0 ]]"><div class="nx-empty" id="fsuNone">No task here.</div></oj-bind-if>
+            <oj-bind-for-each data="[[ $functions.setupRows($variables.setups) ]]"><template data-oj-as="t">
+              <oj-bind-if test="[[ t.data.head ]]"><div class="nx-fsu-modhead"><oj-bind-text value="[[ t.data.moduleName ]]"></oj-bind-text></div></oj-bind-if>
+              <div :class="[[ 'nx-fsu-task nx-fsu-task--' + t.data.cls ]]" :data-code="[[ t.data.code ]]">
+                <span :class="[[ 'nx-fsu-pill nx-fsu-pill--' + t.data.cls ]]"><oj-bind-text value="[[ t.data.status ]]"></oj-bind-text></span>
+                <div class="nx-fsu-main">
+                  <div class="nx-fsu-name"><b><oj-bind-text value="[[ t.data.name ]]"></oj-bind-text></b>
+                    <oj-bind-if test="[[ t.data.optional ]]"><span class="nx-badge nx-fsu-badge">optional</span></oj-bind-if>
+                    <oj-bind-if test="[[ t.data.own ]]"><span class="nx-badge nx-fsu-badge" :title="[[ t.data.source === 'USER' ? 'Added on this PC' : 'A starter task, changed' ]]"><oj-bind-text value="[[ t.data.source === 'USER' ? 'yours' : 'changed' ]]"></oj-bind-text></span></oj-bind-if></div>
+                  <oj-bind-if test="[[ !!t.data.description ]]"><span class="nx-note"><oj-bind-text value="[[ t.data.description ]]"></oj-bind-text></span></oj-bind-if>
+                  <oj-bind-if test="[[ !!t.data.fsm ]]"><span class="nx-fsu-fsm"><oj-bind-text value="[[ 'FSM task: ' + t.data.fsm ]]"></oj-bind-text></span></oj-bind-if>
+                  <oj-bind-if test="[[ !!t.data.error ]]"><span class="nx-fsu-error"><oj-bind-text value="[[ t.data.error ]]"></oj-bind-text></span></oj-bind-if>
+                </div>
+                <div class="nx-fsu-meta">
+                  <b><oj-bind-text value="[[ t.data.count ]]"></oj-bind-text></b>
+                  <span class="nx-note"><oj-bind-text value="[[ t.data.min ]]"></oj-bind-text></span>
+                  <span class="nx-note"><oj-bind-text value="[[ t.data.when ]]"></oj-bind-text></span>
+                </div>
+                <div class="nx-fsql-qacts">
+                  <button type="button" class="nx-btn nx-btn--sm nx-btn--cta nx-fsu-check" data-op="check" :data-id="[[ t.data.code ]]" on-click="[[ $listeners.onSetup ]]" :disabled="[[ t.data.busy || !!$variables.setups.run ]]">Check</button>
+                  <button type="button" class="nx-btn nx-btn--sm nx-fsu-data" data-op="data" :data-id="[[ t.data.code ]]" on-click="[[ $listeners.onSetup ]]" title="The records its SQL finds (1,000 at most)">Records</button>
+                  <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-fsu-edit" data-op="edit" :data-id="[[ t.data.code ]]" on-click="[[ $listeners.onSetup ]]" title="Edit"><span class="oj-ux-ico-edit" aria-hidden="true"></span></button>
+                  <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-flib-del nx-fsu-del" data-op="remove" :data-id="[[ t.data.code ]]" on-click="[[ $listeners.onSetup ]]" title="Remove"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+                </div>
+              </div>
+            </template></oj-bind-for-each>
+          </section>
+        </div>
+        <div class="nx-note nx-fsu-how">Each check runs <code>SELECT COUNT(*) FROM (the task's SQL)</code> on the pod in use, through the query runner: <b>Done</b> when it reaches the task's minimum rows. Results are kept per pod on this PC. <b>Records</b> shows what its SQL finds.</div>
+      </div>
+    </oj-bind-if>
+
     <!-- ── Connection ── -->
     <oj-bind-if test="[[ $variables.tab === 'connection' ]]">
       <div class="nx-fsql-conn">
@@ -444,6 +547,101 @@
         <div class="nx-fsql-formacts nx-fsql-dlgacts">
           <button type="button" class="nx-btn nx-btn--cta" id="fsqlSaveGo" data-op="save" on-click="[[ $listeners.onQuery ]]">Save</button>
           <button type="button" class="nx-btn nx-btn--plain" data-op="saveCancel" on-click="[[ $listeners.onQuery ]]">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </oj-bind-if>
+  <!-- Fusion Setups: a task added or changed -->
+  <oj-bind-if test="[[ !!$variables.setupDlg ]]">
+    <div class="nx-modal" id="fsuDlg">
+      <button type="button" class="nx-modal-scrim" aria-label="Close" data-op="dlgCancel" on-click="[[ $listeners.onSetup ]]"></button>
+      <div class="nx-dialog nx-fsql-dlg nx-fsu-dlg" role="dialog" aria-modal="true" aria-label="Setup task">
+        <div class="nx-dialog-head"><div class="nx-dialog-titles"><div class="nx-kicker">Fusion Setups</div>
+          <h2 class="nx-dialog-title"><oj-bind-text value="[[ $variables.setupDlg.code ? 'Edit the task' : 'A new setup task' ]]"></oj-bind-text></h2>
+          <div class="nx-sub">Its SQL lists the records that prove the setup exists. The check counts them on the pod.</div></div></div>
+        <div class="nx-dialog-body">
+          <div class="nx-fsql-fields">
+            <label>Module<input type="text" id="fsuModule" list="fsuModList" :value="[[ $variables.setupDlg.module ]]" data-op="dlgField" data-value="module" on-input="[[ $listeners.onSetup ]]" placeholder="GL, AP, INV…"></label>
+            <label>Task<input type="text" id="fsuName" :value="[[ $variables.setupDlg.name ]]" data-op="dlgField" data-value="name" on-input="[[ $listeners.onSetup ]]" placeholder="Payment terms"></label>
+            <label>FSM task<input type="text" id="fsuFsm" :value="[[ $variables.setupDlg.fsm ]]" data-op="dlgField" data-value="fsm" on-input="[[ $listeners.onSetup ]]" placeholder="Manage Payment Terms"></label>
+            <label>Minimum rows<input type="number" id="fsuMin" min="1" :value="[[ $variables.setupDlg.minRows ]]" data-op="dlgField" data-value="minRows" on-input="[[ $listeners.onSetup ]]"></label>
+          </div>
+          <datalist id="fsuModList"><oj-bind-for-each data="[[ $variables.setups.modules ]]"><template data-oj-as="m"><option :value="[[ m.data.code ]]"><oj-bind-text value="[[ m.data.name ]]"></oj-bind-text></option></template></oj-bind-for-each></datalist>
+          <label class="nx-fsu-wide">What it checks<input type="text" id="fsuDesc" :value="[[ $variables.setupDlg.description ]]" data-op="dlgField" data-value="description" on-input="[[ $listeners.onSetup ]]"></label>
+          <label class="nx-fsu-wide">Check SQL (one SELECT or WITH)
+            <textarea id="fsuSql" class="nx-fsu-sql" spellcheck="false" :value="[[ $variables.setupDlg.sql ]]" data-op="dlgField" data-value="sql" on-input="[[ $listeners.onSetup ]]" placeholder="SELECT term_id, name FROM ap_terms_tl WHERE language = USERENV('LANG')"></textarea></label>
+          <label class="nx-fsu-check-row"><input type="checkbox" id="fsuMandatory" :checked="[[ $variables.setupDlg.mandatory ]]" data-op="dlgField" data-value="mandatory" on-change="[[ $listeners.onSetup ]]"> Mandatory (counts as not done when missing)</label>
+          <oj-bind-if test="[[ !!$variables.setupDlg.test ]]">
+            <div :class="[[ 'nx-fsu-test ' + ($variables.setupDlg.test.ok ? 'nx-fsu-test--ok' : 'nx-fsu-test--bad') ]]" id="fsuTest">
+              <oj-bind-text value="[[ $variables.setupDlg.test.text ]]"></oj-bind-text>
+              <oj-bind-if test="[[ !!$variables.setupDlg.test.cols ]]"><span class="nx-note"><oj-bind-text value="[[ 'Columns: ' + $variables.setupDlg.test.cols ]]"></oj-bind-text></span></oj-bind-if>
+            </div>
+          </oj-bind-if>
+        </div>
+        <div class="nx-fsql-formacts nx-fsql-dlgacts">
+          <button type="button" class="nx-btn nx-btn--cta" id="fsuSave" data-op="dlgSave" on-click="[[ $listeners.onSetup ]]" :disabled="[[ !!$variables.setupDlg.busy ]]"><oj-bind-text value="[[ $variables.setupDlg.busy === 'save' ? 'Saving…' : 'Save' ]]"></oj-bind-text></button>
+          <button type="button" class="nx-btn" id="fsuTestBtn" data-op="dlgTest" on-click="[[ $listeners.onSetup ]]" :disabled="[[ !!$variables.setupDlg.busy ]]" title="Run it on the pod (first 5 rows)"><oj-bind-text value="[[ $variables.setupDlg.busy === 'test' ? 'Testing…' : 'Test the SQL' ]]"></oj-bind-text></button>
+          <button type="button" class="nx-btn" id="fsuAi" data-op="dlgAi" on-click="[[ $listeners.onSetup ]]" :disabled="[[ !!$variables.setupDlg.busy ]]" title="The AI looks the tables up in the data dictionary and writes the check; Build.Rite checks it on the pod">
+            <span class="oj-ux-ico-chat" aria-hidden="true"></span><oj-bind-text value="[[ $variables.setupDlg.busy === 'ai' ? 'The AI is writing it…' : 'Ask AI to write it' ]]"></oj-bind-text></button>
+          <button type="button" class="nx-btn nx-btn--plain" data-op="dlgCancel" on-click="[[ $listeners.onSetup ]]">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </oj-bind-if>
+
+  <!-- Fusion Setups: the records behind a task -->
+  <oj-bind-if test="[[ !!$variables.setupData ]]">
+    <div class="nx-modal" id="fsuData">
+      <button type="button" class="nx-modal-scrim" aria-label="Close" data-op="dataClose" on-click="[[ $listeners.onSetup ]]"></button>
+      <div class="nx-dialog nx-fsu-datadlg" role="dialog" aria-modal="true" aria-label="Records">
+        <div class="nx-dialog-head"><div class="nx-dialog-titles"><div class="nx-kicker"><oj-bind-text value="[[ 'Fusion Setups · ' + $variables.setupData.task.moduleName ]]"></oj-bind-text></div>
+          <h2 class="nx-dialog-title"><oj-bind-text value="[[ $variables.setupData.task.name ]]"></oj-bind-text></h2>
+          <div class="nx-sub" id="fsuDataText"><oj-bind-text value="[[ $functions.setupDataText($variables.setupData) ]]"></oj-bind-text></div></div></div>
+        <div class="nx-dialog-body">
+          <oj-bind-if test="[[ $variables.setupData.busy ]]"><div class="nx-empty">Reading from the pod…</div></oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.setupData.res && !$variables.setupData.res.ok ]]"><pre class="nx-fsql-raw nx-fsu-error"><oj-bind-text value="[[ $variables.setupData.res.error ]]"></oj-bind-text></pre></oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.setupData.res && $variables.setupData.res.ok ]]">
+            <div class="nx-fsu-datatools">
+              <input type="search" id="fsuDataQ" class="nx-fsql-filter" placeholder="Search the rows" autocomplete="off" :value="[[ $variables.setupData.view.q ]]" data-op="dataSearch" on-input="[[ $listeners.onSetup ]]">
+              <span class="nx-min-flex"></span>
+              <button type="button" class="nx-btn nx-btn--sm" id="fsuDataXlsx" data-op="dataExport" data-value="xlsx" on-click="[[ $listeners.onSetup ]]"><span class="oj-ux-ico-file-excel" aria-hidden="true"></span>Excel</button>
+              <button type="button" class="nx-btn nx-btn--sm" id="fsuDataCsv" data-op="dataExport" data-value="csv" on-click="[[ $listeners.onSetup ]]">CSV</button>
+            </div>
+            <oj-bind-if test="[[ $variables.setupData.res.rowCount === 0 ]]"><div class="nx-empty" id="fsuDataNone">No records: the setup is not there on this pod.</div></oj-bind-if>
+            <oj-bind-if test="[[ $variables.setupData.res.rowCount > 0 ]]">
+              <div class="nx-sql-gridwrap nx-fsu-gridwrap">
+                <div class="nx-sql-grid" role="grid" :style="[[ $variables.setupData.grid.style ]]" id="fsuGrid">
+                  <div class="nx-sql-row nx-sql-row--head" role="row">
+                    <span class="nx-sql-c nx-sql-rn" role="columnheader">#</span>
+                    <oj-bind-for-each data="[[ $variables.setupData.grid.cols ]]"><template data-oj-as="col">
+                      <button type="button" :class="[[ 'nx-sql-c nx-fsql-sort ' + col.data.cls ]]" role="columnheader" data-op="dataSort" :data-value="[[ col.data.name ]]" on-click="[[ $listeners.onSetup ]]">
+                        <oj-bind-text value="[[ col.data.name + (col.data.sort ? ' ' + col.data.sort : '') ]]"></oj-bind-text></button>
+                    </template></oj-bind-for-each>
+                  </div>
+                  <oj-bind-for-each data="[[ $variables.setupData.grid.rows ]]"><template data-oj-as="r">
+                    <div class="nx-sql-row" role="row">
+                      <span class="nx-sql-c nx-sql-rn" role="rowheader"><oj-bind-text value="[[ r.data.n ]]"></oj-bind-text></span>
+                      <oj-bind-for-each data="[[ r.data.cells ]]"><template data-oj-as="x">
+                        <span :class="[[ 'nx-sql-c ' + x.data.cls ]]" role="gridcell" :title="[[ x.data.full ]]"><oj-bind-text value="[[ x.data.t ]]"></oj-bind-text></span>
+                      </template></oj-bind-for-each>
+                    </div>
+                  </template></oj-bind-for-each>
+                </div>
+              </div>
+              <oj-bind-if test="[[ $variables.setupData.grid.pages > 1 ]]">
+                <div class="nx-fsql-pager">
+                  <button type="button" class="nx-btn nx-btn--sm" id="fsuPrev" data-op="dataPage" data-value="-1" on-click="[[ $listeners.onSetup ]]" :disabled="[[ $variables.setupData.grid.page === 0 ]]">‹ Previous</button>
+                  <span class="nx-note"><oj-bind-text value="[[ 'Page ' + ($variables.setupData.grid.page + 1) + ' of ' + $variables.setupData.grid.pages ]]"></oj-bind-text></span>
+                  <button type="button" class="nx-btn nx-btn--sm" id="fsuNext" data-op="dataPage" data-value="1" on-click="[[ $listeners.onSetup ]]" :disabled="[[ $variables.setupData.grid.page >= $variables.setupData.grid.pages - 1 ]]">Next ›</button>
+                </div>
+              </oj-bind-if>
+            </oj-bind-if>
+          </oj-bind-if>
+          <details class="nx-fsu-sqlshow"><summary>Its SQL</summary><pre class="nx-fsql-raw"><oj-bind-text value="[[ $variables.setupData.task.sql ]]"></oj-bind-text></pre></details>
+        </div>
+        <div class="nx-fsql-formacts nx-fsql-dlgacts">
+          <button type="button" class="nx-btn" id="fsuDataSql" data-op="dataSql" on-click="[[ $listeners.onSetup ]]" title="Put it in the SQL tab and run it there">Open in the SQL tab</button>
+          <button type="button" class="nx-btn nx-btn--plain" data-op="dataClose" on-click="[[ $listeners.onSetup ]]">Close</button>
         </div>
       </div>
     </div>

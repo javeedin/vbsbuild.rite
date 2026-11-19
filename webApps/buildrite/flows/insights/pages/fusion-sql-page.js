@@ -1,4 +1,4 @@
-define(['resources/js/exportKit', 'resources/js/fusionSqlKit'], (exportKit, K) => {
+define(['resources/js/exportKit', 'resources/js/fusionSqlKit', 'resources/js/fusionSetupsKit'], (exportKit, K, SK) => {
   'use strict';
 
   // Fusion SQL: binding helpers. Ctrl+Enter in the editor presses Run; Enter in Ask AI's box presses Ask; Enter in a
@@ -102,6 +102,33 @@ define(['resources/js/exportKit', 'resources/js/fusionSqlKit'], (exportKit, K) =
     stepText(s) {
       var icon = { hints: '🧭', ai: '✨', lookup: '🔎', check: '🧪', checked: s.ok ? '✓' : '✗' }[s.kind] || '•';
       return icon + ' ' + s.label;
+    }
+    // Fusion Setups
+    setupFilters() { return SK.FILTERS; }
+    setupRows(su) { return SK.taskRows(su); }
+    setupMods(su) { return SK.moduleRows(su); }
+    setupShownCount(su) { return SK.shown(su).length; }
+    setupPct(t) { return SK.pct(t || {}); }
+    podName(st) { var p = ((st && st.pods) || []).filter(function (x) { return x.active; })[0]; return p ? p.name : 'no pod yet'; }
+    /** "Check all 83" / "Check the 9 shown". */
+    setupCheckLabel(su) {
+      var n = SK.shown(su).length;
+      var all = (su.tasks || []).filter(function (t) { return t.active !== false; }).length;
+      return n === all ? 'Check all ' + n : 'Check the ' + n + ' shown';
+    }
+    setupRunText(su) {
+      var r = su && su.run;
+      if (!r) return '';
+      return (su.stop ? 'Stopping after this one… ' : 'Checking ') + (r.done + 1 > r.total ? r.total : r.done + 1) + ' of ' + r.total + (r.label ? ': ' + r.label : '') + ' · ' + r.ok + ' done, ' + r.missing + ' not done, ' + r.errors + ' errors';
+    }
+    setupDataText(sd) {
+      if (!sd) return '';
+      if (sd.busy) return 'Running its SQL on the pod…';
+      var res = sd.res;
+      if (!res || !res.ok) return '';
+      var g = sd.grid || {};
+      return (g.shown !== g.total ? g.shown.toLocaleString() + ' of ' : '') + res.rowCount.toLocaleString() + (res.rowCount === 1 ? ' record' : ' records') + (res.capped ? ' (the first 1,000)' : '')
+        + ' · ' + (res.ms >= 1000 ? (res.ms / 1000).toFixed(1) + ' s' : res.ms + ' ms') + (sd.task.fsm ? ' · FSM task: ' + sd.task.fsm : '');
     }
     callRows(list) {
       return (list || []).map(function (c, i) {

@@ -399,6 +399,71 @@ button.nx-fsql-col:hover { background: rgba(46, 111, 216, .1); }
 .nx-fsql-callbody { padding: 0 12px 10px; }
 .nx-fsql-dlg { width: min(620px, 100%); }
 .nx-fsql-dlgacts { padding: 0 16px 16px; }
+/* Fusion SQL → Fusion Setups: KPI tiles, modules on the left, the tasks with their status */
+.nx-fsu { display: grid; gap: 12px; }
+.nx-fsu-head { padding: 12px 14px; display: grid; gap: 10px; }
+.nx-fsu-kpis { display: grid; grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(110px, 1fr)); gap: 10px; }
+@media (max-width: 760px) { .nx-fsu-kpis { grid-template-columns: 1fr 1fr; } }
+.nx-fsu-kpi { display: grid; gap: 2px; align-content: start; text-align: left; border: 1px solid var(--nx-line, #e3e8ee); border-radius: 8px; padding: 8px 12px; background: var(--nx-surface, #fff); font: inherit; color: inherit; }
+button.nx-fsu-kpi { cursor: pointer; }
+button.nx-fsu-kpi:hover { border-color: #9db6d8; }
+.nx-fsu-kpi b { font-size: 22px; line-height: 1.2; }
+.nx-fsu-kpil { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--nx-muted, #4a5865); }
+.nx-fsu-kpi--main b { color: #1f7a3d; }
+.nx-fsu-kpi--miss b { color: #a35a00; }
+.nx-fsu-kpi--err b { color: #b3261e; }
+.nx-fsu-bar { display: block; height: 6px; border-radius: 3px; background: #e6ebf1; overflow: hidden; }
+.nx-fsu-bar > span { display: block; height: 100%; background: #2e9d57; border-radius: 3px; transition: width .3s; }
+.nx-fsu-bar--thin { height: 3px; }
+.nx-fsu-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nx-fsu-tools .nx-fsql-filter { width: 220px; }
+.nx-fsu-filters { margin: 0; }
+.nx-fsu-run { display: grid; gap: 4px; }
+.nx-fsu-run .nx-fsu-bar > span { background: #2e6fd8; }
+.nx-fsu-starter { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nx-fsu-error { color: #8c1d18; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+.nx-fsu-work { display: grid; grid-template-columns: minmax(200px, 250px) minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 900px) { .nx-fsu-work { grid-template-columns: 1fr; } }
+.nx-fsu-mods { padding: 6px; display: grid; gap: 2px; position: sticky; top: 8px; }
+.nx-fsu-mod { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; align-items: center; text-align: left; border: 0; border-radius: 6px; background: none; padding: 7px 9px; cursor: pointer; font: inherit; font-size: 13px; color: inherit; }
+.nx-fsu-mod:hover { background: rgba(46, 111, 216, .06); }
+.nx-fsu-mod--on { background: rgba(46, 111, 216, .12); font-weight: 600; }
+.nx-fsu-mod .nx-fsu-bar { grid-column: 1 / -1; }
+.nx-fsu-modname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-fsu-modn { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: var(--nx-muted, #4a5865); font-variant-numeric: tabular-nums; }
+.nx-fsu-dot { width: 7px; height: 7px; border-radius: 50%; }
+.nx-fsu-dot--err { background: #b3261e; }
+.nx-fsu-dot--miss { background: #d98a00; }
+.nx-fsu-list { padding-bottom: 6px; min-width: 0; }
+.nx-fsu-modhead { padding: 10px 12px 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--nx-muted, #4a5865); }
+.nx-fsu-task { display: grid; grid-template-columns: 92px minmax(0, 1fr) 130px auto; gap: 12px; align-items: start; padding: 9px 12px; border-top: 1px solid var(--nx-line, #eef1f4); }
+@media (max-width: 760px) { .nx-fsu-task { grid-template-columns: 92px minmax(0, 1fr); } .nx-fsu-meta, .nx-fsu-task .nx-fsql-qacts { grid-column: 2; } }
+.nx-fsu-task--err { background: #fffafa; }
+.nx-fsu-pill { display: inline-block; text-align: center; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: #eef1f4; color: #4a5865; white-space: nowrap; }
+.nx-fsu-pill--ok { background: #e3f4e8; color: #1f6b37; }
+.nx-fsu-pill--miss { background: #fff1dc; color: #8a4b00; }
+.nx-fsu-pill--err { background: #fde7e5; color: #8c1d18; }
+.nx-fsu-pill--busy { background: #e5eefc; color: #1d4f9c; }
+.nx-fsu-main { display: grid; gap: 2px; min-width: 0; }
+.nx-fsu-name { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.nx-fsu-badge { font-size: 10.5px; }
+.nx-fsu-fsm { font-size: 11.5px; color: #2e5f9e; }
+.nx-fsu-meta { display: grid; gap: 1px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.nx-fsu-how { padding: 0 4px; }
+.nx-fsu-dlg { width: min(760px, 100%); }
+.nx-fsu-dlg .nx-dialog-body { display: grid; gap: 10px; }
+.nx-fsu-wide { display: grid; gap: 3px; font-size: 12.5px; font-weight: 600; color: var(--nx-muted, #4a5865); }
+.nx-fsu-wide input, .nx-fsu-sql { border: 1px solid var(--nx-line, #d3dce6); border-radius: 6px; padding: 6px 8px; font: inherit; font-weight: 400; color: var(--nx-ink, #1d2b36); background: var(--nx-surface, #fff); }
+.nx-fsu-sql { min-height: 150px; resize: vertical; font: 12.5px/1.5 Consolas, "Courier New", monospace; }
+.nx-fsu-check-row { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
+.nx-fsu-test { border-radius: 6px; padding: 8px 10px; font-size: 12.5px; display: grid; gap: 3px; }
+.nx-fsu-test--ok { background: #f3fbf5; border: 1px solid #9fd3ae; }
+.nx-fsu-test--bad { background: #fef6f5; border: 1px solid #f3c2bd; color: #8c1d18; }
+.nx-fsu-datadlg { width: min(1100px, 100%); max-height: 92vh; display: flex; flex-direction: column; }
+.nx-fsu-datadlg .nx-dialog-body { overflow: auto; display: grid; gap: 8px; }
+.nx-fsu-datatools { display: flex; gap: 8px; align-items: center; }
+.nx-fsu-gridwrap { max-height: 52vh; }
+.nx-fsu-sqlshow summary { cursor: pointer; font-size: 12.5px; color: var(--nx-muted, #4a5865); }
 
 /* API Scenarios: the journey's pages (APIs, own tab, reconnect, remove link) and their APIs dialog */
 .nx-sc-journey { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; margin: 6px 0 10px; border: 1px solid var(--nx-line, #dde3ea); border-radius: 10px; background: var(--nx-surface, #fff); }

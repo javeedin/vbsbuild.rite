@@ -500,10 +500,22 @@ app's Fusion SQL module.
   **checks the SQL on the pod** (`… WHERE 1 = 0`): if Fusion refuses it, the error goes back to the AI to fix. Its SQL
   reaches the editor, or runs, only when you choose.
 - **Saved queries** are kept on this PC. Export them to a JSON file to share, and Import someone else's.
+- **Fusion Setups** is a module-by-module checklist of the pod's setup: 83 starter tasks in 13 modules (Enterprise
+  Structures, General Ledger, Tax, Cash Management, Payables, Receivables, Fixed Assets, Procurement, Inventory,
+  Shipping, Order Management, Users & Security, HCM Core), each with its FSM task. Each task holds a SQL that lists the
+  records proving the setup exists. **Check** runs `SELECT COUNT(*) FROM (that SQL)` on the pod in use through the
+  runner: **Done** when the count reaches the task's minimum rows, **Not done** below it, **Error** with the pod's own
+  words (a missing table, or data roles that do not cover it). **Check the n shown** checks every task of the filter or
+  module one after another (Stop at any time). KPI tiles and the module list show what is done; filter by status and
+  search. **Records** shows what the SQL finds (1,000 at most) in a grid with search, sort and Excel / CSV, or opens it
+  in the SQL tab. **Add task** / Edit: module, name, FSM task, minimum rows, mandatory or optional, **Test the SQL** on
+  the pod, or **Ask AI to write it** (the AI looks the tables up and Build.Rite checks its SQL on the pod). Changing a
+  task's SQL drops its old result. Results are kept on this PC **per pod**, so PROD and TEST each have their own.
+  The checklist exports to Excel or PDF.
 - **API calls** shows the last 30 SOAP calls as sent and answered, with passwords as `***`.
 
-Not ported yet from the WMS module: Flows, Setups checklist, Watchdogs, Knowledge, Format Results, Datasets and
-Pipelines (they need the WMS app's APEX tables and services).
+Not ported yet from the WMS module: Flows, Watchdogs, Knowledge, Format Results, Datasets and Pipelines (they need the
+WMS app's APEX tables and services).
 
 ## Run any VB app from its own folder
 
