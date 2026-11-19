@@ -11,7 +11,7 @@ const H = require('../_harness');
 
 const T = H.makeAsserter();
 const text = (page, sel) => page.$eval(sel, (e) => e.textContent.replace(/\s+/g, ' ').trim()).catch(() => '');
-const BUILD_SCREENS = ['projects', 'run-console', 'issues', 'jira', 'minutes', 'followups', 'app-pages', 'api-scenarios', 'change-requests', 'integrations', 'fdd-library', 'flows', 'assistant', 'sql', 'fusion-sql', 'ai'];
+const BUILD_SCREENS = ['projects', 'run-console', 'issues', 'jira', 'minutes', 'followups', 'app-pages', 'api-scenarios', 'change-requests', 'integrations', 'fdd-library', 'flows', 'assistant', 'sql', 'fusion-sql', 'bip', 'ai'];
 
 (async () => {
   // Jira (the fake backend): one story changed lately — created, moved, assigned to me, commented — and one older story
@@ -43,7 +43,7 @@ const BUILD_SCREENS = ['projects', 'run-console', 'issues', 'jira', 'minutes', '
     const items = await page.$$eval('#nxNav [data-nav-id]', (b) => b.map((x) => x.getAttribute('data-nav-id')));
     T.check('no help foot of another app at the foot of the menu', !(await page.$('#nxNavHelp')));
     T.eq('its screens in the menu, in order', items.join(','), BUILD_SCREENS.join(','));
-    T.check('the tools last, after Flows explained: AI Assistant, SQL, Fusion SQL, AI settings', items.slice(-5).join(',') === 'flows,assistant,sql,fusion-sql,ai', items.join(','));
+    T.check('the tools last, after Flows explained: AI Assistant, SQL, Fusion SQL, BIP Reporting, AI settings', items.slice(-6).join(',') === 'flows,assistant,sql,fusion-sql,bip,ai', items.join(','));
     await page.click('#nxNav [data-nav-id="sql"]');
     await page.waitForSelector('#sqlSub', { timeout: 15000 }).catch(() => {});
     T.check('…and opens the SQL worksheet', !!(await page.$('#sqlSub')) && !!(await page.$('.nx-tab[data-tab-id="sql"]')));

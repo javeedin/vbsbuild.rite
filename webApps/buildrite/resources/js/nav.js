@@ -78,8 +78,12 @@ define([], function () {
         keywords: 'query database oracle developer tns select statement worksheet' },
       // Fusion SQL: read-only SQL on an Oracle Fusion Cloud pod through one BI Publisher query-runner report, with the
       // schema browser, saved queries and Ask AI (flows/insights fusion-sql; desktop/lib/fusionSql.js), desktop app only
-      { id: 'fusion-sql', label: 'Fusion SQL', icon: 'oj-ux-ico-table', route: { flow: 'insights', page: 'fusion-sql' },
+      { id: 'fusion-sql', label: 'Fusion SQL', icon: 'oj-ux-ico-file-code', route: { flow: 'insights', page: 'fusion-sql' },
         keywords: 'fusion sql bi publisher bip query runner dbmsxmlgen saas pod schema tables views select ask ai cloud erp scm' },
+      // BIP Reporting: the BI Publisher catalog of a Fusion pod — browse, search, run reports (in date buckets), runs kept
+      // on this PC, favourites, a dashboard (flows/insights bip; desktop/lib/bipReports.js), desktop app only
+      { id: 'bip', label: 'BIP Reporting', icon: 'oj-ux-ico-chart-bar', route: { flow: 'insights', page: 'bip' },
+        keywords: 'bip bi publisher reports reporting catalog run report xdo xdm data model buckets dashboard csv pdf excel fusion oracle' },
       // AI settings: Claude Code on your subscription or an API key — the default for everything, and one per feature
       // (flows/insights ai; desktop/lib/aiSql.js)
       { id: 'ai', label: 'AI settings', icon: 'oj-ux-ico-lightbulb', route: { flow: 'insights', page: 'ai' },

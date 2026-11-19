@@ -47,7 +47,11 @@
     "onConn": { "chains": [ { "chain": "connChain", "parameters": { "op": "{{ $event.currentTarget.dataset.op }}", "id": "{{ $event.currentTarget.dataset.id || '' }}", "value": "{{ $event.currentTarget.dataset.value !== undefined ? $event.currentTarget.dataset.value : ($event.currentTarget.value || '') }}", "input": "{{ $event.currentTarget.value || '' }}" } } ] },
     "onCalls": { "chains": [ { "chain": "callsChain", "parameters": { "op": "{{ $event.currentTarget.dataset.op }}", "index": "{{ $event.currentTarget.dataset.index || '' }}" } } ] },
     "onExport": { "chains": [ { "chain": "exportChain", "parameters": { "format": "{{ $event.currentTarget.dataset.format }}" } } ] },
+    "focusRequest": { "chains": [ { "chain": "setChain", "parameters": { "field": "focus", "value": "" } } ] },
     "onSetup": { "chains": [ { "chain": "setupChain", "parameters": { "op": "{{ $event.currentTarget.dataset.op }}", "id": "{{ $event.currentTarget.dataset.id || '' }}", "value": "{{ $event.currentTarget.dataset.value !== undefined ? $event.currentTarget.dataset.value : '' }}", "input": "{{ $event.currentTarget.type === 'checkbox' ? $event.currentTarget.checked : ($event.currentTarget.value || '') }}" } } ] }
+  },
+  "events": {
+    "focusRequest": { "description": "From resources/js/shellBus.js focus(): another screen handed this one SQL for the editor.", "payloadType": "object" }
   },
   "imports": {
     "components": {

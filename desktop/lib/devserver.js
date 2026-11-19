@@ -1342,6 +1342,82 @@ function createDevServer(o) {
         })().catch((e) => jsonI(200, { ok: false, error: e.message }));
         return undefined;
       }
+      if (pathname.startsWith('/__bip/')) {
+        // BIP Reporting (lib/bipReports.js), for Build.Rite's BIP Reporting screen: the BI Publisher catalog of a Fusion pod,
+        // a report's parameters, runs (in buckets), this PC's runs, favourites and the dashboard. This PC only, by its own
+        // name, and only the app's own page (it sends X-Build-Rite-BIP). It signs in with Fusion SQL's pods; no password
+        // ever comes back.
+        const host = String(req.headers.host || '').replace(/:\d+$/, '');
+        if (!isLoopback(req.socket.remoteAddress) || !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(host)) {
+          return send(res, 404, 'text/plain; charset=utf-8', 'Not found');
+        }
+        const jsonB = (status, body) => send(res, status, 'application/json', JSON.stringify(body), { 'Cache-Control': 'no-store' });
+        if (!o.bipStore) return jsonB(200, { ok: false, unavailable: true, error: 'BIP Reporting runs in the Build.Rite desktop app.' });
+        const origin = req.headers.origin;
+        const bs = o.bipStore;
+        const get = (k) => u.searchParams.get(k) || '';
+        // the output of a run, downloaded (a link the page opens: no custom header, so only by its id, this PC only)
+        if (pathname === '/__bip/run/file' && req.method === 'GET') {
+          const f = bs.runFile(get('id'));
+          if (!f.ok) return send(res, 404, 'text/plain; charset=utf-8', f.error);
+          const type = { csv: 'text/csv', xml: 'application/xml', pdf: 'application/pdf', html: 'text/html', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }[f.file.split('.').pop()] || 'application/octet-stream';
+          return send(res, 200, type, fs.readFileSync(f.file), { 'Content-Disposition': 'attachment; filename="' + f.name.replace(/[^\w. -]+/g, '_') + '"', 'Cache-Control': 'no-store' });
+        }
+        if (req.headers['x-build-rite-bip'] !== '1' || (origin && origin !== `http://${req.headers.host}`)) {
+          return send(res, 403, 'application/json', JSON.stringify({ error: 'Refused: not from Build.Rite on this PC.' }));
+        }
+        const post = req.method === 'POST';
+        const bodyOf = () => new Promise((resolve, reject) => {
+          const chunks = [];
+          let size = 0;
+          req.on('data', (c) => { size += c.length; if (size <= 4 * 1024 * 1024) chunks.push(c); });
+          req.on('end', () => (size > 4 * 1024 * 1024 ? reject(new Error('Too large.')) : resolve(Buffer.concat(chunks).toString('utf8'))));
+          req.on('error', reject);
+        });
+        (async () => {
+          const b = post ? JSON.parse((await bodyOf()) || '{}') : {};
+          const r = (() => {
+            if (pathname === '/__bip/settings' && !post) return bs.settings();
+            if (pathname === '/__bip/prefs' && post) return bs.savePrefs(b);
+            if (pathname === '/__bip/progress' && !post) return bs.progress(get('id'));
+            if (pathname === '/__bip/cancel' && post) return bs.cancel(b.id);
+            if (pathname === '/__bip/search' && !post) return bs.search(get('pod'), get('q'));
+            if (pathname === '/__bip/runs' && !post) return bs.runs();
+            if (pathname === '/__bip/run' && !post) return bs.runRows(get('id'), get('offset'), get('limit'));
+            if (pathname === '/__bip/run/remove' && post) return bs.removeRun(b.id);
+            if (pathname === '/__bip/favorites' && !post) return bs.favorites();
+            if (pathname === '/__bip/favorite' && post) return bs.toggleFavorite(b);
+            if (pathname === '/__bip/cards' && !post) return bs.cards();
+            if (pathname === '/__bip/card/save' && post) return bs.saveCard(b.card);
+            if (pathname === '/__bip/card/remove' && post) return bs.removeCard(b.id);
+            return null;
+          })();
+          if (r) return jsonB(200, r);
+          if (pathname === '/__bip/folder' && !post) return jsonB(200, await bs.folder(get('pod'), get('path'), get('refresh') === '1'));
+          if (pathname === '/__bip/definition' && !post) return jsonB(200, await bs.definition(get('pod'), get('path'), get('refresh') === '1'));
+          if (pathname === '/__bip/datamodel' && !post) return jsonB(200, await bs.dataModel(get('pod'), get('path')));
+          if (pathname === '/__bip/index' && post) {
+            const out = await bs.index(b.pod, b);
+            log(`BIP index ${b.root || '/'} -> ${out.ok ? out.folders + ' folders, ' + out.items + ' items' : out.error}`);
+            return jsonB(200, out);
+          }
+          if (pathname === '/__bip/run' && post) {
+            const out = await bs.run(b.pod, b);
+            log(`BIP run ${b.path || ''} -> ${out.run ? out.run.status + (out.run.rows != null ? ' ' + out.run.rows + ' rows' : '') : out.error}`);
+            return jsonB(200, out);
+          }
+          if (pathname === '/__bip/run/open' && post) {
+            const f = bs.runFile(b.id);
+            if (!f.ok) return jsonB(200, f);
+            if (typeof o.vbsOpenPath !== 'function') return jsonB(200, { ok: false, error: 'Opening a file needs the desktop app: download it instead.' });
+            const err = await o.vbsOpenPath(b.folder ? f.folder : f.file);
+            return jsonB(200, err ? { ok: false, error: String(err) } : { ok: true });
+          }
+          if (pathname === '/__bip/card/run' && post) return jsonB(200, await bs.runCard(b.pod, b.id));
+          return jsonB(404, { error: 'Not found' });
+        })().catch((e) => jsonB(200, { ok: false, error: e.message }));
+        return undefined;
+      }
       if (pathname.startsWith('/__fsql/')) {
         // Fusion SQL (lib/fusionSql.js), for Build.Rite's Fusion SQL screen: read-only SQL on a Fusion pod through its
         // BI Publisher query runner, the schema browser, saved queries, Ask AI. This PC only, by its own name, and only

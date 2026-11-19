@@ -26,6 +26,9 @@
  *   calls(clear)                     the last 30 SOAP calls, passwords as ***
  *   owners / objects / search / detail / clearCache   the schema browser (cached per pod until Refresh)
  *   cacheInfo(pod)                   what the schema cache of a pod holds: { owners, lists, details, bytes, at }
+ *   soap(pod, service, op, inner, { timeoutMs, kind })   one BI Publisher SOAP call as the pod's user (service 'catalog' or
+ *                                    'report'; for the desktop's other engines, e.g. BIP Reporting — never a route), logged
+ *                                    like the runner's → { ok, status, text, fault, pod: { id, name, url, user } }
  *   queries() / saveQuery(q) / removeQuery(id) / importQueries(list) / ranQuery(id)   saved queries, on this PC
  *   ask({ question, history, editorSql, pod, askId }, chat)   Ask AI (below) → { ok, text, sql, checked, checkError, steps }
  *   progress(askId)                  the steps of an Ask AI still running
@@ -694,6 +697,25 @@ function open(opts) {
     cacheSet(p, key, out);
     return Object.assign({ ok: true, cached: false }, out);
   }
+  /** One BI Publisher SOAP call (CatalogService or ReportService v2) as the pod's user, logged with the password as ***. */
+  async function soap(id, service, op, inner, opts) {
+    const rec = podOf(id);
+    if (!rec) return { ok: false, error: 'Add a Fusion pod first (Fusion SQL → Connection).', noPod: true };
+    const p = full(rec);
+    const cred = credentials(p);
+    const who = { id: rec.id, name: rec.name, url: rec.url, user: cred.user };
+    if (!cred.user || !cred.password) return { ok: false, needsLogin: true, pod: who, error: p.login === 'app' ? 'No login for your app on this PC yet (File → Sign in for your app…).' : 'No password for ' + cred.user + ' on this PC: Fusion SQL → Connection → Edit the pod.' };
+    if (!/^[A-Za-z]+$/.test(str(op))) return { ok: false, pod: who, error: 'Not a SOAP operation.' };
+    const o2 = opts || {};
+    const url = p.url + (service === 'catalog' ? p.catalogServicePath : p.reportServicePath);
+    const envelope = '<?xml version="1.0" encoding="utf-8"?>\n<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v2="' + V2 + '"><soapenv:Header/><soapenv:Body><v2:' + op + '>'
+      + str(inner) + '<v2:userID>' + esc(cred.user) + '</v2:userID><v2:password>' + esc(cred.password) + '</v2:password></v2:' + op + '></soapenv:Body></soapenv:Envelope>';
+    const r = await post(url, op, envelope, null, o2.timeoutMs || p.timeoutMs, o2.kind || op);
+    if (r.netError) return { ok: false, status: 0, pod: who, error: r.netError };
+    const fault = r.status >= 400 || /<(?:\w+:)?Fault>/.test(r.text.slice(0, 4000)) ? (readSoap(r.text, 'faultstring').fault || 'HTTP ' + r.status) : null;
+    if (r.status === 401 || r.status === 403) return { ok: false, status: r.status, pod: who, needsLogin: true, error: 'Fusion refused the sign-in of ' + cred.user + ' (HTTP ' + r.status + ').' };
+    return { ok: !fault, status: r.status, text: r.text, fault, error: fault || '', pod: who };
+  }
   /** What the schema cache of a pod holds (Connection → Schema cache). */
   function cacheInfo(id) {
     const rec = podOf(id);
@@ -914,7 +936,7 @@ function open(opts) {
   }
 
   return { settings, savePod, removePod, setActive, execute, test, deploy, calls: (clear) => { if (clear) callLog.length = 0; return { ok: true, calls: callLog.slice() }; },
-    owners, objects, search, detail, clearCache, cacheInfo, queries, saveQuery, removeQuery, ranQuery, importQueries, ask, progress, KINDS };
+    owners, objects, search, detail, clearCache, cacheInfo, soap, queries, saveQuery, removeQuery, ranQuery, importQueries, ask, progress, KINDS };
 }
 
 module.exports = { open, validate, capSql, checkSql, runReportEnvelope, catalogEnvelope, readSoap, parseRows, parseCsv, coerce, columnsOf, diagnose,

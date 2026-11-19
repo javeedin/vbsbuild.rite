@@ -1,0 +1,387 @@
+<!-- BIP Reporting: the BI Publisher catalog of a Fusion pod — browse, search the index, run a report (in buckets), keep the
+     runs on this PC, favourites and a dashboard of report cards. The desktop app makes the calls (desktop/lib/bipReports.js
+     at /__bip/*), signing in with Fusion SQL's pods; rules shared with it: resources/js/bipKit.js. -->
+<div class="nx-page nx-bip" id="page-bip">
+  <div class="nx-pagehead">
+    <div>
+      <div class="nx-kicker">Tools</div>
+      <h1 id="bipTitle">BIP Reporting</h1>
+      <div class="nx-sub">The BI Publisher catalog of your Fusion pod: browse it, search it, run a report — in date buckets when it is big — and keep every run on this PC.</div>
+    </div>
+    <oj-bind-if test="[[ $variables.st.pods.length > 0 ]]">
+      <div class="nx-fsql-podbar" id="bipPodBar">
+        <label class="nx-fsql-podlbl" for="bipPod">Pod</label>
+        <select id="bipPod" class="nx-fsql-select" data-op="pod" on-change="[[ $listeners.onBip ]]" :disabled="[[ !!$variables.running ]]">
+          <oj-bind-for-each data="[[ $variables.st.pods ]]"><template data-oj-as="p">
+            <option :value="[[ p.data.id ]]" :selected="[[ p.data.id === $variables.pod ]]"><oj-bind-text value="[[ p.data.name ]]"></oj-bind-text></option>
+          </template></oj-bind-for-each>
+        </select>
+        <span class="nx-fsql-who"><oj-bind-text value="[[ $functions.whoText($variables.st, $variables.pod) ]]"></oj-bind-text></span>
+      </div>
+    </oj-bind-if>
+  </div>
+
+  <oj-bind-if test="[[ $variables.checked && !$variables.available ]]">
+    <div class="nx-empty" id="bipUnavailable">BIP Reporting runs in the Build.Rite desktop app: it signs in to your Fusion pod from this PC.</div>
+  </oj-bind-if>
+  <oj-bind-if test="[[ $variables.checked && $variables.available && $variables.st.pods.length === 0 ]]">
+    <div class="nx-card nx-fsql-start" id="bipNoPod">
+      <b>Connect a Fusion pod first.</b>
+      <span>BIP Reporting signs in with Fusion SQL's pods: add one under Fusion SQL → Connection (your app's login, or a Fusion user of its own), then come back.</span>
+      <button type="button" class="nx-btn nx-btn--cta" id="bipToFsql" data-op="toFusionSql" on-click="[[ $listeners.onBip ]]">Open Fusion SQL</button>
+    </div>
+  </oj-bind-if>
+
+  <oj-bind-if test="[[ $variables.available && $variables.st.pods.length > 0 ]]">
+    <div class="nx-seg nx-fsql-tabs" role="tablist" aria-label="BIP Reporting">
+      <oj-bind-for-each data="[[ $functions.tabs($variables.runs, $variables.cards, $variables.rep) ]]"><template data-oj-as="t">
+        <button type="button" role="tab" :id="[[ 'bipTab-' + t.data.id ]]" :class="[[ 'nx-seg-btn' + ($variables.tab === t.data.id ? ' nx-seg-btn--on' : '') ]]" data-op="tab" :data-value="[[ t.data.id ]]" on-click="[[ $listeners.onBip ]]">
+          <oj-bind-text value="[[ t.data.label ]]"></oj-bind-text></button>
+      </template></oj-bind-for-each>
+    </div>
+
+    <!-- ── Catalog ── -->
+    <oj-bind-if test="[[ $variables.tab === 'catalog' ]]">
+      <div class="nx-bip-cat">
+        <aside class="nx-card nx-bip-side" aria-label="Favourites and recent">
+          <div class="nx-bip-sidehead">Favourites</div>
+          <oj-bind-if test="[[ $functions.favRows($variables.cat.favorites, $variables.pod).length === 0 ]]"><div class="nx-note nx-bip-sidenote">Star a report to keep it here.</div></oj-bind-if>
+          <oj-bind-for-each data="[[ $functions.favRows($variables.cat.favorites, $variables.pod) ]]"><template data-oj-as="f">
+            <button type="button" class="nx-bip-sideitem nx-bip-fav" data-op="open" :data-id="[[ f.data.path ]]" :data-value="[[ f.data.type ]]" on-click="[[ $listeners.onBip ]]" :title="[[ f.data.path ]]">
+              <span :class="[[ f.data.icon ]]" aria-hidden="true"></span><span><oj-bind-text value="[[ f.data.name ]]"></oj-bind-text></span></button>
+          </template></oj-bind-for-each>
+          <div class="nx-bip-sidehead">Recent runs</div>
+          <oj-bind-if test="[[ $variables.runs.length === 0 ]]"><div class="nx-note nx-bip-sidenote">None yet.</div></oj-bind-if>
+          <oj-bind-for-each data="[[ $functions.recentRows($variables.runs) ]]"><template data-oj-as="r">
+            <button type="button" class="nx-bip-sideitem" data-op="hOpen" :data-id="[[ r.data.id ]]" on-click="[[ $listeners.onBip ]]" :title="[[ r.data.path ]]">
+              <span :class="[[ 'nx-bip-dot nx-bip-dot--' + r.data.cls ]]"></span><span><oj-bind-text value="[[ r.data.name ]]"></oj-bind-text><span class="nx-note"><oj-bind-text value="[[ ' · ' + r.data.when ]]"></oj-bind-text></span></span></button>
+          </template></oj-bind-for-each>
+        </aside>
+
+        <section class="nx-card nx-bip-main" id="bipCatalog">
+          <div class="nx-bip-bar">
+            <nav class="nx-bip-crumbs" aria-label="Folder">
+              <oj-bind-for-each data="[[ $functions.crumbs($variables.cat.path) ]]"><template data-oj-as="c">
+                <button type="button" class="nx-bip-crumb" data-op="go" :data-value="[[ c.data.path ]]" on-click="[[ $listeners.onBip ]]"><oj-bind-text value="[[ c.data.label ]]"></oj-bind-text></button>
+              </template></oj-bind-for-each>
+            </nav>
+            <button type="button" class="nx-iconbtn nx-iconbtn--sm" id="bipRefresh" data-op="refresh" on-click="[[ $listeners.onBip ]]" title="Read this folder again from Fusion" :disabled="[[ $variables.cat.loading ]]"><span class="oj-ux-ico-refresh" aria-hidden="true"></span></button>
+            <span class="nx-min-flex"></span>
+            <input type="search" id="bipSearch" class="nx-fsql-filter nx-bip-search" placeholder="Search the catalog" autocomplete="off" :value="[[ $variables.cat.q ]]" data-op="search" on-input="[[ $listeners.onBip ]]">
+            <oj-bind-if test="[[ !$variables.cat.indexing ]]">
+              <button type="button" class="nx-btn" id="bipIndex" data-op="index" on-click="[[ $listeners.onBip ]]" :title="[[ $functions.indexTitle($variables.cat.index) ]]">
+                <span class="oj-ux-ico-search" aria-hidden="true"></span><oj-bind-text value="[[ $functions.indexLabel($variables.cat.index) ]]"></oj-bind-text></button>
+            </oj-bind-if>
+            <oj-bind-if test="[[ !!$variables.cat.indexing ]]">
+              <button type="button" class="nx-btn" id="bipIndexStop" data-op="indexStop" on-click="[[ $listeners.onBip ]]"><span class="oj-ux-ico-stop" aria-hidden="true"></span>Stop</button>
+            </oj-bind-if>
+          </div>
+          <div class="nx-note nx-bip-src" id="bipSrc"><oj-bind-text value="[[ $functions.srcText($variables.cat) ]]"></oj-bind-text></div>
+          <oj-bind-if test="[[ !!$variables.cat.error ]]"><div class="nx-fsu-error nx-bip-err"><oj-bind-text value="[[ $variables.cat.error ]]"></oj-bind-text></div></oj-bind-if>
+          <oj-bind-if test="[[ $variables.cat.loading ]]"><div class="nx-empty">Reading from Fusion…</div></oj-bind-if>
+          <oj-bind-if test="[[ !$variables.cat.loading && $functions.catRows($variables.cat).length === 0 && !$variables.cat.error ]]">
+            <div class="nx-empty" id="bipEmpty"><oj-bind-text value="[[ $variables.cat.found ? 'Nothing in the catalog matches “' + $variables.cat.q + '”.' + ($variables.cat.index ? '' : ' Index the catalog to search all of it.') : 'This folder is empty.' ]]"></oj-bind-text></div>
+          </oj-bind-if>
+          <oj-bind-for-each data="[[ $functions.catRows($variables.cat) ]]"><template data-oj-as="it">
+            <div class="nx-bip-item" :data-path="[[ it.data.path ]]">
+              <span :class="[[ 'nx-bip-icon ' + it.data.icon ]]" aria-hidden="true"></span>
+              <div class="nx-bip-itemmain">
+                <button type="button" class="nx-bip-name" data-op="open" :data-id="[[ it.data.path ]]" :data-value="[[ it.data.type ]]" on-click="[[ $listeners.onBip ]]"><oj-bind-text value="[[ it.data.name ]]"></oj-bind-text></button>
+                <span class="nx-note"><oj-bind-text value="[[ it.data.sub ]]"></oj-bind-text></span>
+              </div>
+              <span class="nx-note nx-bip-type"><oj-bind-text value="[[ it.data.typeLabel ]]"></oj-bind-text></span>
+              <div class="nx-fsql-qacts">
+                <oj-bind-if test="[[ it.data.type === 'Report' ]]">
+                  <button type="button" class="nx-btn nx-btn--sm nx-btn--cta nx-bip-runit" data-op="open" :data-id="[[ it.data.path ]]" data-value="Report" on-click="[[ $listeners.onBip ]]"><span class="oj-ux-ico-play" aria-hidden="true"></span>Run</button>
+                </oj-bind-if>
+                <oj-bind-if test="[[ it.data.type === 'Report' || it.data.type === 'Folder' ]]">
+                  <button type="button" :class="[[ 'nx-iconbtn nx-iconbtn--sm nx-bip-star' + (it.data.fav ? ' nx-bip-star--on' : '') ]]" data-op="fav" :data-id="[[ it.data.path ]]" :data-value="[[ it.data.type ]]" on-click="[[ $listeners.onBip ]]" :title="[[ it.data.fav ? 'Take it off the favourites' : 'Add to favourites' ]]"><span class="oj-ux-ico-star" aria-hidden="true"></span></button>
+                </oj-bind-if>
+              </div>
+            </div>
+          </template></oj-bind-for-each>
+        </section>
+      </div>
+    </oj-bind-if>
+
+    <!-- ── Run ── -->
+    <oj-bind-if test="[[ $variables.tab === 'run' ]]">
+      <oj-bind-if test="[[ !$variables.rep ]]"><div class="nx-empty" id="bipNoReport">Choose a report in the catalog (or a favourite, a recent run) to run it here.</div></oj-bind-if>
+      <oj-bind-if test="[[ !!$variables.rep ]]">
+        <div class="nx-bip-run">
+          <section class="nx-card nx-bip-rephead" id="bipReport">
+            <div class="nx-bip-repmain">
+              <div class="nx-bip-repname"><b id="bipRepName"><oj-bind-text value="[[ $variables.rep.name ]]"></oj-bind-text></b>
+                <button type="button" :class="[[ 'nx-iconbtn nx-iconbtn--sm nx-bip-star' + ($functions.isFav($variables.cat.favorites, $variables.pod, $variables.rep.path) ? ' nx-bip-star--on' : '') ]]" id="bipRepFav" data-op="fav" :data-id="[[ $variables.rep.path ]]" data-value="Report" on-click="[[ $listeners.onBip ]]" title="Favourite"><span class="oj-ux-ico-star" aria-hidden="true"></span></button></div>
+              <span class="nx-note"><oj-bind-text value="[[ $variables.rep.path ]]"></oj-bind-text></span>
+              <span class="nx-note" id="bipDefNote"><oj-bind-text value="[[ $functions.defNote($variables.rep) ]]"></oj-bind-text></span>
+            </div>
+            <div class="nx-fsql-qacts">
+              <button type="button" class="nx-btn nx-btn--sm" id="bipDefRefresh" data-op="defRefresh" on-click="[[ $listeners.onBip ]]" title="Read its parameters again from Fusion"><span class="oj-ux-ico-refresh" aria-hidden="true"></span>Refresh</button>
+              <oj-bind-if test="[[ !!($variables.rep.def && $variables.rep.def.dataModelUrl) ]]">
+                <button type="button" class="nx-btn nx-btn--sm" id="bipDm" data-op="dm" on-click="[[ $listeners.onBip ]]" title="The SQL of its data model"><span class="oj-ux-ico-database" aria-hidden="true"></span>SQL behind it</button>
+              </oj-bind-if>
+              <button type="button" class="nx-btn nx-btn--sm" id="bipAddCard" data-op="addCard" on-click="[[ $listeners.onBip ]]" :disabled="[[ !$variables.rep.def ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span>Add to dashboard</button>
+              <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="bipToFolder" data-op="go" :data-value="[[ $functions.parentOf($variables.rep.path) ]]" on-click="[[ $listeners.onBip ]]">Open its folder</button>
+            </div>
+          </section>
+          <oj-bind-if test="[[ $variables.rep.loading ]]"><div class="nx-empty">Reading its parameters from Fusion…</div></oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.rep.error ]]"><div class="nx-card nx-fsql-connres nx-fsql-connres--bad"><oj-bind-text value="[[ $variables.rep.error ]]"></oj-bind-text></div></oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.rep.def ]]">
+            <section class="nx-card nx-bip-form">
+              <div class="nx-card-head"><h2 class="nx-h2">Parameters</h2><span class="nx-note"><oj-bind-text value="[[ $functions.paramNote($variables.rep) ]]"></oj-bind-text></span></div>
+              <div class="nx-fsql-fields nx-bip-params" id="bipParams">
+                <oj-bind-for-each data="[[ $functions.paramRows($variables.rep) ]]"><template data-oj-as="p">
+                  <label :class="[[ 'nx-bip-param-' + p.data.kind ]]">
+                    <span><oj-bind-text value="[[ p.data.label ]]"></oj-bind-text> <small><oj-bind-text value="[[ p.data.hint ]]"></oj-bind-text></small></span>
+                    <oj-bind-if test="[[ p.data.kind === 'date' ]]"><input type="date" class="nx-bip-param" :data-name="[[ p.data.name ]]" :value="[[ p.data.value ]]" data-op="pchange" on-change="[[ $listeners.onBip ]]"></oj-bind-if>
+                    <oj-bind-if test="[[ p.data.kind === 'number' ]]"><input type="number" class="nx-bip-param" :data-name="[[ p.data.name ]]" :value="[[ p.data.value ]]"></oj-bind-if>
+                    <oj-bind-if test="[[ p.data.kind === 'text' || p.data.kind === 'hidden' ]]"><input type="text" class="nx-bip-param" :data-name="[[ p.data.name ]]" :value="[[ p.data.value ]]" autocomplete="off"></oj-bind-if>
+                    <oj-bind-if test="[[ p.data.kind === 'bool' ]]"><span class="nx-bip-check"><input type="checkbox" class="nx-bip-param" :data-name="[[ p.data.name ]]" :checked="[[ p.data.checked ]]"> Yes</span></oj-bind-if>
+                    <oj-bind-if test="[[ p.data.kind === 'menu' ]]">
+                      <select class="nx-bip-param nx-fsql-select" :data-name="[[ p.data.name ]]" :multiple="[[ p.data.multi ]]" :size="[[ p.data.multi ? Math.min(6, p.data.options.length) : 1 ]]">
+                        <oj-bind-for-each data="[[ p.data.options ]]"><template data-oj-as="op">
+                          <option :value="[[ op.data.value ]]" :selected="[[ op.data.on ]]"><oj-bind-text value="[[ op.data.label ]]"></oj-bind-text></option>
+                        </template></oj-bind-for-each>
+                      </select>
+                    </oj-bind-if>
+                  </label>
+                </template></oj-bind-for-each>
+              </div>
+              <div class="nx-bip-runbar">
+                <label class="nx-bip-inline">Output
+                  <select id="bipFormat" class="nx-fsql-select" data-op="format" on-change="[[ $listeners.onBip ]]">
+                    <oj-bind-for-each data="[[ $functions.formatRows($variables.rep) ]]"><template data-oj-as="f">
+                      <option :value="[[ f.data.value ]]" :selected="[[ f.data.on ]]"><oj-bind-text value="[[ f.data.label ]]"></oj-bind-text></option>
+                    </template></oj-bind-for-each>
+                  </select></label>
+                <oj-bind-if test="[[ $functions.pairRows($variables.rep).length > 1 ]]">
+                  <label class="nx-bip-inline">Buckets
+                    <select id="bipBucketBy" class="nx-fsql-select" data-op="bField" data-value="by" on-change="[[ $listeners.onBip ]]">
+                      <oj-bind-for-each data="[[ $functions.byRows($variables.rep.bucket.by) ]]"><template data-oj-as="b">
+                        <option :value="[[ b.data.id ]]" :selected="[[ b.data.on ]]"><oj-bind-text value="[[ b.data.label ]]"></oj-bind-text></option>
+                      </template></oj-bind-for-each>
+                    </select></label>
+                  <oj-bind-if test="[[ $variables.rep.bucket.by === 'days' ]]">
+                    <label class="nx-bip-inline">of<input type="number" id="bipBucketN" min="1" max="366" class="nx-bip-n" :value="[[ $variables.rep.bucket.n ]]" data-op="bField" data-value="n" on-input="[[ $listeners.onBip ]]"> days</label>
+                  </oj-bind-if>
+                  <oj-bind-if test="[[ $variables.rep.bucket.by !== 'none' ]]">
+                    <label class="nx-bip-inline">on
+                      <select id="bipBucketPair" class="nx-fsql-select" data-op="bField" data-value="pair" on-change="[[ $listeners.onBip ]]">
+                        <oj-bind-for-each data="[[ $functions.pairRows($variables.rep) ]]"><template data-oj-as="b">
+                          <option :value="[[ b.data.id ]]" :selected="[[ b.data.on ]]"><oj-bind-text value="[[ b.data.label ]]"></oj-bind-text></option>
+                        </template></oj-bind-for-each>
+                      </select></label>
+                  </oj-bind-if>
+                </oj-bind-if>
+                <span class="nx-min-flex"></span>
+                <oj-bind-if test="[[ !$variables.running ]]">
+                  <button type="button" class="nx-btn nx-btn--cta" id="bipRun" data-op="run" on-click="[[ $listeners.onBip ]]"><span class="oj-ux-ico-play" aria-hidden="true"></span>Run</button>
+                </oj-bind-if>
+                <oj-bind-if test="[[ !!$variables.running ]]">
+                  <span class="nx-note nx-bip-running" id="bipRunning"><span class="nx-fsql-spin"></span><oj-bind-text value="[[ $variables.running.label + ' · ' + $variables.running.secs + ' s' ]]"></oj-bind-text></span>
+                  <button type="button" class="nx-btn" id="bipStop" data-op="stop" on-click="[[ $listeners.onBip ]]"><span class="oj-ux-ico-stop" aria-hidden="true"></span>Stop</button>
+                </oj-bind-if>
+              </div>
+              <oj-bind-if test="[[ $variables.rep.bucket.by !== 'none' && $functions.pairRows($variables.rep).length > 1 ]]">
+                <div class="nx-note nx-bip-plan" id="bipPlan"><oj-bind-text value="[[ $functions.planText($variables.rep) ]]"></oj-bind-text></div>
+              </oj-bind-if>
+            </section>
+          </oj-bind-if>
+
+          <!-- the result -->
+          <oj-bind-if test="[[ !!$variables.res ]]">
+            <section class="nx-card nx-bip-res" id="bipResult">
+              <div class="nx-card-head">
+                <span :class="[[ 'nx-fsu-pill nx-fsu-pill--' + $functions.statusCls($variables.res.run.status) ]]" id="bipStatus"><oj-bind-text value="[[ $functions.statusLabel($variables.res.run) ]]"></oj-bind-text></span>
+                <b id="bipCount"><oj-bind-text value="[[ $functions.resText($variables.res, $variables.grid) ]]"></oj-bind-text></b>
+                <span class="nx-min-flex"></span>
+                <oj-bind-if test="[[ $variables.res.rows.length > 0 ]]">
+                  <input type="search" id="bipGridQ" class="nx-fsql-filter" placeholder="Search the rows" autocomplete="off" :value="[[ $variables.view.q ]]" data-op="gSearch" on-input="[[ $listeners.onBip ]]">
+                  <button type="button" class="nx-btn nx-btn--sm" id="bipXlsx" data-op="export" data-value="xlsx" on-click="[[ $listeners.onBip ]]"><span class="oj-ux-ico-file-excel" aria-hidden="true"></span>Excel</button>
+                  <button type="button" class="nx-btn nx-btn--sm" data-op="export" data-value="csv" on-click="[[ $listeners.onBip ]]">CSV</button>
+                </oj-bind-if>
+                <oj-bind-if test="[[ !!$variables.res.run.file ]]">
+                  <button type="button" class="nx-btn nx-btn--sm" id="bipDownload" data-op="download" :data-id="[[ $variables.res.run.id ]]" on-click="[[ $listeners.onBip ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span>Download</button>
+                  <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="bipOpenFile" data-op="openFile" :data-id="[[ $variables.res.run.id ]]" on-click="[[ $listeners.onBip ]]" title="Open it with this PC's program">Open file</button>
+                  <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-op="openFolder" :data-id="[[ $variables.res.run.id ]]" on-click="[[ $listeners.onBip ]]">Folder</button>
+                </oj-bind-if>
+              </div>
+              <oj-bind-if test="[[ $functions.partErrors($variables.res.run).length > 0 ]]">
+                <div class="nx-bip-parts" id="bipParts">
+                  <oj-bind-for-each data="[[ $functions.partErrors($variables.res.run) ]]"><template data-oj-as="e">
+                    <div class="nx-fsu-error"><oj-bind-text value="[[ e.data ]]"></oj-bind-text></div>
+                  </template></oj-bind-for-each>
+                </div>
+              </oj-bind-if>
+              <oj-bind-if test="[[ $variables.res.run.rows === null ]]">
+                <div class="nx-empty" id="bipFileOnly"><oj-bind-text value="[[ 'The ' + $variables.res.run.format.toUpperCase() + ' is kept on this PC: Download it, or open it with this PC\'s program.' ]]"></oj-bind-text></div>
+              </oj-bind-if>
+              <oj-bind-if test="[[ $variables.res.run.rows === 0 ]]"><div class="nx-empty">No rows.</div></oj-bind-if>
+              <oj-bind-if test="[[ $variables.res.rows.length > 0 ]]">
+                <div class="nx-sql-gridwrap nx-bip-gridwrap">
+                  <div class="nx-sql-grid" role="grid" :style="[[ $variables.grid.style ]]" id="bipGrid">
+                    <div class="nx-sql-row nx-sql-row--head" role="row">
+                      <span class="nx-sql-c nx-sql-rn" role="columnheader">#</span>
+                      <oj-bind-for-each data="[[ $variables.grid.cols ]]"><template data-oj-as="col">
+                        <button type="button" :class="[[ 'nx-sql-c nx-fsql-sort ' + col.data.cls ]]" role="columnheader" data-op="gSort" :data-value="[[ col.data.name ]]" on-click="[[ $listeners.onBip ]]">
+                          <oj-bind-text value="[[ col.data.name + (col.data.sort ? ' ' + col.data.sort : '') ]]"></oj-bind-text></button>
+                      </template></oj-bind-for-each>
+                    </div>
+                    <oj-bind-for-each data="[[ $variables.grid.rows ]]"><template data-oj-as="r">
+                      <div class="nx-sql-row" role="row">
+                        <span class="nx-sql-c nx-sql-rn" role="rowheader"><oj-bind-text value="[[ r.data.n ]]"></oj-bind-text></span>
+                        <oj-bind-for-each data="[[ r.data.cells ]]"><template data-oj-as="x">
+                          <span :class="[[ 'nx-sql-c ' + x.data.cls ]]" role="gridcell" :title="[[ x.data.full ]]"><oj-bind-text value="[[ x.data.t ]]"></oj-bind-text></span>
+                        </template></oj-bind-for-each>
+                      </div>
+                    </template></oj-bind-for-each>
+                  </div>
+                </div>
+                <oj-bind-if test="[[ $variables.grid.pages > 1 ]]">
+                  <div class="nx-fsql-pager">
+                    <button type="button" class="nx-btn nx-btn--sm" id="bipPrev" data-op="gPage" data-value="-1" on-click="[[ $listeners.onBip ]]" :disabled="[[ $variables.grid.page === 0 ]]">‹ Previous</button>
+                    <span class="nx-note"><oj-bind-text value="[[ 'Page ' + ($variables.grid.page + 1) + ' of ' + $variables.grid.pages ]]"></oj-bind-text></span>
+                    <button type="button" class="nx-btn nx-btn--sm" id="bipNext" data-op="gPage" data-value="1" on-click="[[ $listeners.onBip ]]" :disabled="[[ $variables.grid.page >= $variables.grid.pages - 1 ]]">Next ›</button>
+                  </div>
+                </oj-bind-if>
+              </oj-bind-if>
+            </section>
+          </oj-bind-if>
+        </div>
+      </oj-bind-if>
+    </oj-bind-if>
+
+    <!-- ── Dashboard ── -->
+    <oj-bind-if test="[[ $variables.tab === 'dashboard' ]]">
+      <div class="nx-bip-dash">
+        <div class="nx-bip-bar">
+          <span class="nx-note">Report cards, each run with its saved parameters (dates can move with today). Add one from a report's Run tab.</span>
+          <span class="nx-min-flex"></span>
+          <button type="button" class="nx-btn nx-btn--cta" id="bipRunAll" data-op="cardRunAll" on-click="[[ $listeners.onBip ]]" :disabled="[[ $variables.cards.length === 0 || $functions.anyBusy($variables.cardBusy) ]]"><span class="oj-ux-ico-play" aria-hidden="true"></span>Run all</button>
+        </div>
+        <oj-bind-if test="[[ $variables.cards.length === 0 ]]"><div class="nx-empty" id="bipNoCards">No card yet: open a report, then Add to dashboard.</div></oj-bind-if>
+        <div class="nx-bip-cards" id="bipCards">
+          <oj-bind-for-each data="[[ $functions.cardRows($variables.cards, $variables.cardBusy) ]]"><template data-oj-as="c">
+            <section class="nx-card nx-bip-card" :data-id="[[ c.data.id ]]">
+              <div class="nx-bip-cardhead"><b><oj-bind-text value="[[ c.data.name ]]"></oj-bind-text></b><span class="nx-min-flex"></span>
+                <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-bip-cardrun" data-op="cardRun" :data-id="[[ c.data.id ]]" on-click="[[ $listeners.onBip ]]" :disabled="[[ c.data.busy ]]" title="Run it now"><span class="oj-ux-ico-refresh" aria-hidden="true"></span></button>
+                <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-op="cardOpen" :data-id="[[ c.data.id ]]" on-click="[[ $listeners.onBip ]]" title="Open it in Run"><span class="oj-ux-ico-external-link" aria-hidden="true"></span></button>
+                <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-flib-del nx-bip-carddel" data-op="cardRemove" :data-id="[[ c.data.id ]]" on-click="[[ $listeners.onBip ]]" title="Remove"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button></div>
+              <span class="nx-note"><oj-bind-text value="[[ c.data.sub ]]"></oj-bind-text></span>
+              <div class="nx-bip-cardval"><oj-bind-text value="[[ c.data.value ]]"></oj-bind-text></div>
+              <span class="nx-note"><oj-bind-text value="[[ c.data.meta ]]"></oj-bind-text></span>
+              <oj-bind-if test="[[ !!c.data.error ]]"><div class="nx-fsu-error"><oj-bind-text value="[[ c.data.error ]]"></oj-bind-text></div></oj-bind-if>
+              <oj-bind-if test="[[ c.data.preview.length > 0 ]]">
+                <div class="nx-bip-mini" :style="[[ { gridTemplateColumns: 'repeat(' + c.data.cols.length + ', minmax(60px, 1fr))' } ]]">
+                  <oj-bind-for-each data="[[ c.data.cols ]]"><template data-oj-as="h"><span class="nx-bip-minih"><oj-bind-text value="[[ h.data ]]"></oj-bind-text></span></template></oj-bind-for-each>
+                  <oj-bind-for-each data="[[ c.data.preview ]]"><template data-oj-as="cell"><span class="nx-bip-minic" :title="[[ cell.data ]]"><oj-bind-text value="[[ cell.data ]]"></oj-bind-text></span></template></oj-bind-for-each>
+                </div>
+              </oj-bind-if>
+            </section>
+          </template></oj-bind-for-each>
+        </div>
+      </div>
+    </oj-bind-if>
+
+    <!-- ── History ── -->
+    <oj-bind-if test="[[ $variables.tab === 'history' ]]">
+      <section class="nx-card nx-bip-hist" id="bipHistory">
+        <div class="nx-card-head"><h2 class="nx-h2">Runs on this PC</h2><span class="nx-note">Every run with what was asked, its output and its rows. Nothing leaves this PC.</span><span class="nx-min-flex"></span>
+          <input type="search" id="bipHistQ" class="nx-fsql-filter" placeholder="Search the runs" autocomplete="off" :value="[[ $variables.hFilter ]]" data-op="hFilter" on-input="[[ $listeners.onBip ]]"></div>
+        <oj-bind-if test="[[ $functions.histRows($variables.runs, $variables.hFilter).length === 0 ]]"><div class="nx-empty">No run here.</div></oj-bind-if>
+        <oj-bind-for-each data="[[ $functions.histRows($variables.runs, $variables.hFilter) ]]"><template data-oj-as="h">
+          <div class="nx-bip-hrow" :data-id="[[ h.data.id ]]">
+            <span :class="[[ 'nx-fsu-pill nx-fsu-pill--' + h.data.cls ]]"><oj-bind-text value="[[ h.data.status ]]"></oj-bind-text></span>
+            <div class="nx-bip-itemmain"><b><oj-bind-text value="[[ h.data.name ]]"></oj-bind-text></b>
+              <span class="nx-note"><oj-bind-text value="[[ h.data.sub ]]"></oj-bind-text></span>
+              <oj-bind-if test="[[ !!h.data.error ]]"><span class="nx-fsu-error"><oj-bind-text value="[[ h.data.error ]]"></oj-bind-text></span></oj-bind-if></div>
+            <span class="nx-note nx-bip-hmeta"><oj-bind-text value="[[ h.data.meta ]]"></oj-bind-text></span>
+            <div class="nx-fsql-qacts">
+              <oj-bind-if test="[[ h.data.hasRows ]]"><button type="button" class="nx-btn nx-btn--sm nx-bip-hopen" data-op="hOpen" :data-id="[[ h.data.id ]]" on-click="[[ $listeners.onBip ]]">Open</button></oj-bind-if>
+              <button type="button" class="nx-btn nx-btn--sm nx-bip-hagain" data-op="hAgain" :data-id="[[ h.data.id ]]" on-click="[[ $listeners.onBip ]]" title="Its report with the same values, ready to run">Run again</button>
+              <oj-bind-if test="[[ h.data.hasFile ]]"><button type="button" class="nx-iconbtn nx-iconbtn--sm" data-op="download" :data-id="[[ h.data.id ]]" on-click="[[ $listeners.onBip ]]" title="Download"><span class="oj-ux-ico-download" aria-hidden="true"></span></button></oj-bind-if>
+              <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-flib-del nx-bip-hdel" data-op="hRemove" :data-id="[[ h.data.id ]]" on-click="[[ $listeners.onBip ]]" title="Delete it and its files"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+            </div>
+          </div>
+        </template></oj-bind-for-each>
+      </section>
+    </oj-bind-if>
+
+    <!-- ── Settings ── -->
+    <oj-bind-if test="[[ $variables.tab === 'settings' ]]">
+      <div class="nx-fsql-cards">
+        <section class="nx-card nx-fsql-card" id="bipPrefs">
+          <div class="nx-card-head"><h2 class="nx-h2"><span class="oj-ux-ico-settings" aria-hidden="true"></span> Runs and the index</h2></div>
+          <div class="nx-fsql-fields">
+            <label>Download in chunks of (MB)<input type="number" id="bipPChunk" min="1" max="64" :value="[[ $variables.prefs.chunkMb ]]" data-op="pField" data-value="chunkMb" on-input="[[ $listeners.onBip ]]"></label>
+            <label>Time limit per bucket (seconds)<input type="number" id="bipPTimeout" min="30" max="7200" :value="[[ $variables.prefs.timeoutS ]]" data-op="pField" data-value="timeoutS" on-input="[[ $listeners.onBip ]]"></label>
+            <label>Index from folder<input type="text" id="bipPRoot" :value="[[ $variables.prefs.indexRoot ]]" data-op="pField" data-value="indexRoot" on-input="[[ $listeners.onBip ]]"></label>
+            <label>At most (folders)<input type="number" id="bipPMax" min="10" max="5000" :value="[[ $variables.prefs.maxFolders ]]" data-op="pField" data-value="maxFolders" on-input="[[ $listeners.onBip ]]"></label>
+          </div>
+          <div class="nx-fsql-formacts"><button type="button" class="nx-btn nx-btn--cta" id="bipPSave" data-op="pSave" on-click="[[ $listeners.onBip ]]"><span class="oj-ux-ico-save" aria-hidden="true"></span>Save</button></div>
+        </section>
+        <section class="nx-card nx-fsql-card nx-fsql-how">
+          <div class="nx-card-head"><h2 class="nx-h2"><span class="oj-ux-ico-information" aria-hidden="true"></span> How it works</h2></div>
+          <p>BIP Reporting calls BI Publisher's own web services on the pod (CatalogService and ReportService, SOAP), as the Fusion user of the pod chosen above — the pods, their logins and the API calls are Fusion SQL's (Fusion SQL → Connection, and its API Inspector). A report runs with its own layout or as data (CSV / XML, shown as rows). With <b>buckets</b> a big report runs once per day / week / month… of a date range and the rows are joined into one table. A big output comes in chunks. Every run — what was asked, the output file, its rows — is kept on this PC; the catalog and the reports' parameters are kept too, until Refresh.</p>
+        </section>
+      </div>
+    </oj-bind-if>
+  </oj-bind-if>
+
+  <!-- the data model's SQL -->
+  <oj-bind-if test="[[ !!$variables.dm ]]">
+    <div class="nx-modal" id="bipDmDlg">
+      <button type="button" class="nx-modal-scrim" aria-label="Close" data-op="dmClose" on-click="[[ $listeners.onBip ]]"></button>
+      <div class="nx-dialog nx-fsu-datadlg" role="dialog" aria-modal="true" aria-label="Data model">
+        <div class="nx-dialog-head"><div class="nx-dialog-titles"><div class="nx-kicker">Data model</div><h2 class="nx-dialog-title"><oj-bind-text value="[[ $variables.dm.path ]]"></oj-bind-text></h2>
+          <div class="nx-sub"><oj-bind-text value="[[ $functions.dmNote($variables.dm) ]]"></oj-bind-text></div></div></div>
+        <div class="nx-dialog-body">
+          <oj-bind-if test="[[ $variables.dm.busy ]]"><div class="nx-empty">Downloading it from the catalog…</div></oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.dm.error ]]"><div class="nx-fsu-error"><oj-bind-text value="[[ $variables.dm.error ]]"></oj-bind-text></div></oj-bind-if>
+          <oj-bind-for-each data="[[ $functions.dmRows($variables.dm) ]]"><template data-oj-as="d">
+            <div class="nx-bip-ds">
+              <div class="nx-bip-dshead"><b><oj-bind-text value="[[ d.data.name ]]"></oj-bind-text></b><span class="nx-note"><oj-bind-text value="[[ d.data.dataSource ]]"></oj-bind-text></span><span class="nx-min-flex"></span>
+                <button type="button" class="nx-btn nx-btn--sm" data-op="dmCopy" :data-id="[[ d.data.i ]]" on-click="[[ $listeners.onBip ]]"><span class="oj-ux-ico-copy" aria-hidden="true"></span>Copy</button>
+                <button type="button" class="nx-btn nx-btn--sm nx-bip-dmfsql" data-op="dmFusion" :data-id="[[ d.data.i ]]" on-click="[[ $listeners.onBip ]]" title="Put it in Fusion SQL's editor (its :binds ask for values)">Open in Fusion SQL</button></div>
+              <pre class="nx-fsql-raw"><oj-bind-text value="[[ d.data.sql ]]"></oj-bind-text></pre>
+            </div>
+          </template></oj-bind-for-each>
+        </div>
+        <div class="nx-fsql-formacts nx-fsql-dlgacts"><button type="button" class="nx-btn nx-btn--plain" data-op="dmClose" on-click="[[ $listeners.onBip ]]">Close</button></div>
+      </div>
+    </div>
+  </oj-bind-if>
+
+  <!-- a dashboard card -->
+  <oj-bind-if test="[[ !!$variables.cardDlg ]]">
+    <div class="nx-modal" id="bipCardDlg">
+      <button type="button" class="nx-modal-scrim" aria-label="Close" data-op="cardCancel" on-click="[[ $listeners.onBip ]]"></button>
+      <div class="nx-dialog nx-fsql-dlg" role="dialog" aria-modal="true" aria-label="Add to dashboard">
+        <div class="nx-dialog-head"><div class="nx-dialog-titles"><div class="nx-kicker">Dashboard</div><h2 class="nx-dialog-title">Add to dashboard</h2>
+          <div class="nx-sub">The card runs this report with the values in the form now, as data.</div></div></div>
+        <div class="nx-dialog-body nx-fsql-fields">
+          <label>Name<input type="text" id="bipCardName" :value="[[ $variables.cardDlg.name ]]" data-op="cardField" data-value="name" on-input="[[ $listeners.onBip ]]"></label>
+          <label>Its number
+            <select id="bipCardMode" class="nx-fsql-select" data-op="cardField" data-value="mode" on-change="[[ $listeners.onBip ]]">
+              <option value="count" :selected="[[ $variables.cardDlg.mode === 'count' ]]">How many rows</option>
+              <option value="sum" :selected="[[ $variables.cardDlg.mode === 'sum' ]]">Sum of a column</option>
+              <option value="first" :selected="[[ $variables.cardDlg.mode === 'first' ]]">A column of the first row</option>
+            </select></label>
+          <oj-bind-if test="[[ $variables.cardDlg.mode !== 'count' ]]">
+            <label>Column<input type="text" id="bipCardCol" :value="[[ $variables.cardDlg.column ]]" data-op="cardField" data-value="column" on-input="[[ $listeners.onBip ]]" placeholder="AMOUNT"></label>
+          </oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.cardDlg.pair ]]">
+            <label class="nx-bip-check"><input type="checkbox" id="bipCardRolling" :checked="[[ $variables.cardDlg.rolling ]]" data-op="cardField" data-value="rolling" on-change="[[ $listeners.onBip ]]">
+              <oj-bind-text value="[[ 'Dates move with today: ' + $variables.cardDlg.pairLabel + ' = the last' ]]"></oj-bind-text></label>
+            <label>days<input type="number" id="bipCardDays" min="0" max="3660" :value="[[ $variables.cardDlg.days ]]" data-op="cardField" data-value="days" on-input="[[ $listeners.onBip ]]"></label>
+          </oj-bind-if>
+        </div>
+        <div class="nx-fsql-formacts nx-fsql-dlgacts">
+          <button type="button" class="nx-btn nx-btn--cta" id="bipCardSave" data-op="cardSave" on-click="[[ $listeners.onBip ]]">Add</button>
+          <button type="button" class="nx-btn nx-btn--plain" data-op="cardCancel" on-click="[[ $listeners.onBip ]]">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </oj-bind-if>
+</div>

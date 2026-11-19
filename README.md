@@ -15,7 +15,7 @@ It is an independent app: it works with any VB Studio project and keeps its own 
 | **Workspace** | **Organizations & projects**: your VB Studio organizations (the sign-in is kept encrypted on this PC) and their projects and workspaces. **Set up your workspace**: a wizard that clones a workspace into `main` and `working` (a worktree on its own branch). **▶ Run** and the **Run console**: your workspace's app built from its working folder and run in a window of its own, with the build, its requests and its console shown live, and commands typed as in an editor's terminal. **Run as**: the user and roles the app runs as; the roles offered are the ones found in the app's own code. |
 | **Work** | **Issues**: an issue is logged against a page, then written up and analysed by the AI against the page's code and the FDD. Once approved, the agent applies it on a branch with a pull request, and Jira is kept up to date. **Jira stories**, sprints, daily progress and AI analyses of one story or several; under a story's analysis, **Create the functional design** writes its design document as a PDF (see below). **Standup minutes** and **Follow-ups**, with the messages you keep for them (see below). |
 | **Application** | **Application pages**: every VB page of your workspace's app, with its technical sheet, screenshots, navigation maps, page code (lines changed since VB Studio are highlighted) and **Code fix**. Code fix writes a change into your working folder only after you approve it — approving applies it, checks it and saves it there (a commit on this PC, never pushed) — and marks each change in the code with who asked for it, when, and its issue or Jira story. **Change requests**: a change asked of a page, with who asked, the customer, the Jira story and the issue, made with Code fix and followed until it is fixed (see below). **API Scenarios**: a page's web services put in order and tested through the APIs alone, with no need to open the page (see below). **FDD library**: the FDDs that Analyze with AI reads. **Flows explained**: how Build.Rite's own flows work. |
-| **Tools** | **AI Assistant** (Ctrl+J from anywhere): ask anything about your app — its code, integrations and processes — answered from your workspace, formatted, with its sources (see below). **SQL**: a worksheet against an Oracle database, with Ask AI. **Fusion SQL**: read-only SQL on your Oracle Fusion Cloud pod through one BI Publisher report, with a schema browser, saved queries and Ask AI (see below). **AI settings**: which AI Build.Rite asks, either **Claude Code** on your Claude subscription (no API key, no per-call cost) or an **API key** paid per use (Anthropic, OpenAI, Gemini, OCI Generative AI, or any OpenAI-compatible service). You pick one default for everything, and can give a feature its own: Code fix, Issues, Analyze with AI, Application pages, Standup minutes, SQL or the AI Assistant. **Try it** checks each one; Code fix also has a quick switch on its own tab. |
+| **Tools** | **AI Assistant** (Ctrl+J from anywhere): ask anything about your app — its code, integrations and processes — answered from your workspace, formatted, with its sources (see below). **SQL**: a worksheet against an Oracle database, with Ask AI. **Fusion SQL**: read-only SQL on your Oracle Fusion Cloud pod through one BI Publisher report, with a schema browser, saved queries, Ask AI and a setup checklist (see below). **BIP Reporting**: the BI Publisher catalog of your Fusion pod — browse it, search it, run a report (in date buckets when it is big), keep every run on this PC, and a dashboard of report cards (see below). **AI settings**: which AI Build.Rite asks, either **Claude Code** on your Claude subscription (no API key, no per-call cost) or an **API key** paid per use (Anthropic, OpenAI, Gemini, OCI Generative AI, or any OpenAI-compatible service). You pick one default for everything, and can give a feature its own: Code fix, Issues, Analyze with AI, Application pages, Standup minutes, SQL or the AI Assistant. **Try it** checks each one; Code fix also has a quick switch on its own tab. |
 
 ## Start
 
@@ -526,6 +526,41 @@ app's Fusion SQL module.
 
 Not ported yet from the WMS module: Flows, Watchdogs, Knowledge, Format Results, Datasets and Pipelines (they need the
 WMS app's APEX tables and services).
+
+## BIP Reporting: the BI Publisher catalog of your Fusion pod
+
+**Tools → BIP Reporting** browses and runs the reports of your pod's BI Publisher catalog from this PC. It was ported from
+the WMS app's Oracle BIP Reporting module. It signs in with **Fusion SQL's pods** (Fusion SQL → Connection): the same
+users, the password kept in the keychain, never shown. Every call is to BI Publisher's own web services (CatalogService
+and ReportService v2, SOAP) and shows in Fusion SQL's **API Inspector** with the password as `***`.
+
+- **Catalog.** Folders with breadcrumbs. Each one is read from Fusion once and kept on this PC until **Refresh**. When
+  Fusion refuses to list a folder, the copy from the index is shown. **Favourites** (the star) and **Recent runs** sit on
+  the left.
+- **Index the catalog** walks every folder once, four at a time, up to a limit you set, so the search box finds any
+  report, data model or folder by name or path. **Update the index** walks it again and says what is new, changed or gone
+  since the last walk. **Stop** halts a walk part way.
+- **Run.** The report's parameters come from its definition. The form shows:
+  - dates as date boxes;
+  - numbers;
+  - ticks;
+  - a choice from its list of values (several when the report allows it, with **All**).
+
+  The values go to BI Publisher in the report's own date format. **Output** lists the formats its layouts offer, its
+  default first, plus XML data. CSV and XML come back as rows: a grid with search, sort, pages, and Excel or CSV export.
+  Other formats (PDF, Excel, HTML…) are kept as a file to **Download** or open with this PC's program. Big outputs come in
+  chunks (BI Publisher's `downloadReportDataChunk`).
+- **Buckets.** A big report can run once per day, n days, week, month, quarter or year of a date range, on the pair of
+  date parameters it has. The plan shows how many runs there will be. Their rows are joined into one table with a
+  `BUCKET` column. A bucket that fails is shown with its error, and the others are kept.
+- **SQL behind it** downloads the report's data model and shows each data set's SQL, to copy or to put in Fusion SQL's
+  editor (its `:binds` ask for values there).
+- **Dashboard.** **Add to dashboard** saves a card: the report with the values in the form. Its number is the row count,
+  the sum of a column, or a column of the first row. Its dates can **move with today** (the last n days). **Run all**
+  runs every card and shows its number, its rows and a preview.
+- **History.** Every run is kept on this PC with what was asked, its output file and its rows. **Open** shows the rows
+  again, **Run again** fills the form with the same values, and **Delete** removes the run and its files.
+- **Settings**: the chunk size, the time limit per bucket, and the folder and folder limit for the index.
 
 ## Run any VB app from its own folder
 

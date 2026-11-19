@@ -1,0 +1,40 @@
+{
+  "description": "BIP Reporting: the BI Publisher catalog of an Oracle Fusion pod from this PC — browse folders (kept on this PC until Refresh), index the whole catalog and search it, read a report's parameters and output formats, run it (dates in the report's own format, date buckets joined into one table, big outputs in chunks), the result as a grid (search, sort, Excel / CSV) or the output file (download, open), every run kept on this PC, favourites, a dashboard of report cards (dates that move with today), and the SQL behind a report (its data model, into Fusion SQL). Ported from the WMS app's Oracle BIP Reporting module. The desktop app makes the calls (desktop/lib/bipReports.js at /__bip/*) with Fusion SQL's pods; rules shared with it: resources/js/bipKit.js.",
+  "navigation": { "embeddable": "enabled" },
+  "variables": {
+    "checked": { "type": "boolean", "defaultValue": false },
+    "available": { "type": "boolean", "defaultValue": true, "description": "The local server has BIP Reporting (the desktop app)." },
+    "tab": { "type": "string", "defaultValue": "catalog", "description": "catalog | run | dashboard | history | settings" },
+    "st": { "type": "any", "defaultValue": { "pods": [], "active": "", "prefs": {} }, "description": "Fusion SQL's pods (no password), the one in use, BIP's settings." },
+    "pod": { "type": "string", "defaultValue": "" },
+    "cat": { "type": "any", "defaultValue": { "path": "/", "items": [], "at": "", "src": "", "loading": false, "error": "", "q": "", "found": null, "index": null, "indexing": null, "favorites": [], "podId": "" },
+      "description": "The folder shown, its source, the search, the index and the walk going on, the favourites." },
+    "rep": { "type": "any", "defaultValue": null, "description": "The report in the Run tab: { path, name, def, at, src, loading, error, values, format, template, bucket: { pair, by, n } }." },
+    "running": { "type": "any", "defaultValue": null, "description": "A run going on: { id, label, secs }." },
+    "res": { "type": "any", "defaultValue": null, "description": "The last result: { run, columns, rows, kinds, sent }." },
+    "view": { "type": "any", "defaultValue": { "q": "", "sortCol": "", "sortDir": 1, "page": 0 } },
+    "grid": { "type": "any", "defaultValue": { "cols": [], "rows": [], "shown": 0, "total": 0, "page": 0, "pages": 1, "style": {} }, "description": "The page of the grid shown (fusionSqlKit.view)." },
+    "runs": { "type": "any[]", "defaultValue": [], "description": "This PC's runs, newest first." },
+    "hFilter": { "type": "string", "defaultValue": "" },
+    "cards": { "type": "any[]", "defaultValue": [] },
+    "cardBusy": { "type": "any", "defaultValue": {} },
+    "cardDlg": { "type": "any", "defaultValue": null, "description": "Add to dashboard: { name, mode, column, pair, pairLabel, rolling, days }." },
+    "dm": { "type": "any", "defaultValue": null, "description": "The report's data model: { path, busy, ok, dataSets, parameters, dataSource, error }." },
+    "prefs": { "type": "any", "defaultValue": {}, "description": "Settings being edited." }
+  },
+  "eventListeners": {
+    "vbEnter": { "chains": [ { "chain": "bipChain", "parameters": { "op": "load", "id": "", "value": "", "input": "" } } ] },
+    "onBip": { "chains": [ { "chain": "bipChain", "parameters": { "op": "{{ $event.currentTarget.dataset.op }}", "id": "{{ $event.currentTarget.dataset.id || '' }}", "value": "{{ $event.currentTarget.dataset.value !== undefined ? $event.currentTarget.dataset.value : '' }}", "input": "{{ $event.currentTarget.type === 'checkbox' ? $event.currentTarget.checked : ($event.currentTarget.value || '') }}" } } ] },
+    "focusRequest": { "chains": [ { "chain": "bipChain", "parameters": { "op": "focus", "id": "", "value": "", "input": "" } } ] }
+  },
+  "events": {
+    "focusRequest": { "description": "From resources/js/shellBus.js focus(): another screen handed this one a report to open.", "payloadType": "object" }
+  },
+  "imports": {
+    "components": {
+      "oj-bind-for-each": { "path": "ojs/ojknockout" },
+      "oj-bind-if": { "path": "ojs/ojknockout" },
+      "oj-bind-text": { "path": "ojs/ojknockout" }
+    }
+  }
+}

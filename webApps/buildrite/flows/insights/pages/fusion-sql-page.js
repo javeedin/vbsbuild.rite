@@ -1,4 +1,4 @@
-define(['resources/js/exportKit', 'resources/js/fusionSqlKit', 'resources/js/fusionSetupsKit'], (exportKit, K, SK) => {
+define(['resources/js/exportKit', 'resources/js/fusionSqlKit', 'resources/js/fusionSetupsKit', 'resources/js/shellBus'], (exportKit, K, SK, bus) => {
   'use strict';
 
   // Fusion SQL: binding helpers. Ctrl+Enter in the editor presses Run; Enter in Ask AI's box presses Ask; Enter in a
@@ -44,6 +44,11 @@ define(['resources/js/exportKit', 'resources/js/fusionSqlKit', 'resources/js/fus
   }
 
   class PageModule {
+    constructor(context) {
+      // another screen hands this one SQL for the editor: bus.focus('fusion-sql', { sql, title }) (e.g. BIP Reporting's data model)
+      const helper = context && typeof context.getEventHelper === 'function' ? context.getEventHelper() : null;
+      if (bus && typeof bus.onFocus === 'function') bus.onFocus('fusion-sql', () => { if (helper) helper.fireCustomEvent('focusRequest', {}); });
+    }
     formats() { return exportKit.FORMATS; }
     kindList() { return KINDS; }
     ownerList(s) { var l = (s && s.owners && s.owners.length) ? s.owners.slice() : []; if (s && s.owner && l.indexOf(s.owner) === -1) l.unshift(s.owner); return l.length ? l : ['FUSION']; }

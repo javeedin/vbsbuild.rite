@@ -8,6 +8,9 @@
  *
  *   const pod = await start({ user, password, runner, tables, csvOnly, data })  →  { url, calls, sql, catalog, close() }
  *     data      { TABLE_NAME: [rows] } more tables it answers (counted, or their rows), e.g. for Fusion Setups' checks
+ *     bip       a BI Publisher catalog for BIP Reporting: { folders: { path: [items] }, reports: { path: { def, run(format,
+ *               params) → output text } }, dataModels: { path: xml } } — getFolderContents, getReportDefinition,
+ *               getReportParameters, runReport (chunked when asked: reportFileID + downloadReportDataChunk), downloadObject
  *     calls     every SOAP call: { service, op, format, sql }
  *     sql       every statement run (decoded)
  *     catalog   { path: { type, entry, xml } } — what deploy uploaded
@@ -117,6 +120,32 @@ function answer(sql, o) {
   return { error: 'ORA-00942: table or view does not exist' };
 }
 
+/** BIP Reporting: the parameters a runReport asked for → { name: [values] }. */
+function paramsOf(body) {
+  const out = {};
+  const list = (/<v2:listOfParamNameValues>([\s\S]*?)<\/v2:listOfParamNameValues>/.exec(body) || [])[1] || '';
+  list.replace(/<v2:item><v2:name>([^<]*)<\/v2:name>(?:<v2:multiValuesAllowed>true<\/v2:multiValuesAllowed>)?<v2:values>([\s\S]*?)<\/v2:values><\/v2:item>/g, (m, n, vals) => {
+    out[unesc(n)] = []; vals.replace(/<v2:item>([^<]*)<\/v2:item>/g, (m2, v) => { out[unesc(n)].push(unesc(v)); return m2; }); return m;
+  });
+  return out;
+}
+function defXml(path, d) {
+  const items = (arr, f) => (arr || []).map((x) => '<ns2:item>' + f(x) + '</ns2:item>').join('');
+  const param = (x) => '<ns2:name>' + esc(x.name) + '</ns2:name><ns2:label>' + esc(x.label || x.name) + '</ns2:label><ns2:dataType>' + esc(x.dataType || 'String') + '</ns2:dataType>'
+    + (x.uiType ? '<ns2:UIType>' + esc(x.uiType) + '</ns2:UIType>' : '') + (x.dateFormatString ? '<ns2:dateFormatString>' + esc(x.dateFormatString) + '</ns2:dateFormatString>' : '')
+    + (x.default != null ? '<ns2:defaultValue>' + esc(x.default) + '</ns2:defaultValue>' : '') + (x.values ? '<ns2:values>' + items(x.values, esc) + '</ns2:values>' : '')
+    + (x.lovLabels ? '<ns2:lovLabels>' + items(x.lovLabels, esc) + '</ns2:lovLabels>' : '') + '<ns2:multiValuesAllowed>' + (x.multi ? 'true' : 'false') + '</ns2:multiValuesAllowed>'
+    + '<ns2:selectAsAll>' + (x.all ? 'true' : 'false') + '</ns2:selectAsAll>';
+  return '<ns2:getReportDefinitionResponse xmlns:ns2="http://xmlns.oracle.com/oxp/service/v2"><ns2:getReportDefinitionReturn>'
+    + '<ns2:reportName>' + esc(d.reportName || path.split('/').pop()) + '</ns2:reportName><ns2:defaultOutputFormat>' + esc(d.defaultOutputFormat || 'csv') + '</ns2:defaultOutputFormat>'
+    + '<ns2:dataModelURL>' + esc(d.dataModelURL || '') + '</ns2:dataModelURL>'
+    + '<ns2:listOfTemplateFormatsLabelValues>' + items(d.templates || [], (t) => '<ns2:templateID>' + esc(t.id) + '</ns2:templateID><ns2:templateType>' + esc(t.type || 'rtf') + '</ns2:templateType>'
+      + '<ns2:templateFormatsLabelValues>' + items(t.formats || [], (f) => '<ns2:templateFormatLabel>' + esc(f[0]) + '</ns2:templateFormatLabel><ns2:templateFormatValue>' + esc(f[1]) + '</ns2:templateFormatValue>') + '</ns2:templateFormatsLabelValues>')
+    + '</ns2:listOfTemplateFormatsLabelValues><ns2:parameterNames>' + items(d.params || [], (x) => esc(x.name)) + '</ns2:parameterNames>'
+    + (d.paramsElsewhere ? '' : '<ns2:reportParameterNameValues>' + items(d.params || [], param) + '</ns2:reportParameterNameValues>')
+    + '</ns2:getReportDefinitionReturn></ns2:getReportDefinitionResponse>';
+}
+
 function soap(body) {
   return '<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"><soapenv:Body>' + body + '</soapenv:Body></soapenv:Envelope>';
 }
@@ -127,6 +156,8 @@ async function start(opts) {
   const calls = [], sqls = [];
   const catalog = {};
   const folders = {};
+  const files = {}; // BIP Reporting: outputs being downloaded in chunks
+  let fileSeq = 0;
   const reportPath = '/Custom/BuildRite/QueryRunner.xdo';
   if (o.runner) catalog[o.runnerPath || reportPath] = { type: 'xdoz', entry: '_report.xdo', xml: '<report/>' };
   const server = http.createServer((req, res) => {
@@ -139,6 +170,37 @@ async function start(opts) {
         const user = unesc(tag(body, 'userID') || ''), pass = unesc(tag(body, 'password') || '');
         const fmt = tag(body, 'attributeFormat');
         const path = unesc(tag(body, 'reportAbsolutePath') || '');
+        // BIP Reporting: the catalog's reports
+        const bip = o.bip || {};
+        const R2 = '<ns2:%OP%Response xmlns:ns2="http://xmlns.oracle.com/oxp/service/v2"><ns2:%OP%Return>%BODY%</ns2:%OP%Return></ns2:%OP%Response>';
+        const reply = (op2, inner) => send(200, soap(R2.replace(/%OP%/g, op2).replace('%BODY%', inner)));
+        if (op === 'getReportDefinition' || op === 'getReportParameters' || op === 'downloadReportDataChunk' || (op === 'runReport' && (bip.reports || {})[path])) {
+          calls.push({ service: 'ReportService', op, format: fmt, path, params: paramsOf(body) });
+          if (user !== o.user || pass !== o.password) return send(500, fault('Failed to authenticate: invalid user name or password.'));
+          if (op === 'downloadReportDataChunk') {
+            const id = unesc(tag(body, 'fileID') || ''), from = Number(tag(body, 'beginIdx')), size = Number(tag(body, 'size'));
+            const buf = files[id];
+            if (!buf) return send(500, fault('Unknown file ' + id));
+            return send(200, soap('<ns2:downloadReportDataChunkResponse xmlns:ns2="http://xmlns.oracle.com/oxp/service/v2"><ns2:downloadReportDataChunkReturn><ns2:reportDataChunk>'
+              + buf.slice(from, from + size).toString('base64') + '</ns2:reportDataChunk><ns2:reportDataFileID>' + esc(id) + '</ns2:reportDataFileID><ns2:reportDataOffset>' + (from + size) + '</ns2:reportDataOffset></ns2:downloadReportDataChunkReturn></ns2:downloadReportDataChunkResponse>'));
+          }
+          const rep = (bip.reports || {})[path];
+          if (!rep) return send(500, fault('oracle.xdo.webservice.exception.OperationFailedException: Report ' + path + ' not found'));
+          if (op === 'getReportDefinition') return send(200, soap(defXml(path, rep.def || {})));
+          if (op === 'getReportParameters') return send(200, soap('<ns2:getReportParametersResponse xmlns:ns2="http://xmlns.oracle.com/oxp/service/v2"><ns2:getReportParametersReturn>'
+            + (rep.def.params || []).map((x) => '<ns2:item><ns2:name>' + esc(x.name) + '</ns2:name><ns2:label>' + esc(x.label || x.name) + '</ns2:label><ns2:dataType>' + esc(x.dataType || 'String') + '</ns2:dataType>'
+              + (x.dateFormatString ? '<ns2:dateFormatString>' + esc(x.dateFormatString) + '</ns2:dateFormatString>' : '') + '</ns2:item>').join('') + '</ns2:getReportParametersReturn></ns2:getReportParametersResponse>'));
+          let out;
+          try { out = rep.run(fmt, paramsOf(body)); } catch (e) { return send(500, fault(e.message)); }
+          const buf = Buffer.isBuffer(out) ? out : Buffer.from(String(out), 'utf8');
+          const size = Number(tag(body, 'sizeOfDataChunkDownload'));
+          if (size > 0 && buf.length >= size) {
+            const id = 'f' + (++fileSeq);
+            files[id] = buf;
+            return reply('runReport', '<ns2:reportBytes>' + buf.slice(0, size).toString('base64') + '</ns2:reportBytes><ns2:reportContentType>text/plain</ns2:reportContentType><ns2:reportFileID>' + id + '</ns2:reportFileID>');
+          }
+          return reply('runReport', '<ns2:reportBytes>' + buf.toString('base64') + '</ns2:reportBytes><ns2:reportContentType>' + (fmt === 'pdf' ? 'application/pdf' : 'text/plain') + '</ns2:reportContentType>');
+        }
         const b64 = (/<v2:name>P_QRY_STMT<\/v2:name>\s*<v2:values>\s*<v2:item>([^<]*)<\/v2:item>/.exec(body) || [])[1] || '';
         const sql = Buffer.from(b64, 'base64').toString('utf8');
         calls.push({ service: 'ReportService', op, format: fmt, sql });
@@ -159,8 +221,23 @@ async function start(opts) {
       if (req.url === '/xmlpserver/services/v2/CatalogService') {
         const user = unesc(tag(body, 'userID') || ''), pass = unesc(tag(body, 'password') || '');
         const basic = Buffer.from(String(req.headers.authorization || '').replace(/^Basic /, ''), 'base64').toString('utf8');
-        calls.push({ service: 'CatalogService', op, basic });
+        calls.push({ service: 'CatalogService', op, basic, path: unesc(tag(body, 'folderAbsolutePath') || tag(body, 'reportAbsolutePath') || '') });
         if (user !== o.user || pass !== o.password) return send(500, fault('Failed to authenticate.'));
+        if (op === 'getFolderContents' && o.bip) {
+          const f = unesc(tag(body, 'folderAbsolutePath') || '');
+          const list = (o.bip.folders || {})[f];
+          if (!list) return send(500, fault('oracle.xdo.webservice.exception.OperationFailedException: Folder ' + f + ' not found'));
+          return send(200, soap('<ns2:getFolderContentsResponse xmlns:ns2="http://xmlns.oracle.com/oxp/service/v2"><ns2:getFolderContentsReturn><ns2:catalogContents>'
+            + list.map((it) => '<ns2:item><ns2:absolutePath>' + esc(it.absolutePath) + '</ns2:absolutePath><ns2:displayName>' + esc(it.displayName || it.absolutePath.split('/').pop()) + '</ns2:displayName>'
+              + '<ns2:fileName>' + esc(it.absolutePath.split('/').pop()) + '</ns2:fileName><ns2:lastModified>' + esc(it.lastModified || '2026-11-01T10:00:00Z') + '</ns2:lastModified><ns2:owner>' + esc(it.owner || 'BI.AUTHOR') + '</ns2:owner>'
+              + '<ns2:parentAbsolutePath>' + (f === '/' ? '' : esc(f)) + '</ns2:parentAbsolutePath><ns2:type>' + esc(it.type) + '</ns2:type></ns2:item>').join('')
+            + '</ns2:catalogContents></ns2:getFolderContentsReturn></ns2:getFolderContentsResponse>'));
+        }
+        if (op === 'downloadObject' && o.bip) {
+          const dm = (o.bip.dataModels || {})[unesc(tag(body, 'reportAbsolutePath') || '')];
+          if (!dm) return send(500, fault('Object not found'));
+          return send(200, soap('<ns2:downloadObjectResponse xmlns:ns2="http://xmlns.oracle.com/oxp/service/v2"><ns2:downloadObjectReturn>' + (Buffer.isBuffer(dm) ? dm : Buffer.from(dm, 'utf8')).toString('base64') + '</ns2:downloadObjectReturn></ns2:downloadObjectResponse>'));
+        }
         if (o.noAuthor) return send(500, fault('oracle.xdo.webservice.exception.AccessDeniedException: no permission to create objects'));
         if (op === 'createFolder') {
           const f = unesc(tag(body, 'folderAbsolutePath'));

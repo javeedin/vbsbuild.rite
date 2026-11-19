@@ -28,7 +28,7 @@ const text = (page, sel) => page.$eval(sel, (e) => e.textContent.replace(/\s+/g,
     const groups = await page.$$eval('.nx-nav-label', (l) => l.map((x) => x.textContent.trim()));
     T.eq('its groups', groups.join(' | '), 'Workspace | Work | Application | Tools');
     const items = await page.$$eval('.nx-nav-item', (b) => b.map((x) => x.getAttribute('data-nav-id')));
-    T.eq('its screens, in order', items.join(','), 'projects,run-console,issues,jira,minutes,followups,app-pages,api-scenarios,change-requests,integrations,fdd-library,flows,assistant,sql,fusion-sql,ai');
+    T.eq('its screens, in order', items.join(','), 'projects,run-console,issues,jira,minutes,followups,app-pages,api-scenarios,change-requests,integrations,fdd-library,flows,assistant,sql,fusion-sql,bip,ai');
     T.check('the open screen\'s item marked', /nx-nav-item--on/.test((await page.getAttribute('.nx-nav-item[data-nav-id="issues"]', 'class')) || ''));
     await page.click('.nx-nav-item[data-nav-id="minutes"]');
     await page.waitForSelector('.nx-tab--on[data-tab-id="minutes"]', { timeout: 15000 }).catch(() => {});

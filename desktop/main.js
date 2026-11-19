@@ -298,6 +298,13 @@ function fusionSqlStore() {
   }
   return fusionSqlInst;
 }
+// BIP Reporting (lib/bipReports.js): the BI Publisher catalog of a Fusion pod, its reports run (in buckets) and kept on this
+// PC; it signs in with Fusion SQL's pods (the same users, passwords in the keychain)
+let bipInst = null;
+function bipStore() {
+  if (!bipInst) bipInst = require('./lib/bipReports').open({ dir: path.join(app.getPath('userData'), 'bip'), fq: fusionSqlStore() });
+  return bipInst;
+}
 // Fusion Setups (lib/fusionSetups.js): the module-by-module setup checklist of Fusion SQL; each check runs as COUNT(*)
 // through the runner above; the checklist and its results per pod in this app's data folder
 let fusionSetupsInst = null;
@@ -363,6 +370,7 @@ async function buildRiteOptions() {
     htmlToPdf: htmlToPdf, // Create the functional design: the document printed to PDF
     fusionSqlStore: fusionSqlStore(), // Fusion SQL: read-only SQL on a Fusion pod through its BI Publisher runner
     fusionSetupsStore: fusionSetupsStore(), // Fusion SQL → Fusion Setups: the setup checklist, checked on the pod
+    bipStore: bipStore(), // BIP Reporting: the BI Publisher catalog, reports run and kept on this PC
     appWindow: () => (runWin && !runWin.isDestroyed() ? { url: runWin.webContents.getURL(), title: runWin.getTitle() } : null), // the page your app's window shows (API Scenarios follows it)
     // …sent to your workspace's backends (its services/catalog.json), with who its app runs as (Run as, Sign in for your app)
     apiProject: () => { const c = currentWorkspace(); if (!c) return null; const p = profileOf(c.working); return { catalogFiles: ((p.services && p.services.catalogs) || []).map((x) => x.file), getIdentity: () => workspaceIdentity() }; },
