@@ -124,6 +124,17 @@ const ROOT = path.join(__dirname, 'fixtures', 'vb-sample');
     tr = await store.tryStep(unsaved, gone.steps[0].id, env, {});
     T.check('…a list of values tried: its values come back to pick from', tr.result.values.length === 2 && tr.result.values[1].key === '42', JSON.stringify(tr.result.values));
 
+    T.section('▶ Run on one step: the values it needs are filled from the earlier steps automatically');
+    const chain = store.save({ page: 'shop/orders/order-detail', name: 'Auto chain', steps: [
+      { name: 'Orders (a dropdown)', endpoint: 'shopApi/getOrders', lov: { field: 'Order', target: 'orderId', key: 'id', text: 'status', itemsPath: 'items' }, extract: [{ var: 'orderId', from: 'items[0].id' }] },
+      { name: 'The one picked', endpoint: 'shopApi/getOrderById', params: { id: '{{orderId}}' }, expect: { status: '200,404' } }] }).scenario;
+    let ac = await store.tryStep(chain, chain.steps[1].id, env, { vars: {} });
+    T.check('the earlier list ran first and handed on orderId = 41; the step went to /orders/41 and passed', ac.ok && ac.result.state === 'ok' && ac.result.status === 200
+      && /\/shop\/v1\/orders\/41$/.test(ac.result.request.url) && (ac.result.autofilled || []).some((a) => a.var === 'orderId' && a.value === '41'), JSON.stringify(ac.result).slice(0, 400));
+    T.check('…it says the value was filled from the earlier step; no run is kept', /filled orderId from earlier steps/.test(ac.result.note || '') && store.runs('shop/orders/order-detail').runs.length === runsBefore, ac.result.note);
+    ac = await store.tryStep(chain, chain.steps[1].id, env, { vars: {}, noAuto: true });
+    T.check('with auto-fill off: it asks you to run the earlier steps', !ac.result.status && /no value for orderId — run the steps before it/.test(ac.result.note), ac.result.note);
+
     T.section('the page an address of the app shows (its window)');
     const pgs = [{ id: 'app/orders/order-create', label: 'New Order', route: { url: '/vp/shell/orders/order-create' } }, { id: 'app/orders/order-create-quick', label: 'New Order', route: { url: '/vp/shell/orders/order-create-quick' } },
       { id: 'app/main/home', label: 'Home', route: { url: '/vp/shell/main/home' } }];

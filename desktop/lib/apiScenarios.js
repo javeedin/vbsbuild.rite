@@ -519,6 +519,32 @@ function open(o) {
     return res;
   }
 
+  /** The values a step needs: the {{vars}} in what it sends (its params, body, extra). */
+  const needsOf = (st) => uniq([].concat(...Object.keys(st.params || {}).map((k) => varsIn(st.params[k])), varsIn(st.body), varsIn(st.extra)));
+  /**
+   * Fill the values a step needs from earlier steps' results (for ▶ Run on one step): for each {{var}} it sends that has
+   * no value yet, run the earlier step that hands it on — its own needs first — and keep what it hands on. Only steps
+   * before it that read (a list of values, a report, a GET); a step that changes data is never run this way. Best effort:
+   * a value that still cannot be found is left for the step to report.
+   */
+  async function resolveNeeded(s, st, vars, env, filled, seen) {
+    seen = seen || [st.id];
+    const steps = s.steps || [];
+    const idx = {};
+    steps.forEach((x, i) => { idx[x.id] = i; });
+    const producer = (v) => steps.filter((x) => x.id !== st.id && !x.writes && idx[x.id] < idx[st.id]
+      && ((x.lov && x.lov.target === v) || (x.extract || []).some((e) => e.var === v)))[0];
+    for (const v of needsOf(st)) {
+      if (vars[v] !== undefined && str(vars[v]) !== '') continue;
+      const prod = producer(v);
+      if (!prod || seen.indexOf(prod.id) !== -1 || filled.length >= 20) continue;
+      seen.push(prod.id);
+      await resolveNeeded(s, prod, vars, env, filled, seen); // what the producer itself needs, first
+      await runOne(s, prod, vars, env, { allowWrites: false }); // hands its value on into vars
+      if (vars[v] !== undefined && str(vars[v]) !== '') filled.push({ var: v, from: prod.name, value: str(vars[v]).slice(0, 80) });
+    }
+  }
+
   const store = {
     list(page, env) {
       if (!dirNow()) return no('Set up your workspace first: scenarios are kept per VB Studio project.');
@@ -722,8 +748,12 @@ function open(o) {
       Object.keys(isObj(o.vars) ? o.vars : {}).slice(0, 200).forEach((k) => { if (/^[\w.-]+$/.test(k) && o.vars[k] !== null && o.vars[k] !== undefined && str(o.vars[k]) !== '') vars[k] = str(o.vars[k]).slice(0, 2000); });
       // a list of values searched as you type: the text typed sent as its search parameter (as the page sends it)
       if (o.search !== undefined && o.search !== null && st.lov && st.lov.search) st.params = Object.assign({}, st.params, { [st.lov.search]: str(o.search).slice(0, 200) });
+      // auto-fill the values it needs from the earlier steps that hand them on (reads only; off with noAuto)
+      const filled = [];
+      if (o.noAuto !== true) { try { await resolveNeeded(s, st, vars, env, filled); } catch (e) { /* best effort */ } }
       const res = await runOne(s, st, vars, env, { allowWrites: !!o.allowWrites, anyCase: true });
       delete res.stop;
+      if (filled.length) { res.autofilled = filled; res.note = (res.note ? res.note + ' · ' : '') + 'filled ' + uniq(filled.map((a) => a.var)).join(', ') + ' from earlier steps (' + uniq(filled.map((a) => a.from)).join(', ') + ')'; }
       if (/^no value for /.test(str(res.note))) res.note = res.note.replace(/ — give it under Data, or hand it on from an earlier step$/, ' — run the steps before it (Save & run), pick it from a list of values, or give it under Data');
       return { ok: true, result: Object.assign(res, { at: now().toISOString() }), vars };
     },

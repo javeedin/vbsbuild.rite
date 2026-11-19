@@ -172,6 +172,11 @@ shows them all again). When you come back from your app's window, the list says 
   the path and values, with the values known so far filled in. ▶ Run sends that one API now, with the values handed
   on so far (the last run's, the data row, the values picked), and shows what was sent and what came back. It is not
   kept as a run.
+  - **Values filled from the earlier steps automatically.** If the step needs a value it has no answer for yet
+    (`{{projectId}}`, `{{selectedContractId}}`…), ▶ Run first runs the earlier steps that hand that value on — a list of
+    values, a report, a GET, never a step that changes data — and fills the parameter from their result (the first value,
+    as the page uses it until you pick one). It says which values it filled and from where. So a step deep in a flow runs
+    on its own without you running the whole scenario or picking each list by hand.
 - **Checks on every answer.** The status (`2xx`, or `200,404` when a 404 is expected), how many rows, how long it took,
   whether the answer still has the same shape as the example the page was built with, and given fields
   (`items[0].status = OPEN`).
