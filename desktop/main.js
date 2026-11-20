@@ -588,7 +588,8 @@ function attachRecorderNet(w) {
       } else if (method === 'Network.loadingFinished') {
         const p = pend[params.requestId]; if (!p) return;
         delete pend[params.requestId];
-        const finish = (resp) => { if (recState && recState.running) recState.calls.push(Object.assign(p, { response: String(resp || '').slice(0, REC_CAP) })); };
+        // keep the response generously here (a BIP answer is big base64); flowRecorder.trimCall decodes + trims it on save
+        const finish = (resp) => { if (recState && recState.running) recState.calls.push(Object.assign(p, { response: String(resp || '').slice(0, 900000) })); };
         if (/json|text|xml|urlencoded/i.test(p.mime)) {
           dbg.sendCommand('Network.getResponseBody', { requestId: params.requestId })
             .then((b) => finish(b && b.body && b.base64Encoded ? Buffer.from(b.body, 'base64').toString('utf8') : (b && b.body) || ''))

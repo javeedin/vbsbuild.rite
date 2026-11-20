@@ -1460,6 +1460,8 @@ button.nx-fsu-kpi:hover { border-color: #9db6d8; }
 .nx-pf-apidk { flex: 0 0 110px; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--nx-muted, #6b7886); }
 .nx-pf-apidv { min-width: 0; overflow-wrap: anywhere; color: var(--nx-ink, #22303c); }
 .nx-pf-apidpre { margin: 0; max-height: 200px; overflow: auto; font-size: 11px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--nx-ink, #22303c); background: var(--nx-card, #fff); border: 1px solid var(--nx-line, #e6eaef); border-radius: 6px; padding: 6px 8px; }
+.nx-pf-apitbl { white-space: pre; overflow-wrap: normal; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; max-height: 260px; background: var(--nx-subtle, #f7f9fb); }
+.nx-pf-apikind { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #2e6fd8; background: #eaf1fd; border: 1px solid #cfe0fb; }
 .nx-pf-apidfoot { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 1px; }
 .nx-pf-apiresult { border-radius: 8px; padding: 6px 9px; font-size: 12px; display: grid; gap: 5px; border: 1px solid var(--nx-line, #e6eaef); background: var(--nx-subtle, #f7f9fb); }
 .nx-pf-apiresult--ok { border-color: #bfe3cf; background: #f1faf4; color: #15673e; }

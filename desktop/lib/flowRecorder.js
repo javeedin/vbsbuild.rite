@@ -75,14 +75,48 @@ function matchPage(url, pages) {
 
 const MAX_CALLS = 40;
 const CAP = 20000;
-/** One captured network call, trimmed for storage: method, url, query, request body, status, a short response preview. */
+/** Keep a decoded response to a readable preview + a small table: columns and the first rows. */
+function trimTable(tb) {
+  if (!tb || !tb.columns || !tb.columns.length) return null;
+  const columns = tb.columns.slice(0, 24);
+  const rows = (tb.rows || []).slice(0, 20).map((r) => (Array.isArray(r) ? r.slice(0, 24).map((x) => str(x).slice(0, 200)) : []));
+  return { columns, rows, total: typeof tb.total === 'number' ? tb.total : rows.length, from: str(tb.from).slice(0, 60) };
+}
+/** Make a captured response readable: JSON pretty-printed (+ a row table), a BI Publisher answer decoded from its
+ *  base64 reportBytes into its XML rows (+ a table), XML/HTML tidied, anything else left as text. Returns
+ *  { kind: 'json'|'bip'|'xml'|'text'|'', pretty, table }. Reuses the API tester's decoders so it matches Test output. */
+function decodeResponse(mime, text) {
+  let AT = null; try { AT = require('./apiTest'); } catch (e) { AT = null; }
+  const t = str(text);
+  const m = str(mime);
+  if (!t) return { kind: '', pretty: '', table: null };
+  if (AT && /reportBytes>/.test(t)) { // a BI Publisher report: base64 XML inside <…reportBytes>
+    let xml = '';
+    try { xml = Buffer.from(AT.reportBytesOf(t), 'base64').toString('utf8'); } catch (e) { xml = ''; }
+    const x = xml ? AT.xmlRows(xml) : null;
+    const table = x ? trimTable(Object.assign(AT.rowsOf(x.rows) || {}, { from: '<' + x.tag + '>' })) : null;
+    return { kind: 'bip', pretty: (AT.prettyXml ? AT.prettyXml(xml) : xml).slice(0, CAP), table: table };
+  }
+  if (/json/i.test(m) || /^\s*[[{]/.test(t)) {
+    try { const j = JSON.parse(t); return { kind: 'json', pretty: JSON.stringify(j, null, 2).slice(0, CAP), table: AT ? trimTable(AT.rowsOf(j)) : null }; } catch (e) { /* not JSON after all */ }
+  }
+  if (/xml|soap|html/i.test(m) || /^\s*</.test(t)) return { kind: 'xml', pretty: (AT && AT.prettyXml ? AT.prettyXml(t) : t).slice(0, CAP), table: null };
+  return { kind: 'text', pretty: t.slice(0, CAP), table: null };
+}
+/** One captured network call, trimmed for storage: method, url, query, request body, status, and the response made
+ *  readable (JSON pretty / BIP rows) with a small table when it has rows. */
 function trimCall(c) {
   const o = c && typeof c === 'object' ? c : {};
   const url = str(o.url);
   const call = { method: str(o.method || 'GET').toUpperCase(), url, path: parse(url).path, query: str(o.query || (url.indexOf('?') !== -1 ? url.slice(url.indexOf('?') + 1) : '')) };
   if (o.body !== undefined && o.body !== null && str(o.body)) call.body = str(o.body).slice(0, CAP);
   if (o.status !== undefined && o.status !== null && o.status !== '') call.status = Number(o.status) || str(o.status);
-  if (o.response !== undefined && o.response !== null && str(o.response)) call.response = str(o.response).slice(0, CAP);
+  if (o.response !== undefined && o.response !== null && str(o.response)) {
+    const d = decodeResponse(o.mime, o.response);
+    call.response = d.pretty || str(o.response).slice(0, CAP);
+    if (d.kind) call.respKind = d.kind;
+    if (d.table) call.table = d.table;
+  }
   return call;
 }
 
@@ -166,4 +200,4 @@ function callForApi(api, calls) {
   return hits[0] || null;
 }
 
-module.exports = { matchPage, buildSteps, callForApi, pathMatches, trimCall, parse, routeTail, routeOpen };
+module.exports = { matchPage, buildSteps, callForApi, pathMatches, trimCall, decodeResponse, parse, routeTail, routeOpen };

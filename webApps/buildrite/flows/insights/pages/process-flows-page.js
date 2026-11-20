@@ -40,6 +40,21 @@ define([], () => {
     if (c.status != null) bits.push('was ' + c.status);
     return bits.join(' · ');
   }
+  /** The decoded response rows as a readable text table (columns header + rows). */
+  function tableText(tb) {
+    if (!tb || !Array.isArray(tb.columns) || !tb.columns.length) return '';
+    const head = tb.columns.join('  |  ');
+    const rows = (Array.isArray(tb.rows) ? tb.rows : []).map((r) => (Array.isArray(r) ? r.join('  |  ') : ''));
+    return head + '\n' + '-'.repeat(Math.min(head.length, 120)) + '\n' + rows.join('\n');
+  }
+  /** A one-line summary of the decoded response (what kind it is, how many rows). */
+  function tableInfo(call) {
+    const tb = call && call.table;
+    if (!tb) return '';
+    const n = typeof tb.total === 'number' ? tb.total : (tb.rows ? tb.rows.length : 0);
+    const kind = call.respKind === 'bip' ? 'BI Publisher report' : 'Response';
+    return kind + ' · ' + n + (n === 1 ? ' row' : ' rows') + (tb.from ? ' · ' + tb.from : '');
+  }
   /** The test result as a short line. */
   function testText(t) {
     if (!t) return '';
@@ -124,6 +139,7 @@ define([], () => {
             // the captured request/response, shown in the expand/collapse panel
             callMethod: String(mth).toUpperCase(), callPath: (call && (call.path || call.url)) || '', callQuery: (call && call.query) || '',
             callBody: (call && call.body) || '', callResp: (call && call.response) || '', callStatus: call && call.status != null && call.status !== '' ? String(call.status) : '',
+            callKind: (call && call.respKind) || '', callTableText: call && call.table ? tableText(call.table) : '', callTableInfo: call && call.table ? tableInfo(call) : '',
             running: !!(t && t.running),
             result: t && !t.running ? t : null,
             resultClass: t && !t.running ? (t.needsConfirm ? 'warn' : (t.ok ? 'ok' : 'bad')) : '',

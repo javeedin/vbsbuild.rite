@@ -55,6 +55,12 @@ function cleanCalls(a) {
     if (c.body) out.body = cut(c.body, MAX.callText);
     if (c.status !== undefined && c.status !== null && c.status !== '') out.status = typeof c.status === 'number' ? c.status : cut(c.status, 20);
     if (c.response) out.response = cut(c.response, MAX.callText);
+    if (c.respKind === 'json' || c.respKind === 'bip' || c.respKind === 'xml' || c.respKind === 'text') out.respKind = c.respKind;
+    if (isObj(c.table) && Array.isArray(c.table.columns) && c.table.columns.length) {
+      out.table = { columns: c.table.columns.slice(0, 24).map((x) => cut(x, 80)),
+        rows: (Array.isArray(c.table.rows) ? c.table.rows : []).slice(0, 20).map((r) => (Array.isArray(r) ? r.slice(0, 24).map((x) => cut(x, 200)) : [])),
+        total: typeof c.table.total === 'number' ? c.table.total : 0, from: cut(c.table.from, 60) };
+    }
     return out;
   }).filter((c) => c.url || c.path);
 }

@@ -72,7 +72,17 @@ const calls = [
 ];
 const r2 = R.buildSteps(nav2, PAGES, calls);
 T.check('calls are attached to the step whose page was open when they fired', (r2.steps[0].calls || []).length === 1 && r2.steps[0].calls[0].url.indexOf('/crm/v1/requests') !== -1 && (r2.steps[1].calls || []).length === 1 && r2.steps[1].calls[0].method === 'POST', JSON.stringify((r2.steps[0].calls || []).map((c) => c.method + ' ' + c.path)));
-T.check('a call trims to method/url/path/query/body/status/response within the cap', r2.steps[0].calls[0].path === '/crm/v1/requests' && r2.steps[0].calls[0].query === 'q=open' && r2.steps[1].calls[0].body === '{"name":"New"}' && r2.steps[1].calls[0].status === 201 && r2.steps[1].calls[0].response === '{"id":7}');
+T.check('a call trims to method/url/path/query/body/status/response within the cap (response made readable)', r2.steps[0].calls[0].path === '/crm/v1/requests' && r2.steps[0].calls[0].query === 'q=open' && r2.steps[1].calls[0].body === '{"name":"New"}' && r2.steps[1].calls[0].status === 201 && JSON.parse(r2.steps[1].calls[0].response).id === 7 && r2.steps[1].calls[0].respKind === 'json', JSON.stringify(r2.steps[1].calls[0]));
+
+T.section('decodeResponse (JSON / BIP XML made readable)');
+const dj = R.decodeResponse('application/json', '{"items":[{"id":1,"name":"Widget"},{"id":2,"name":"Gadget"}],"count":2}');
+T.check('JSON is pretty-printed and its rows become a table', dj.kind === 'json' && /"name": "Widget"/.test(dj.pretty) && dj.table && dj.table.columns.join(',') === 'id,name' && dj.table.rows.length === 2, JSON.stringify(dj.table));
+const bipXml = '<DATA_DS><G_1><ITEM>Widget</ITEM><QTY>5</QTY></G_1><G_1><ITEM>Gadget</ITEM><QTY>3</QTY></G_1></DATA_DS>';
+const bipResp = '<env:Envelope><reportBytes>' + Buffer.from(bipXml, 'utf8').toString('base64') + '</reportBytes></env:Envelope>';
+const db = R.decodeResponse('text/xml', bipResp);
+T.check('a BI Publisher answer decodes its base64 reportBytes into an XML row table', db.kind === 'bip' && db.table && db.table.columns.join(',') === 'ITEM,QTY' && db.table.rows.length === 2 && db.table.rows[0][0] === 'Widget' && db.table.from === '<G_1>', JSON.stringify(db.table));
+T.check('plain XML is kept as xml (no table), text as text, empty as nothing', R.decodeResponse('application/xml', '<a><b>1</b></a>').kind === 'xml' && R.decodeResponse('text/plain', 'hello').kind === 'text' && R.decodeResponse('', '').kind === '');
+T.check('trimCall carries the decoded kind and table through to storage', (() => { const c = R.trimCall({ method: 'get', url: 'https://h/bip', mime: 'text/xml', response: bipResp }); return c.respKind === 'bip' && c.table && c.table.columns.join(',') === 'ITEM,QTY'; })());
 
 T.section('callForApi');
 const stepCalls = r2.steps[1].calls.concat(r2.steps[0].calls);
