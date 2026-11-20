@@ -106,11 +106,13 @@ function buildSteps(nav, pages, calls) {
     const key = p.id + (screenId ? '::' + screenId : ''); // a page can show more than one screen (a dialog, a wizard step)
     const title = str(e.title).trim();
     const last = steps[steps.length - 1];
-    if (last && last.key === key) { // the same screen again: keep the newest shot
+    // Collapse consecutive repeats of the same screen — but NOT a manual capture: pressing "Capture this screen" is a
+    // deliberate step, so each press is its own step even when the screen looks the same as the one before it.
+    if (last && last.key === key && !e.manual && !last.manual) {
       if (e.shot && /^data:image\//.test(str(e.shot))) last.shot = { src: 'page', data: str(e.shot) };
       return;
     }
-    const step = { id: 'p' + (++n), key: key, page: p.id, name: title || p.label || p.page || p.id, url: str(e.url), kind: kind };
+    const step = { id: 'p' + (++n), key: key, manual: !!e.manual, page: p.id, name: title || p.label || p.page || p.id, url: str(e.url), kind: kind };
     if (title) step.title = title;
     if (e.shot && /^data:image\//.test(str(e.shot))) step.shot = { src: 'page', data: str(e.shot) };
     steps.push(step);
@@ -125,7 +127,7 @@ function buildSteps(nav, pages, calls) {
     if (!target) return;
     (byStep[target.id] = byStep[target.id] || []).push(trimCall(c));
   });
-  steps.forEach((s) => { const list = byStep[s.id]; if (list && list.length) s.calls = list.slice(0, MAX_CALLS); delete s.key; });
+  steps.forEach((s) => { const list = byStep[s.id]; if (list && list.length) s.calls = list.slice(0, MAX_CALLS); delete s.key; delete s.manual; });
   return { steps, skipped };
 }
 

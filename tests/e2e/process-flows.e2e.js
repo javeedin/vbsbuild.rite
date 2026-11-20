@@ -49,7 +49,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
   const recorder = {
     start: async () => { recRunning = true; recNav = []; recCalls = []; recAuto = false; return { ok: true }; },
     status: async () => ({ ok: true, running: recRunning, auto: recAuto, nav: recNav.map((x) => ({ url: x.url, title: x.title, kind: x.kind, screen: x.screen })) }),
-    capture: async () => { if (!recCurrent) return { ok: false, error: 'no screen' }; recNav.push(Object.assign({ shot: IMG }, recCurrent)); return { ok: true, count: recNav.length, name: recCurrent.title || '', kind: recCurrent.kind || 'page' }; },
+    capture: async () => { if (!recCurrent) return { ok: false, error: 'no screen' }; recNav.push(Object.assign({ shot: IMG, manual: true }, recCurrent)); return { ok: true, count: recNav.length, name: recCurrent.title || '', kind: recCurrent.kind || 'page' }; },
     auto: async (on) => { recAuto = !!on; return { ok: true, auto: recAuto }; },
     stop: async () => { recRunning = false; return { ok: true, running: false, nav: recNav.slice(), calls: recCalls.slice() }; },
   };
@@ -198,12 +198,16 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     recCurrent = { url: 'http://app/vp/shell/orders/order-list', title: 'Cancel order', kind: 'dialog', screen: 'dialog:Cancel order' };
     await page.click('#pfRecCapture');
     await page.waitForFunction(() => document.querySelectorAll('#pfRecSteps .nx-pf-recstep').length === 2, null, { timeout: 10000 });
+    // back to the first screen and capture it AGAIN — a deliberate press is its own step, never merged away
+    recCurrent = { url: 'http://app/vp/shell/orders/order-list', title: 'Order Workbench', kind: 'page', screen: 'view:Order Workbench' };
+    await page.click('#pfRecCapture');
+    await page.waitForFunction(() => document.querySelectorAll('#pfRecSteps .nx-pf-recstep').length === 3, null, { timeout: 10000 });
     const capKinds = await page.$$eval('#pfRecSteps .nx-pf-kind', (a) => a.map((x) => x.textContent.trim()));
-    T.check('only the screens I captured are recorded, each tagged Screen or Dialog', capKinds.join(',') === 'Screen,Dialog', capKinds.join(','));
+    T.check('every captured screen is kept (a repeat is NOT merged), each tagged Screen or Dialog', capKinds.join(',') === 'Screen,Dialog,Screen', capKinds.join(','));
     await page.click('#pfRecStop');
     await page.waitForSelector('#pf-name', { timeout: 10000 });
-    T.check('Stop & save keeps exactly the two screens I chose', (await page.$$('#pfEditor .nx-pf-prow')).length === 2
-      && (await page.inputValue(prow(0) + ' .nx-pf-pname')) === 'Order Workbench' && (await page.inputValue(prow(1) + ' .nx-pf-pname')) === 'Cancel order');
+    T.check('Stop & save keeps exactly the three screens I captured, in order', (await page.$$('#pfEditor .nx-pf-prow')).length === 3
+      && (await page.inputValue(prow(0) + ' .nx-pf-pname')) === 'Order Workbench' && (await page.inputValue(prow(1) + ' .nx-pf-pname')) === 'Cancel order' && (await page.inputValue(prow(2) + ' .nx-pf-pname')) === 'Order Workbench');
     await page.click('#pfBack');
     await page.waitForSelector('#pfEmpty', { timeout: 10000 });
 

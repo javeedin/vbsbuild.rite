@@ -673,7 +673,7 @@ function attachRecorder(w) {
     const same = last && last.url.split('#')[0] === path && last.screen === screen;
     // auto: never repeat the same screen in a row. manual: honour the choice, but swallow an accidental double-click.
     if (same && (!s.manual || now - (recState.lastPush || 0) < 1200)) { if (s.title) last.title = String(s.title); return; }
-    const entry = { url: url, shot: '', title: String(s.title || ''), kind: s.kind === 'dialog' ? 'dialog' : 'page', screen: screen };
+    const entry = { url: url, shot: '', title: String(s.title || ''), kind: s.kind === 'dialog' ? 'dialog' : 'page', screen: screen, manual: !!s.manual };
     recState.nav.push(entry);
     recState.lastPush = now;
     await captureOne(entry);
@@ -713,7 +713,7 @@ function flowRecorder() {
       return { ok: true, running: !!(recState && recState.running), auto: !!(recState && recState.auto),
         url: (runWin && !runWin.isDestroyed()) ? runWin.webContents.getURL() : '',
         // url + title + kind + screen (no shot: keep the live poll light) so the panel can show screens and dialogs live
-        nav: recState ? recState.nav.map((x) => ({ url: x.url, title: x.title, kind: x.kind, screen: x.screen })) : [] };
+        nav: recState ? recState.nav.map((x) => ({ url: x.url, title: x.title, kind: x.kind, screen: x.screen, manual: x.manual })) : [] };
     },
     // Capture the screen on display right now (the "Capture this screen" button in the recording panel). The button in
     // the app window itself does the same through the observer. Returns the running count.
@@ -730,7 +730,7 @@ function flowRecorder() {
       await new Promise((r) => setTimeout(r, 45));
       let shot = '';
       try { const img = await wc.capturePage(); shot = img && !img.isEmpty() ? img.toDataURL() : ''; } catch (e) { shot = ''; }
-      const entry = { url: url, shot: shot, title: String((s && s.title) || ''), kind: (s && s.kind) === 'dialog' ? 'dialog' : 'page', screen: String((s && s.key) || ('manual:' + Date.now())) };
+      const entry = { url: url, shot: shot, title: String((s && s.title) || ''), kind: (s && s.kind) === 'dialog' ? 'dialog' : 'page', screen: String((s && s.key) || ('manual:' + Date.now())), manual: true };
       recState.nav.push(entry);
       recState.lastPush = Date.now();
       try { await wc.executeJavaScript('window.__brFlowShow&&window.__brFlowShow();window.__brFlowCount&&window.__brFlowCount(' + recState.nav.length + ')', true); } catch (e) { /* ignore */ }

@@ -49,6 +49,11 @@ T.eq('a page and a dialog on the same URL are two steps, named by what was on sc
 T.check('each step records its url and whether it is a page or a dialog', rs.steps[0].kind === 'page' && rs.steps[1].kind === 'dialog' && rs.steps[0].url === rs.steps[1].url && /request-list$/.test(rs.steps[1].url) && rs.steps[2].kind === 'page' && rs.steps[2].page === 'portalapp/customer-portal/project-create-request', JSON.stringify(rs.steps.map((s) => s.kind + ' ' + s.url)));
 T.check('the same dialog in a row is collapsed, the page id kept for context (so its APIs still resolve)', rs.steps.length === 3 && rs.steps[1].page === 'portalapp/customer-portal/request-list');
 T.check('entries without a screen behave as before (no kind noise beyond the page default)', R.buildSteps([{ url: navS[0].url }], PAGES).steps[0].kind === 'page' && R.buildSteps([{ url: navS[0].url }], PAGES).steps[0].name === 'My Requests');
+// pressing "Capture this screen" is deliberate: six captures of the same screen are six steps, not collapsed to one
+const navM = [];
+for (let i = 0; i < 6; i++) navM.push({ url: navS[0].url, title: 'My Requests', kind: 'page', screen: 'view:My Requests', manual: true });
+T.check('every manual capture is its own step (consecutive repeats are NOT collapsed)', R.buildSteps(navM, PAGES).steps.length === 6);
+T.check('auto repeats still collapse, so auto + manual mix keeps the manual ones', R.buildSteps([{ url: navS[0].url, screen: 'view:A', title: 'A' }, { url: navS[0].url, screen: 'view:A', title: 'A' }, { url: navS[0].url, screen: 'view:A', title: 'A', manual: true }], PAGES).steps.length === 2 && !('manual' in R.buildSteps(navM, PAGES).steps[0]));
 
 T.section('captured API calls per step');
 const nav2 = [
