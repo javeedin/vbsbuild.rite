@@ -600,19 +600,35 @@ function attachRecorderNet(w) {
   try { dbg.sendCommand('Network.enable', { maxResourceBufferSize: 10 * 1024 * 1024, maxTotalBufferSize: 50 * 1024 * 1024 }); } catch (e) { /* ignore */ }
   w.on('closed', () => { try { if (dbg.isAttached()) dbg.detach(); } catch (e) { /* gone */ } });
 }
-// Injected into the run window: it reports each SCREEN the user sees — a page that loaded, a dialog / drawer that opened,
-// or the main view / heading changing — even when the web address does not change (JET/VBCS apps do most of this in
-// place). It posts a line to the console (console-message below reads it); it never calls Oracle or changes the page.
+// Injected into the run window. It shows a floating "Capture this screen" button (so you pick exactly which screens go
+// into the flow), and — when auto-capture is on — also reports each screen it detects (a page that loaded, a dialog /
+// drawer that opened, the main view changing) even when the web address does not change (JET/VBCS apps do most of this
+// in place). Either way it posts a line to the console that the main process reads; it never calls Oracle. The helpers
+// it exposes let the main process read the current screen (__brFlowScreen), hide/show the button around a screenshot,
+// update the count, and turn auto-capture on/off.
 const FLOW_OBSERVER = '(function(){' +
-  'if(window.__brFlowRec){try{window.__brFlowEmit&&window.__brFlowEmit();}catch(e){}return;}window.__brFlowRec=true;' +
+  'if(window.__brFlowRec){try{window.__brFlowUI&&window.__brFlowUI();window.__brFlowEmit&&window.__brFlowEmit();}catch(e){}return;}window.__brFlowRec=true;window.__brFlowAuto=false;' +
   'var vis=function(el){if(!el)return false;try{var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>40&&r.height>28&&s.display!=="none"&&s.visibility!=="hidden"&&s.opacity!=="0";}catch(e){return false;}};' +
   'var topDialog=function(){var sel="[role=dialog],[role=alertdialog],oj-dialog,.oj-dialog,oj-drawer-popup,.oj-drawer,.oj-drawer-popup,.oj-popup";var n=[];try{n=Array.prototype.slice.call(document.querySelectorAll(sel));}catch(e){n=[];}n=n.filter(vis);return n.length?n[n.length-1]:null;};' +
   'var titleOf=function(scope){scope=scope||document.body;if(!scope)return "";var sels=[".oj-dialog-title","[slot=header]","h1","h2",".oj-typography-heading-lg",".oj-typography-heading-md",".oj-typography-heading-sm"];for(var i=0;i<sels.length;i++){var t=scope.querySelector(sels[i]);if(t&&vis(t)){var s=(t.textContent||"").trim().replace(/\\s+/g," ");if(s)return s.slice(0,120);}}return (document.title||"").trim().replace(/\\s+/g," ").slice(0,120);};' +
   'var screenOf=function(){var d=topDialog();if(d){var dt=titleOf(d)||"Dialog";return {kind:"dialog",title:dt,key:"dialog:"+dt};}var vt=titleOf(document);return {kind:"page",title:vt,key:"view:"+vt};};' +
-  'var last="";var emit=function(){try{var s=screenOf();if(s.kind==="page"&&!s.title)return;var sig=location.pathname+location.search+"|"+s.key;if(sig===last)return;last=sig;console.log("__BRFLOW__"+JSON.stringify({url:location.href,title:s.title,kind:s.kind,key:s.key}));}catch(e){}};' +
-  'window.__brFlowEmit=emit;var t=null;var kick=function(){clearTimeout(t);t=setTimeout(emit,350);};' +
+  'window.__brFlowScreen=function(){var s=screenOf();return {url:location.href,title:s.title,kind:s.kind,key:s.key};};' +
+  'var last="";var emit=function(){try{if(!window.__brFlowAuto)return;var s=screenOf();if(s.kind==="page"&&!s.title)return;var sig=location.pathname+location.search+"|"+s.key;if(sig===last)return;last=sig;console.log("__BRFLOW__"+JSON.stringify({url:location.href,title:s.title,kind:s.kind,key:s.key}));}catch(e){}};window.__brFlowEmit=emit;' +
+  'window.__brFlowAutoSet=function(on){window.__brFlowAuto=!!on;if(on)emit();};' +
+  'var bar=null,cnt=null;var hide=function(){if(bar)bar.style.visibility="hidden";};var show=function(){if(bar)bar.style.visibility="visible";};window.__brFlowHide=hide;window.__brFlowShow=show;' +
+  'window.__brFlowCount=function(n){try{if(cnt)cnt.textContent=String(n);}catch(e){}};' +
+  'var cap=function(){try{hide();setTimeout(function(){var s=screenOf();console.log("__BRFLOW__"+JSON.stringify({url:location.href,title:s.title,kind:s.kind,key:s.key,manual:true}));},60);setTimeout(show,520);}catch(e){show();}};window.__brFlowCapture=cap;' +
+  'var build=function(){try{if(!document.body)return;if(bar&&document.body.contains(bar))return;bar=document.createElement("div");bar.id="__brFlowBar";bar.setAttribute("style","position:fixed;z-index:2147483647;right:16px;bottom:16px;display:flex;gap:9px;align-items:center;background:#12224a;color:#fff;border-radius:999px;padding:7px 9px 7px 13px;font:600 13px/1 -apple-system,Segoe UI,Roboto,Arial,sans-serif;box-shadow:0 6px 22px rgba(0,0,0,.35)");' +
+  'var dot=document.createElement("span");dot.setAttribute("style","width:9px;height:9px;border-radius:50%;background:#ff4d4d;animation:__brflow 1.2s infinite");bar.appendChild(dot);' +
+  'var lbl=document.createElement("span");lbl.textContent="Recording";lbl.setAttribute("style","opacity:.85");bar.appendChild(lbl);' +
+  'var btn=document.createElement("button");btn.type="button";btn.textContent="\\uD83D\\uDCF7 Capture this screen";btn.setAttribute("style","cursor:pointer;border:0;border-radius:999px;background:#2e6fd8;color:#fff;font:700 13px -apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:7px 12px");btn.addEventListener("click",function(ev){ev.preventDefault();ev.stopPropagation();cap();});bar.appendChild(btn);' +
+  'cnt=document.createElement("span");cnt.textContent="0";cnt.title="screens captured";cnt.setAttribute("style","min-width:14px;height:20px;border-radius:999px;background:rgba(255,255,255,.2);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;padding:0 6px");bar.appendChild(cnt);' +
+  'if(!document.getElementById("__brFlowKf")){var st=document.createElement("style");st.id="__brFlowKf";st.textContent="@keyframes __brflow{0%{opacity:1}50%{opacity:.25}100%{opacity:1}}";(document.head||document.documentElement).appendChild(st);}' +
+  'document.body.appendChild(bar);}catch(e){}};window.__brFlowUI=build;' +
+  'var t=null;var kick=function(){clearTimeout(t);t=setTimeout(function(){build();emit();},350);};' +
   'try{var mo=new MutationObserver(kick);mo.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["class","style","aria-hidden","open","hidden"]});}catch(e){}' +
-  'document.addEventListener("click",function(){clearTimeout(t);t=setTimeout(emit,500);},true);setTimeout(emit,300);' +
+  'document.addEventListener("click",function(ev){try{if(bar&&bar.contains(ev.target))return;}catch(e){}clearTimeout(t);t=setTimeout(emit,500);},true);' +
+  'build();setTimeout(build,500);setTimeout(emit,300);' +
   '})();';
 function attachRecorder(w) {
   if (!w || w.isDestroyed()) return;
@@ -621,31 +637,47 @@ function attachRecorder(w) {
   if (wc.__brRec) return;
   wc.__brRec = true;
   const bad = (u) => !u || /^(about:|data:|chrome:|devtools:)/.test(u);
-  const inject = () => { if (!wc.isDestroyed()) wc.executeJavaScript(FLOW_OBSERVER, true).catch(() => {}); };
-  const forceEmit = () => { if (!wc.isDestroyed()) wc.executeJavaScript('window.__brFlowEmit&&window.__brFlowEmit()', true).catch(() => {}); };
-  // the observer reports each screen; we record it (one step per screen) and capture its picture once it has settled.
-  // A page and a dialog on it share the same URL but have different screen keys, so both become steps and the URL +
-  // kind tell them apart. No navigation-based pushing: this catches in-page screens the URL never reflects.
-  wc.on('console-message', (e, level, message) => {
-    if (!recState || !recState.running || typeof message !== 'string' || message.indexOf('__BRFLOW__') !== 0) return;
+  const run = (js) => { if (!wc.isDestroyed()) wc.executeJavaScript(js, true).catch(() => {}); };
+  const inject = () => { run(FLOW_OBSERVER); run('window.__brFlowAutoSet&&window.__brFlowAutoSet(' + (recState && recState.auto ? 'true' : 'false') + ')'); };
+  const forceEmit = () => run('window.__brFlowEmit&&window.__brFlowEmit()');
+  // take the screenshot with the "Capture" button hidden, so the button never appears in the picture
+  const captureInto = (entry) => {
+    run('window.__brFlowHide&&window.__brFlowHide()');
+    setTimeout(() => {
+      if (wc.isDestroyed()) return;
+      wc.capturePage().then((img) => {
+        let shot = ''; try { shot = img && !img.isEmpty() ? img.toDataURL() : ''; } catch (err) { shot = ''; }
+        if (shot && recState && recState.running) entry.shot = shot;
+        run('window.__brFlowShow&&window.__brFlowShow();window.__brFlowCount&&window.__brFlowCount(' + (recState ? recState.nav.length : 0) + ')');
+      }).catch(() => run('window.__brFlowShow&&window.__brFlowShow()'));
+    }, 45);
+  };
+  // the observer reports a screen — manual (the Capture button) or automatic. A page and a dialog on it share the same
+  // URL but have different screen keys, so both become steps; the URL + kind tell them apart. console-message in
+  // Electron 45 passes one event object ({ message }); older builds pass positional args — handle both.
+  wc.on('console-message', function (a, b, c) {
+    if (!recState || !recState.running) return;
+    const message = (a && typeof a === 'object' && typeof a.message === 'string') ? a.message
+      : (typeof c === 'string' ? c : (typeof a === 'string' ? a : ''));
+    if (message.indexOf('__BRFLOW__') !== 0) return;
     let s; try { s = JSON.parse(message.slice(9)); } catch (err) { return; }
     const url = String(s.url || '');
     if (bad(url)) return;
     recState.curUrl = url;
     const screen = String(s.key || '');
     const path = url.split('#')[0];
+    const now = Date.now();
     const last = recState.nav[recState.nav.length - 1];
-    if (last && last.url.split('#')[0] === path && last.screen === screen) { if (s.title) last.title = String(s.title); return; }
+    const same = last && last.url.split('#')[0] === path && last.screen === screen;
+    // auto: never repeat the same screen in a row. manual: honour the choice, but swallow an accidental double-click.
+    if (same && (!s.manual || now - (recState.lastPush || 0) < 1200)) { if (s.title) last.title = String(s.title); return; }
     const entry = { url: url, shot: '', title: String(s.title || ''), kind: s.kind === 'dialog' ? 'dialog' : 'page', screen: screen };
     recState.nav.push(entry);
-    wc.capturePage().then((img) => {
-      if (!recState || !recState.running) return;
-      let shot = ''; try { shot = img && !img.isEmpty() ? img.toDataURL() : ''; } catch (err) { shot = ''; }
-      if (shot) entry.shot = shot;
-    }).catch(() => {});
+    recState.lastPush = now;
+    captureInto(entry);
   });
-  wc.on('dom-ready', inject);              // a full page load: (re)install the observer, which emits on load
-  wc.on('did-navigate', forceEmit);        // and nudge it after any navigation (SPA routes don't reload the document)
+  wc.on('dom-ready', inject);              // a full page load: (re)install the observer + button, restore auto
+  wc.on('did-navigate', forceEmit);        // nudge auto after any navigation (SPA routes don't reload the document)
   wc.on('did-navigate-in-page', forceEmit);
   wc.on('did-stop-loading', forceEmit);
   inject();
@@ -658,16 +690,44 @@ function flowRecorder() {
       const useApp = app || runAppOf(c);
       const p = await buildWorkspace(c, useApp, 'Record a flow');
       if (!p.ok) return { ok: false, error: p.error };
-      recState = { running: true, nav: [], calls: [], curUrl: '', app: useApp };
+      recState = { running: true, nav: [], calls: [], curUrl: '', app: useApp, auto: false, lastPush: 0 };
       const w = openRunWindow(p.url + '/', 'Recording a flow — ' + c.projectName + ' (' + useApp + ')');
       attachRecorder(w);
       return { ok: true, app: useApp };
     },
     async status() {
-      return { ok: true, running: !!(recState && recState.running),
+      return { ok: true, running: !!(recState && recState.running), auto: !!(recState && recState.auto),
         url: (runWin && !runWin.isDestroyed()) ? runWin.webContents.getURL() : '',
         // url + title + kind + screen (no shot: keep the live poll light) so the panel can show screens and dialogs live
         nav: recState ? recState.nav.map((x) => ({ url: x.url, title: x.title, kind: x.kind, screen: x.screen })) : [] };
+    },
+    // Capture the screen on display right now (the "Capture this screen" button in the recording panel). The button in
+    // the app window itself does the same through the observer. Returns the running count.
+    async capture() {
+      if (!recState || !recState.running) return { ok: false, error: 'Not recording.' };
+      const w = runWin;
+      if (!w || w.isDestroyed()) return { ok: false, error: 'The app window is closed — open it and try again.' };
+      const wc = w.webContents;
+      let s = {};
+      try { s = (await wc.executeJavaScript('(window.__brFlowScreen&&window.__brFlowScreen())||{}', true)) || {}; } catch (e) { s = {}; }
+      const url = String((s && s.url) || wc.getURL());
+      if (/^(about:|data:|chrome:|devtools:)/.test(url) || !url) return { ok: false, error: 'There is no app screen to capture yet.' };
+      try { await wc.executeJavaScript('window.__brFlowHide&&window.__brFlowHide()', true); } catch (e) { /* no button yet */ }
+      await new Promise((r) => setTimeout(r, 45));
+      let shot = '';
+      try { const img = await wc.capturePage(); shot = img && !img.isEmpty() ? img.toDataURL() : ''; } catch (e) { shot = ''; }
+      const entry = { url: url, shot: shot, title: String((s && s.title) || ''), kind: (s && s.kind) === 'dialog' ? 'dialog' : 'page', screen: String((s && s.key) || ('manual:' + Date.now())) };
+      recState.nav.push(entry);
+      recState.lastPush = Date.now();
+      try { await wc.executeJavaScript('window.__brFlowShow&&window.__brFlowShow();window.__brFlowCount&&window.__brFlowCount(' + recState.nav.length + ')', true); } catch (e) { /* ignore */ }
+      return { ok: true, count: recState.nav.length, name: entry.title || '', kind: entry.kind, url: url };
+    },
+    // Turn automatic capture on / off (off by default, so you choose what to record).
+    async auto(on) {
+      if (!recState) return { ok: false, error: 'Not recording.' };
+      recState.auto = !!on;
+      try { if (runWin && !runWin.isDestroyed()) await runWin.webContents.executeJavaScript('window.__brFlowAutoSet&&window.__brFlowAutoSet(' + (!!on) + ')', true); } catch (e) { /* ignore */ }
+      return { ok: true, auto: !!on };
     },
     async stop() {
       const nav = recState ? recState.nav.slice() : [];

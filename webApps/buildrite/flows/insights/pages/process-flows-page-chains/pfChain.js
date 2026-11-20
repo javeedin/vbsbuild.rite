@@ -83,7 +83,7 @@ define([
     PC.recordStatus().then((r) => {
       if (!recOn || !v.recording) return;
       const b = r.body || {};
-      if (r.ok) v.recording = Object.assign({}, v.recording, { running: !!b.running, steps: b.steps || [], skipped: b.skipped || 0 });
+      if (r.ok) v.recording = Object.assign({}, v.recording, { running: !!b.running, steps: b.steps || [], skipped: b.skipped || 0, auto: typeof b.auto === 'boolean' ? b.auto : v.recording.auto });
       recTimer = setTimeout(() => recPoll(v), 1500);
     }).catch(() => { if (recOn) recTimer = setTimeout(() => recPoll(v), 1500); });
   }
@@ -230,9 +230,27 @@ define([
       if (op === 'recStart') {
         const r = await PC.recordStart('');
         if (!r.ok) { say(false, (r.body && r.body.error) || 'Recording needs the desktop app with your workspace set up.'); return; }
-        v.recording = { running: true, steps: [], skipped: 0, busy: false, error: '' };
+        v.recording = { running: true, steps: [], skipped: 0, busy: false, error: '', auto: false };
         recOn = true;
         recTimer = setTimeout(() => recPoll(v), 1200);
+        return;
+      }
+      // capture the screen on display right now (so you choose exactly what goes into the flow)
+      if (op === 'recCapture') {
+        if (!v.recording || v.recording.busy) return;
+        const r = await PC.recordCapture();
+        const b = r.body || {};
+        if (!r.ok) { say(false, (b && b.error) || 'Could not capture the screen — open your app window and try again.'); return; }
+        say(true, 'Captured ' + (b.kind === 'dialog' ? 'dialog' : 'screen') + (b.name ? ' “' + b.name + '”' : '') + ' — ' + b.count + ' so far.');
+        try { const st = await PC.recordStatus(); const sb = st.body || {}; if (st.ok && v.recording) v.recording = Object.assign({}, v.recording, { steps: sb.steps || [], skipped: sb.skipped || 0 }); } catch (e) { /* the poll will catch up */ }
+        return;
+      }
+      // turn automatic capture on / off
+      if (op === 'recAuto') {
+        if (!v.recording) return;
+        const on = !v.recording.auto;
+        v.recording = Object.assign({}, v.recording, { auto: on });
+        try { await PC.recordAuto(on); } catch (e) { /* ignore */ }
         return;
       }
       if (op === 'recCancel') {

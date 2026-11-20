@@ -999,6 +999,15 @@ function createDevServer(o) {
               return jsonPf(200, { ok: true, running: !!(st && st.running), url: (st && st.url) || '', waiting: !!(st && st.waiting),
                 steps: built.steps.map((s) => ({ page: s.page, name: s.name, kind: s.kind, url: s.url })), skipped: built.skipped });
             }
+            if (pathname === '/__pflow/record/capture' && post) {
+              const r = typeof rec.capture === 'function' ? await rec.capture() : { ok: false, error: 'Update the app to capture a screen.' };
+              if (r && r.ok) log('Process flow recording: captured ' + (r.kind || 'screen') + ' "' + (r.name || '') + '" (' + r.count + ' so far)');
+              return jsonPf(200, r || { ok: false, error: 'Could not capture.' });
+            }
+            if (pathname === '/__pflow/record/auto' && post) {
+              const r = typeof rec.auto === 'function' ? await rec.auto(!!b.on) : { ok: false, error: 'Update the app for auto-capture.' };
+              return jsonPf(200, r || { ok: false });
+            }
             if (pathname === '/__pflow/record/stop' && post) {
               const st = await rec.stop();
               const built = FR.buildSteps((st && st.nav) || [], catalog(), (st && st.calls) || []);

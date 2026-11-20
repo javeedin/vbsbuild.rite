@@ -23,13 +23,17 @@
           <div class="nx-dialog-titles">
             <div class="nx-kicker"><span class="nx-pf-recdot" aria-hidden="true"></span>Recording</div>
             <h2 class="nx-dialog-title">Walk your process in the app</h2>
-            <div class="nx-sub">Your app is open in its own window. Use it as a user would — each page you open is captured here, in order. When you are done, press <b>Stop &amp; save</b>.</div>
+            <div class="nx-sub">Your app is open in its own window. Go to a screen you want in the flow, then press <b>Capture this screen</b> — here or the <b>📷</b> button in the app window. Capture as many as you like, in order; then <b>Stop &amp; save</b>.</div>
           </div>
         </div>
         <div class="nx-dialog-body nx-pf-recbody">
+          <div class="nx-pf-capbar">
+            <button type="button" class="nx-btn nx-btn--cta nx-pf-capbtn" id="pfRecCapture" data-op="recCapture" on-click="[[ $listeners.onPf ]]" :disabled="[[ $variables.recording.busy ]]"><span class="oj-ux-ico-camera" aria-hidden="true"></span>Capture this screen</button>
+            <label class="nx-pf-capauto"><input type="checkbox" id="pfRecAuto" data-op="recAuto" on-change="[[ $listeners.onPf ]]" :checked="[[ !!$variables.recording.auto ]]"> Capture every screen automatically as I walk</label>
+          </div>
           <oj-bind-if test="[[ !!$variables.recording.error ]]"><div class="nx-sc-err" id="pfRecErr"><oj-bind-text value="[[ $variables.recording.error ]]"></oj-bind-text></div></oj-bind-if>
           <oj-bind-if test="[[ (!$variables.recording.steps || $variables.recording.steps.length === 0) && !$variables.recording.error ]]">
-            <div class="nx-empty" id="pfRecWait">Waiting for the first page… open a page in your app.</div>
+            <div class="nx-empty" id="pfRecWait">No screens captured yet — go to a screen in your app and press <b>Capture this screen</b>.</div>
           </oj-bind-if>
           <oj-bind-if test="[[ $variables.recording.steps && $variables.recording.steps.length > 0 ]]">
             <ol class="nx-pf-recsteps" id="pfRecSteps">
@@ -40,7 +44,7 @@
               </template></oj-bind-for-each>
             </ol>
           </oj-bind-if>
-          <div class="nx-note" id="pfRecCount"><oj-bind-text value="[[ ($variables.recording.steps ? $variables.recording.steps.length : 0) + ' page(s) so far' + ($variables.recording.skipped ? ' · ' + $variables.recording.skipped + ' other screen(s) skipped' : '') ]]"></oj-bind-text></div>
+          <div class="nx-note" id="pfRecCount"><oj-bind-text value="[[ ($variables.recording.steps ? $variables.recording.steps.length : 0) + ' screen(s) captured' + ($variables.recording.auto && $variables.recording.skipped ? ' · ' + $variables.recording.skipped + ' other screen(s) skipped' : '') ]]"></oj-bind-text></div>
         </div>
         <div class="nx-dialog-foot nx-pf-recfoot">
           <button type="button" class="nx-btn nx-btn--plain" id="pfRecCancel" data-op="recCancel" on-click="[[ $listeners.onPf ]]" :disabled="[[ $variables.recording.busy ]]">Cancel</button>

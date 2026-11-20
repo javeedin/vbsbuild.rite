@@ -28,6 +28,8 @@ define([], function () {
     // Record from the app: open the real app in a window, follow the pages walked through, build the steps
     recordStart: function (app) { return call('record/start', { app: app }); },
     recordStatus: function () { return call('record/status?' + qs({ t: Date.now() })); },
+    recordCapture: function () { return call('record/capture', {}); },
+    recordAuto: function (on) { return call('record/auto', { on: !!on }); },
     recordStop: function () { return call('record/stop', {}); }
   };
 });
