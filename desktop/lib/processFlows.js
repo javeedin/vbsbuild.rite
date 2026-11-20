@@ -66,6 +66,8 @@ function cleanFlow(flow, by, old, opts) {
   let n = 0;
   const pages = (Array.isArray(f.pages) ? f.pages : []).filter(isObj).map((p) => {
     const out = { id: idOf(p.id, 20) || 'p' + (++n), page: idOf(p.page), name: cut(p.name, MAX.name).trim(), note: cut(p.note, MAX.note) };
+    if (p.url) out.url = cut(p.url, MAX.url);
+    if (p.kind === 'dialog' || p.kind === 'page') out.kind = p.kind;
     const shot = cleanShot(p.shot);
     if (shot) out.shot = shot;
     const calls = cleanCalls(p.calls);
@@ -114,7 +116,7 @@ h2::before{content:'';width:4px;height:17px;background:#2e6fd8;border-radius:2px
 .card-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
 .card-head h3{font-size:13pt;margin:0;color:#13315c}
 .tag{font-size:7.5pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:#8792a3;border-radius:999px;padding:2px 9px}
-.tag.start{background:#1f8a4c} .tag.end{background:#b06400}
+.tag.start{background:#1f8a4c} .tag.end{background:#b06400} .tag.dialog{background:#7c5cd6} .tag.screen{background:#2a63c6}
 .path{font-size:8.5pt;color:#6b7886;margin-top:2px;overflow-wrap:anywhere}
 .note{margin:8px 0 0;white-space:pre-wrap}
 .shot{margin-top:10px}
@@ -154,8 +156,9 @@ function renderDocument(flow, opts) {
       const start = i === 0; const end = i === pages.length - 1;
       return '<div class="step"><div class="rail"><span class="badge ' + (start ? 'start' : end ? 'end' : '') + '">' + (i + 1) + '</span>' + (end ? '' : '<span class="line"></span>') + '</div>'
         + '<div class="card"><div class="card-head"><h3>' + esc(p.name || p.page) + '</h3>'
+        + (p.kind === 'dialog' ? '<span class="tag dialog">Dialog</span>' : p.kind === 'page' ? '<span class="tag screen">Screen</span>' : '')
         + (start ? '<span class="tag start">Start</span>' : end ? '<span class="tag end">End</span>' : '<span class="tag">Step ' + (i + 1) + '</span>') + '</div>'
-        + (p.page && p.page !== p.name ? '<div class="path">' + esc(p.page) + '</div>' : '')
+        + (p.url ? '<div class="path">' + esc(p.url) + '</div>' : (p.page && p.page !== p.name ? '<div class="path">' + esc(p.page) + '</div>' : ''))
         + (p.note ? '<div class="note">' + esc(p.note).replace(/\n/g, '<br>') + '</div>' : '')
         + shotImg(p) + apiList(p) + '</div></div>';
     }).join('') + '</div>'

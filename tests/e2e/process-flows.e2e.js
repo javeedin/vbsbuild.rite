@@ -46,7 +46,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
   let recRunning = false;
   const recorder = {
     start: async () => { recRunning = true; recNav = []; recCalls = []; return { ok: true }; },
-    status: async () => ({ ok: true, running: recRunning, nav: recNav.map((x) => ({ url: x.url })) }),
+    status: async () => ({ ok: true, running: recRunning, nav: recNav.map((x) => ({ url: x.url, title: x.title, kind: x.kind, screen: x.screen })) }),
     stop: async () => { recRunning = false; return { ok: true, running: false, nav: recNav.slice(), calls: recCalls.slice() }; },
   };
   const env = await E.start({ port: 19991, processFlowStore: store, pagesStore: pg.store, recorder, apiStore, scenarioStore, apiProject, aiStore, htmlToPdf });
@@ -221,6 +221,33 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await page.waitForSelector(dataRow1 + ' .nx-pf-apiresult--ok', { timeout: 10000 });
     const wrote = env.writes[env.writes.length - 1];
     T.check('Run anyway sends the POST with the captured body (201)', env.writes.length === beforeWrites + 1 && wrote && wrote.method === 'POST' && /\/shop\/v1\/orders$/.test(wrote.path) && wrote.body && wrote.body.note === 'from the recording' && /201/.test(await text(dataRow1 + ' .nx-pf-apiresline')), JSON.stringify(wrote && { m: wrote.method, p: wrote.path, b: wrote.body }));
+    await page.click('#pfBack');
+    await page.waitForSelector('#pfEmpty', { timeout: 10000 });
+
+    T.section('each screen, and a dialog within a screen, with its url');
+    await page.click('#pfRecord');
+    await page.waitForSelector('#pfRec', { timeout: 10000 });
+    // the same page, then a dialog on it (same url): two screens
+    recNav.push({ url: 'http://app/vp/shell/orders/order-list', shot: IMG, title: 'Order Workbench', kind: 'page', screen: 'view:Order Workbench' });
+    recNav.push({ url: 'http://app/vp/shell/orders/order-list', shot: IMG, title: 'Cancel order', kind: 'dialog', screen: 'dialog:Cancel order' });
+    await page.waitForFunction(() => document.querySelectorAll('#pfRecSteps .nx-pf-recstep').length === 2, null, { timeout: 10000 });
+    const recKinds = await page.$$eval('#pfRecSteps .nx-pf-kind', (a) => a.map((x) => x.textContent.trim()));
+    T.check('the live panel marks each step a Screen or a Dialog', recKinds.join(',') === 'Screen,Dialog', recKinds.join(','));
+    const recUrls = await page.$$eval('#pfRecSteps .nx-pf-recurl', (a) => a.map((x) => x.textContent.trim()));
+    T.check('…and shows the url of each (a dialog shares its screen\'s url)', recUrls.length === 2 && recUrls.every((uu) => /\/vp\/shell\/orders\/order-list/.test(uu)), recUrls.join(' | '));
+    await page.click('#pfRecStop');
+    await page.waitForSelector('#pf-name', { timeout: 10000 });
+    T.check('two steps saved — a screen and a dialog on the same page', (await page.$$('#pfEditor .nx-pf-prow')).length === 2
+      && (await page.inputValue(prow(0) + ' .nx-pf-pname')) === 'Order Workbench' && (await page.inputValue(prow(1) + ' .nx-pf-pname')) === 'Cancel order');
+    const rowKinds = await page.$$eval('#pfEditor .nx-pf-kind', (a) => a.map((x) => x.textContent.trim()));
+    T.check('each editor row shows a Screen / Dialog tag and the url', rowKinds.join(',') === 'Screen,Dialog'
+      && /\/vp\/shell\/orders\/order-list/.test(await text(prow(1) + ' .nx-pf-plocurl')), rowKinds.join(',') + ' | ' + (await text(prow(1) + ' .nx-pf-plocurl')));
+    await page.click('#pfViewPreview');
+    await page.waitForFunction(() => { const f = document.getElementById('pfDocFrame'); return f && /class="cover"/.test(f.getAttribute('srcdoc') || ''); }, null, { timeout: 10000 });
+    const docK = await page.evaluate(() => { const f = document.getElementById('pfDocFrame'); return f ? f.getAttribute('srcdoc') : ''; });
+    T.check('the document shows the url and a Screen / Dialog tag per card', /class="tag dialog"/.test(docK) && /class="tag screen"/.test(docK) && docK.indexOf('/vp/shell/orders/order-list') !== -1);
+    await page.click('#pfViewEdit');
+    await page.waitForSelector('#pf-name', { timeout: 5000 });
     await page.click('#pfBack');
     await page.waitForSelector('#pfEmpty', { timeout: 10000 });
 

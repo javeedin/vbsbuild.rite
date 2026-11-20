@@ -34,7 +34,9 @@
           <oj-bind-if test="[[ $variables.recording.steps && $variables.recording.steps.length > 0 ]]">
             <ol class="nx-pf-recsteps" id="pfRecSteps">
               <oj-bind-for-each data="[[ $functions.recRows($variables.recording) ]]"><template data-oj-as="s">
-                <li class="nx-pf-recstep"><span class="nx-pf-recn"><oj-bind-text value="[[ s.data.n ]]"></oj-bind-text></span><span class="nx-pf-recname"><oj-bind-text value="[[ s.data.name ]]"></oj-bind-text></span></li>
+                <li class="nx-pf-recstep"><span class="nx-pf-recn"><oj-bind-text value="[[ s.data.n ]]"></oj-bind-text></span>
+                  <span class="nx-pf-recmid"><span class="nx-pf-recline"><span class="nx-pf-recname"><oj-bind-text value="[[ s.data.name ]]"></oj-bind-text></span><span :class="[[ 'nx-pf-kind nx-pf-kind--' + (s.data.isDialog ? 'dialog' : 'screen') ]]"><oj-bind-text value="[[ s.data.kindLabel ]]"></oj-bind-text></span></span>
+                  <oj-bind-if test="[[ !!s.data.url ]]"><code class="nx-pf-recurl"><oj-bind-text value="[[ s.data.url ]]"></oj-bind-text></code></oj-bind-if></span></li>
               </template></oj-bind-for-each>
             </ol>
           </oj-bind-if>
@@ -147,6 +149,12 @@
                   <div class="nx-pf-pin">
                     <input type="text" class="nx-pf-pname" list="pfPageList" :value="[[ p.data.name ]]" placeholder="Page name" data-op="pedit" data-key="name" :data-idx="[[ p.data.idx ]]" on-input="[[ $listeners.onPf ]]">
                     <input type="text" class="nx-pf-pnote" :value="[[ p.data.note ]]" placeholder="What the user does here (optional)" data-op="pedit" data-key="note" :data-idx="[[ p.data.idx ]]" on-input="[[ $listeners.onPf ]]">
+                    <oj-bind-if test="[[ !!p.data.kindLabel || !!p.data.url ]]">
+                      <div class="nx-pf-ploc">
+                        <oj-bind-if test="[[ !!p.data.kindLabel ]]"><span :class="[[ 'nx-pf-kind nx-pf-kind--' + (p.data.isDialog ? 'dialog' : 'screen') ]]"><oj-bind-text value="[[ p.data.kindLabel ]]"></oj-bind-text></span></oj-bind-if>
+                        <oj-bind-if test="[[ !!p.data.url ]]"><code class="nx-pf-plocurl" :title="[[ p.data.fullUrl ]]"><oj-bind-text value="[[ p.data.url ]]"></oj-bind-text></code></oj-bind-if>
+                      </div>
+                    </oj-bind-if>
                   </div>
                   <div class="nx-pf-pacts">
                     <button type="button" :class="[[ 'nx-iconbtn nx-iconbtn--sm nx-pf-apisbtn' + (p.data.apisOpen ? ' nx-pf-apisbtn--on' : '') ]]" data-op="apisToggle" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" :title="[[ 'List this page\'s APIs' ]]"><span class="oj-ux-ico-code" aria-hidden="true"></span><oj-bind-if test="[[ p.data.apisCount !== null ]]"><span class="nx-pf-apisn"><oj-bind-text value="[[ p.data.apisCount ]]"></oj-bind-text></span></oj-bind-if></button>

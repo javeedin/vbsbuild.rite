@@ -271,11 +271,15 @@ names match), and each gets a short **note** — what the user does on that page
 remove them; the Start / End labels follow the order.
 
 **Or record it by using the app.** Press **Record from the app** and your real working‑copy app opens in its own window
-(sign in once, as with Run). Just *use it* — open a customer, go to the request page, check out. A live panel lists each
-page you land on, in order (matched to your Application pages catalog, so it's named), takes a screenshot of each, and
-**captures the API calls the app makes** on each page (the request it sent and a short preview of the answer).
-Press **Stop & save** and the editor opens already filled with those pages, their screenshots and their captured calls —
-you name it, tweak the order or notes, and Save. It records the pages you walk through (login and other non‑app screens are skipped). Recording
+(sign in once, as with Run). Just *use it* — open a customer, go to the request page, open a dialog, press Next, check out.
+A small observer injected into the window reports **every screen you see**, so the recorder captures the whole flow —
+not only page loads but also **dialogs, drawers and wizard steps that open without the web address changing** (JET/VBCS
+apps do most of that in place, which a URL‑only recorder misses). A live panel lists each screen in order, tagged
+**Screen** or **Dialog** with its **URL** (a dialog shares its screen's URL, so the URL + tag tell them apart), matched
+to your Application pages catalog so it's named, with a screenshot of each and **the API calls the app made** on it (the
+request it sent and a short preview of the answer). Press **Stop & save** and the editor opens already filled with those
+screens, their screenshots and their captured calls — you name it, tweak the order or notes, and Save. Login and other
+non‑app screens are skipped. Recording
 needs the desktop app with your workspace set up; in the browser‑only `npm run serve` mode there's no app window, so you
 build the flow by hand.
 

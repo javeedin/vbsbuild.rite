@@ -997,7 +997,7 @@ function createDevServer(o) {
               const st = await rec.status();
               const built = FR.buildSteps((st && st.nav) || [], catalog());
               return jsonPf(200, { ok: true, running: !!(st && st.running), url: (st && st.url) || '', waiting: !!(st && st.waiting),
-                steps: built.steps.map((s) => ({ page: s.page, name: s.name })), skipped: built.skipped });
+                steps: built.steps.map((s) => ({ page: s.page, name: s.name, kind: s.kind, url: s.url })), skipped: built.skipped });
             }
             if (pathname === '/__pflow/record/stop' && post) {
               const st = await rec.stop();

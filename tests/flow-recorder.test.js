@@ -37,6 +37,19 @@ T.check('unmatched URLs are skipped and counted', r.skipped === 1);
 T.check('a repeat visit with a newer screenshot updates the step', R.buildSteps([{ url: nav[1].url }, { url: nav[1].url, shot: 'data:image/png;base64,ZZZ' }], PAGES).steps[0].shot.data === 'data:image/png;base64,ZZZ');
 T.check('nothing recorded / no pages: empty, nothing thrown', R.buildSteps([], PAGES).steps.length === 0 && R.buildSteps(nav, []).steps.length === 0 && R.buildSteps(null, null).skipped === 0);
 
+T.section('screens and dialogs (in-page screens the URL never changes for)');
+const navS = [
+  { url: 'https://host/vp/shell/customer-portal/request-list', title: 'My Requests', kind: 'page', screen: 'view:My Requests', shot: 'data:image/png;base64,AAA' },
+  { url: 'https://host/vp/shell/customer-portal/request-list', title: 'Cancel request', kind: 'dialog', screen: 'dialog:Cancel request', shot: 'data:image/png;base64,BBB' }, // same URL, a dialog on it
+  { url: 'https://host/vp/shell/customer-portal/request-list', title: 'Cancel request', kind: 'dialog', screen: 'dialog:Cancel request' }, // same dialog again — collapsed
+  { url: 'https://host/vp/shell/customer-portal/project-create-request', title: 'New Equipment Request', kind: 'page', screen: 'view:New Equipment Request' },
+];
+const rs = R.buildSteps(navS, PAGES);
+T.eq('a page and a dialog on the same URL are two steps, named by what was on screen', rs.steps.map((s) => s.name).join(' → '), 'My Requests → Cancel request → New Equipment Request');
+T.check('each step records its url and whether it is a page or a dialog', rs.steps[0].kind === 'page' && rs.steps[1].kind === 'dialog' && rs.steps[0].url === rs.steps[1].url && /request-list$/.test(rs.steps[1].url) && rs.steps[2].kind === 'page' && rs.steps[2].page === 'portalapp/customer-portal/project-create-request', JSON.stringify(rs.steps.map((s) => s.kind + ' ' + s.url)));
+T.check('the same dialog in a row is collapsed, the page id kept for context (so its APIs still resolve)', rs.steps.length === 3 && rs.steps[1].page === 'portalapp/customer-portal/request-list');
+T.check('entries without a screen behave as before (no kind noise beyond the page default)', R.buildSteps([{ url: navS[0].url }], PAGES).steps[0].kind === 'page' && R.buildSteps([{ url: navS[0].url }], PAGES).steps[0].name === 'My Requests');
+
 T.section('captured API calls per step');
 const nav2 = [
   { url: 'https://host/vp/shell/customer-portal/request-list', shot: 'data:image/png;base64,AAA' },

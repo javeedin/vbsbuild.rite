@@ -563,7 +563,7 @@ function watchRunWindow(w) {
 // Process Flows → Record from the app: open the real app in the Run window and follow the pages walked through, taking a
 // screenshot of each as it settles. The /__pflow/record/* routes (devserver.js) map the URLs to the app's pages and build
 // the ordered steps (lib/flowRecorder.js).
-let recState = null; // { running, nav: [{ url, shot }], calls: [{ pageUrl, method, url, body, status, response }], app }
+let recState = null; // { running, nav: [{ url, shot, title, kind, screen }], calls: [{ pageUrl, method, url, body, status, response }], app, curUrl }
 const REC_CAP = 24000;
 /** Watch the Run window's network (CDP) so each API call the app makes is captured with its data, tagged to the page. */
 function attachRecorderNet(w) {
@@ -600,61 +600,55 @@ function attachRecorderNet(w) {
   try { dbg.sendCommand('Network.enable', { maxResourceBufferSize: 10 * 1024 * 1024, maxTotalBufferSize: 50 * 1024 * 1024 }); } catch (e) { /* ignore */ }
   w.on('closed', () => { try { if (dbg.isAttached()) dbg.detach(); } catch (e) { /* gone */ } });
 }
+// Injected into the run window: it reports each SCREEN the user sees — a page that loaded, a dialog / drawer that opened,
+// or the main view / heading changing — even when the web address does not change (JET/VBCS apps do most of this in
+// place). It posts a line to the console (console-message below reads it); it never calls Oracle or changes the page.
+const FLOW_OBSERVER = '(function(){' +
+  'if(window.__brFlowRec){try{window.__brFlowEmit&&window.__brFlowEmit();}catch(e){}return;}window.__brFlowRec=true;' +
+  'var vis=function(el){if(!el)return false;try{var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>40&&r.height>28&&s.display!=="none"&&s.visibility!=="hidden"&&s.opacity!=="0";}catch(e){return false;}};' +
+  'var topDialog=function(){var sel="[role=dialog],[role=alertdialog],oj-dialog,.oj-dialog,oj-drawer-popup,.oj-drawer,.oj-drawer-popup,.oj-popup";var n=[];try{n=Array.prototype.slice.call(document.querySelectorAll(sel));}catch(e){n=[];}n=n.filter(vis);return n.length?n[n.length-1]:null;};' +
+  'var titleOf=function(scope){scope=scope||document.body;if(!scope)return "";var sels=[".oj-dialog-title","[slot=header]","h1","h2",".oj-typography-heading-lg",".oj-typography-heading-md",".oj-typography-heading-sm"];for(var i=0;i<sels.length;i++){var t=scope.querySelector(sels[i]);if(t&&vis(t)){var s=(t.textContent||"").trim().replace(/\\s+/g," ");if(s)return s.slice(0,120);}}return (document.title||"").trim().replace(/\\s+/g," ").slice(0,120);};' +
+  'var screenOf=function(){var d=topDialog();if(d){var dt=titleOf(d)||"Dialog";return {kind:"dialog",title:dt,key:"dialog:"+dt};}var vt=titleOf(document);return {kind:"page",title:vt,key:"view:"+vt};};' +
+  'var last="";var emit=function(){try{var s=screenOf();if(s.kind==="page"&&!s.title)return;var sig=location.pathname+location.search+"|"+s.key;if(sig===last)return;last=sig;console.log("__BRFLOW__"+JSON.stringify({url:location.href,title:s.title,kind:s.kind,key:s.key}));}catch(e){}};' +
+  'window.__brFlowEmit=emit;var t=null;var kick=function(){clearTimeout(t);t=setTimeout(emit,350);};' +
+  'try{var mo=new MutationObserver(kick);mo.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["class","style","aria-hidden","open","hidden"]});}catch(e){}' +
+  'document.addEventListener("click",function(){clearTimeout(t);t=setTimeout(emit,500);},true);setTimeout(emit,300);' +
+  '})();';
 function attachRecorder(w) {
   if (!w || w.isDestroyed()) return;
   attachRecorderNet(w);
   const wc = w.webContents;
   if (wc.__brRec) return;
   wc.__brRec = true;
-  let timer = null;
   const bad = (u) => !u || /^(about:|data:|chrome:|devtools:)/.test(u);
-  // Record each distinct page the moment we land on it, so a quick walk-through never loses a page (the previous design
-  // used one debounced capture that each new navigation cancelled, so only the page you paused on was kept). The
-  // screenshot is filled in when the page settles; buildSteps collapses consecutive repeats and keeps the newest shot.
-  const setShot = (url, shot) => {
-    if (!shot) return;
-    for (let i = recState.nav.length - 1; i >= 0; i--) { if (recState.nav[i].url === url) { recState.nav[i].shot = shot; return; } }
-  };
-  const note = () => {
-    if (!recState || !recState.running || w.isDestroyed()) return;
-    const url = wc.getURL();
+  const inject = () => { if (!wc.isDestroyed()) wc.executeJavaScript(FLOW_OBSERVER, true).catch(() => {}); };
+  const forceEmit = () => { if (!wc.isDestroyed()) wc.executeJavaScript('window.__brFlowEmit&&window.__brFlowEmit()', true).catch(() => {}); };
+  // the observer reports each screen; we record it (one step per screen) and capture its picture once it has settled.
+  // A page and a dialog on it share the same URL but have different screen keys, so both become steps and the URL +
+  // kind tell them apart. No navigation-based pushing: this catches in-page screens the URL never reflects.
+  wc.on('console-message', (e, level, message) => {
+    if (!recState || !recState.running || typeof message !== 'string' || message.indexOf('__BRFLOW__') !== 0) return;
+    let s; try { s = JSON.parse(message.slice(9)); } catch (err) { return; }
+    const url = String(s.url || '');
     if (bad(url)) return;
     recState.curUrl = url;
+    const screen = String(s.key || '');
+    const path = url.split('#')[0];
     const last = recState.nav[recState.nav.length - 1];
-    if (!last || last.url !== url) recState.nav.push({ url: url, shot: '' });
-  };
-  const shoot = () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      if (!recState || !recState.running || w.isDestroyed()) return;
-      const url = wc.getURL();
-      if (bad(url)) return;
-      wc.capturePage().then((img) => {
-        if (!recState || !recState.running) return;
-        let shot = '';
-        try { shot = img && !img.isEmpty() ? img.toDataURL() : ''; } catch (e) { shot = ''; }
-        setShot(url, shot);
-      }).catch(() => {});
-    }, 500);
-  };
-  const grab = () => { note(); shoot(); };
-  // before leaving a page, grab a shot of it (so a page you move on from quickly still gets its picture)
-  wc.on('did-start-navigation', (e, url, isInPlace, isMainFrame) => {
-    if (!recState || !recState.running || w.isDestroyed() || isMainFrame === false) return;
-    const leaving = recState.curUrl;
-    if (bad(leaving) || leaving === url) return;
+    if (last && last.url.split('#')[0] === path && last.screen === screen) { if (s.title) last.title = String(s.title); return; }
+    const entry = { url: url, shot: '', title: String(s.title || ''), kind: s.kind === 'dialog' ? 'dialog' : 'page', screen: screen };
+    recState.nav.push(entry);
     wc.capturePage().then((img) => {
       if (!recState || !recState.running) return;
       let shot = ''; try { shot = img && !img.isEmpty() ? img.toDataURL() : ''; } catch (err) { shot = ''; }
-      // only if that page has no shot yet (don't overwrite a settled capture)
-      for (let i = recState.nav.length - 1; i >= 0; i--) { if (recState.nav[i].url === leaving) { if (!recState.nav[i].shot) recState.nav[i].shot = shot; return; } }
+      if (shot) entry.shot = shot;
     }).catch(() => {});
   });
-  wc.on('did-navigate', grab);
-  wc.on('did-navigate-in-page', grab);
-  wc.on('did-stop-loading', grab);
-  // the page already loaded when we attached (the first navigation may have fired before the listeners)
-  grab();
+  wc.on('dom-ready', inject);              // a full page load: (re)install the observer, which emits on load
+  wc.on('did-navigate', forceEmit);        // and nudge it after any navigation (SPA routes don't reload the document)
+  wc.on('did-navigate-in-page', forceEmit);
+  wc.on('did-stop-loading', forceEmit);
+  inject();
 }
 function flowRecorder() {
   return {
@@ -672,7 +666,8 @@ function flowRecorder() {
     async status() {
       return { ok: true, running: !!(recState && recState.running),
         url: (runWin && !runWin.isDestroyed()) ? runWin.webContents.getURL() : '',
-        nav: recState ? recState.nav.map((x) => ({ url: x.url })) : [] };
+        // url + title + kind + screen (no shot: keep the live poll light) so the panel can show screens and dialogs live
+        nav: recState ? recState.nav.map((x) => ({ url: x.url, title: x.title, kind: x.kind, screen: x.screen })) : [] };
     },
     async stop() {
       const nav = recState ? recState.nav.slice() : [];

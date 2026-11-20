@@ -86,8 +86,12 @@ function trimCall(c) {
   return call;
 }
 
-/** The distinct pages walked through, in order (consecutive repeats collapsed), each as a step with its screenshot and
- *  the API calls the app made while on it (calls are tagged with the page URL that was open when they fired). */
+/** The distinct SCREENS walked through, in order, each as a step with its screenshot and the API calls the app made
+ *  while on it. A "screen" is a page that loaded, or — when the recorder's observer reports it (entry.screen /
+ *  entry.kind) — a dialog / drawer / wizard step that appeared without the web address changing. So one page can be
+ *  several steps: the page itself, then a dialog on it. Each step carries its url and kind (page | dialog) so you can
+ *  tell a screen from a dialog within that screen. Backward compatible: entries without `screen` behave as before (one
+ *  step per page, consecutive repeats collapsed). */
 function buildSteps(nav, pages, calls) {
   const steps = [];
   const byStep = {}; // step.id → [trimmed call]
@@ -97,12 +101,17 @@ function buildSteps(nav, pages, calls) {
     const e = entry && typeof entry === 'object' ? entry : { url: entry };
     const p = matchPage(e.url, pages);
     if (!p) { skipped += 1; return; }
+    const screenId = str(e.screen).trim();
+    const kind = str(e.kind).trim() === 'dialog' || screenId.indexOf('dialog:') === 0 ? 'dialog' : 'page';
+    const key = p.id + (screenId ? '::' + screenId : ''); // a page can show more than one screen (a dialog, a wizard step)
+    const title = str(e.title).trim();
     const last = steps[steps.length - 1];
-    if (last && last.page === p.id) {
+    if (last && last.key === key) { // the same screen again: keep the newest shot
       if (e.shot && /^data:image\//.test(str(e.shot))) last.shot = { src: 'page', data: str(e.shot) };
       return;
     }
-    const step = { id: 'p' + (++n), page: p.id, name: p.label || p.page || p.id, url: str(e.url) };
+    const step = { id: 'p' + (++n), key: key, page: p.id, name: title || p.label || p.page || p.id, url: str(e.url), kind: kind };
+    if (title) step.title = title;
     if (e.shot && /^data:image\//.test(str(e.shot))) step.shot = { src: 'page', data: str(e.shot) };
     steps.push(step);
   });
@@ -116,7 +125,7 @@ function buildSteps(nav, pages, calls) {
     if (!target) return;
     (byStep[target.id] = byStep[target.id] || []).push(trimCall(c));
   });
-  steps.forEach((s) => { const list = byStep[s.id]; if (list && list.length) s.calls = list.slice(0, MAX_CALLS); });
+  steps.forEach((s) => { const list = byStep[s.id]; if (list && list.length) s.calls = list.slice(0, MAX_CALLS); delete s.key; });
   return { steps, skipped };
 }
 

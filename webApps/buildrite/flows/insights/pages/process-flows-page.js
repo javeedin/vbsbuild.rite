@@ -10,6 +10,8 @@ define([], () => {
     const m = Math.max(0, Math.round((Date.now() - d.getTime()) / 60000));
     return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : d.getDate() + ' ' + MON[d.getMonth()] + ' ' + d.getFullYear();
   }
+  /** A URL as the editor/panel shows it: the path + query (the scheme and host dropped), for readability. */
+  function loc(u) { return String(u || '').replace(/^[a-z]+:\/\/[^/]+/i, '').trim(); }
 
   // Match a recorded API call (method + path pattern) to a catalog API, so its Test button runs with that data.
   // This mirrors flowRecorder.callForApi on the desktop so the editor and the document agree.
@@ -93,9 +95,10 @@ define([], () => {
     cardMeta(f) {
       return (f.pages || 0) + (f.pages === 1 ? ' page' : ' pages') + (f.area ? ' · ' + f.area : '') + (f.updated ? ' · updated ' + ago(f.updated) : '') + (f.updatedBy ? ' · ' + f.updatedBy : '');
     }
-    /** The live recording's steps, numbered, for the recording panel. */
+    /** The live recording's steps, numbered, for the recording panel (with the screen / dialog kind and the url). */
     recRows(recording) {
-      return ((recording && recording.steps) || []).map((s, i) => ({ n: String(i + 1), name: s.name || s.page || 'Page' }));
+      return ((recording && recording.steps) || []).map((s, i) => ({ n: String(i + 1), name: s.name || s.page || 'Page',
+        isDialog: s.kind === 'dialog', kindLabel: s.kind === 'dialog' ? 'Dialog' : 'Screen', url: loc(s.url) }));
     }
     /** The editor's page rows: position label, the screenshot (if any), and the APIs list state for the matched page. */
     pageRows(flow, pageApis, apisOpen, apiTests, apiData) {
@@ -130,6 +133,7 @@ define([], () => {
         });
         return {
           id: p.id, page: p.page || '', name: p.name || '', note: p.note || '', idx: i,
+          url: loc(p.url), fullUrl: p.url || '', kind: p.kind || '', isDialog: p.kind === 'dialog', kindLabel: p.kind === 'dialog' ? 'Dialog' : (p.kind === 'page' ? 'Screen' : ''),
           label: i === 0 ? 'Start' : (i === last ? 'End' : String(i + 1)), first: i === 0, last: i === last,
           hasShot: !!(p.shot && p.shot.data), shotData: (p.shot && p.shot.data) || '',
           shotSrc: (p.shot && p.shot.src) || '',

@@ -99,6 +99,8 @@ define([
       const name = String(p.name || '').trim();
       const page = pagesByLabel[name.toLowerCase()] || p.page || '';
       const out = { id: p.id || 'p' + (i + 1), page, name, note: String(p.note || '') };
+      if (p.url) out.url = p.url;
+      if (p.kind) out.kind = p.kind;
       if (p.shot && p.shot.data) out.shot = p.shot;
       if (p.calls && p.calls.length) out.calls = p.calls;
       return out;
@@ -249,7 +251,7 @@ define([
         if (!pages.length) { say(false, 'No app pages were recorded. Open the pages you want in the app, then Stop & save.'); v.recording = null; return; }
         // open the editor pre-filled with the recorded pages — the user names it and Saves
         MODEL = { id: '', name: '', description: '', area: '', owner: '', status: 'draft',
-          pages: pages.map((p, i) => { const pg = { id: p.id || ('p' + (i + 1)), page: p.page || '', name: p.name || '', note: '' }; if (p.shot && p.shot.data) pg.shot = { src: 'page', data: p.shot.data }; if (p.calls && p.calls.length) pg.calls = p.calls; return pg; }) };
+          pages: pages.map((p, i) => { const pg = { id: p.id || ('p' + (i + 1)), page: p.page || '', name: p.name || '', note: '' }; if (p.url) pg.url = p.url; if (p.kind) pg.kind = p.kind; if (p.shot && p.shot.data) pg.shot = { src: 'page', data: p.shot.data }; if (p.calls && p.calls.length) pg.calls = p.calls; return pg; }) };
         v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.view = 'edit'; v.recording = null;
         render(v);
         setTimeout(() => { const el = byId('pf-name'); if (el) el.focus(); }, 80);

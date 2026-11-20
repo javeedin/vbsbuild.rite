@@ -76,6 +76,15 @@ const T = H.makeAsserter();
   const noCalls = P.cleanFlow({ name: 'Rec', pages: [{ name: 'A' }] });
   T.check('a page with no calls stores none', !noCalls.pages[0].calls);
 
+  T.section('a step records its url and whether it is a screen or a dialog');
+  const withKind = P.cleanFlow({ name: 'Kinds', pages: [
+    { name: 'Request Catalog', page: 'shop/customer-portal/request-catalog', url: 'http://host/vp/shell/customer-portal/request-catalog', kind: 'page' },
+    { name: 'Cancel order', page: 'shop/customer-portal/request-catalog', url: 'http://host/vp/shell/customer-portal/request-catalog', kind: 'dialog' },
+    { name: 'Odd', kind: 'nonsense' }] });
+  T.check('cleanFlow keeps the url and a valid kind (page|dialog), drops a bad kind', withKind.pages[0].url === 'http://host/vp/shell/customer-portal/request-catalog' && withKind.pages[0].kind === 'page' && withKind.pages[1].kind === 'dialog' && !withKind.pages[2].kind, JSON.stringify(withKind.pages.map((p) => p.kind)));
+  const docK = P.renderDocument(withKind, {});
+  T.check('the document shows the url and a Screen / Dialog tag per card', /class="tag screen"/.test(docK) && /class="tag dialog"/.test(docK) && docK.indexOf('/vp/shell/customer-portal/request-catalog') !== -1);
+
   T.section('the AI prompt');
   const prompt = P.aiPrompt(flow);
   T.check('names the process and the pages in order, carries the author\'s text, forbids invention', /Equipment rental v2/.test(prompt) && /1\. Catalog/.test(prompt) && /3\. Checkout/.test(prompt) && /rents an item/.test(prompt) && /Do not invent/.test(prompt));
