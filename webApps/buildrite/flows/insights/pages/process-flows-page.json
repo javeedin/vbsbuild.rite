@@ -15,7 +15,8 @@
     "doc": { "type": "any", "defaultValue": null, "description": "The generated document to preview: { html }." },
     "ai": { "type": "any", "defaultValue": null, "description": "A description drafted by AI, to use or discard: { text, provider }." },
     "pageApis": { "type": "any", "defaultValue": {}, "description": "A page's APIs, cached by catalog page id: { loading, list: [{ method, name, path, writes }], error }." },
-    "apisOpen": { "type": "any", "defaultValue": {}, "description": "Which editor rows have their APIs list open, by row id." }
+    "apisOpen": { "type": "any", "defaultValue": {}, "description": "Which editor rows have their APIs list open, by row id." },
+    "recording": { "type": "any", "defaultValue": null, "description": "A live recording from the real app: { running, steps: [{ name }], skipped, busy, error }." }
   },
   "eventListeners": {
     "vbEnter": { "chains": [ { "chain": "pfChain", "parameters": { "op": "load", "idx": "", "key": "", "value": "", "input": "" } } ] },

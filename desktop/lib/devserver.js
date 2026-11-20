@@ -986,6 +986,26 @@ function createDevServer(o) {
             log(`Process flow AI draft -> ${r && r.ok ? 'ok' : (r && r.error) || 'no answer'}`);
             return jsonPf(200, r && r.ok ? { ok: true, text: String(r.text || '').trim(), provider: r.provider || '' } : { ok: false, error: (r && r.error) || 'The AI did not answer.', needsSetup: !!(r && r.needsSetup) });
           }
+          // ── Record from the app: open the real app in a window, follow the pages walked through, build the steps ──
+          if (pathname.indexOf('/__pflow/record/') === 0) {
+            const rec = o.recorder;
+            if (!rec || typeof rec.start !== 'function') return jsonPf(200, { ok: false, noRecord: true, error: 'Recording needs the desktop app with your workspace set up.' });
+            const FR = require('./flowRecorder');
+            const catalog = () => { try { return (o.pagesStore && o.pagesStore.catalog && o.pagesStore.catalog().pages) || []; } catch (e) { return []; } };
+            if (pathname === '/__pflow/record/start' && post) { const r = await rec.start(String(b.app || '')); log('Process flow recording: start -> ' + (r && r.ok ? 'ok' : (r && r.error) || 'no')); return jsonPf(200, r || { ok: false, error: 'Could not start.' }); }
+            if (pathname === '/__pflow/record/status' && !post) {
+              const st = await rec.status();
+              const built = FR.buildSteps((st && st.nav) || [], catalog());
+              return jsonPf(200, { ok: true, running: !!(st && st.running), url: (st && st.url) || '', waiting: !!(st && st.waiting),
+                steps: built.steps.map((s) => ({ page: s.page, name: s.name })), skipped: built.skipped });
+            }
+            if (pathname === '/__pflow/record/stop' && post) {
+              const st = await rec.stop();
+              const built = FR.buildSteps((st && st.nav) || [], catalog());
+              log('Process flow recording: stop -> ' + built.steps.length + ' step(s), ' + built.skipped + ' skipped');
+              return jsonPf(200, { ok: true, pages: built.steps, skipped: built.skipped });
+            }
+          }
           return jsonPf(404, { error: 'Not found' });
         })().catch((e) => jsonPf(200, { ok: false, error: e.message }));
         return undefined;

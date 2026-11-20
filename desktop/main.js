@@ -367,6 +367,7 @@ async function buildRiteOptions() {
     crStore: crStore(), // Change requests: a change asked of a page, made with Code Fix
     flowStore: flowStore(), // Saved flows: integration flows saved under a name, edited, commented on, checked against the app
     processFlowStore: processFlowStore(), // Process Flows: a user process across the pages, written by hand, as a document
+    recorder: flowRecorder(), // Process Flows → Record from the app: open the real app, follow the pages walked through
     assistantStore: await assistantStore(), // AI Assistant: questions about the app answered from the workspace; conversations on this PC
     htmlToPdf: htmlToPdf, // Create the functional design: the document printed to PDF
     fusionSqlStore: fusionSqlStore(), // Fusion SQL: read-only SQL on a Fusion pod through its BI Publisher runner
@@ -558,6 +559,59 @@ function watchRunWindow(w) {
   wc.on('did-fail-load', (e, code, desc, url) => { if (code !== -3) cpush('error', 'could not load ' + url + ': ' + desc + ' (' + code + ')'); });
   wc.on('render-process-gone', (e, d) => cpush('error', 'the app\'s window stopped: ' + ((d && d.reason) || 'gone')));
   w.on('closed', () => { cpush('info', 'the app\'s window was closed'); if (runWin === w) runWin = null; });
+}
+// Process Flows → Record from the app: open the real app in the Run window and follow the pages walked through, taking a
+// screenshot of each as it settles. The /__pflow/record/* routes (devserver.js) map the URLs to the app's pages and build
+// the ordered steps (lib/flowRecorder.js).
+let recState = null; // { running, nav: [{ url, shot }], app }
+function attachRecorder(w) {
+  if (!w || w.isDestroyed()) return;
+  const wc = w.webContents;
+  if (wc.__brRec) return;
+  wc.__brRec = true;
+  let timer = null;
+  const grab = () => {
+    if (!recState || !recState.running || w.isDestroyed()) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (!recState || !recState.running || w.isDestroyed()) return;
+      const url = wc.getURL();
+      wc.capturePage().then((img) => {
+        if (!recState || !recState.running) return;
+        let shot = '';
+        try { shot = img && !img.isEmpty() ? img.toDataURL() : ''; } catch (e) { shot = ''; }
+        recState.nav.push({ url: url, shot: shot });
+      }).catch(() => { if (recState && recState.running) recState.nav.push({ url: url, shot: '' }); });
+    }, 800);
+  };
+  wc.on('did-navigate', grab);
+  wc.on('did-navigate-in-page', grab);
+  wc.on('did-stop-loading', grab);
+}
+function flowRecorder() {
+  return {
+    async start(app) {
+      const c = currentWork();
+      if (!c) return { ok: false, error: NO_WORKSPACE };
+      const useApp = app || runAppOf(c);
+      const p = await buildWorkspace(c, useApp, 'Record a flow');
+      if (!p.ok) return { ok: false, error: p.error };
+      recState = { running: true, nav: [], app: useApp };
+      const w = openRunWindow(p.url + '/', 'Recording a flow — ' + c.projectName + ' (' + useApp + ')');
+      attachRecorder(w);
+      return { ok: true, app: useApp };
+    },
+    async status() {
+      return { ok: true, running: !!(recState && recState.running),
+        url: (runWin && !runWin.isDestroyed()) ? runWin.webContents.getURL() : '',
+        nav: recState ? recState.nav.map((x) => ({ url: x.url })) : [] };
+    },
+    async stop() {
+      const nav = recState ? recState.nav.slice() : [];
+      if (recState) recState.running = false;
+      return { ok: true, running: false, nav: nav };
+    },
+  };
 }
 function currentWork() { try { const x = vbsStoreInst && vbsStoreInst.work().current; return x && x.exists ? x : null; } catch (e) { return null; } }
 let lastApp = '';

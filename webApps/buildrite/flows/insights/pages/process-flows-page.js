@@ -58,6 +58,10 @@ define([], () => {
     cardMeta(f) {
       return (f.pages || 0) + (f.pages === 1 ? ' page' : ' pages') + (f.area ? ' · ' + f.area : '') + (f.updated ? ' · updated ' + ago(f.updated) : '') + (f.updatedBy ? ' · ' + f.updatedBy : '');
     }
+    /** The live recording's steps, numbered, for the recording panel. */
+    recRows(recording) {
+      return ((recording && recording.steps) || []).map((s, i) => ({ n: String(i + 1), name: s.name || s.page || 'Page' }));
+    }
     /** The editor's page rows: position label, the screenshot (if any), and the APIs list state for the matched page. */
     pageRows(flow, pageApis, apisOpen) {
       const pages = (flow && flow.pages) || [];

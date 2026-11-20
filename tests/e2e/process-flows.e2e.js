@@ -37,7 +37,16 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
   const aiStore = { settings: () => ({ active: 'anthropic', providers: { anthropic: { ready: true } }, catalog: [], features: [], uses: {} }),
     chat: async (b) => { asked.push(b); return { ok: true, provider: 'Claude (Anthropic)', text: 'The equipment rental process lets a customer rent an item and return it.\n\nOn the first page they browse; on Checkout they pay.' }; } };
   const htmlToPdf = async () => Buffer.from('%PDF-1.4 process flow');
-  const env = await E.start({ port: 19991, processFlowStore: store, pagesStore: pg.store, apiStore, scenarioStore, apiProject, aiStore, htmlToPdf });
+  // a stand-in for the desktop recorder: the test pushes nav entries (the pages "walked") into recNav
+  const IMG = 'data:image/png;base64,' + PNG.toString('base64');
+  let recNav = [];
+  let recRunning = false;
+  const recorder = {
+    start: async () => { recRunning = true; recNav = []; return { ok: true }; },
+    status: async () => ({ ok: true, running: recRunning, nav: recNav.map((x) => ({ url: x.url })) }),
+    stop: async () => { recRunning = false; return { ok: true, running: false, nav: recNav.slice() }; },
+  };
+  const env = await E.start({ port: 19991, processFlowStore: store, pagesStore: pg.store, recorder, apiStore, scenarioStore, apiProject, aiStore, htmlToPdf });
   const page = env.page;
   page.on('dialog', (d) => d.accept());
   page.on('filechooser', (fc) => { fc.setFiles({ name: 'cart.png', mimeType: 'image/png', buffer: PNG }).catch(() => {}); });
@@ -149,6 +158,24 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await page.click('#pfList .nx-pf-del');
     await page.waitForSelector('#pfEmpty', { timeout: 10000 });
     T.check('removed from the list and this PC', store.list('').flows.length === 0 && /No process flow yet/.test(await text('#pfEmpty')));
+
+    T.section('record a flow by walking the real app');
+    await page.click('#pfRecord');
+    await page.waitForSelector('#pfRec', { timeout: 10000 });
+    // the person walks the app: a login (skipped), then two pages, each captured
+    recNav.push({ url: 'http://app/oauth?code=1' });
+    recNav.push({ url: 'http://app/vp/shell/orders/order-list', shot: IMG });
+    recNav.push({ url: 'http://app/vp/shell/orders/order-detail', shot: IMG });
+    await page.waitForFunction(() => document.querySelectorAll('#pfRecSteps .nx-pf-recstep').length === 2, null, { timeout: 10000 });
+    const recNames = await page.$$eval('#pfRecSteps .nx-pf-recname', (a) => a.map((x) => x.textContent.trim()));
+    T.check('the recording panel lists the pages walked (named from the catalog), the login screen skipped', recNames.join(',') === 'Order Workbench,Order' && /1 other screen/.test(await text('#pfRecCount')), recNames.join(',') + ' | ' + (await text('#pfRecCount')));
+    await page.click('#pfRecStop');
+    await page.waitForSelector('#pf-name', { timeout: 10000 });
+    T.check('Stop & save opens the editor pre-filled with the recorded pages and their screenshots', (await page.$$('#pfEditor .nx-pf-prow')).length === 2
+      && (await page.inputValue(prow(0) + ' .nx-pf-pname')) === 'Order Workbench' && (await page.inputValue(prow(1) + ' .nx-pf-pname')) === 'Order' && !!(await page.$(prow(0) + ' .nx-pf-shotimg')));
+    await page.click('#pfBack');
+    await page.waitForSelector('#pfEmpty', { timeout: 10000 });
+
     await env.shot('process-flows.png');
     T.eq('no browser errors', errs().join(' | ').slice(0, 1500), '');
   } catch (e) {

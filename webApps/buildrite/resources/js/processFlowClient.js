@@ -24,6 +24,10 @@ define([], function () {
     remove: function (id) { return call('remove', { id: id }); },
     document: function (flow, app) { return call('document', { flow: flow, app: app }); },
     pdf: function (flow, app) { return call('pdf', { flow: flow, app: app }); },
-    ai: function (flow) { return call('ai', { flow: flow }); }
+    ai: function (flow) { return call('ai', { flow: flow }); },
+    // Record from the app: open the real app in a window, follow the pages walked through, build the steps
+    recordStart: function (app) { return call('record/start', { app: app }); },
+    recordStatus: function () { return call('record/status?' + qs({ t: Date.now() })); },
+    recordStop: function () { return call('record/stop', {}); }
   };
 });

@@ -9,9 +9,45 @@
       <div class="nx-sub">Write a user process across your pages: name it, describe it, list the pages in order — then generate a process-flow document.</div>
     </div>
     <div class="nx-pagehead-actions">
+      <button type="button" class="nx-btn" id="pfRecord" data-op="recStart" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.recording ]]" title="Open your real app and walk the process — the pages you visit become the flow"><span class="oj-ux-ico-play-circle" aria-hidden="true"></span>Record from the app</button>
       <button type="button" class="nx-btn nx-btn--cta" id="pfNew" data-op="new" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span>New process flow</button>
     </div>
   </div>
+
+  <!-- Record from the app: a live panel while you walk the real app -->
+  <oj-bind-if test="[[ !!$variables.recording ]]">
+    <div class="nx-modal" id="pfRec">
+      <div class="nx-modal-scrim"></div>
+      <div class="nx-dialog nx-pf-recdlg" role="dialog" aria-modal="true" aria-label="Recording a flow">
+        <div class="nx-dialog-head">
+          <div class="nx-dialog-titles">
+            <div class="nx-kicker"><span class="nx-pf-recdot" aria-hidden="true"></span>Recording</div>
+            <h2 class="nx-dialog-title">Walk your process in the app</h2>
+            <div class="nx-sub">Your app is open in its own window. Use it as a user would — each page you open is captured here, in order. When you are done, press <b>Stop &amp; save</b>.</div>
+          </div>
+        </div>
+        <div class="nx-dialog-body nx-pf-recbody">
+          <oj-bind-if test="[[ !!$variables.recording.error ]]"><div class="nx-sc-err" id="pfRecErr"><oj-bind-text value="[[ $variables.recording.error ]]"></oj-bind-text></div></oj-bind-if>
+          <oj-bind-if test="[[ (!$variables.recording.steps || $variables.recording.steps.length === 0) && !$variables.recording.error ]]">
+            <div class="nx-empty" id="pfRecWait">Waiting for the first page… open a page in your app.</div>
+          </oj-bind-if>
+          <oj-bind-if test="[[ $variables.recording.steps && $variables.recording.steps.length > 0 ]]">
+            <ol class="nx-pf-recsteps" id="pfRecSteps">
+              <oj-bind-for-each data="[[ $functions.recRows($variables.recording) ]]"><template data-oj-as="s">
+                <li class="nx-pf-recstep"><span class="nx-pf-recn"><oj-bind-text value="[[ s.data.n ]]"></oj-bind-text></span><span class="nx-pf-recname"><oj-bind-text value="[[ s.data.name ]]"></oj-bind-text></span></li>
+              </template></oj-bind-for-each>
+            </ol>
+          </oj-bind-if>
+          <div class="nx-note" id="pfRecCount"><oj-bind-text value="[[ ($variables.recording.steps ? $variables.recording.steps.length : 0) + ' page(s) so far' + ($variables.recording.skipped ? ' · ' + $variables.recording.skipped + ' other screen(s) skipped' : '') ]]"></oj-bind-text></div>
+        </div>
+        <div class="nx-dialog-foot nx-pf-recfoot">
+          <button type="button" class="nx-btn nx-btn--plain" id="pfRecCancel" data-op="recCancel" on-click="[[ $listeners.onPf ]]" :disabled="[[ $variables.recording.busy ]]">Cancel</button>
+          <span class="nx-min-flex"></span>
+          <button type="button" class="nx-btn nx-btn--cta" id="pfRecStop" data-op="recStop" on-click="[[ $listeners.onPf ]]" :disabled="[[ $variables.recording.busy ]]"><span class="oj-ux-ico-stop" aria-hidden="true"></span><oj-bind-text value="[[ $variables.recording.busy ? 'Saving…' : 'Stop & save' ]]"></oj-bind-text></button>
+        </div>
+      </div>
+    </div>
+  </oj-bind-if>
 
   <oj-bind-if test="[[ $variables.checked && !$variables.available ]]">
     <div class="nx-empty" id="pfUnavailable">Process Flows run in the Build.Rite desktop app: they are kept per VB Studio project on this PC.</div>

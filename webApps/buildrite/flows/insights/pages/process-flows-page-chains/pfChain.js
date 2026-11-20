@@ -39,6 +39,20 @@ define([
   // The flow being edited (pages are authoritative here, not in the DOM).
   let MODEL = null;
 
+  // Record from the app: while recording, poll the desktop recorder for the pages walked through so the panel updates live.
+  let recTimer = null;
+  let recOn = false;
+  function recStopPoll() { recOn = false; if (recTimer) { clearTimeout(recTimer); recTimer = null; } }
+  function recPoll(v) {
+    if (!recOn) return;
+    PC.recordStatus().then((r) => {
+      if (!recOn || !v.recording) return;
+      const b = r.body || {};
+      if (r.ok) v.recording = Object.assign({}, v.recording, { running: !!b.running, steps: b.steps || [], skipped: b.skipped || 0 });
+      recTimer = setTimeout(() => recPoll(v), 1500);
+    }).catch(() => { if (recOn) recTimer = setTimeout(() => recPoll(v), 1500); });
+  }
+
   // a top field: the live input when the form is on screen (edit view), else MODEL's value (preview, where the form is gone)
   const top = (id, fallback) => (byId(id) ? val(id) : String(fallback || ''));
   /** The editor as it is → a flow object: the top fields (from the form, or MODEL in preview), the pages from MODEL. */
@@ -169,8 +183,41 @@ define([
       if (op === 'back') {
         if (MODEL) foldRows(v);
         if (dirty(v) && !window.confirm('Leave without saving? Your changes to this process flow are lost.')) return;
-        MODEL = null; v.flow = null; v.saved = null; v.doc = null; v.ai = null; v.apisOpen = {}; v.view = 'edit'; v.view = 'edit';
+        MODEL = null; v.flow = null; v.saved = null; v.doc = null; v.ai = null; v.apisOpen = {}; v.view = 'edit';
         await loadList();
+        return;
+      }
+
+      // ── Record from the app: open the real app, follow the pages walked through, build the flow ──
+      if (op === 'recStart') {
+        const r = await PC.recordStart('');
+        if (!r.ok) { say(false, (r.body && r.body.error) || 'Recording needs the desktop app with your workspace set up.'); return; }
+        v.recording = { running: true, steps: [], skipped: 0, busy: false, error: '' };
+        recOn = true;
+        recTimer = setTimeout(() => recPoll(v), 1200);
+        return;
+      }
+      if (op === 'recCancel') {
+        recStopPoll();
+        try { await PC.recordStop(); } catch (e) { /* the window may already be gone */ }
+        v.recording = null;
+        return;
+      }
+      if (op === 'recStop') {
+        if (!v.recording || v.recording.busy) return;
+        recStopPoll();
+        v.recording = Object.assign({}, v.recording, { busy: true });
+        const r = await PC.recordStop();
+        const b = r.body || {};
+        const pages = (r.ok && b.pages) || [];
+        if (!pages.length) { say(false, 'No app pages were recorded. Open the pages you want in the app, then Stop & save.'); v.recording = null; return; }
+        // open the editor pre-filled with the recorded pages — the user names it and Saves
+        MODEL = { id: '', name: '', description: '', area: '', owner: '', status: 'draft',
+          pages: pages.map((p, i) => { const pg = { id: p.id || ('p' + (i + 1)), page: p.page || '', name: p.name || '', note: '' }; if (p.shot && p.shot.data) pg.shot = { src: 'page', data: p.shot.data }; return pg; }) };
+        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.view = 'edit'; v.recording = null;
+        render(v);
+        setTimeout(() => { const el = byId('pf-name'); if (el) el.focus(); }, 80);
+        say(true, pages.length + ' page(s) recorded — name it and Save.');
         return;
       }
 

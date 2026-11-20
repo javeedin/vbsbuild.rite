@@ -270,6 +270,14 @@ numbered. Each page is picked from your app's own page catalog (the same list th
 names match), and each gets a short **note** — what the user does on that page. Add pages, move them up and down, or
 remove them; the Start / End labels follow the order.
 
+**Or record it by using the app.** Press **Record from the app** and your real working‑copy app opens in its own window
+(sign in once, as with Run). Just *use it* — open a customer, go to the request page, check out. A live panel lists each
+page you land on, in order (matched to your Application pages catalog, so it's named), and takes a screenshot of each.
+Press **Stop & save** and the editor opens already filled with those pages and their screenshots — you name it, tweak the
+order or notes, and Save. It records the pages you walk through (login and other non‑app screens are skipped). Recording
+needs the desktop app with your workspace set up; in the browser‑only `npm run serve` mode there's no app window, so you
+build the flow by hand.
+
 For each page you can also:
 
 - **add a screenshot** — **From the page** captures it live the same way Application pages does (it runs the matched page
