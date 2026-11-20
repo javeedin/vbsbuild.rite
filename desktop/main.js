@@ -635,6 +635,10 @@ const FLOW_OBSERVER = '(function(){' +
   'document.body.appendChild(bar);drag(grip);drag(lbl);drag(dot);}catch(e){}};window.__brFlowUI=build;' +
   // rebuild the bar if the app's own re-render removes it; it does NOT report screens
   'var t=null;try{var mo=new MutationObserver(function(){clearTimeout(t);t=setTimeout(build,400);});mo.observe(document.documentElement,{childList:true,subtree:true});}catch(e){}' +
+  // after the user acts on a page (a click, typing), ask the host to refresh THIS page\'s screenshot so it keeps up with
+  // what they did (items added to a cart, a form filled). This never adds a step — it only updates the current shot.
+  'var rt=null;var kickR=function(ev){try{if(bar&&ev&&ev.target&&bar.contains(ev.target))return;}catch(e){}clearTimeout(rt);rt=setTimeout(function(){push({refresh:true});},900);};' +
+  'document.addEventListener("click",kickR,true);document.addEventListener("input",kickR,true);document.addEventListener("change",kickR,true);' +
   'build();setTimeout(build,500);' +
   '})();';
 function attachRecorder(w) {
@@ -648,17 +652,33 @@ function attachRecorder(w) {
   const run = (js) => { if (!wc.isDestroyed()) wc.executeJavaScript(js, true).catch(() => {}); };
   const inject = () => run(FLOW_OBSERVER);
   const count = () => run('window.__brFlowCount&&window.__brFlowCount(' + (recState ? recState.nav.length : 0) + ')');
-  // fill an entry's title + screenshot once the screen has settled, with the bar hidden so it is never in the picture
-  const fillShot = async (entry) => {
-    if (!recState || !recState.running || wc.isDestroyed()) return;
-    try { const s = await wc.executeJavaScript('(window.__brFlowScreen&&window.__brFlowScreen())||{}', true); if (s && s.title && !entry.title) entry.title = String(s.title); } catch (e) { /* no title yet */ }
-    try { await wc.executeJavaScript('window.__brFlowHide&&window.__brFlowHide()', true); } catch (e) { /* no bar yet */ }
-    await new Promise((r) => setTimeout(r, 50));
-    try { const img = await wc.capturePage(); const shot = img && !img.isEmpty() ? img.toDataURL() : ''; if (shot && recState && recState.running) entry.shot = shot; } catch (e) { /* */ }
-    try { await wc.executeJavaScript('window.__brFlowShow&&window.__brFlowShow()', true); } catch (e) { /* */ }
+  // Take one screenshot of the screen on display and store it on `entry` (title filled only if still empty), with the bar
+  // hidden so it is never in the picture. Used for the first shot of a page, for the manual button, and for refreshes.
+  let shooting = false;
+  const shoot = async (entry) => {
+    if (!entry || !recState || !recState.running || wc.isDestroyed() || shooting) return;
+    shooting = true;
+    try {
+      try { const s = await wc.executeJavaScript('(window.__brFlowScreen&&window.__brFlowScreen())||{}', true); if (s && s.title && !entry.title) entry.title = String(s.title); } catch (e) { /* no title yet */ }
+      try { await wc.executeJavaScript('window.__brFlowHide&&window.__brFlowHide()', true); } catch (e) { /* no bar yet */ }
+      await new Promise((r) => setTimeout(r, 50));
+      try { const img = await wc.capturePage(); const sh = img && !img.isEmpty() ? img.toDataURL() : ''; if (sh && recState && recState.running) entry.shot = sh; } catch (e) { /* */ }
+      try { await wc.executeJavaScript('window.__brFlowShow&&window.__brFlowShow()', true); } catch (e) { /* */ }
+    } finally { shooting = false; }
   };
-  // AUTO: one step per navigation. Record the URL the moment it changes (so a fast walk never loses a page), then fill
-  // its title + screenshot once it settles. The same page twice in a row is not repeated.
+  // Re-shoot the CURRENT auto page while we are still on it, so its screenshot keeps up with what the user does (a form
+  // being filled, items added to the cart). When they move on, that entry keeps its last — i.e. final — screenshot.
+  const refreshCurrent = async () => {
+    const entry = recState && recState.shotEntry;
+    if (!entry || !recState.running || wc.isDestroyed()) return;
+    let url = ''; try { url = wc.getURL(); } catch (e) { return; }
+    if (!url || url.split('#')[0] !== String(entry.url).split('#')[0]) return; // already moved on — keep its last shot
+    await shoot(entry);
+  };
+  if (recState) recState.refresh = refreshCurrent;
+  // AUTO: one step per navigation. Record the URL the moment it changes (so a fast walk never loses a page); its
+  // screenshot is taken once it settles and then kept fresh until the next navigation. The same page twice in a row is
+  // not repeated (but it becomes the page whose shot we keep refreshing).
   const onNav = (url) => {
     if (!recState || !recState.running || !recState.auto) return;
     const u = String(url || '');
@@ -666,14 +686,15 @@ function attachRecorder(w) {
     recState.curUrl = u;
     const path = u.split('#')[0];
     const last = recState.nav[recState.nav.length - 1];
-    if (last && !last.manual && last.url.split('#')[0] === path) return;
+    if (last && !last.manual && last.url.split('#')[0] === path) { recState.shotEntry = last; return; }
     const entry = { url: u, shot: '', title: '', kind: 'page', screen: '', manual: false };
     recState.nav.push(entry);
+    recState.shotEntry = entry;
     recState.lastPush = Date.now();
     count();
-    setTimeout(() => fillShot(entry), 700);
+    setTimeout(refreshCurrent, 700);
   };
-  // MANUAL: the "Capture this screen" button queues a screen; drain the queue and record each (dialog-aware)
+  // MANUAL: the "Capture this screen" button queues a screen; record each (dialog-aware), snapped right now
   const handleManual = async (s) => {
     if (!recState || !recState.running || !s) return;
     const url = String(s.url || '');
@@ -687,7 +708,7 @@ function attachRecorder(w) {
     recState.nav.push(entry);
     recState.lastPush = now;
     count();
-    await fillShot(entry);
+    await shoot(entry);
   };
   let draining = false;
   const drain = async () => {
@@ -696,14 +717,15 @@ function attachRecorder(w) {
     try {
       let items = [];
       try { items = await wc.executeJavaScript('window.__brFlowDrain?window.__brFlowDrain():[]', true); } catch (e) { items = []; }
-      if (Array.isArray(items)) { for (let i = 0; i < items.length; i++) { await handleManual(items[i]); } }
+      if (Array.isArray(items)) { for (let i = 0; i < items.length; i++) { const it = items[i]; if (it && it.refresh) { await refreshCurrent(); } else { await handleManual(it); } } }
     } finally { draining = false; }
   };
   const timer = setInterval(drain, 350);
+  const shotTimer = setInterval(() => { refreshCurrent(); }, 2500); // backstop: keep the current page's shot up to date
   wc.on('dom-ready', inject);                                        // (re)install the bar after a page load
   wc.on('did-navigate', (e, url) => onNav(url));                     // a real page navigation
   wc.on('did-navigate-in-page', (e, url, isMainFrame) => { if (isMainFrame !== false) onNav(url); }); // an SPA route change
-  w.on('closed', () => clearInterval(timer));
+  w.on('closed', () => { clearInterval(timer); clearInterval(shotTimer); });
   inject();
   setTimeout(() => { if (recState && recState.running && recState.auto && !wc.isDestroyed()) onNav(wc.getURL()); }, 900); // the first page
 }
@@ -715,7 +737,7 @@ function flowRecorder() {
       const useApp = app || runAppOf(c);
       const p = await buildWorkspace(c, useApp, 'Record a flow');
       if (!p.ok) return { ok: false, error: p.error };
-      recState = { running: true, nav: [], calls: [], curUrl: '', app: useApp, auto: true, lastPush: 0 };
+      recState = { running: true, nav: [], calls: [], curUrl: '', app: useApp, auto: true, lastPush: 0, shotEntry: null, refresh: null };
       const w = openRunWindow(p.url + '/', 'Recording a flow — ' + c.projectName + ' (' + useApp + ')');
       attachRecorder(w);
       return { ok: true, app: useApp };
@@ -754,6 +776,7 @@ function flowRecorder() {
       return { ok: true, auto: !!on };
     },
     async stop() {
+      try { if (recState && recState.refresh) await recState.refresh(); } catch (e) { /* take the last page's final screenshot */ }
       const nav = recState ? recState.nav.slice() : [];
       const calls = recState ? recState.calls.slice() : [];
       if (recState) recState.running = false;
