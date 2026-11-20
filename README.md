@@ -271,8 +271,8 @@ names match), and each gets a short **note** — what the user does on that page
 remove them; the Start / End labels follow the order.
 
 **Or record it by using the app.** Press **Record from the app** and your real working‑copy app opens in its own window
-(sign in once, as with Run). A floating **📷 Capture this screen** button sits in the app window, and the recording panel
-has the same button — **you choose exactly which screens go into the flow**: go to a screen (a page, or a dialog / drawer /
+(sign in once, as with Run). A floating **📷 Capture this screen** bar sits at the bottom‑centre of the app window (drag it anywhere by its
+handle so it never covers the app's own controls), and the recording panel has the same button — **you choose exactly which screens go into the flow**: go to a screen (a page, or a dialog / drawer /
 wizard step opened in place), press **Capture this screen**, and it's added with its screenshot, its **URL**, and a
 **Screen** or **Dialog** tag (a dialog shares its screen's URL, so the URL + tag tell them apart). Capture as many as you
 like, in order. Prefer hands‑off? Tick **Capture every screen automatically as I walk** and it records each screen it

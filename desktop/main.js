@@ -600,31 +600,37 @@ function attachRecorderNet(w) {
   try { dbg.sendCommand('Network.enable', { maxResourceBufferSize: 10 * 1024 * 1024, maxTotalBufferSize: 50 * 1024 * 1024 }); } catch (e) { /* ignore */ }
   w.on('closed', () => { try { if (dbg.isAttached()) dbg.detach(); } catch (e) { /* gone */ } });
 }
-// Injected into the run window. It shows a floating "Capture this screen" button (so you pick exactly which screens go
-// into the flow), and — when auto-capture is on — also reports each screen it detects (a page that loaded, a dialog /
-// drawer that opened, the main view changing) even when the web address does not change (JET/VBCS apps do most of this
-// in place). Either way it posts a line to the console that the main process reads; it never calls Oracle. The helpers
-// it exposes let the main process read the current screen (__brFlowScreen), hide/show the button around a screenshot,
-// update the count, and turn auto-capture on/off.
+// Injected into the run window. It shows a floating, draggable "Capture this screen" bar (bottom-centre) so you pick
+// exactly which screens go into the flow, and — when auto-capture is on — also detects each screen (a page that loaded,
+// a dialog that opened, the main view changing) even when the web address does not change. Rather than relying on the
+// console (console-message is flaky across Electron versions), it pushes each screen onto window.__brFlowQ, which the
+// main process drains on a timer (reliable). It never calls Oracle. Helpers let the host read the current screen,
+// hide/show the bar around a screenshot, update the count and turn auto-capture on/off.
 const FLOW_OBSERVER = '(function(){' +
-  'if(window.__brFlowRec){try{window.__brFlowUI&&window.__brFlowUI();window.__brFlowEmit&&window.__brFlowEmit();}catch(e){}return;}window.__brFlowRec=true;window.__brFlowAuto=false;' +
+  'if(window.__brFlowRec){try{window.__brFlowUI&&window.__brFlowUI();}catch(e){}return;}window.__brFlowRec=true;window.__brFlowAuto=false;window.__brFlowQ=window.__brFlowQ||[];' +
   'var vis=function(el){if(!el)return false;try{var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>40&&r.height>28&&s.display!=="none"&&s.visibility!=="hidden"&&s.opacity!=="0";}catch(e){return false;}};' +
   'var topDialog=function(){var sel="[role=dialog],[role=alertdialog],oj-dialog,.oj-dialog,oj-drawer-popup,.oj-drawer,.oj-drawer-popup,.oj-popup";var n=[];try{n=Array.prototype.slice.call(document.querySelectorAll(sel));}catch(e){n=[];}n=n.filter(vis);return n.length?n[n.length-1]:null;};' +
   'var titleOf=function(scope){scope=scope||document.body;if(!scope)return "";var sels=[".oj-dialog-title","[slot=header]","h1","h2",".oj-typography-heading-lg",".oj-typography-heading-md",".oj-typography-heading-sm"];for(var i=0;i<sels.length;i++){var t=scope.querySelector(sels[i]);if(t&&vis(t)){var s=(t.textContent||"").trim().replace(/\\s+/g," ");if(s)return s.slice(0,120);}}return (document.title||"").trim().replace(/\\s+/g," ").slice(0,120);};' +
   'var screenOf=function(){var d=topDialog();if(d){var dt=titleOf(d)||"Dialog";return {kind:"dialog",title:dt,key:"dialog:"+dt};}var vt=titleOf(document);return {kind:"page",title:vt,key:"view:"+vt};};' +
   'window.__brFlowScreen=function(){var s=screenOf();return {url:location.href,title:s.title,kind:s.kind,key:s.key};};' +
-  'var last="";var emit=function(){try{if(!window.__brFlowAuto)return;var s=screenOf();if(s.kind==="page"&&!s.title)return;var sig=location.pathname+location.search+"|"+s.key;if(sig===last)return;last=sig;console.log("__BRFLOW__"+JSON.stringify({url:location.href,title:s.title,kind:s.kind,key:s.key}));}catch(e){}};window.__brFlowEmit=emit;' +
+  'window.__brFlowDrain=function(){var q=window.__brFlowQ||[];window.__brFlowQ=[];return q;};' +
+  'var push=function(o){try{window.__brFlowQ.push(o);}catch(e){}};' +
+  'var last="";var emit=function(){try{if(!window.__brFlowAuto)return;var s=screenOf();if(s.kind==="page"&&!s.title)return;var sig=location.pathname+location.search+"|"+s.key;if(sig===last)return;last=sig;push({url:location.href,title:s.title,kind:s.kind,key:s.key});}catch(e){}};window.__brFlowEmit=emit;' +
   'window.__brFlowAutoSet=function(on){window.__brFlowAuto=!!on;if(on)emit();};' +
   'var bar=null,cnt=null;var hide=function(){if(bar)bar.style.visibility="hidden";};var show=function(){if(bar)bar.style.visibility="visible";};window.__brFlowHide=hide;window.__brFlowShow=show;' +
   'window.__brFlowCount=function(n){try{if(cnt)cnt.textContent=String(n);}catch(e){}};' +
-  'var cap=function(){try{hide();setTimeout(function(){var s=screenOf();console.log("__BRFLOW__"+JSON.stringify({url:location.href,title:s.title,kind:s.kind,key:s.key,manual:true}));},60);setTimeout(show,520);}catch(e){show();}};window.__brFlowCapture=cap;' +
-  'var build=function(){try{if(!document.body)return;if(bar&&document.body.contains(bar))return;bar=document.createElement("div");bar.id="__brFlowBar";bar.setAttribute("style","position:fixed;z-index:2147483647;right:16px;bottom:16px;display:flex;gap:9px;align-items:center;background:#12224a;color:#fff;border-radius:999px;padding:7px 9px 7px 13px;font:600 13px/1 -apple-system,Segoe UI,Roboto,Arial,sans-serif;box-shadow:0 6px 22px rgba(0,0,0,.35)");' +
+  'var cap=function(){try{var s=screenOf();push({url:location.href,title:s.title,kind:s.kind,key:s.key,manual:true});if(bar){bar.style.outline="3px solid #4da3ff";setTimeout(function(){if(bar)bar.style.outline="";},200);}}catch(e){}};window.__brFlowCapture=cap;' +
+  'var drag=function(h){var ox=0,oy=0,on=false;h.style.cursor="grab";var md=function(ev){on=true;var r=bar.getBoundingClientRect();ox=ev.clientX-r.left;oy=ev.clientY-r.top;bar.style.left=r.left+"px";bar.style.top=r.top+"px";bar.style.right="auto";bar.style.bottom="auto";bar.style.transform="none";h.style.cursor="grabbing";ev.preventDefault();};' +
+  'var mm=function(ev){if(!on)return;var x=Math.max(4,Math.min(window.innerWidth-60,ev.clientX-ox));var y=Math.max(4,Math.min(window.innerHeight-40,ev.clientY-oy));bar.style.left=x+"px";bar.style.top=y+"px";};var mu=function(){if(on){on=false;h.style.cursor="grab";}};' +
+  'h.addEventListener("mousedown",md);document.addEventListener("mousemove",mm,true);document.addEventListener("mouseup",mu,true);};' +
+  'var build=function(){try{if(!document.body)return;if(bar&&document.body.contains(bar))return;bar=document.createElement("div");bar.id="__brFlowBar";bar.setAttribute("style","position:fixed;z-index:2147483647;left:50%;bottom:20px;transform:translateX(-50%);display:flex;gap:9px;align-items:center;background:#12224a;color:#fff;border-radius:999px;padding:7px 10px 7px 10px;font:600 13px/1 -apple-system,Segoe UI,Roboto,Arial,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.45)");' +
+  'var grip=document.createElement("span");grip.textContent="\\u2630";grip.title="Drag to move";grip.setAttribute("style","opacity:.55;padding:0 3px;font-size:13px");bar.appendChild(grip);' +
   'var dot=document.createElement("span");dot.setAttribute("style","width:9px;height:9px;border-radius:50%;background:#ff4d4d;animation:__brflow 1.2s infinite");bar.appendChild(dot);' +
   'var lbl=document.createElement("span");lbl.textContent="Recording";lbl.setAttribute("style","opacity:.85");bar.appendChild(lbl);' +
   'var btn=document.createElement("button");btn.type="button";btn.textContent="\\uD83D\\uDCF7 Capture this screen";btn.setAttribute("style","cursor:pointer;border:0;border-radius:999px;background:#2e6fd8;color:#fff;font:700 13px -apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:7px 12px");btn.addEventListener("click",function(ev){ev.preventDefault();ev.stopPropagation();cap();});bar.appendChild(btn);' +
   'cnt=document.createElement("span");cnt.textContent="0";cnt.title="screens captured";cnt.setAttribute("style","min-width:14px;height:20px;border-radius:999px;background:rgba(255,255,255,.2);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;padding:0 6px");bar.appendChild(cnt);' +
   'if(!document.getElementById("__brFlowKf")){var st=document.createElement("style");st.id="__brFlowKf";st.textContent="@keyframes __brflow{0%{opacity:1}50%{opacity:.25}100%{opacity:1}}";(document.head||document.documentElement).appendChild(st);}' +
-  'document.body.appendChild(bar);}catch(e){}};window.__brFlowUI=build;' +
+  'document.body.appendChild(bar);drag(grip);drag(lbl);drag(dot);}catch(e){}};window.__brFlowUI=build;' +
   'var t=null;var kick=function(){clearTimeout(t);t=setTimeout(function(){build();emit();},350);};' +
   'try{var mo=new MutationObserver(kick);mo.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["class","style","aria-hidden","open","hidden"]});}catch(e){}' +
   'document.addEventListener("click",function(ev){try{if(bar&&bar.contains(ev.target))return;}catch(e){}clearTimeout(t);t=setTimeout(emit,500);},true);' +
@@ -640,27 +646,23 @@ function attachRecorder(w) {
   const run = (js) => { if (!wc.isDestroyed()) wc.executeJavaScript(js, true).catch(() => {}); };
   const inject = () => { run(FLOW_OBSERVER); run('window.__brFlowAutoSet&&window.__brFlowAutoSet(' + (recState && recState.auto ? 'true' : 'false') + ')'); };
   const forceEmit = () => run('window.__brFlowEmit&&window.__brFlowEmit()');
-  // take the screenshot with the "Capture" button hidden, so the button never appears in the picture
-  const captureInto = (entry) => {
+  // record one screen (from the queue), taking its screenshot with the bar hidden so it never shows in the picture
+  const captureOne = (entry) => new Promise((resolve) => {
     run('window.__brFlowHide&&window.__brFlowHide()');
     setTimeout(() => {
-      if (wc.isDestroyed()) return;
+      if (wc.isDestroyed()) return resolve();
       wc.capturePage().then((img) => {
         let shot = ''; try { shot = img && !img.isEmpty() ? img.toDataURL() : ''; } catch (err) { shot = ''; }
         if (shot && recState && recState.running) entry.shot = shot;
         run('window.__brFlowShow&&window.__brFlowShow();window.__brFlowCount&&window.__brFlowCount(' + (recState ? recState.nav.length : 0) + ')');
-      }).catch(() => run('window.__brFlowShow&&window.__brFlowShow()'));
-    }, 45);
-  };
-  // the observer reports a screen — manual (the Capture button) or automatic. A page and a dialog on it share the same
-  // URL but have different screen keys, so both become steps; the URL + kind tell them apart. console-message in
-  // Electron 45 passes one event object ({ message }); older builds pass positional args — handle both.
-  wc.on('console-message', function (a, b, c) {
-    if (!recState || !recState.running) return;
-    const message = (a && typeof a === 'object' && typeof a.message === 'string') ? a.message
-      : (typeof c === 'string' ? c : (typeof a === 'string' ? a : ''));
-    if (message.indexOf('__BRFLOW__') !== 0) return;
-    let s; try { s = JSON.parse(message.slice(9)); } catch (err) { return; }
+        resolve();
+      }).catch(() => { run('window.__brFlowShow&&window.__brFlowShow()'); resolve(); });
+    }, 60);
+  });
+  // a screen reported by the overlay (manual) or auto-detection. A page and a dialog on it share the same URL but have
+  // different screen keys, so both become steps; the URL + kind tell them apart.
+  const handleScreen = async (s) => {
+    if (!recState || !recState.running || !s) return;
     const url = String(s.url || '');
     if (bad(url)) return;
     recState.curUrl = url;
@@ -674,12 +676,24 @@ function attachRecorder(w) {
     const entry = { url: url, shot: '', title: String(s.title || ''), kind: s.kind === 'dialog' ? 'dialog' : 'page', screen: screen };
     recState.nav.push(entry);
     recState.lastPush = now;
-    captureInto(entry);
-  });
-  wc.on('dom-ready', inject);              // a full page load: (re)install the observer + button, restore auto
+    await captureOne(entry);
+  };
+  // drain the page's queue on a timer — reliable across Electron versions (no console-message dependency)
+  let draining = false;
+  const drain = async () => {
+    if (draining || !recState || !recState.running || wc.isDestroyed()) return;
+    draining = true;
+    try {
+      let items = [];
+      try { items = await wc.executeJavaScript('window.__brFlowDrain?window.__brFlowDrain():[]', true); } catch (e) { items = []; }
+      if (Array.isArray(items)) { for (let i = 0; i < items.length; i++) { await handleScreen(items[i]); } }
+    } finally { draining = false; }
+  };
+  const timer = setInterval(drain, 350);
+  wc.on('dom-ready', inject);              // a full page load: (re)install the observer + bar, restore auto
   wc.on('did-navigate', forceEmit);        // nudge auto after any navigation (SPA routes don't reload the document)
   wc.on('did-navigate-in-page', forceEmit);
-  wc.on('did-stop-loading', forceEmit);
+  w.on('closed', () => clearInterval(timer));
   inject();
 }
 function flowRecorder() {
