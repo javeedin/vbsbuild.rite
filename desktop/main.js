@@ -607,25 +607,54 @@ function attachRecorder(w) {
   if (wc.__brRec) return;
   wc.__brRec = true;
   let timer = null;
-  const grab = () => {
+  const bad = (u) => !u || /^(about:|data:|chrome:|devtools:)/.test(u);
+  // Record each distinct page the moment we land on it, so a quick walk-through never loses a page (the previous design
+  // used one debounced capture that each new navigation cancelled, so only the page you paused on was kept). The
+  // screenshot is filled in when the page settles; buildSteps collapses consecutive repeats and keeps the newest shot.
+  const setShot = (url, shot) => {
+    if (!shot) return;
+    for (let i = recState.nav.length - 1; i >= 0; i--) { if (recState.nav[i].url === url) { recState.nav[i].shot = shot; return; } }
+  };
+  const note = () => {
     if (!recState || !recState.running || w.isDestroyed()) return;
-    if (!w.isDestroyed()) recState.curUrl = wc.getURL();
+    const url = wc.getURL();
+    if (bad(url)) return;
+    recState.curUrl = url;
+    const last = recState.nav[recState.nav.length - 1];
+    if (!last || last.url !== url) recState.nav.push({ url: url, shot: '' });
+  };
+  const shoot = () => {
     clearTimeout(timer);
     timer = setTimeout(() => {
       if (!recState || !recState.running || w.isDestroyed()) return;
       const url = wc.getURL();
-      recState.curUrl = url;
+      if (bad(url)) return;
       wc.capturePage().then((img) => {
         if (!recState || !recState.running) return;
         let shot = '';
         try { shot = img && !img.isEmpty() ? img.toDataURL() : ''; } catch (e) { shot = ''; }
-        recState.nav.push({ url: url, shot: shot });
-      }).catch(() => { if (recState && recState.running) recState.nav.push({ url: url, shot: '' }); });
-    }, 800);
+        setShot(url, shot);
+      }).catch(() => {});
+    }, 500);
   };
+  const grab = () => { note(); shoot(); };
+  // before leaving a page, grab a shot of it (so a page you move on from quickly still gets its picture)
+  wc.on('did-start-navigation', (e, url, isInPlace, isMainFrame) => {
+    if (!recState || !recState.running || w.isDestroyed() || isMainFrame === false) return;
+    const leaving = recState.curUrl;
+    if (bad(leaving) || leaving === url) return;
+    wc.capturePage().then((img) => {
+      if (!recState || !recState.running) return;
+      let shot = ''; try { shot = img && !img.isEmpty() ? img.toDataURL() : ''; } catch (err) { shot = ''; }
+      // only if that page has no shot yet (don't overwrite a settled capture)
+      for (let i = recState.nav.length - 1; i >= 0; i--) { if (recState.nav[i].url === leaving) { if (!recState.nav[i].shot) recState.nav[i].shot = shot; return; } }
+    }).catch(() => {});
+  });
   wc.on('did-navigate', grab);
   wc.on('did-navigate-in-page', grab);
   wc.on('did-stop-loading', grab);
+  // the page already loaded when we attached (the first navigation may have fired before the listeners)
+  grab();
 }
 function flowRecorder() {
   return {
