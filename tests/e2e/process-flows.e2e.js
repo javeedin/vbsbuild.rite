@@ -47,7 +47,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
   let recCurrent = null; // the "screen on display" the Capture button would grab
   let recAuto = false;
   const recorder = {
-    start: async () => { recRunning = true; recNav = []; recCalls = []; recAuto = false; return { ok: true }; },
+    start: async () => { recRunning = true; recNav = []; recCalls = []; recAuto = true; return { ok: true }; },
     status: async () => ({ ok: true, running: recRunning, auto: recAuto, nav: recNav.map((x) => ({ url: x.url, title: x.title, kind: x.kind, screen: x.screen })) }),
     capture: async () => { if (!recCurrent) return { ok: false, error: 'no screen' }; recNav.push(Object.assign({ shot: IMG, manual: true }, recCurrent)); return { ok: true, count: recNav.length, name: recCurrent.title || '', kind: recCurrent.kind || 'page' }; },
     auto: async (on) => { recAuto = !!on; return { ok: true, auto: recAuto }; },
@@ -169,9 +169,8 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     T.section('record a flow by walking the real app');
     await page.click('#pfRecord');
     await page.waitForSelector('#pfRec', { timeout: 10000 });
-    await page.click('#pfRecAuto'); // turn auto-capture on, then just walk
     await settle(page, 150);
-    T.check('the auto-capture toggle reaches the recorder', recAuto === true);
+    T.check('auto-capture is on by default — just walk the app', recAuto === true && (await page.isChecked('#pfRecAuto')));
     // the person walks the app: a login (skipped), then two pages, each captured
     recNav.push({ url: 'http://app/oauth?code=1' });
     recNav.push({ url: 'http://app/vp/shell/orders/order-list', shot: IMG });
@@ -189,7 +188,9 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     T.section('choose screens with "Capture this screen"');
     await page.click('#pfRecord');
     await page.waitForSelector('#pfRec', { timeout: 10000 });
-    T.check('nothing is captured until I choose', /No screens captured yet/.test(await text('#pfRecWait')) && (await page.$$('#pfEditor .nx-pf-prow, #pfRecSteps .nx-pf-recstep')).length === 0);
+    await page.click('#pfRecAuto'); // turn auto off — capture only what I choose
+    await settle(page, 150);
+    T.check('I can turn auto off to choose only what I capture', recAuto === false && (await page.$$('#pfRecSteps .nx-pf-recstep')).length === 0);
     // go to a screen and press Capture this screen
     recCurrent = { url: 'http://app/vp/shell/orders/order-list', title: 'Order Workbench', kind: 'page', screen: 'view:Order Workbench' };
     await page.click('#pfRecCapture');

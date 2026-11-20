@@ -23,7 +23,7 @@
           <div class="nx-dialog-titles">
             <div class="nx-kicker"><span class="nx-pf-recdot" aria-hidden="true"></span>Recording</div>
             <h2 class="nx-dialog-title">Walk your process in the app</h2>
-            <div class="nx-sub">Your app is open in its own window. Go to a screen you want in the flow, then press <b>Capture this screen</b> — here or the <b>📷</b> button in the app window. Capture as many as you like, in order; then <b>Stop &amp; save</b>.</div>
+            <div class="nx-sub">Your app is open in its own window. As you walk through it, each screen is captured automatically, in order. Use <b>📷 Capture this screen</b> (here or in the app window) to grab a dialog or step it misses — or untick auto to capture only what you choose. When done, <b>Stop &amp; save</b>.</div>
           </div>
         </div>
         <div class="nx-dialog-body nx-pf-recbody">
@@ -33,7 +33,7 @@
           </div>
           <oj-bind-if test="[[ !!$variables.recording.error ]]"><div class="nx-sc-err" id="pfRecErr"><oj-bind-text value="[[ $variables.recording.error ]]"></oj-bind-text></div></oj-bind-if>
           <oj-bind-if test="[[ (!$variables.recording.steps || $variables.recording.steps.length === 0) && !$variables.recording.error ]]">
-            <div class="nx-empty" id="pfRecWait">No screens captured yet — go to a screen in your app and press <b>Capture this screen</b>.</div>
+            <div class="nx-empty" id="pfRecWait">Walk through your app — screens appear here as you go. Or press <b>Capture this screen</b> for a specific one.</div>
           </oj-bind-if>
           <oj-bind-if test="[[ $variables.recording.steps && $variables.recording.steps.length > 0 ]]">
             <ol class="nx-pf-recsteps" id="pfRecSteps">

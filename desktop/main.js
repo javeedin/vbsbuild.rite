@@ -704,7 +704,7 @@ function flowRecorder() {
       const useApp = app || runAppOf(c);
       const p = await buildWorkspace(c, useApp, 'Record a flow');
       if (!p.ok) return { ok: false, error: p.error };
-      recState = { running: true, nav: [], calls: [], curUrl: '', app: useApp, auto: false, lastPush: 0 };
+      recState = { running: true, nav: [], calls: [], curUrl: '', app: useApp, auto: true, lastPush: 0 };
       const w = openRunWindow(p.url + '/', 'Recording a flow — ' + c.projectName + ' (' + useApp + ')');
       attachRecorder(w);
       return { ok: true, app: useApp };

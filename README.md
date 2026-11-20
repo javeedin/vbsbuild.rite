@@ -271,14 +271,15 @@ names match), and each gets a short **note** — what the user does on that page
 remove them; the Start / End labels follow the order.
 
 **Or record it by using the app.** Press **Record from the app** and your real working‑copy app opens in its own window
-(sign in once, as with Run). A floating **📷 Capture this screen** bar sits at the bottom‑centre of the app window (drag it anywhere by its
-handle so it never covers the app's own controls), and the recording panel has the same button — **you choose exactly which screens go into the flow**: go to a screen (a page, or a dialog / drawer /
-wizard step opened in place), press **Capture this screen**, and it's added with its screenshot, its **URL**, and a
-**Screen** or **Dialog** tag (a dialog shares its screen's URL, so the URL + tag tell them apart). Capture as many as you
-like, in order. Prefer hands‑off? Tick **Capture every screen automatically as I walk** and it records each screen it
-detects as you go (login and other non‑app screens are skipped). It also captures **the API calls the app made** on each
-screen (the request it sent and a short preview of the answer). Press **Stop & save** and the editor opens already filled
-with those screens, their screenshots and their captured calls — you name it, tweak the order or notes, and Save. Recording
+(sign in once, as with Run). As you walk the app, **each screen is captured automatically, in order** — pages and the dialogs / drawers / wizard steps
+that open in place (login and other non‑app screens are skipped). A floating **📷 Capture this screen** bar sits at the
+bottom‑centre of the app window (drag it anywhere by its handle so it never covers the app's own controls), and the
+recording panel has the same button — press it to grab a specific screen the auto‑capture missed; every press is kept as
+its own step. Want to pick manually instead? Untick **Capture every screen automatically as I walk** and record only what
+you press. Each captured screen keeps its screenshot, its **URL**, a **Screen** or **Dialog** tag (a dialog shares its
+screen's URL, so the URL + tag tell them apart), and **the API calls the app made** on it (the request it sent and a
+short preview of the answer). Press **Stop & save** and the editor opens already filled with those screens, their
+screenshots and their captured calls — you name it, tweak the order or notes, and Save. Recording
 needs the desktop app with your workspace set up; in the browser‑only `npm run serve` mode there's no app window, so you
 build the flow by hand.
 

@@ -230,7 +230,7 @@ define([
       if (op === 'recStart') {
         const r = await PC.recordStart('');
         if (!r.ok) { say(false, (r.body && r.body.error) || 'Recording needs the desktop app with your workspace set up.'); return; }
-        v.recording = { running: true, steps: [], skipped: 0, busy: false, error: '', auto: false };
+        v.recording = { running: true, steps: [], skipped: 0, busy: false, error: '', auto: true };
         recOn = true;
         recTimer = setTimeout(() => recPoll(v), 1200);
         return;
