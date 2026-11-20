@@ -86,24 +86,38 @@ function trimCall(c) {
   return call;
 }
 
-/** The distinct SCREENS walked through, in order, each as a step with its screenshot and the API calls the app made
- *  while on it. A "screen" is a page that loaded, or — when the recorder's observer reports it (entry.screen /
- *  entry.kind) — a dialog / drawer / wizard step that appeared without the web address changing. So one page can be
- *  several steps: the page itself, then a dialog on it. Each step carries its url and kind (page | dialog) so you can
- *  tell a screen from a dialog within that screen. Backward compatible: entries without `screen` behave as before (one
- *  step per page, consecutive repeats collapsed). */
+/** A URL that is not an app screen at all — the sign-in / OAuth round-trip, a blank tab. These are the only screens we
+ *  drop; everything else the person walked through is kept, matched to the catalog or not. */
+function isNonApp(url) {
+  const u = str(url);
+  return /^(about:|data:|chrome:|devtools:|blob:)/.test(u) || /\/oauth|\/login\b|\/signin|\/logout|\/sso\/|\.well-known|accounts\.|login\./i.test(u);
+}
+/** A readable name from a URL when we have nothing better (the last path segment, spaced and capitalised). */
+function nameFromUrl(url) {
+  const path = parse(url).path.replace(/\/+$/, '');
+  const seg = path.split('/').filter(Boolean).pop() || path || 'Screen';
+  return seg.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()).slice(0, 80);
+}
+/** The SCREENS walked through, in order, each a step with its screenshot and the API calls the app made while on it.
+ *  A "screen" is a page that was navigated to, or — when the recorder reports it (entry.screen / entry.kind) — a dialog
+ *  / wizard step that appeared without the web address changing. EVERY screen the person walked is kept: if it is in the
+ *  Application pages catalog it takes that page's name (and its APIs resolve), otherwise it is still a step named from
+ *  its title or URL. Only the sign-in / OAuth round-trip is dropped. Consecutive repeats of the same screen collapse,
+ *  except a manual capture (pressing "Capture this screen" is always its own step). */
 function buildSteps(nav, pages, calls) {
   const steps = [];
   const byStep = {}; // step.id → [trimmed call]
   let skipped = 0;
   let n = 0;
+  const pathOf = (u) => parse(u).path;
   (nav || []).forEach((entry) => {
     const e = entry && typeof entry === 'object' ? entry : { url: entry };
     const p = matchPage(e.url, pages);
-    if (!p) { skipped += 1; return; }
+    if (!p && isNonApp(e.url)) { skipped += 1; return; }   // only the sign-in / blank screens are dropped
+    const base = p ? p.id : ('url:' + pathOf(e.url));        // unmatched pages are still distinct steps, by their URL
     const screenId = str(e.screen).trim();
     const kind = str(e.kind).trim() === 'dialog' || screenId.indexOf('dialog:') === 0 ? 'dialog' : 'page';
-    const key = p.id + (screenId ? '::' + screenId : ''); // a page can show more than one screen (a dialog, a wizard step)
+    const key = base + (screenId ? '::' + screenId : '');   // a page can show more than one screen (a dialog, a wizard step)
     const title = str(e.title).trim();
     const last = steps[steps.length - 1];
     // Collapse consecutive repeats of the same screen — but NOT a manual capture: pressing "Capture this screen" is a
@@ -112,18 +126,18 @@ function buildSteps(nav, pages, calls) {
       if (e.shot && /^data:image\//.test(str(e.shot))) last.shot = { src: 'page', data: str(e.shot) };
       return;
     }
-    const step = { id: 'p' + (++n), key: key, manual: !!e.manual, page: p.id, name: title || p.label || p.page || p.id, url: str(e.url), kind: kind };
+    const step = { id: 'p' + (++n), key: key, manual: !!e.manual, page: p ? p.id : '', name: title || (p && (p.label || p.page || p.id)) || nameFromUrl(e.url), url: str(e.url), kind: kind };
     if (title) step.title = title;
     if (e.shot && /^data:image\//.test(str(e.shot))) step.shot = { src: 'page', data: str(e.shot) };
     steps.push(step);
   });
-  // assign each captured call to the step whose page was open when it fired (matchPage of the call's pageUrl)
+  // assign each captured call to the step it fired on: the latest step on the same catalog page, else on the same URL path
   (calls || []).forEach((c) => {
-    const p = matchPage(str(c && c.pageUrl), pages);
-    if (!p) return;
-    // the latest step for that page (a page can appear more than once; keep calls with the most recent visit)
+    const cu = str(c && c.pageUrl);
+    const p = matchPage(cu, pages);
+    const cp = pathOf(cu);
     let target = null;
-    for (let i = steps.length - 1; i >= 0; i--) { if (steps[i].page === p.id) { target = steps[i]; break; } }
+    for (let i = steps.length - 1; i >= 0; i--) { const s = steps[i]; if ((p && s.page === p.id) || pathOf(s.url) === cp) { target = s; break; } }
     if (!target) return;
     (byStep[target.id] = byStep[target.id] || []).push(trimCall(c));
   });

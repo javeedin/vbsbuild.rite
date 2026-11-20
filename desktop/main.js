@@ -606,17 +606,19 @@ function attachRecorderNet(w) {
 // console (console-message is flaky across Electron versions), it pushes each screen onto window.__brFlowQ, which the
 // main process drains on a timer (reliable). It never calls Oracle. Helpers let the host read the current screen,
 // hide/show the bar around a screenshot, update the count and turn auto-capture on/off.
+// Injected into the run window ONLY to draw the draggable "Capture this screen" bar and expose a few helpers. It does NOT
+// decide what a screen is — auto-capture is driven by the host from real navigation events (reliable, no click noise).
+// Helpers: __brFlowScreen (the screen on display, dialog-aware), __brFlowQ/__brFlowDrain (the manual queue the host
+// drains), __brFlowHide/Show (hide the bar around a screenshot), __brFlowCount (update the badge).
 const FLOW_OBSERVER = '(function(){' +
-  'if(window.__brFlowRec){try{window.__brFlowUI&&window.__brFlowUI();}catch(e){}return;}window.__brFlowRec=true;window.__brFlowAuto=false;window.__brFlowQ=window.__brFlowQ||[];' +
+  'if(window.__brFlowRec){try{window.__brFlowUI&&window.__brFlowUI();}catch(e){}return;}window.__brFlowRec=true;window.__brFlowQ=window.__brFlowQ||[];' +
   'var vis=function(el){if(!el)return false;try{var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>40&&r.height>28&&s.display!=="none"&&s.visibility!=="hidden"&&s.opacity!=="0";}catch(e){return false;}};' +
   'var topDialog=function(){var sel="[role=dialog],[role=alertdialog],oj-dialog,.oj-dialog,oj-drawer-popup,.oj-drawer,.oj-drawer-popup,.oj-popup";var n=[];try{n=Array.prototype.slice.call(document.querySelectorAll(sel));}catch(e){n=[];}n=n.filter(vis);return n.length?n[n.length-1]:null;};' +
   'var titleOf=function(scope){scope=scope||document.body;if(!scope)return "";var sels=[".oj-dialog-title","[slot=header]","h1","h2",".oj-typography-heading-lg",".oj-typography-heading-md",".oj-typography-heading-sm"];for(var i=0;i<sels.length;i++){var t=scope.querySelector(sels[i]);if(t&&vis(t)){var s=(t.textContent||"").trim().replace(/\\s+/g," ");if(s)return s.slice(0,120);}}return (document.title||"").trim().replace(/\\s+/g," ").slice(0,120);};' +
-  'var screenOf=function(){var d=topDialog();if(d){var dt=titleOf(d)||"Dialog";return {kind:"dialog",title:dt,key:"dialog:"+dt};}var vt=titleOf(document);return {kind:"page",title:vt,key:"view:"+vt};};' +
+  'var screenOf=function(){var d=topDialog();if(d){var dt=titleOf(d)||"Dialog";return {kind:"dialog",title:dt,key:"dialog:"+dt};}return {kind:"page",title:titleOf(document),key:""};};' +
   'window.__brFlowScreen=function(){var s=screenOf();return {url:location.href,title:s.title,kind:s.kind,key:s.key};};' +
   'window.__brFlowDrain=function(){var q=window.__brFlowQ||[];window.__brFlowQ=[];return q;};' +
   'var push=function(o){try{window.__brFlowQ.push(o);}catch(e){}};' +
-  'var last="";var emit=function(){try{if(!window.__brFlowAuto)return;var s=screenOf();if(s.kind==="page"&&!s.title)return;var sig=location.pathname+location.search+"|"+s.key;if(sig===last)return;last=sig;push({url:location.href,title:s.title,kind:s.kind,key:s.key});}catch(e){}};window.__brFlowEmit=emit;' +
-  'window.__brFlowAutoSet=function(on){window.__brFlowAuto=!!on;if(on)emit();};' +
   'var bar=null,cnt=null;var hide=function(){if(bar)bar.style.visibility="hidden";};var show=function(){if(bar)bar.style.visibility="visible";};window.__brFlowHide=hide;window.__brFlowShow=show;' +
   'window.__brFlowCount=function(n){try{if(cnt)cnt.textContent=String(n);}catch(e){}};' +
   'var cap=function(){try{var s=screenOf();push({url:location.href,title:s.title,kind:s.kind,key:s.key,manual:true});if(bar){bar.style.outline="3px solid #4da3ff";setTimeout(function(){if(bar)bar.style.outline="";},200);}}catch(e){}};window.__brFlowCapture=cap;' +
@@ -631,10 +633,9 @@ const FLOW_OBSERVER = '(function(){' +
   'cnt=document.createElement("span");cnt.textContent="0";cnt.title="screens captured";cnt.setAttribute("style","min-width:14px;height:20px;border-radius:999px;background:rgba(255,255,255,.2);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;padding:0 6px");bar.appendChild(cnt);' +
   'if(!document.getElementById("__brFlowKf")){var st=document.createElement("style");st.id="__brFlowKf";st.textContent="@keyframes __brflow{0%{opacity:1}50%{opacity:.25}100%{opacity:1}}";(document.head||document.documentElement).appendChild(st);}' +
   'document.body.appendChild(bar);drag(grip);drag(lbl);drag(dot);}catch(e){}};window.__brFlowUI=build;' +
-  'var t=null;var kick=function(){clearTimeout(t);t=setTimeout(function(){build();emit();},350);};' +
-  'try{var mo=new MutationObserver(kick);mo.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["class","style","aria-hidden","open","hidden"]});}catch(e){}' +
-  'document.addEventListener("click",function(ev){try{if(bar&&bar.contains(ev.target))return;}catch(e){}clearTimeout(t);t=setTimeout(emit,500);},true);' +
-  'build();setTimeout(build,500);setTimeout(emit,300);' +
+  // rebuild the bar if the app's own re-render removes it; it does NOT report screens
+  'var t=null;try{var mo=new MutationObserver(function(){clearTimeout(t);t=setTimeout(build,400);});mo.observe(document.documentElement,{childList:true,subtree:true});}catch(e){}' +
+  'build();setTimeout(build,500);' +
   '})();';
 function attachRecorder(w) {
   if (!w || w.isDestroyed()) return;
@@ -642,43 +643,52 @@ function attachRecorder(w) {
   const wc = w.webContents;
   if (wc.__brRec) return;
   wc.__brRec = true;
-  const bad = (u) => !u || /^(about:|data:|chrome:|devtools:)/.test(u);
+  const bad = (u) => !u || /^(about:|data:|chrome:|devtools:|blob:)/.test(u);
+  const login = (u) => /\/oauth|\/login\b|\/signin|\/logout|\/sso\/|\.well-known|accounts\.|login\./i.test(String(u));
   const run = (js) => { if (!wc.isDestroyed()) wc.executeJavaScript(js, true).catch(() => {}); };
-  const inject = () => { run(FLOW_OBSERVER); run('window.__brFlowAutoSet&&window.__brFlowAutoSet(' + (recState && recState.auto ? 'true' : 'false') + ')'); };
-  const forceEmit = () => run('window.__brFlowEmit&&window.__brFlowEmit()');
-  // record one screen (from the queue), taking its screenshot with the bar hidden so it never shows in the picture
-  const captureOne = (entry) => new Promise((resolve) => {
-    run('window.__brFlowHide&&window.__brFlowHide()');
-    setTimeout(() => {
-      if (wc.isDestroyed()) return resolve();
-      wc.capturePage().then((img) => {
-        let shot = ''; try { shot = img && !img.isEmpty() ? img.toDataURL() : ''; } catch (err) { shot = ''; }
-        if (shot && recState && recState.running) entry.shot = shot;
-        run('window.__brFlowShow&&window.__brFlowShow();window.__brFlowCount&&window.__brFlowCount(' + (recState ? recState.nav.length : 0) + ')');
-        resolve();
-      }).catch(() => { run('window.__brFlowShow&&window.__brFlowShow()'); resolve(); });
-    }, 60);
-  });
-  // a screen reported by the overlay (manual) or auto-detection. A page and a dialog on it share the same URL but have
-  // different screen keys, so both become steps; the URL + kind tell them apart.
-  const handleScreen = async (s) => {
+  const inject = () => run(FLOW_OBSERVER);
+  const count = () => run('window.__brFlowCount&&window.__brFlowCount(' + (recState ? recState.nav.length : 0) + ')');
+  // fill an entry's title + screenshot once the screen has settled, with the bar hidden so it is never in the picture
+  const fillShot = async (entry) => {
+    if (!recState || !recState.running || wc.isDestroyed()) return;
+    try { const s = await wc.executeJavaScript('(window.__brFlowScreen&&window.__brFlowScreen())||{}', true); if (s && s.title && !entry.title) entry.title = String(s.title); } catch (e) { /* no title yet */ }
+    try { await wc.executeJavaScript('window.__brFlowHide&&window.__brFlowHide()', true); } catch (e) { /* no bar yet */ }
+    await new Promise((r) => setTimeout(r, 50));
+    try { const img = await wc.capturePage(); const shot = img && !img.isEmpty() ? img.toDataURL() : ''; if (shot && recState && recState.running) entry.shot = shot; } catch (e) { /* */ }
+    try { await wc.executeJavaScript('window.__brFlowShow&&window.__brFlowShow()', true); } catch (e) { /* */ }
+  };
+  // AUTO: one step per navigation. Record the URL the moment it changes (so a fast walk never loses a page), then fill
+  // its title + screenshot once it settles. The same page twice in a row is not repeated.
+  const onNav = (url) => {
+    if (!recState || !recState.running || !recState.auto) return;
+    const u = String(url || '');
+    if (bad(u) || login(u)) return;
+    recState.curUrl = u;
+    const path = u.split('#')[0];
+    const last = recState.nav[recState.nav.length - 1];
+    if (last && !last.manual && last.url.split('#')[0] === path) return;
+    const entry = { url: u, shot: '', title: '', kind: 'page', screen: '', manual: false };
+    recState.nav.push(entry);
+    recState.lastPush = Date.now();
+    count();
+    setTimeout(() => fillShot(entry), 700);
+  };
+  // MANUAL: the "Capture this screen" button queues a screen; drain the queue and record each (dialog-aware)
+  const handleManual = async (s) => {
     if (!recState || !recState.running || !s) return;
     const url = String(s.url || '');
     if (bad(url)) return;
     recState.curUrl = url;
-    const screen = String(s.key || '');
-    const path = url.split('#')[0];
+    const screen = String(s.key || ('manual:' + Date.now()));
     const now = Date.now();
     const last = recState.nav[recState.nav.length - 1];
-    const same = last && last.url.split('#')[0] === path && last.screen === screen;
-    // auto: never repeat the same screen in a row. manual: honour the choice, but swallow an accidental double-click.
-    if (same && (!s.manual || now - (recState.lastPush || 0) < 1200)) { if (s.title) last.title = String(s.title); return; }
-    const entry = { url: url, shot: '', title: String(s.title || ''), kind: s.kind === 'dialog' ? 'dialog' : 'page', screen: screen, manual: !!s.manual };
+    if (last && last.manual && last.url.split('#')[0] === url.split('#')[0] && last.screen === screen && now - (recState.lastPush || 0) < 1200) return; // double-click
+    const entry = { url: url, shot: '', title: String(s.title || ''), kind: s.kind === 'dialog' ? 'dialog' : 'page', screen: screen, manual: true };
     recState.nav.push(entry);
     recState.lastPush = now;
-    await captureOne(entry);
+    count();
+    await fillShot(entry);
   };
-  // drain the page's queue on a timer — reliable across Electron versions (no console-message dependency)
   let draining = false;
   const drain = async () => {
     if (draining || !recState || !recState.running || wc.isDestroyed()) return;
@@ -686,15 +696,16 @@ function attachRecorder(w) {
     try {
       let items = [];
       try { items = await wc.executeJavaScript('window.__brFlowDrain?window.__brFlowDrain():[]', true); } catch (e) { items = []; }
-      if (Array.isArray(items)) { for (let i = 0; i < items.length; i++) { await handleScreen(items[i]); } }
+      if (Array.isArray(items)) { for (let i = 0; i < items.length; i++) { await handleManual(items[i]); } }
     } finally { draining = false; }
   };
   const timer = setInterval(drain, 350);
-  wc.on('dom-ready', inject);              // a full page load: (re)install the observer + bar, restore auto
-  wc.on('did-navigate', forceEmit);        // nudge auto after any navigation (SPA routes don't reload the document)
-  wc.on('did-navigate-in-page', forceEmit);
+  wc.on('dom-ready', inject);                                        // (re)install the bar after a page load
+  wc.on('did-navigate', (e, url) => onNav(url));                     // a real page navigation
+  wc.on('did-navigate-in-page', (e, url, isMainFrame) => { if (isMainFrame !== false) onNav(url); }); // an SPA route change
   w.on('closed', () => clearInterval(timer));
   inject();
+  setTimeout(() => { if (recState && recState.running && recState.auto && !wc.isDestroyed()) onNav(wc.getURL()); }, 900); // the first page
 }
 function flowRecorder() {
   return {
@@ -736,11 +747,10 @@ function flowRecorder() {
       try { await wc.executeJavaScript('window.__brFlowShow&&window.__brFlowShow();window.__brFlowCount&&window.__brFlowCount(' + recState.nav.length + ')', true); } catch (e) { /* ignore */ }
       return { ok: true, count: recState.nav.length, name: entry.title || '', kind: entry.kind, url: url };
     },
-    // Turn automatic capture on / off (off by default, so you choose what to record).
+    // Turn automatic (per-navigation) capture on / off. On by default so the whole walk is recorded.
     async auto(on) {
       if (!recState) return { ok: false, error: 'Not recording.' };
       recState.auto = !!on;
-      try { if (runWin && !runWin.isDestroyed()) await runWin.webContents.executeJavaScript('window.__brFlowAutoSet&&window.__brFlowAutoSet(' + (!!on) + ')', true); } catch (e) { /* ignore */ }
       return { ok: true, auto: !!on };
     },
     async stop() {

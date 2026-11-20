@@ -33,9 +33,14 @@ const r = R.buildSteps(nav, PAGES);
 T.eq('the distinct pages, in the order walked', r.steps.map((s) => s.name).join(' → '), 'My Requests → Create Equipment Request → My Requests');
 T.check('each step carries the catalog page id and renumbered ids', r.steps.map((s) => s.id).join(',') === 'p1,p2,p3' && r.steps[1].page === 'portalapp/customer-portal/project-create-request');
 T.check('the screenshot of a visit is kept as a page shot', r.steps[0].shot && r.steps[0].shot.src === 'page' && /^data:image\//.test(r.steps[0].shot.data));
-T.check('unmatched URLs are skipped and counted', r.skipped === 1);
+T.check('the sign-in / oauth screen is dropped and counted', r.skipped === 1);
+// a screen the person walked that is NOT in the catalog is still kept (named from its URL), never silently dropped
+const rKeep = R.buildSteps([{ url: 'https://host/vp/shell/customer-portal/request-list' }, { url: 'https://host/vp/shell/fleet/depot-overview' }], PAGES);
+T.check('an app screen not in the catalog is still a step (named from its URL), not dropped', rKeep.steps.length === 2 && rKeep.steps[1].name === 'Depot Overview' && rKeep.steps[1].page === '', JSON.stringify(rKeep.steps.map((s) => s.name + '/' + s.page)));
+T.check('only sign-in / oauth is dropped, other unknown screens are kept', R.buildSteps([{ url: 'https://host/oauth?c=1' }, { url: 'https://host/vp/shell/fleet/depot-overview' }], PAGES).skipped === 1 && R.buildSteps([{ url: 'https://host/vp/shell/fleet/depot-overview' }], PAGES).skipped === 0);
 T.check('a repeat visit with a newer screenshot updates the step', R.buildSteps([{ url: nav[1].url }, { url: nav[1].url, shot: 'data:image/png;base64,ZZZ' }], PAGES).steps[0].shot.data === 'data:image/png;base64,ZZZ');
-T.check('nothing recorded / no pages: empty, nothing thrown', R.buildSteps([], PAGES).steps.length === 0 && R.buildSteps(nav, []).steps.length === 0 && R.buildSteps(null, null).skipped === 0);
+T.check('nothing recorded: empty, nothing thrown', R.buildSteps([], PAGES).steps.length === 0 && R.buildSteps(null, null).skipped === 0);
+T.check('even with no catalog, the walked app screens are kept (login dropped)', R.buildSteps(nav, []).steps.length === 3);
 
 T.section('screens and dialogs (in-page screens the URL never changes for)');
 const navS = [
