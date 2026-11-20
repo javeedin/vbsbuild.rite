@@ -90,13 +90,13 @@ function cleanFlow(flow, by, old, opts) {
 const CSS = `*{box-sizing:border-box}
 @page{size:A4;margin:14mm 12mm}
 body{font:11pt/1.55 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2a37;margin:0;background:#fff}
-.cover{background:linear-gradient(125deg,#13315c 0%,#1e498f 55%,#2e6fd8 100%);color:#fff;border-radius:16px;padding:26px 30px}
-.cover .kick{font-size:8.5pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.82}
-.cover h1{font-size:25pt;margin:4px 0 10px;line-height:1.15}
-.cover .meta{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:9.5pt;opacity:.95}
-.cover .meta b{opacity:.7;font-weight:600}
-.pill{display:inline-block;font-size:8pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 11px;background:rgba(255,255,255,.18);color:#fff}
-.pill.draft{background:rgba(255,255,255,.2)} .pill.review{background:#2a63c6} .pill.approved{background:#1f8a4c} .pill.retired{background:#6b7280}
+.cover{background:#fff;color:#1f2a37;border:1px solid #e3e8ee;border-radius:16px;padding:26px 30px}
+.cover .kick{font-size:8.5pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#2e6fd8}
+.cover h1{font-size:25pt;margin:4px 0 10px;line-height:1.15;color:#13315c}
+.cover .meta{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:9.5pt;color:#4a5865}
+.cover .meta b{color:#8a97a5;font-weight:600}
+.pill{display:inline-block;font-size:8pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 11px;background:#eef1f5;color:#44506a}
+.pill.draft{background:#eef1f5;color:#44506a} .pill.review{background:#2a63c6;color:#fff} .pill.approved{background:#1f8a4c;color:#fff} .pill.retired{background:#6b7280;color:#fff}
 h2{font-size:12.5pt;color:#13315c;margin:26px 0 12px;display:flex;align-items:center;gap:9px}
 h2::before{content:'';width:4px;height:17px;background:#2e6fd8;border-radius:2px;display:inline-block}
 .facts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:16px}
