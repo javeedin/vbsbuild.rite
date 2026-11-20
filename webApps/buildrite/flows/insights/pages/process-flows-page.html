@@ -140,7 +140,7 @@
             <datalist id="pfPageList"><oj-bind-for-each data="[[ $variables.pages ]]"><template data-oj-as="p"><option :value="[[ p.data.label ]]"></option></template></oj-bind-for-each></datalist>
             <input type="file" id="pfShotFile" accept="image/*" style="display:none">
             <oj-bind-if test="[[ ($variables.flow.pages || []).length === 0 ]]"><div class="nx-empty" id="pfNoPages">No page yet. Add the start page below.</div></oj-bind-if>
-            <oj-bind-for-each data="[[ $functions.pageRows($variables.flow, $variables.pageApis, $variables.apisOpen, $variables.apiTests) ]]"><template data-oj-as="p">
+            <oj-bind-for-each data="[[ $functions.pageRows($variables.flow, $variables.pageApis, $variables.apisOpen, $variables.apiTests, $variables.apiData) ]]"><template data-oj-as="p">
               <div class="nx-pf-prow" :data-idx="[[ p.data.idx ]]">
                 <div class="nx-pf-prowtop">
                   <span class="nx-pf-num"><oj-bind-text value="[[ p.data.label ]]"></oj-bind-text></span>
@@ -189,12 +189,27 @@
                               <div class="nx-pf-apimain">
                                 <span :class="[[ 'nx-pg-method nx-sc-apim nx-pg-method--' + (a.data.method || '').toLowerCase() ]]"><oj-bind-text value="[[ a.data.method ]]"></oj-bind-text></span>
                                 <span class="nx-pf-apiname"><b><oj-bind-text value="[[ a.data.name ]]"></oj-bind-text></b><code><oj-bind-text value="[[ a.data.path ]]"></oj-bind-text></code></span>
-                                <oj-bind-if test="[[ a.data.hasData ]]"><span class="nx-pf-apidatachip" title="Captured while recording the flow">has data</span></oj-bind-if>
                                 <oj-bind-if test="[[ a.data.writes ]]"><span class="nx-sc-wchip">changes data</span></oj-bind-if>
                                 <span class="nx-min-flex"></span>
+                                <oj-bind-if test="[[ a.data.hasData ]]">
+                                  <button type="button" :class="[[ 'nx-btn nx-btn--sm nx-pf-apidbtn' + (a.data.dataOpen ? ' nx-pf-apidbtn--on' : '') ]]" data-op="apiDataToggle" :data-idx="[[ p.data.idx ]]" :data-key="[[ a.data.k ]]" on-click="[[ $listeners.onPf ]]" :aria-expanded="[[ a.data.dataOpen ? 'true' : 'false' ]]" title="The request captured while recording this flow"><span :class="[[ a.data.dataOpen ? 'oj-ux-ico-chevron-down' : 'oj-ux-ico-chevron-right' ]]" aria-hidden="true"></span>Captured data</button>
+                                </oj-bind-if>
                                 <button type="button" class="nx-btn nx-btn--sm nx-pf-apitest" data-op="apiTest" :data-idx="[[ p.data.idx ]]" :data-key="[[ a.data.k ]]" on-click="[[ $listeners.onPf ]]" :disabled="[[ a.data.running ]]" :title="[[ a.data.hasData ? 'Run this API with the data captured while recording' : 'Run this API' ]]"><span class="oj-ux-ico-play" aria-hidden="true"></span><oj-bind-text value="[[ a.data.running ? 'Running…' : 'Test' ]]"></oj-bind-text></button>
                               </div>
-                              <oj-bind-if test="[[ a.data.hasData && !!a.data.dataText ]]"><div class="nx-pf-apidata"><span class="oj-ux-ico-data" aria-hidden="true"></span><code><oj-bind-text value="[[ a.data.dataText ]]"></oj-bind-text></code></div></oj-bind-if>
+                              <!-- the captured request / response, expanded -->
+                              <oj-bind-if test="[[ a.data.hasData && a.data.dataOpen ]]">
+                                <div class="nx-pf-apidetail">
+                                  <div class="nx-pf-apidrow"><span class="nx-pf-apidk">Request</span><code class="nx-pf-apidv"><oj-bind-text value="[[ a.data.callMethod + ' ' + a.data.callPath ]]"></oj-bind-text></code></div>
+                                  <oj-bind-if test="[[ !!a.data.callQuery ]]"><div class="nx-pf-apidrow"><span class="nx-pf-apidk">Query</span><code class="nx-pf-apidv"><oj-bind-text value="[[ a.data.callQuery ]]"></oj-bind-text></code></div></oj-bind-if>
+                                  <oj-bind-if test="[[ !!a.data.callBody ]]"><div class="nx-pf-apidrow nx-pf-apidrow--block"><span class="nx-pf-apidk">Request body</span><pre class="nx-pf-apidpre"><oj-bind-text value="[[ a.data.callBody ]]"></oj-bind-text></pre></div></oj-bind-if>
+                                  <oj-bind-if test="[[ !!a.data.callStatus ]]"><div class="nx-pf-apidrow"><span class="nx-pf-apidk">Captured response</span><span class="nx-pf-apidv"><oj-bind-text value="[[ 'HTTP ' + a.data.callStatus ]]"></oj-bind-text></span></div></oj-bind-if>
+                                  <oj-bind-if test="[[ !!a.data.callResp ]]"><pre class="nx-pf-apidpre"><oj-bind-text value="[[ a.data.callResp ]]"></oj-bind-text></pre></oj-bind-if>
+                                  <div class="nx-pf-apidfoot">
+                                    <button type="button" class="nx-btn nx-btn--sm nx-btn--cta" data-op="apiTest" :data-idx="[[ p.data.idx ]]" :data-key="[[ a.data.k ]]" on-click="[[ $listeners.onPf ]]" :disabled="[[ a.data.running ]]"><span class="oj-ux-ico-play" aria-hidden="true"></span><oj-bind-text value="[[ a.data.running ? 'Running…' : 'Run with this data' ]]"></oj-bind-text></button>
+                                    <span class="nx-note"><oj-bind-text value="[[ a.data.writes ? 'This changes data — it asks before it sends.' : 'Sends this request to your backend.' ]]"></oj-bind-text></span>
+                                  </div>
+                                </div>
+                              </oj-bind-if>
                               <oj-bind-if test="[[ !!a.data.result ]]">
                                 <div :class="[[ 'nx-pf-apiresult nx-pf-apiresult--' + a.data.resultClass ]]">
                                   <div class="nx-pf-apiresline"><oj-bind-text value="[[ a.data.resultText ]]"></oj-bind-text>

@@ -17,6 +17,7 @@
     "pageApis": { "type": "any", "defaultValue": {}, "description": "A page's APIs, cached by catalog page id: { loading, list: [{ method, name, path, writes }], error }." },
     "apisOpen": { "type": "any", "defaultValue": {}, "description": "Which editor rows have their APIs list open, by row id." },
     "apiTests": { "type": "any", "defaultValue": {}, "description": "Per-API test state, keyed by '<pageId>|<apiIdx>': { running, ok, status, ms, rows, body, needsConfirm, message, error }." },
+    "apiData": { "type": "any", "defaultValue": {}, "description": "Which APIs have their captured-data panel expanded, keyed by '<pageId>|<apiIdx>'." },
     "recording": { "type": "any", "defaultValue": null, "description": "A live recording from the real app: { running, steps: [{ name }], skipped, busy, error }." }
   },
   "eventListeners": {

@@ -98,12 +98,13 @@ define([], () => {
       return ((recording && recording.steps) || []).map((s, i) => ({ n: String(i + 1), name: s.name || s.page || 'Page' }));
     }
     /** The editor's page rows: position label, the screenshot (if any), and the APIs list state for the matched page. */
-    pageRows(flow, pageApis, apisOpen, apiTests) {
+    pageRows(flow, pageApis, apisOpen, apiTests, apiData) {
       const pages = (flow && flow.pages) || [];
       const last = pages.length - 1;
       const pa = pageApis || {};
       const open = apisOpen || {};
       const tests = apiTests || {};
+      const dOpen = apiData || {};
       return pages.map((p, i) => {
         const api = p.page && pa[p.page] ? pa[p.page] : null;
         const isOpen = !!open[p.id];
@@ -113,9 +114,13 @@ define([], () => {
           const call = callForApi(a, calls);
           const tkey = p.id + '|' + k;
           const t = tests[tkey] || null;
+          const mth = (call && call.method) || a.method || 'GET';
           return {
             idx: i, k: k, endpoint: a.endpoint || '', method: a.method || 'GET', name: a.name || '', path: a.path || '', writes: !!a.writes,
-            hasData: !!call, dataText: call ? callText(call) : '',
+            hasData: !!call, dataText: call ? callText(call) : '', dataOpen: !!dOpen[tkey],
+            // the captured request/response, shown in the expand/collapse panel
+            callMethod: String(mth).toUpperCase(), callPath: (call && (call.path || call.url)) || '', callQuery: (call && call.query) || '',
+            callBody: (call && call.body) || '', callResp: (call && call.response) || '', callStatus: call && call.status != null && call.status !== '' ? String(call.status) : '',
             running: !!(t && t.running),
             result: t && !t.running ? t : null,
             resultClass: t && !t.running ? (t.needsConfirm ? 'warn' : (t.ok ? 'ok' : 'bad')) : '',

@@ -190,21 +190,30 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await page.waitForFunction(() => document.querySelectorAll('#pfRecSteps .nx-pf-recstep').length === 2, null, { timeout: 10000 });
     await page.click('#pfRecStop');
     await page.waitForSelector('#pf-name', { timeout: 10000 });
-    // page 0 (order-list): its GET carries the captured data; Test runs it and shows the result
+    // page 0 (order-list): its GET carries captured data — expand it to see the request, then Run with this data
     await page.click(prow(0) + ' [data-op="apisToggle"]');
     await page.waitForSelector(prow(0) + ' .nx-pf-apirow', { timeout: 10000 });
-    const dataRow0 = prow(0) + ' .nx-pf-apirow:has(.nx-pf-apidatachip)';
+    const dataRow0 = prow(0) + ' .nx-pf-apirow:has([data-op="apiDataToggle"])';
     await page.waitForSelector(dataRow0, { timeout: 10000 });
-    T.check('the recorded GET shows "has data" and what it sent (its query)', /status=open/.test(await text(dataRow0 + ' .nx-pf-apidata')), await text(dataRow0 + ' .nx-pf-apidata'));
-    await page.click(dataRow0 + ' [data-op="apiTest"]');
+    T.check('an API with captured data has a "Captured data" toggle (no detail shown until expanded)', /Captured data/.test(await text(dataRow0 + ' [data-op="apiDataToggle"]')) && !(await page.$(dataRow0 + ' .nx-pf-apidetail')));
+    await page.click(dataRow0 + ' [data-op="apiDataToggle"]');
+    await page.waitForSelector(dataRow0 + ' .nx-pf-apidetail', { timeout: 10000 });
+    T.check('expanded: the captured GET request and its query are shown', /GET \/shop\/v1\/orders/.test(await text(dataRow0 + ' .nx-pf-apidetail')) && /status=open/.test(await text(dataRow0 + ' .nx-pf-apidetail')), await text(dataRow0 + ' .nx-pf-apidetail'));
+    await page.click(dataRow0 + ' .nx-pf-apidetail [data-op="apiTest"]'); // Run with this data
     await page.waitForSelector(dataRow0 + ' .nx-pf-apiresult', { timeout: 10000 });
-    T.check('Test runs the GET against the backend and shows the result (✓ 200)', /✓/.test(await text(dataRow0 + ' .nx-pf-apiresline')) && /200/.test(await text(dataRow0 + ' .nx-pf-apiresline')), await text(dataRow0 + ' .nx-pf-apiresline'));
-    // page 1 (order-create): its POST changes data — Test asks first, Run anyway sends the captured body
+    T.check('Run with this data sends the GET to the backend and shows the result (✓ 200)', /✓/.test(await text(dataRow0 + ' .nx-pf-apiresline')) && /200/.test(await text(dataRow0 + ' .nx-pf-apiresline')), await text(dataRow0 + ' .nx-pf-apiresline'));
+    await page.click(dataRow0 + ' [data-op="apiDataToggle"]'); // collapse again
+    await page.waitForFunction((sel) => !document.querySelector(sel), dataRow0 + ' .nx-pf-apidetail', { timeout: 5000 });
+    T.check('the panel collapses again', !(await page.$(dataRow0 + ' .nx-pf-apidetail')));
+    // page 1 (order-create): its POST changes data — expand shows the body; Run with this data asks first, Run anyway sends it
     await page.click(prow(1) + ' [data-op="apisToggle"]');
     await page.waitForSelector(prow(1) + ' .nx-pf-apirow', { timeout: 10000 });
-    const dataRow1 = prow(1) + ' .nx-pf-apirow:has(.nx-pf-apidatachip)';
+    const dataRow1 = prow(1) + ' .nx-pf-apirow:has([data-op="apiDataToggle"])';
     await page.waitForSelector(dataRow1, { timeout: 10000 });
-    await page.click(dataRow1 + ' [data-op="apiTest"]');
+    await page.click(dataRow1 + ' [data-op="apiDataToggle"]');
+    await page.waitForSelector(dataRow1 + ' .nx-pf-apidetail', { timeout: 10000 });
+    T.check('expanded: the captured POST and its request body are shown', /POST \/shop\/v1\/orders/.test(await text(dataRow1 + ' .nx-pf-apidetail')) && /from the recording/.test(await text(dataRow1 + ' .nx-pf-apidetail')));
+    await page.click(dataRow1 + ' .nx-pf-apidetail [data-op="apiTest"]'); // Run with this data
     await page.waitForSelector(dataRow1 + ' .nx-pf-apiresult--warn', { timeout: 10000 });
     T.check('a write API asks first (changes data), with "Run anyway"', /changes data/i.test(await text(dataRow1 + ' .nx-pf-apiresline')) && !!(await page.$(dataRow1 + ' [data-op="apiTestGo"]')));
     const beforeWrites = env.writes.length;

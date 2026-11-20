@@ -286,9 +286,11 @@ For each page you can also:
   can **paste** an image (click the box, Ctrl+V), **drop** one, or **upload** a file. The picture is kept with the flow.
 - **list its APIs** — the code icon on a row shows every API that page makes (the method, the call and its path, and
   whether it changes data), read from the code the same way API Scenarios reads them. An API the recorder captured data
-  for shows a **has data** chip and what it sent, and each API has a **Test** button that runs it against your backend
-  (through the same tester as Application pages) and shows the result right there — a read runs straight away; one that
-  changes data asks first, then **Run anyway** sends it with the captured request.
+  for gets a **Captured data** expand/collapse — open it to see the exact request that was recorded (the method and
+  path, the query for a GET, the request body for a POST/PATCH, and the captured response), with a **Run with this data**
+  button inside. Every API also has a **Test** button on the row. Either runs it against your backend (through the same
+  tester as Application pages) and shows the result right there — a read runs straight away; one that changes data asks
+  first, then **Run anyway** sends it with the captured request.
 
 Don't want to write the description yourself? **Draft with AI** sends the name and the pages to the AI you chose in AI
 settings and drafts a plain-English description from them (it is told to describe only the pages you listed, never to
