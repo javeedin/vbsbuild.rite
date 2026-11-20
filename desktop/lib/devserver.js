@@ -1001,8 +1001,9 @@ function createDevServer(o) {
             }
             if (pathname === '/__pflow/record/stop' && post) {
               const st = await rec.stop();
-              const built = FR.buildSteps((st && st.nav) || [], catalog());
-              log('Process flow recording: stop -> ' + built.steps.length + ' step(s), ' + built.skipped + ' skipped');
+              const built = FR.buildSteps((st && st.nav) || [], catalog(), (st && st.calls) || []);
+              const nCalls = built.steps.reduce((a, s) => a + ((s.calls && s.calls.length) || 0), 0);
+              log('Process flow recording: stop -> ' + built.steps.length + ' step(s), ' + nCalls + ' call(s), ' + built.skipped + ' skipped');
               return jsonPf(200, { ok: true, pages: built.steps, skipped: built.skipped });
             }
           }

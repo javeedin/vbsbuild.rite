@@ -73,9 +73,24 @@ function matchPage(url, pages) {
   return best;
 }
 
-/** The distinct pages walked through, in order (consecutive repeats collapsed), each as a step with its screenshot. */
-function buildSteps(nav, pages) {
+const MAX_CALLS = 40;
+const CAP = 20000;
+/** One captured network call, trimmed for storage: method, url, query, request body, status, a short response preview. */
+function trimCall(c) {
+  const o = c && typeof c === 'object' ? c : {};
+  const url = str(o.url);
+  const call = { method: str(o.method || 'GET').toUpperCase(), url, path: parse(url).path, query: str(o.query || (url.indexOf('?') !== -1 ? url.slice(url.indexOf('?') + 1) : '')) };
+  if (o.body !== undefined && o.body !== null && str(o.body)) call.body = str(o.body).slice(0, CAP);
+  if (o.status !== undefined && o.status !== null && o.status !== '') call.status = Number(o.status) || str(o.status);
+  if (o.response !== undefined && o.response !== null && str(o.response)) call.response = str(o.response).slice(0, CAP);
+  return call;
+}
+
+/** The distinct pages walked through, in order (consecutive repeats collapsed), each as a step with its screenshot and
+ *  the API calls the app made while on it (calls are tagged with the page URL that was open when they fired). */
+function buildSteps(nav, pages, calls) {
   const steps = [];
+  const byStep = {}; // step.id → [trimmed call]
   let skipped = 0;
   let n = 0;
   (nav || []).forEach((entry) => {
@@ -84,7 +99,6 @@ function buildSteps(nav, pages) {
     if (!p) { skipped += 1; return; }
     const last = steps[steps.length - 1];
     if (last && last.page === p.id) {
-      // same page again in a row: keep the latest screenshot if this visit has one
       if (e.shot && /^data:image\//.test(str(e.shot))) last.shot = { src: 'page', data: str(e.shot) };
       return;
     }
@@ -92,7 +106,39 @@ function buildSteps(nav, pages) {
     if (e.shot && /^data:image\//.test(str(e.shot))) step.shot = { src: 'page', data: str(e.shot) };
     steps.push(step);
   });
+  // assign each captured call to the step whose page was open when it fired (matchPage of the call's pageUrl)
+  (calls || []).forEach((c) => {
+    const p = matchPage(str(c && c.pageUrl), pages);
+    if (!p) return;
+    // the latest step for that page (a page can appear more than once; keep calls with the most recent visit)
+    let target = null;
+    for (let i = steps.length - 1; i >= 0; i--) { if (steps[i].page === p.id) { target = steps[i]; break; } }
+    if (!target) return;
+    (byStep[target.id] = byStep[target.id] || []).push(trimCall(c));
+  });
+  steps.forEach((s) => { const list = byStep[s.id]; if (list && list.length) s.calls = list.slice(0, MAX_CALLS); });
   return { steps, skipped };
 }
 
-module.exports = { matchPage, buildSteps, parse, routeTail, routeOpen };
+/** The catalog API's path pattern (/a/b/{id}) → a tester: does a captured call's URL path belong to this API? */
+function pathMatches(apiPath, urlPath) {
+  const pat = str(apiPath).replace(/[?#].*$/, '').replace(/\/+$/, '');
+  const got = str(urlPath).replace(/[?#].*$/, '').replace(/\/+$/, '');
+  if (!pat) return false;
+  if (got === pat || got.slice(-pat.length) === pat) return true;
+  const rx = new RegExp(pat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\{[^/}]+\\\}/g, '[^/]+') + '$');
+  return rx.test(got);
+}
+/** The captured call that belongs to a catalog API (same method, and the path matches its pattern), or null. */
+function callForApi(api, calls) {
+  if (!api || !calls || !calls.length) return null;
+  const method = str(api.method || 'GET').toUpperCase();
+  const apiPath = str(api.path || '');
+  if (!apiPath) return null;
+  const hits = calls.filter((c) => str(c.method || 'GET').toUpperCase() === method && pathMatches(apiPath, c.path || parse(c.url || '').path));
+  // prefer the one whose path is the closest length (most specific), else the first
+  hits.sort((a, b) => Math.abs(str(a.path).length - apiPath.length) - Math.abs(str(b.path).length - apiPath.length));
+  return hits[0] || null;
+}
+
+module.exports = { matchPage, buildSteps, callForApi, pathMatches, trimCall, parse, routeTail, routeOpen };

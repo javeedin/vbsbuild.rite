@@ -272,9 +272,10 @@ remove them; the Start / End labels follow the order.
 
 **Or record it by using the app.** Press **Record from the app** and your real working‑copy app opens in its own window
 (sign in once, as with Run). Just *use it* — open a customer, go to the request page, check out. A live panel lists each
-page you land on, in order (matched to your Application pages catalog, so it's named), and takes a screenshot of each.
-Press **Stop & save** and the editor opens already filled with those pages and their screenshots — you name it, tweak the
-order or notes, and Save. It records the pages you walk through (login and other non‑app screens are skipped). Recording
+page you land on, in order (matched to your Application pages catalog, so it's named), takes a screenshot of each, and
+**captures the API calls the app makes** on each page (the request it sent and a short preview of the answer).
+Press **Stop & save** and the editor opens already filled with those pages, their screenshots and their captured calls —
+you name it, tweak the order or notes, and Save. It records the pages you walk through (login and other non‑app screens are skipped). Recording
 needs the desktop app with your workspace set up; in the browser‑only `npm run serve` mode there's no app window, so you
 build the flow by hand.
 
@@ -284,7 +285,10 @@ For each page you can also:
   and takes the shot; if this app can't capture, it uses the screenshot already on that page's technical sheet), or you
   can **paste** an image (click the box, Ctrl+V), **drop** one, or **upload** a file. The picture is kept with the flow.
 - **list its APIs** — the code icon on a row shows every API that page makes (the method, the call and its path, and
-  whether it changes data), read from the code the same way API Scenarios reads them.
+  whether it changes data), read from the code the same way API Scenarios reads them. An API the recorder captured data
+  for shows a **has data** chip and what it sent, and each API has a **Test** button that runs it against your backend
+  (through the same tester as Application pages) and shows the result right there — a read runs straight away; one that
+  changes data asks first, then **Run anyway** sends it with the captured request.
 
 Don't want to write the description yourself? **Draft with AI** sends the name and the pages to the AI you chose in AI
 settings and drafts a plain-English description from them (it is told to describe only the pages you listed, never to

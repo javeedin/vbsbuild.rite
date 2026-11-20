@@ -65,6 +65,17 @@ const T = H.makeAsserter();
   const docS = P.renderDocument({ name: 'Doc', pages: [{ name: 'A', page: 'app/a', shot: { src: 'page', data: img }, apis: [{ method: 'GET', name: 'getThings', path: '/things', writes: true }] }] }, {});
   T.check('the document embeds the screenshot and lists the page\'s APIs', /class="shot"/.test(docS) && docS.indexOf(img) !== -1 && /class="apis"/.test(docS) && /getThings/.test(docS) && /\/things/.test(docS) && /changes data/.test(docS));
 
+  T.section('recorded API call data (kept with each page as the test data)');
+  const withCalls = P.cleanFlow({ name: 'Rec', pages: [{ name: 'A', calls: [
+    { method: 'get', url: 'https://host/crm/v1/requests?q=open', path: '/crm/v1/requests', query: 'q=open', status: 200, response: '{"items":[]}' },
+    { method: 'POST', url: 'https://host/crm/v1/requests', path: '/crm/v1/requests', body: '{"title":"x"}', status: 201 },
+    { junk: 1 }] }] });
+  T.check('cleanCalls keeps the recorded calls (method upper-cased, path/query/body/status/response) and drops junk', withCalls.pages[0].calls && withCalls.pages[0].calls.length === 2 && withCalls.pages[0].calls[0].method === 'GET' && withCalls.pages[0].calls[0].query === 'q=open' && withCalls.pages[0].calls[0].status === 200 && withCalls.pages[0].calls[1].body === '{"title":"x"}', JSON.stringify(withCalls.pages[0].calls));
+  const overCall = P.cleanFlow({ name: 'Rec', pages: [{ name: 'A', calls: [{ method: 'POST', path: '/x', body: 'B'.repeat(40000), response: 'R'.repeat(40000) }] }] });
+  T.check('an over-long body / response is capped', overCall.pages[0].calls[0].body.length <= 24000 && overCall.pages[0].calls[0].response.length <= 24000);
+  const noCalls = P.cleanFlow({ name: 'Rec', pages: [{ name: 'A' }] });
+  T.check('a page with no calls stores none', !noCalls.pages[0].calls);
+
   T.section('the AI prompt');
   const prompt = P.aiPrompt(flow);
   T.check('names the process and the pages in order, carries the author\'s text, forbids invention', /Equipment rental v2/.test(prompt) && /1\. Catalog/.test(prompt) && /3\. Checkout/.test(prompt) && /rents an item/.test(prompt) && /Do not invent/.test(prompt));

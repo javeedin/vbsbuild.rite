@@ -11,6 +11,41 @@ define([], () => {
     return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : d.getDate() + ' ' + MON[d.getMonth()] + ' ' + d.getFullYear();
   }
 
+  // Match a recorded API call (method + path pattern) to a catalog API, so its Test button runs with that data.
+  // This mirrors flowRecorder.callForApi on the desktop so the editor and the document agree.
+  function pathOf(u) { const s = String(u || ''); const h = s.replace(/#.*$/, ''); const q = h.indexOf('?'); return (q === -1 ? h : h.slice(0, q)).replace(/^[a-z]+:\/\/[^/]+/i, '').replace(/\/+$/, '') || '/'; }
+  function pathMatches(apiPath, got) {
+    const pat = String(apiPath || '').replace(/[?#].*$/, '').replace(/\/+$/, '');
+    const g = String(got || '').replace(/\/+$/, '');
+    if (!pat) return false;
+    if (g === pat || (pat.length && g.slice(-pat.length) === pat)) return true;
+    try { return new RegExp(pat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\{[^/}]+\\\}/g, '[^/]+') + '$').test(g); } catch (e) { return false; }
+  }
+  function callForApi(api, calls) {
+    if (!api || !api.path || !calls || !calls.length) return null;
+    const m = String(api.method || 'GET').toUpperCase();
+    const hits = calls.filter((c) => String(c.method || 'GET').toUpperCase() === m && pathMatches(api.path, c.path || pathOf(c.url)));
+    hits.sort((a, b) => Math.abs(String(a.path || pathOf(a.url)).length - api.path.length) - Math.abs(String(b.path || pathOf(b.url)).length - api.path.length));
+    return hits[0] || null;
+  }
+  /** A short, human line of what the recorded call sends. */
+  function callText(c) {
+    if (!c) return '';
+    const cut = (s, n) => (s && s.length > n ? s.slice(0, n) + '…' : s || '');
+    const bits = [];
+    if (c.query) bits.push(cut(String(c.query), 60));
+    if (c.body) bits.push('body ' + cut(String(c.body), 60));
+    if (c.status != null) bits.push('was ' + c.status);
+    return bits.join(' · ');
+  }
+  /** The test result as a short line. */
+  function testText(t) {
+    if (!t) return '';
+    if (t.needsConfirm) return t.message || t.error || 'This changes data — Run anyway to send it.';
+    if (t.error && t.status == null) return t.error;
+    return (t.ok ? '✓ ' : '✗ ') + (t.status != null ? t.status : '') + (t.ms != null ? ' · ' + t.ms + ' ms' : '') + (t.rows != null ? ' · ' + t.rows + ' row(s)' : '');
+  }
+
   // A page row's screenshot can be pasted (Ctrl+V on its box), dropped, or picked from a file. The clipboard can only be
   // read during the event, so this module reads it (one set of listeners, whichever page instance is live), puts the image
   // on window.__nxPfImg = { row, data } and tells the chain through the pfImage event (it writes it into the flow's page).
@@ -63,24 +98,41 @@ define([], () => {
       return ((recording && recording.steps) || []).map((s, i) => ({ n: String(i + 1), name: s.name || s.page || 'Page' }));
     }
     /** The editor's page rows: position label, the screenshot (if any), and the APIs list state for the matched page. */
-    pageRows(flow, pageApis, apisOpen) {
+    pageRows(flow, pageApis, apisOpen, apiTests) {
       const pages = (flow && flow.pages) || [];
       const last = pages.length - 1;
       const pa = pageApis || {};
       const open = apisOpen || {};
+      const tests = apiTests || {};
       return pages.map((p, i) => {
         const api = p.page && pa[p.page] ? pa[p.page] : null;
         const isOpen = !!open[p.id];
+        const calls = (p.calls && p.calls.length) ? p.calls : [];
+        const list = isOpen && api && !api.loading && !api.error ? (api.list || []) : [];
+        const apis = list.map((a, k) => {
+          const call = callForApi(a, calls);
+          const tkey = p.id + '|' + k;
+          const t = tests[tkey] || null;
+          return {
+            idx: i, k: k, endpoint: a.endpoint || '', method: a.method || 'GET', name: a.name || '', path: a.path || '', writes: !!a.writes,
+            hasData: !!call, dataText: call ? callText(call) : '',
+            running: !!(t && t.running),
+            result: t && !t.running ? t : null,
+            resultClass: t && !t.running ? (t.needsConfirm ? 'warn' : (t.ok ? 'ok' : 'bad')) : '',
+            resultText: t && !t.running ? testText(t) : '',
+            response: t && !t.running && t.body ? t.body : '',
+            needsConfirm: !!(t && !t.running && t.needsConfirm) };
+        });
         return {
           id: p.id, page: p.page || '', name: p.name || '', note: p.note || '', idx: i,
           label: i === 0 ? 'Start' : (i === last ? 'End' : String(i + 1)), first: i === 0, last: i === last,
           hasShot: !!(p.shot && p.shot.data), shotData: (p.shot && p.shot.data) || '',
           shotSrc: (p.shot && p.shot.src) || '',
-          matched: !!p.page,
+          matched: !!p.page, calls: calls.length,
           apisOpen: isOpen,
           apisLoading: isOpen && !!(api && api.loading),
           apisError: isOpen && api && !api.loading ? (api.error || '') : '',
-          apis: isOpen && api && !api.loading && !api.error ? (api.list || []) : [],
+          apis: apis,
           apisCount: api && api.list ? api.list.length : null,
           apisLabel: (api && api.list ? 'APIs (' + api.list.length + ')' : 'APIs') };
       });

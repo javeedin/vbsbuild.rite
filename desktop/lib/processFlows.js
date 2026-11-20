@@ -23,7 +23,7 @@ const fs = require('fs');
 const path = require('path');
 
 const STATUSES = { draft: 'Draft', review: 'In review', approved: 'Approved', retired: 'Retired' };
-const MAX = { pages: 60, name: 200, note: 4000, desc: 20000, shot: 6000000, apis: 60, apiText: 400 };
+const MAX = { pages: 60, name: 200, note: 4000, desc: 20000, shot: 6000000, apis: 60, apiText: 400, calls: 40, callText: 24000, url: 2000 };
 
 const str = (v) => (v === undefined || v === null ? '' : String(v));
 const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -47,6 +47,17 @@ function cleanApis(a) {
     .map((x) => ({ method: cut(x.method, 12), name: cut(x.name, MAX.name), path: cut(x.path, MAX.apiText), writes: !!x.writes }))
     .filter((x) => x.name || x.path);
 }
+/** A page's recorded API calls (method, url, query, request body, status, short response), kept as the test data. */
+function cleanCalls(a) {
+  return (Array.isArray(a) ? a : []).filter(isObj).slice(0, MAX.calls).map((c) => {
+    const out = { method: (cut(c.method, 12) || 'GET').toUpperCase(), url: cut(c.url, MAX.url), path: cut(c.path, MAX.url) };
+    if (c.query) out.query = cut(c.query, 4000);
+    if (c.body) out.body = cut(c.body, MAX.callText);
+    if (c.status !== undefined && c.status !== null && c.status !== '') out.status = typeof c.status === 'number' ? c.status : cut(c.status, 20);
+    if (c.response) out.response = cut(c.response, MAX.callText);
+    return out;
+  }).filter((c) => c.url || c.path);
+}
 /** A flow with every field within its size and shape (what the page or a person sent is never kept as is). */
 function cleanFlow(flow, by, old, opts) {
   const f = isObj(flow) ? flow : {};
@@ -57,6 +68,8 @@ function cleanFlow(flow, by, old, opts) {
     const out = { id: idOf(p.id, 20) || 'p' + (++n), page: idOf(p.page), name: cut(p.name, MAX.name).trim(), note: cut(p.note, MAX.note) };
     const shot = cleanShot(p.shot);
     if (shot) out.shot = shot;
+    const calls = cleanCalls(p.calls);
+    if (calls.length) out.calls = calls;
     if (keepApis) { const apis = cleanApis(p.apis); if (apis.length) out.apis = apis; }
     return out;
   }).filter((p) => p.name || p.page).slice(0, MAX.pages);

@@ -6,7 +6,8 @@
  * note, add / move / remove pages; Save (PF-0001) and it is in the list. A page matched to a real app page can have its
  * screenshot fetched from the code or uploaded, and its APIs listed; Generate document → a preview with the name, the
  * flow, the numbered steps, the screenshots and the APIs; Draft with AI (a stand-in AI) → the draft, Use it fills the
- * description; reopen keeps everything; remove.
+ * description; reopen keeps everything; remove. Record from the app captures each page's API calls too, so an API can be
+ * Tested with the data it was recorded with (a read runs straight away; a write asks first, then Run anyway sends it).
  * Needs `npm run build`. Run: node tests/e2e/process-flows.e2e.js
  */
 const fs = require('fs');
@@ -37,14 +38,16 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
   const aiStore = { settings: () => ({ active: 'anthropic', providers: { anthropic: { ready: true } }, catalog: [], features: [], uses: {} }),
     chat: async (b) => { asked.push(b); return { ok: true, provider: 'Claude (Anthropic)', text: 'The equipment rental process lets a customer rent an item and return it.\n\nOn the first page they browse; on Checkout they pay.' }; } };
   const htmlToPdf = async () => Buffer.from('%PDF-1.4 process flow');
-  // a stand-in for the desktop recorder: the test pushes nav entries (the pages "walked") into recNav
+  // a stand-in for the desktop recorder: the test pushes nav entries (the pages "walked") into recNav and the API calls
+  // the app made (tagged with the page URL that was open) into recCalls
   const IMG = 'data:image/png;base64,' + PNG.toString('base64');
   let recNav = [];
+  let recCalls = [];
   let recRunning = false;
   const recorder = {
-    start: async () => { recRunning = true; recNav = []; return { ok: true }; },
+    start: async () => { recRunning = true; recNav = []; recCalls = []; return { ok: true }; },
     status: async () => ({ ok: true, running: recRunning, nav: recNav.map((x) => ({ url: x.url })) }),
-    stop: async () => { recRunning = false; return { ok: true, running: false, nav: recNav.slice() }; },
+    stop: async () => { recRunning = false; return { ok: true, running: false, nav: recNav.slice(), calls: recCalls.slice() }; },
   };
   const env = await E.start({ port: 19991, processFlowStore: store, pagesStore: pg.store, recorder, apiStore, scenarioStore, apiProject, aiStore, htmlToPdf });
   const page = env.page;
@@ -173,6 +176,42 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await page.waitForSelector('#pf-name', { timeout: 10000 });
     T.check('Stop & save opens the editor pre-filled with the recorded pages and their screenshots', (await page.$$('#pfEditor .nx-pf-prow')).length === 2
       && (await page.inputValue(prow(0) + ' .nx-pf-pname')) === 'Order Workbench' && (await page.inputValue(prow(1) + ' .nx-pf-pname')) === 'Order' && !!(await page.$(prow(0) + ' .nx-pf-shotimg')));
+    await page.click('#pfBack');
+    await page.waitForSelector('#pfEmpty', { timeout: 10000 });
+
+    T.section('capture each API\'s data while recording, and test it with that data');
+    await page.click('#pfRecord');
+    await page.waitForSelector('#pfRec', { timeout: 10000 });
+    // walk two real pages; the app made a GET on the first and a POST (a write) on the second — captured with the data
+    recNav.push({ url: 'http://app/vp/shell/orders/order-list', shot: IMG });
+    recNav.push({ url: 'http://app/vp/shell/orders/order-create', shot: IMG });
+    recCalls.push({ pageUrl: 'http://app/vp/shell/orders/order-list', method: 'GET', url: 'http://app/shop/v1/orders?status=open', path: '/shop/v1/orders', query: 'status=open', status: 200, response: '{"items":[]}' });
+    recCalls.push({ pageUrl: 'http://app/vp/shell/orders/order-create', method: 'POST', url: 'http://app/shop/v1/orders', path: '/shop/v1/orders', body: '{"note":"from the recording"}', status: 201 });
+    await page.waitForFunction(() => document.querySelectorAll('#pfRecSteps .nx-pf-recstep').length === 2, null, { timeout: 10000 });
+    await page.click('#pfRecStop');
+    await page.waitForSelector('#pf-name', { timeout: 10000 });
+    // page 0 (order-list): its GET carries the captured data; Test runs it and shows the result
+    await page.click(prow(0) + ' [data-op="apisToggle"]');
+    await page.waitForSelector(prow(0) + ' .nx-pf-apirow', { timeout: 10000 });
+    const dataRow0 = prow(0) + ' .nx-pf-apirow:has(.nx-pf-apidatachip)';
+    await page.waitForSelector(dataRow0, { timeout: 10000 });
+    T.check('the recorded GET shows "has data" and what it sent (its query)', /status=open/.test(await text(dataRow0 + ' .nx-pf-apidata')), await text(dataRow0 + ' .nx-pf-apidata'));
+    await page.click(dataRow0 + ' [data-op="apiTest"]');
+    await page.waitForSelector(dataRow0 + ' .nx-pf-apiresult', { timeout: 10000 });
+    T.check('Test runs the GET against the backend and shows the result (✓ 200)', /✓/.test(await text(dataRow0 + ' .nx-pf-apiresline')) && /200/.test(await text(dataRow0 + ' .nx-pf-apiresline')), await text(dataRow0 + ' .nx-pf-apiresline'));
+    // page 1 (order-create): its POST changes data — Test asks first, Run anyway sends the captured body
+    await page.click(prow(1) + ' [data-op="apisToggle"]');
+    await page.waitForSelector(prow(1) + ' .nx-pf-apirow', { timeout: 10000 });
+    const dataRow1 = prow(1) + ' .nx-pf-apirow:has(.nx-pf-apidatachip)';
+    await page.waitForSelector(dataRow1, { timeout: 10000 });
+    await page.click(dataRow1 + ' [data-op="apiTest"]');
+    await page.waitForSelector(dataRow1 + ' .nx-pf-apiresult--warn', { timeout: 10000 });
+    T.check('a write API asks first (changes data), with "Run anyway"', /changes data/i.test(await text(dataRow1 + ' .nx-pf-apiresline')) && !!(await page.$(dataRow1 + ' [data-op="apiTestGo"]')));
+    const beforeWrites = env.writes.length;
+    await page.click(dataRow1 + ' [data-op="apiTestGo"]');
+    await page.waitForSelector(dataRow1 + ' .nx-pf-apiresult--ok', { timeout: 10000 });
+    const wrote = env.writes[env.writes.length - 1];
+    T.check('Run anyway sends the POST with the captured body (201)', env.writes.length === beforeWrites + 1 && wrote && wrote.method === 'POST' && /\/shop\/v1\/orders$/.test(wrote.path) && wrote.body && wrote.body.note === 'from the recording' && /201/.test(await text(dataRow1 + ' .nx-pf-apiresline')), JSON.stringify(wrote && { m: wrote.method, p: wrote.path, b: wrote.body }));
     await page.click('#pfBack');
     await page.waitForSelector('#pfEmpty', { timeout: 10000 });
 

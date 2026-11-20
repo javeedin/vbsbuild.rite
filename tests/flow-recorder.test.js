@@ -37,4 +37,24 @@ T.check('unmatched URLs are skipped and counted', r.skipped === 1);
 T.check('a repeat visit with a newer screenshot updates the step', R.buildSteps([{ url: nav[1].url }, { url: nav[1].url, shot: 'data:image/png;base64,ZZZ' }], PAGES).steps[0].shot.data === 'data:image/png;base64,ZZZ');
 T.check('nothing recorded / no pages: empty, nothing thrown', R.buildSteps([], PAGES).steps.length === 0 && R.buildSteps(nav, []).steps.length === 0 && R.buildSteps(null, null).skipped === 0);
 
+T.section('captured API calls per step');
+const nav2 = [
+  { url: 'https://host/vp/shell/customer-portal/request-list', shot: 'data:image/png;base64,AAA' },
+  { url: 'https://host/vp/shell/customer-portal/project-create-request', shot: 'data:image/png;base64,BBB' },
+];
+const calls = [
+  { pageUrl: 'https://host/vp/shell/customer-portal/request-list', method: 'get', url: 'https://host/crm/v1/requests?q=open', body: '', status: 200, response: '{"items":[]}' },
+  { pageUrl: 'https://host/vp/shell/customer-portal/project-create-request', method: 'POST', url: 'https://host/crm/v1/requests', body: '{"name":"New"}', status: 201, response: '{"id":7}' },
+  { pageUrl: 'https://host/nowhere', method: 'GET', url: 'https://host/x', status: 200 }, // page matches nothing → dropped
+];
+const r2 = R.buildSteps(nav2, PAGES, calls);
+T.check('calls are attached to the step whose page was open when they fired', (r2.steps[0].calls || []).length === 1 && r2.steps[0].calls[0].url.indexOf('/crm/v1/requests') !== -1 && (r2.steps[1].calls || []).length === 1 && r2.steps[1].calls[0].method === 'POST', JSON.stringify((r2.steps[0].calls || []).map((c) => c.method + ' ' + c.path)));
+T.check('a call trims to method/url/path/query/body/status/response within the cap', r2.steps[0].calls[0].path === '/crm/v1/requests' && r2.steps[0].calls[0].query === 'q=open' && r2.steps[1].calls[0].body === '{"name":"New"}' && r2.steps[1].calls[0].status === 201 && r2.steps[1].calls[0].response === '{"id":7}');
+
+T.section('callForApi');
+const stepCalls = r2.steps[1].calls.concat(r2.steps[0].calls);
+T.check('matches a catalog API to the captured call by method + path pattern', (R.callForApi({ method: 'POST', path: '/crm/v1/requests' }, stepCalls) || {}).body === '{"name":"New"}');
+T.check('path pattern with {id} matches a concrete URL', R.pathMatches('/crm/v1/requests/{id}', '/crm/v1/requests/7') && !R.pathMatches('/crm/v1/requests/{id}', '/crm/v1/other/7'));
+T.check('no match for a different method or path → null', R.callForApi({ method: 'DELETE', path: '/crm/v1/requests' }, stepCalls) === null && R.callForApi({ method: 'GET', path: '/crm/v1/none' }, stepCalls) === null);
+
 T.report();

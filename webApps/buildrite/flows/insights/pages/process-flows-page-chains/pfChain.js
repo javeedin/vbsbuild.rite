@@ -3,9 +3,10 @@ define([
   'resources/js/processFlowClient',
   'resources/js/pagesClient',
   'resources/js/scenarioClient',
+  'resources/js/apiClient',
   'resources/js/exportKit',
   'resources/js/shellBus',
-], (ActionChain, PC, PagesPC, SC, exportKit, bus) => {
+], (ActionChain, PC, PagesPC, SC, API, exportKit, bus) => {
   'use strict';
 
   // Process Flows: one screen — a list of flows and an editor. Ops (data-op):
@@ -18,12 +19,13 @@ define([
   const byId = (id) => { try { return document.getElementById(id); } catch (e) { return null; } };
   const val = (id) => { const el = byId(id); return el ? String(el.value || '') : ''; };
   const copy = (x) => (x == null ? x : JSON.parse(JSON.stringify(x)));
-  /** A page's APIs (scenarioClient) as the list the editor and the document show: method, name, path, writes. */
+  /** A page's APIs (scenarioClient) as the list the editor and the document show: endpoint, method, name, path, writes. */
   function mapApis(apis) {
     return (apis || []).map((a) => {
       const st = a.step || {};
       const m = st.report ? 'REPORT' : ((st.api && st.api.method) || a.method || (st.writes ? 'POST' : 'GET'));
-      return { method: m, name: st.name || a.name || a.key || '', path: st.report ? (st.report.path || '') : ((st.api && st.api.path) || st.endpoint || a.path || ''), writes: !!st.writes };
+      return { endpoint: a.key || st.endpoint || '', report: st.report ? (st.report.name || st.report.path || '') : '',
+        method: m, name: st.name || a.name || a.key || '', path: st.report ? (st.report.path || '') : ((st.api && st.api.path) || st.endpoint || a.path || ''), writes: !!st.writes };
     });
   }
   /** A page's APIs, from the cache (v.pageApis) or fetched once and cached there. */
@@ -35,6 +37,39 @@ define([
     v.pageApis = Object.assign({}, v.pageApis || {}, { [pageId]: { loading: false, list, error: r.ok ? '' : ((r.body && r.body.error) || 'Could not read the APIs.') } });
     return list;
   }
+
+  // ── match a recorded call to a page's API, and turn it into a tester request (mirrors desktop/lib/flowRecorder) ──
+  const pathOf = (u) => { const s = String(u || '').replace(/#.*$/, ''); const q = s.indexOf('?'); return (q === -1 ? s : s.slice(0, q)).replace(/^[a-z]+:\/\/[^/]+/i, '').replace(/\/+$/, '') || '/'; };
+  function pathMatches(apiPath, got) {
+    const pat = String(apiPath || '').replace(/[?#].*$/, '').replace(/\/+$/, '');
+    const g = String(got || '').replace(/\/+$/, '');
+    if (!pat) return false;
+    if (g === pat || (pat.length && g.slice(-pat.length) === pat)) return true;
+    try { return new RegExp(pat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\{[^/}]+\\\}/g, '[^/]+') + '$').test(g); } catch (e) { return false; }
+  }
+  function callForApi(api, calls) {
+    if (!api || !api.path || !calls || !calls.length) return null;
+    const m = String(api.method || 'GET').toUpperCase();
+    const hits = (calls || []).filter((c) => String(c.method || 'GET').toUpperCase() === m && pathMatches(api.path, c.path || pathOf(c.url)));
+    hits.sort((a, b) => Math.abs(String(a.path || pathOf(a.url)).length - api.path.length) - Math.abs(String(b.path || pathOf(b.url)).length - api.path.length));
+    return hits[0] || null;
+  }
+  /** The path parameters (/a/b/{id} ↔ the recorded /a/b/42) as { id: '42' }, aligned from the end. */
+  function pathParams(apiPath, urlPath) {
+    const a = String(apiPath || '').replace(/[?#].*$/, '').replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
+    const u = String(urlPath || '').replace(/[?#].*$/, '').replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
+    const off = Math.max(0, u.length - a.length);
+    const out = {};
+    a.forEach((seg, idx) => { const m = /^\{(.+)\}$/.exec(seg); if (m) { try { out[m[1]] = decodeURIComponent(u[off + idx] || ''); } catch (e) { out[m[1]] = u[off + idx] || ''; } } });
+    return out;
+  }
+  /** A tester request (apiTest.run) from a recorded call: path params filled, its query as extra, its body. */
+  function reqFromCall(api, call) {
+    if (!call) return { params: {}, extra: '', body: '' };
+    return { params: pathParams(api.path, call.path || pathOf(call.url)), extra: String(call.query || '').replace(/^\?/, ''), body: String(call.body || '') };
+  }
+  const RESP_CAP = 1600;
+  const trimResp = (s) => { const t = String(s || ''); return t.length > RESP_CAP ? t.slice(0, RESP_CAP) + '\n…' : t; };
 
   // The flow being edited (pages are authoritative here, not in the DOM).
   let MODEL = null;
@@ -65,6 +100,7 @@ define([
       const page = pagesByLabel[name.toLowerCase()] || p.page || '';
       const out = { id: p.id || 'p' + (i + 1), page, name, note: String(p.note || '') };
       if (p.shot && p.shot.data) out.shot = p.shot;
+      if (p.calls && p.calls.length) out.calls = p.calls;
       return out;
     });
     return Object.assign({}, f, { name: top('pf-name', f.name), area: top('pf-area', f.area), owner: top('pf-owner', f.owner),
@@ -155,7 +191,7 @@ define([
       if (op === 'search') { v.q = String(input || ''); await loadList(); return; }
       if (op === 'new') {
         MODEL = { id: '', name: '', description: '', area: '', owner: '', status: 'draft', pages: [newPage()] };
-        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.view = 'edit';
+        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.view = 'edit';
         render(v);
         setTimeout(() => { const el = byId('pf-name'); if (el) el.focus(); }, 80);
         return;
@@ -165,7 +201,7 @@ define([
         if (!r.ok) { say(false, (r.body && r.body.error) || 'It could not be opened.'); return; }
         MODEL = Object.assign({ pages: [] }, copy(r.body.flow));
         if (!MODEL.pages.length) MODEL.pages = [newPage()];
-        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.view = 'edit';
+        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.view = 'edit';
         render(v);
         return;
       }
@@ -183,7 +219,7 @@ define([
       if (op === 'back') {
         if (MODEL) foldRows(v);
         if (dirty(v) && !window.confirm('Leave without saving? Your changes to this process flow are lost.')) return;
-        MODEL = null; v.flow = null; v.saved = null; v.doc = null; v.ai = null; v.apisOpen = {}; v.view = 'edit';
+        MODEL = null; v.flow = null; v.saved = null; v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.view = 'edit';
         await loadList();
         return;
       }
@@ -213,8 +249,8 @@ define([
         if (!pages.length) { say(false, 'No app pages were recorded. Open the pages you want in the app, then Stop & save.'); v.recording = null; return; }
         // open the editor pre-filled with the recorded pages — the user names it and Saves
         MODEL = { id: '', name: '', description: '', area: '', owner: '', status: 'draft',
-          pages: pages.map((p, i) => { const pg = { id: p.id || ('p' + (i + 1)), page: p.page || '', name: p.name || '', note: '' }; if (p.shot && p.shot.data) pg.shot = { src: 'page', data: p.shot.data }; return pg; }) };
-        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.view = 'edit'; v.recording = null;
+          pages: pages.map((p, i) => { const pg = { id: p.id || ('p' + (i + 1)), page: p.page || '', name: p.name || '', note: '' }; if (p.shot && p.shot.data) pg.shot = { src: 'page', data: p.shot.data }; if (p.calls && p.calls.length) pg.calls = p.calls; return pg; }) };
+        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.view = 'edit'; v.recording = null;
         render(v);
         setTimeout(() => { const el = byId('pf-name'); if (el) el.focus(); }, 80);
         say(true, pages.length + ' page(s) recorded — name it and Save.');
@@ -317,6 +353,39 @@ define([
         v.pageApis = Object.assign({}, v.pageApis || {}, { [pageId]: { loading: true, list: null, error: '' } });
         const r = await SC.apis(pageId);
         v.pageApis = Object.assign({}, v.pageApis || {}, { [pageId]: { loading: false, list: r.ok ? mapApis(r.body.apis) : [], error: r.ok ? '' : ((r.body && r.body.error) || 'Could not read the APIs.') } });
+        return;
+      }
+      // ── test one of a page's APIs, with the data captured while recording the flow (apiTestGo = after "changes data") ──
+      if (op === 'apiTest' || op === 'apiTestGo') {
+        if (!MODEL || !MODEL.pages[i]) return;
+        foldRows(v);
+        const pg = MODEL.pages[i];
+        const k = Number(key);
+        const list = (v.pageApis && v.pageApis[pg.page] && v.pageApis[pg.page].list) || [];
+        const api = list[k];
+        if (!api) return;
+        const tkey = pg.id + '|' + k;
+        if (api.report) { say(false, 'This is a BI Publisher report — run it from Oracle BIP Reporting.'); return; }
+        if (!api.endpoint) { say(false, 'This API has no endpoint to test.'); return; }
+        const reqBase = reqFromCall(api, callForApi(api, pg.calls || []));
+        const confirm = op === 'apiTestGo';
+        v.apiTests = Object.assign({}, v.apiTests || {}, { [tkey]: { running: true } });
+        try {
+          const r = await API.run(Object.assign({}, reqBase, { endpoint: api.endpoint, confirm }));
+          const res = r.body || {};
+          const res2 = {
+            running: false, ok: !!res.ok,
+            status: (res.status !== undefined && res.status !== null) ? res.status : null,
+            ms: (res.ms !== undefined && res.ms !== null) ? res.ms : null,
+            rows: res.table ? res.table.total : null,
+            body: trimResp(res.pretty),
+            needsConfirm: !!res.needsConfirm,
+            message: res.needsConfirm ? (res.error || '') : '',
+            error: res.needsConfirm ? '' : (res.fault || res.error || (!res.ok ? (res.statusText || 'The call failed.') : '')) };
+          v.apiTests = Object.assign({}, v.apiTests || {}, { [tkey]: res2 });
+        } catch (e) {
+          v.apiTests = Object.assign({}, v.apiTests || {}, { [tkey]: { running: false, ok: false, status: null, error: String((e && e.message) || e) } });
+        }
         return;
       }
       if (op === 'save') {

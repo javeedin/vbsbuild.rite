@@ -140,7 +140,7 @@
             <datalist id="pfPageList"><oj-bind-for-each data="[[ $variables.pages ]]"><template data-oj-as="p"><option :value="[[ p.data.label ]]"></option></template></oj-bind-for-each></datalist>
             <input type="file" id="pfShotFile" accept="image/*" style="display:none">
             <oj-bind-if test="[[ ($variables.flow.pages || []).length === 0 ]]"><div class="nx-empty" id="pfNoPages">No page yet. Add the start page below.</div></oj-bind-if>
-            <oj-bind-for-each data="[[ $functions.pageRows($variables.flow, $variables.pageApis, $variables.apisOpen) ]]"><template data-oj-as="p">
+            <oj-bind-for-each data="[[ $functions.pageRows($variables.flow, $variables.pageApis, $variables.apisOpen, $variables.apiTests) ]]"><template data-oj-as="p">
               <div class="nx-pf-prow" :data-idx="[[ p.data.idx ]]">
                 <div class="nx-pf-prowtop">
                   <span class="nx-pf-num"><oj-bind-text value="[[ p.data.label ]]"></oj-bind-text></span>
@@ -186,9 +186,23 @@
                         <ul class="nx-pf-apilist">
                           <oj-bind-for-each data="[[ p.data.apis ]]"><template data-oj-as="a">
                             <li class="nx-pf-apirow">
-                              <span :class="[[ 'nx-pg-method nx-sc-apim nx-pg-method--' + (a.data.method || '').toLowerCase() ]]"><oj-bind-text value="[[ a.data.method ]]"></oj-bind-text></span>
-                              <span class="nx-pf-apiname"><b><oj-bind-text value="[[ a.data.name ]]"></oj-bind-text></b><code><oj-bind-text value="[[ a.data.path ]]"></oj-bind-text></code></span>
-                              <oj-bind-if test="[[ a.data.writes ]]"><span class="nx-sc-wchip">changes data</span></oj-bind-if>
+                              <div class="nx-pf-apimain">
+                                <span :class="[[ 'nx-pg-method nx-sc-apim nx-pg-method--' + (a.data.method || '').toLowerCase() ]]"><oj-bind-text value="[[ a.data.method ]]"></oj-bind-text></span>
+                                <span class="nx-pf-apiname"><b><oj-bind-text value="[[ a.data.name ]]"></oj-bind-text></b><code><oj-bind-text value="[[ a.data.path ]]"></oj-bind-text></code></span>
+                                <oj-bind-if test="[[ a.data.hasData ]]"><span class="nx-pf-apidatachip" title="Captured while recording the flow">has data</span></oj-bind-if>
+                                <oj-bind-if test="[[ a.data.writes ]]"><span class="nx-sc-wchip">changes data</span></oj-bind-if>
+                                <span class="nx-min-flex"></span>
+                                <button type="button" class="nx-btn nx-btn--sm nx-pf-apitest" data-op="apiTest" :data-idx="[[ p.data.idx ]]" :data-key="[[ a.data.k ]]" on-click="[[ $listeners.onPf ]]" :disabled="[[ a.data.running ]]" :title="[[ a.data.hasData ? 'Run this API with the data captured while recording' : 'Run this API' ]]"><span class="oj-ux-ico-play" aria-hidden="true"></span><oj-bind-text value="[[ a.data.running ? 'Running…' : 'Test' ]]"></oj-bind-text></button>
+                              </div>
+                              <oj-bind-if test="[[ a.data.hasData && !!a.data.dataText ]]"><div class="nx-pf-apidata"><span class="oj-ux-ico-data" aria-hidden="true"></span><code><oj-bind-text value="[[ a.data.dataText ]]"></oj-bind-text></code></div></oj-bind-if>
+                              <oj-bind-if test="[[ !!a.data.result ]]">
+                                <div :class="[[ 'nx-pf-apiresult nx-pf-apiresult--' + a.data.resultClass ]]">
+                                  <div class="nx-pf-apiresline"><oj-bind-text value="[[ a.data.resultText ]]"></oj-bind-text>
+                                    <oj-bind-if test="[[ a.data.needsConfirm ]]"><button type="button" class="nx-btn nx-btn--sm nx-btn--cta nx-pf-apirun" data-op="apiTestGo" :data-idx="[[ p.data.idx ]]" :data-key="[[ a.data.k ]]" on-click="[[ $listeners.onPf ]]">Run anyway</button></oj-bind-if>
+                                  </div>
+                                  <oj-bind-if test="[[ !!a.data.response ]]"><pre class="nx-pf-apiresp"><oj-bind-text value="[[ a.data.response ]]"></oj-bind-text></pre></oj-bind-if>
+                                </div>
+                              </oj-bind-if>
                             </li>
                           </template></oj-bind-for-each>
                         </ul>

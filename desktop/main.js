@@ -563,19 +563,58 @@ function watchRunWindow(w) {
 // Process Flows → Record from the app: open the real app in the Run window and follow the pages walked through, taking a
 // screenshot of each as it settles. The /__pflow/record/* routes (devserver.js) map the URLs to the app's pages and build
 // the ordered steps (lib/flowRecorder.js).
-let recState = null; // { running, nav: [{ url, shot }], app }
+let recState = null; // { running, nav: [{ url, shot }], calls: [{ pageUrl, method, url, body, status, response }], app }
+const REC_CAP = 24000;
+/** Watch the Run window's network (CDP) so each API call the app makes is captured with its data, tagged to the page. */
+function attachRecorderNet(w) {
+  if (!w || w.isDestroyed()) return;
+  const wc = w.webContents;
+  if (wc.__brRecNet) return;
+  const dbg = wc.debugger;
+  try { if (!dbg.isAttached()) dbg.attach('1.3'); } catch (e) { return; } // DevTools already open, etc. — skip capture
+  wc.__brRecNet = true;
+  const pend = {}; // requestId → { method, url, body, status, mime }
+  const want = (type) => { const t = String(type || '').toLowerCase(); return t === 'xhr' || t === 'fetch'; };
+  dbg.on('message', (e, method, params) => {
+    if (!recState || !recState.running) return;
+    try {
+      if (method === 'Network.requestWillBeSent') {
+        if (!want(params.type)) return;
+        const r = params.request || {};
+        pend[params.requestId] = { pageUrl: (recState.curUrl || (w.isDestroyed() ? '' : wc.getURL())), method: r.method || 'GET', url: r.url || '', body: (r.postData || '').slice(0, REC_CAP), status: '', mime: '' };
+      } else if (method === 'Network.responseReceived') {
+        const p = pend[params.requestId]; if (!p) return;
+        p.status = (params.response && params.response.status) || ''; p.mime = (params.response && params.response.mimeType) || '';
+      } else if (method === 'Network.loadingFinished') {
+        const p = pend[params.requestId]; if (!p) return;
+        delete pend[params.requestId];
+        const finish = (resp) => { if (recState && recState.running) recState.calls.push(Object.assign(p, { response: String(resp || '').slice(0, REC_CAP) })); };
+        if (/json|text|xml|urlencoded/i.test(p.mime)) {
+          dbg.sendCommand('Network.getResponseBody', { requestId: params.requestId })
+            .then((b) => finish(b && b.body && b.base64Encoded ? Buffer.from(b.body, 'base64').toString('utf8') : (b && b.body) || ''))
+            .catch(() => finish(''));
+        } else finish('');
+      }
+    } catch (err) { /* a malformed CDP event — ignore */ }
+  });
+  try { dbg.sendCommand('Network.enable', { maxResourceBufferSize: 10 * 1024 * 1024, maxTotalBufferSize: 50 * 1024 * 1024 }); } catch (e) { /* ignore */ }
+  w.on('closed', () => { try { if (dbg.isAttached()) dbg.detach(); } catch (e) { /* gone */ } });
+}
 function attachRecorder(w) {
   if (!w || w.isDestroyed()) return;
+  attachRecorderNet(w);
   const wc = w.webContents;
   if (wc.__brRec) return;
   wc.__brRec = true;
   let timer = null;
   const grab = () => {
     if (!recState || !recState.running || w.isDestroyed()) return;
+    if (!w.isDestroyed()) recState.curUrl = wc.getURL();
     clearTimeout(timer);
     timer = setTimeout(() => {
       if (!recState || !recState.running || w.isDestroyed()) return;
       const url = wc.getURL();
+      recState.curUrl = url;
       wc.capturePage().then((img) => {
         if (!recState || !recState.running) return;
         let shot = '';
@@ -596,7 +635,7 @@ function flowRecorder() {
       const useApp = app || runAppOf(c);
       const p = await buildWorkspace(c, useApp, 'Record a flow');
       if (!p.ok) return { ok: false, error: p.error };
-      recState = { running: true, nav: [], app: useApp };
+      recState = { running: true, nav: [], calls: [], curUrl: '', app: useApp };
       const w = openRunWindow(p.url + '/', 'Recording a flow — ' + c.projectName + ' (' + useApp + ')');
       attachRecorder(w);
       return { ok: true, app: useApp };
@@ -608,8 +647,9 @@ function flowRecorder() {
     },
     async stop() {
       const nav = recState ? recState.nav.slice() : [];
+      const calls = recState ? recState.calls.slice() : [];
       if (recState) recState.running = false;
-      return { ok: true, running: false, nav: nav };
+      return { ok: true, running: false, nav: nav, calls: calls };
     },
   };
 }
