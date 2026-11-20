@@ -95,6 +95,9 @@
             <button type="button" role="tab" id="pfViewEdit" :class="[[ 'nx-pf-vtab' + ($variables.view !== 'preview' ? ' nx-pf-vtab--on' : '') ]]" :aria-selected="[[ $variables.view !== 'preview' ? 'true' : 'false' ]]" data-op="view" data-key="edit" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-edit" aria-hidden="true"></span>Edit</button>
             <button type="button" role="tab" id="pfViewPreview" :class="[[ 'nx-pf-vtab' + ($variables.view === 'preview' ? ' nx-pf-vtab--on' : '') ]]" :aria-selected="[[ $variables.view === 'preview' ? 'true' : 'false' ]]" data-op="view" data-key="preview" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-document" aria-hidden="true"></span>Preview</button>
           </div>
+          <oj-bind-if test="[[ $functions.hasRecordedCalls($variables.flow) ]]">
+            <button type="button" class="nx-btn" id="pfMakeScenario" data-op="makeScenario" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]" title="Turn this recording's captured API calls, in the order they fired, into an API Scenario you can run"><span class="oj-ux-ico-flow" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'scenario' ? 'Creating…' : 'Create scenario from the recording' ]]"></oj-bind-text></button>
+          </oj-bind-if>
           <button type="button" class="nx-btn nx-btn--cta" id="pfSave" data-op="save" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]"><span class="oj-ux-ico-save" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'save' ? 'Saving…' : 'Save' ]]"></oj-bind-text></button>
         </div>
 

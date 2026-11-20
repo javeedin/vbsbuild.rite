@@ -100,6 +100,10 @@ define([], () => {
       listenForPfImages();
     }
     statusLabel(s) { return STATUS[s] || s || 'Draft'; }
+    /** Does this flow carry recorded API calls on any page? (then "Create scenario from the recording" is offered.) */
+    hasRecordedCalls(flow) { return ((flow && flow.pages) || []).some((p) => p && Array.isArray(p.calls) && p.calls.length); }
+    /** How many recorded calls across the flow, for the button's hint. */
+    recordedCallCount(flow) { return ((flow && flow.pages) || []).reduce((n, p) => n + ((p && Array.isArray(p.calls)) ? p.calls.length : 0), 0); }
     statusRows(cur) { return Object.keys(STATUS).map((id) => ({ id, label: STATUS[id], on: (cur || 'draft') === id })); }
     chainText(names) {
       const list = (names || []).filter(Boolean);

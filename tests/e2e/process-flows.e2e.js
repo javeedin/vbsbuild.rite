@@ -284,6 +284,34 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await page.click('#pfBack');
     await page.waitForSelector('#pfEmpty', { timeout: 10000 });
 
+    T.section('Create a scenario from the recording (on request only)');
+    await page.click('#pfRecord');
+    await page.waitForSelector('#pfRec', { timeout: 10000 });
+    recNav.push({ url: 'http://app/vp/shell/orders/order-list', shot: IMG });
+    recNav.push({ url: 'http://app/vp/shell/orders/order-create', shot: IMG });
+    recCalls.push({ pageUrl: 'http://app/vp/shell/orders/order-list', method: 'GET', url: 'http://app/shop/v1/orders?status=open', path: '/shop/v1/orders', query: 'status=open', status: 200, response: '{"items":[]}' });
+    recCalls.push({ pageUrl: 'http://app/vp/shell/orders/order-create', method: 'POST', url: 'http://app/shop/v1/orders', path: '/shop/v1/orders', body: '{"note":"from the recording"}', status: 201 });
+    await page.waitForFunction(() => document.querySelectorAll('#pfRecSteps .nx-pf-recstep').length === 2, null, { timeout: 10000 });
+    await page.click('#pfRecStop');
+    await page.waitForSelector('#pf-name', { timeout: 10000 });
+    T.check('a recorded flow offers "Create scenario from the recording"', !!(await page.$('#pfMakeScenario')));
+    const scenDir = path.join(dir, 'scenarios', 'scenarios'); // S.open(dir)/scenarios
+    await page.click('#pfMakeScenario');
+    // the route builds and saves the scenario; wait for its file to appear and read it back
+    let built = null;
+    for (let k = 0; k < 40 && !built; k++) {
+      await settle(page, 150);
+      const files = fs.existsSync(scenDir) ? fs.readdirSync(scenDir).filter((fn) => fn.endsWith('.json')) : [];
+      for (const fn of files) { try { const sc = JSON.parse(fs.readFileSync(path.join(scenDir, fn), 'utf8')); if (/^From recording/.test(String(sc.name || ''))) { built = sc; break; } } catch (e) { /* mid-write */ } }
+    }
+    T.check('it builds an API Scenario from the captured calls, in order (GET then POST), pre-filled with the recorded data',
+      !!built && (built.steps || []).length === 2 && built.steps[0].endpoint && built.steps[1].endpoint
+      && built.steps[0].params && built.steps[0].params.status === 'open'
+      && built.steps[1].body === '{"note":"from the recording"}' && built.steps[1].writes === true,
+      JSON.stringify(built && built.steps.map((s) => [s.endpoint, s.params, s.writes])));
+    T.check('the scenario it opens is runnable in API Scenarios (it appears in that page’s list)', !!built && scenarioStore.list(built.page).scenarios.some((x) => x.id === built.id));
+    // clicking it opens the scenario in API Scenarios (the shell switches screen), so we do not return to the flow list here
+
     await env.shot('process-flows.png');
     T.eq('no browser errors', errs().join(' | ').slice(0, 1500), '');
   } catch (e) {

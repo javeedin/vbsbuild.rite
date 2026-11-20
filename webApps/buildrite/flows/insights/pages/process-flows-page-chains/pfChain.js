@@ -435,6 +435,28 @@ define([
         return;
       }
 
+      // ── Create a scenario from this recording: its captured calls in order → an API Scenario, opened to Run (on request) ──
+      if (op === 'makeScenario') {
+        if (!MODEL || v.busy) return;
+        foldRows(v);
+        const f = readEditor(v);
+        if (!(f.pages || []).some((p) => p.calls && p.calls.length)) {
+          say(false, 'This flow has no recorded API calls to build a scenario from. Use “Record from the app” so each screen captures the calls it makes.');
+          return;
+        }
+        v.busy = 'scenario';
+        try {
+          const r = await SC.fromFlow(f.id || '', f);
+          const b = r.body || {};
+          if (!r.ok || !b.scenario) { say(false, (b && b.error) || 'The scenario could not be built from this recording.'); return; }
+          const s = b.scenario;
+          const left = (b.unmatched && b.unmatched.length) ? ' (' + b.unmatched.length + ' call(s) with no matching API left out)' : '';
+          say(true, 'Scenario “' + s.name + '” created with ' + ((s.steps || []).length) + ' step(s)' + left + ' — opening it in API Scenarios.');
+          bus.open({ record: 'api-scenario', params: { scId: s.id, page: s.page || '', title: (s.code ? s.code + ' · ' : '') + s.name } });
+        } finally { v.busy = ''; }
+        return;
+      }
+
       // the flow for the document: the pages with their screenshots (already on MODEL) and their APIs (resolved now)
       const withApisAsync = async (f) => Object.assign({}, f, {
         pages: await Promise.all((f.pages || []).map(async (p) => Object.assign({}, p, { apis: p.page ? await apisForPage(v, p.page) : [] }))) });

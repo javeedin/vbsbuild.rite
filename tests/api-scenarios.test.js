@@ -311,6 +311,33 @@ const ROOT = path.join(__dirname, 'fixtures', 'vb-sample');
     T.check('its runs, newest first; one opened again in full', runs.ok && runs.runs.length >= 5 && runs.runs[0].at >= runs.runs[1].at && store.runOf(page, runs.runs[0].id).run.rows.length >= 1);
     T.check('no workspace (no folder): said', S.open({ api, dir: () => '' }).list(page).ok === false);
 
+    T.section('a scenario built from a recorded flow (fromFlow) — on request, runnable');
+    host = 'https://shop.example.com/api'; // a test host, so the built POST may run when writes are allowed
+    const recFlow = { id: 'PF-9', name: 'Open an order', pages: [
+      { id: 'r1', page: 'shop/orders/order-list', calls: [
+        { method: 'GET', url: 'https://shop.example.com/api/shop/v1/orders?status=OPEN', path: '/shop/v1/orders', query: 'status=OPEN', status: 200, respKind: 'json', table: { columns: ['id'], rows: [['41']], total: 2 } }] },
+      { id: 'r2', page: 'shop/orders/order-detail', calls: [
+        { method: 'GET', url: 'https://shop.example.com/api/shop/v1/orders/41', path: '/shop/v1/orders/41', status: 200 },
+        { method: 'POST', url: 'https://shop.example.com/api/shop/v1/orders', path: '/shop/v1/orders', body: '{"customer":"41"}', status: 201 },
+        { method: 'GET', url: 'https://host/no/such/api', path: '/no/such/api', status: 200 }] }] };
+    const recFacts = {
+      'shop/orders/order-list': { label: 'Order list', integrations: { rest: [{ endpoint: 'shopApi/getOrders', method: 'GET' }], reports: [] }, logic: { chains: [] } },
+      'shop/orders/order-detail': { label: 'Order', integrations: { rest: [{ endpoint: 'shopApi/getOrderById', method: 'GET' }, { endpoint: 'shopApi/createOrder', method: 'POST', path: '/shop/v1/orders' }], reports: [] }, logic: { chains: [] } } };
+    const recMade = store.fromFlow(recFlow, recFacts, 'jane.doe', { env });
+    T.check('built and saved, named after the recording, the pages as a journey', recMade.ok && /From recording . Open an order/.test(recMade.scenario.name) && recMade.scenario.journey.map((j) => j.page).join() === 'shop/orders/order-list,shop/orders/order-detail', JSON.stringify(recMade.scenario && recMade.scenario.name));
+    const fsteps = recMade.scenario.steps;
+    T.check('the captured calls in order, pre-filled: GET keeps its query + expects its status/rows; the detail keeps {id} from the path; the POST keeps its body + is a write',
+      fsteps.map((s) => s.endpoint).join() === 'shopApi/getOrders,shopApi/getOrderById,shopApi/createOrder'
+      && fsteps[0].params.status === 'OPEN' && fsteps[0].expect.status === '200' && fsteps[0].expect.minRows === 1
+      && fsteps[1].params.id === '41' && fsteps[2].body === '{"customer":"41"}' && fsteps[2].writes === true && fsteps[2].expect.status === '201', JSON.stringify(fsteps.map((s) => [s.endpoint, s.params, s.expect, s.writes])));
+    T.check('a call with no matching API is left out and named in the notes', (recMade.unmatched || []).some((u) => u.path === '/no/such/api') && /no matching API|left out/.test(recMade.scenario.notes) && /no\/such\/api/.test(recMade.scenario.notes), recMade.scenario.notes);
+    const rrSafe = await store.run(recMade.scenario.id, env, { by: 'jane.doe' });
+    T.check('runs its reads end to end (list, detail/41); the write is held until writes are allowed', rrSafe.run.rows[0].steps[0].state === 'ok' && rrSafe.run.rows[0].steps[1].state === 'ok' && sent.indexOf('GET /shop/v1/orders/41') !== -1 && rrSafe.run.rows[0].steps[2].state === 'skip', JSON.stringify(rrSafe.run.rows[0].steps.map((s) => [s.state, s.note])));
+    store.save(Object.assign({}, recMade.scenario, { allowWrites: true }), 'jane.doe');
+    const rr = await store.run(recMade.scenario.id, env, { allowWrites: true, by: 'jane.doe' });
+    T.check('with writes allowed, the recorded POST runs too (its captured body)', rr.run.rows[0].steps[2].state === 'ok' && sent.some((x) => x === 'POST /shop/v1/orders'), JSON.stringify(rr.run.rows[0].steps.map((s) => [s.state, s.note])));
+    T.check('no flow / nothing matched: said, not thrown', store.fromFlow(null).ok === false && store.fromFlow({ name: 'x', pages: [{ page: 'shop/orders/order-list', calls: [{ method: 'GET', path: '/none', url: 'https://h/none' }] }] }, { 'shop/orders/order-list': recFacts['shop/orders/order-list'] }, 'j', { env }).ok === false);
+
     T.section('reading answers, filling values');
     const ans = { status: 200, json: { items: [{ OrderId: 5, lines: [{ qty: 2 }] }] }, rows: [{ PROJECT_ID: 'P1' }] };
     T.check('readPath: a path, a table row, auto: (any case), $status, $count; a field named status is the field', S.readPath(ans, 'items[0].lines[0].qty') === 2 && S.readPath(ans, 'rows[0].PROJECT_ID') === 'P1'

@@ -629,6 +629,53 @@ function open(o) {
     },
 
     /**
+     * A scenario built from a recorded flow (Process Flows → "Create scenario from the recording"), on request only: the
+     * flow's captured API calls in the order they fired, each pre-filled with the data the app sent and expecting the
+     * status it returned. Each page's calls are matched to that page's catalog (so the runner can resolve them) using
+     * flowRecorder.scenarioFromFlow; calls with no match are listed in the notes, never invented. Saved like any scenario.
+     */
+    fromFlow(flow, factsByPage, by, opts) {
+      if (!isObj(flow)) return no('No recorded flow to build from.');
+      const FR = require('./flowRecorder');
+      const env = isObj(opts) ? opts.env : null;
+      const acc = accepts(env);
+      const fb = isObj(factsByPage) ? factsByPage : {};
+      const apisByPage = {};
+      uniq((Array.isArray(flow.pages) ? flow.pages : []).map((p) => str(p && p.page))).filter(Boolean).forEach((pg) => {
+        const facts = Object.assign({}, fb[pg] || {}, { id: pg });
+        const cat = catalogOf(facts, opts);
+        const shown = acc({ steps: cat.map((c) => c.step) }).steps; // adds .api { method, path } per step
+        const integ = facts.integrations || {};
+        const bip = (integ.rest || []).filter((r) => /runBIPReport$/i.test(str(r.endpoint)) || /\/xmlpserver\//i.test(str(r.path)))[0];
+        const entries = [];
+        shown.forEach((st) => {
+          if (st.report && st.report.path) entries.push({ kind: 'report', endpoint: str((bip && bip.endpoint) || st.endpoint), report: { path: str(st.report.path), name: str(st.report.name), rowTag: str(st.report.rowTag) } });
+          else if (st.endpoint && st.api && st.api.path) entries.push({ kind: 'rest', endpoint: str(st.endpoint), method: str(st.api.method || 'GET').toUpperCase(), path: str(st.api.path), writes: !!st.writes });
+        });
+        apisByPage[pg] = entries;
+      });
+      const built = FR.scenarioFromFlow(flow, apisByPage);
+      if (!built.steps.length) {
+        return no(built.unmatched.length
+          ? 'None of the ' + built.unmatched.length + ' recorded call(s) match an API in these pages’ technical sheets, so there is nothing to run. Build the pages’ sheets (Application pages), then try again.'
+          : 'The recording captured no API calls to turn into a scenario.');
+      }
+      const label = str(flow.name) || 'recording';
+      const first = built.pages.filter((pg) => fb[pg])[0] || built.pages[0] || str((flow.pages && flow.pages[0] && flow.pages[0].page) || '');
+      const journey = built.pages.map((pg) => ({ page: pg, label: str((fb[pg] && fb[pg].label) || pg.split('/').pop()) }));
+      let notes = 'Built from the recorded walkthrough “' + label + '”: its captured API calls in the order they fired, each pre-filled with the data the app sent and expecting the status it returned. Check the values, then Run.';
+      if (built.unmatched.length) {
+        notes += ' ' + built.unmatched.length + ' recorded call(s) had no matching API in these pages’ sheets and were left out: '
+          + built.unmatched.slice(0, 8).map((u) => u.method + ' ' + u.path).join(', ') + (built.unmatched.length > 8 ? '…' : '') + '.';
+      }
+      const s = clean({ page: first, name: 'From recording — ' + label, kind: 'happy', steps: built.steps,
+        journey: journey.length ? journey : [{ page: first, label }], notes }, by, null);
+      const saved = store.save(s, by, env);
+      if (saved.ok) saved.unmatched = built.unmatched;
+      return saved;
+    },
+
+    /**
      * The journey continued on the next page (Next → the catalog → the cart): that page's steps after these, with the
      * values picked so far handed on (a {{projectId}} the cart sends is the Project picked on the first page).
      */

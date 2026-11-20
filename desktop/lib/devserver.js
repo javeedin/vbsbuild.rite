@@ -1254,6 +1254,19 @@ function createDevServer(o) {
               const r = sc.draft(pid, facts, who(), Object.assign(optsOf(pid, facts), b.into && typeof b.into === 'object' ? { into: b.into } : {}));
               return jsonA(200, r.ok ? Object.assign(r, { next: nextOf(facts) }) : r);
             }
+            // a scenario built from a recorded Process Flow (on request): its captured calls in order, matched to the pages' catalog
+            if (pathname === '/__api/scenarios/from-flow' && post) {
+              const pf = o.processFlowStore;
+              const flow = (b.flow && typeof b.flow === 'object') ? b.flow : (b.flowId && pf ? ((pf.get(String(b.flowId)) || {}).flow || null) : null);
+              if (!flow) return jsonA(200, { ok: false, error: 'No such recorded flow.' });
+              const pageIds = Array.from(new Set((flow.pages || []).map((p) => String((p && p.page) || '')).filter(Boolean)));
+              const fb = {};
+              pageIds.slice(0, 12).forEach((pg) => { const f = factsOf(pg); if (f) fb[pg] = f; });
+              const first = pageIds.filter((pg) => fb[pg])[0] || pageIds[0] || '';
+              const r = sc.fromFlow(flow, fb, who(), fb[first] ? optsOf(first, fb[first]) : { env });
+              if (r.ok) log(`API Scenarios: from recording "${flow.name || flow.id}" -> ${r.scenario.name} (${(r.scenario.steps || []).length} step(s)${r.unmatched && r.unmatched.length ? ', ' + r.unmatched.length + ' left out' : ''})`);
+              return jsonA(200, r);
+            }
             // the journey continued on the next page (Next → the catalog → the cart)
             if (pathname === '/__api/scenarios/extend' && post) {
               const pid = String(b.page || '');
