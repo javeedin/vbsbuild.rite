@@ -1575,6 +1575,19 @@ html[data-nx-product="buildrite"] .nx-pagehead .nx-vbs-fchip--on, html[data-nx-l
 html[data-nx-product="buildrite"] .nx-pagehead .nx-vbs-fchip--on .nx-vbs-fcount, html[data-nx-look="redwood"] .nx-pagehead .nx-vbs-fchip--on .nx-vbs-fcount { background: #e3edf8; color: #1d5fae; }
 html[data-nx-product="buildrite"] .nx-pagehead .nx-vbs-fsearch, html[data-nx-look="redwood"] .nx-pagehead .nx-vbs-fsearch { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .38); color: #fff; }
 html[data-nx-product="buildrite"] .nx-pagehead .nx-vbs-fsearch::placeholder, html[data-nx-look="redwood"] .nx-pagehead .nx-vbs-fsearch::placeholder { color: rgba(255, 255, 255, .72); }
+/* …but on the complete light theme (menu › Colours › All light) the band is light, so these go dark-on-light */
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-pagehead .nx-vbs-fchip { background: var(--nx-surface); border-color: var(--nx-line-strong); color: var(--nx-ink); }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-pagehead .nx-vbs-fchip:hover { background: var(--nx-hover); }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-pagehead .nx-vbs-fcount { background: var(--nx-surface-2); color: var(--nx-muted); }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-pagehead .nx-vbs-fchip--on { background: var(--nx-band); border-color: var(--nx-band); color: #fff; }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-pagehead .nx-vbs-fchip--on .nx-vbs-fcount { background: rgba(255, 255, 255, .22); color: #fff; }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-pagehead .nx-vbs-fsearch { background: var(--nx-surface); border-color: var(--nx-line-strong); color: var(--nx-ink); }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-pagehead .nx-vbs-fsearch::placeholder { color: var(--nx-faint); }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-pagehead .nx-jp-dates { border-color: var(--nx-line-strong); }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-pagehead .nx-jp-dates--on { background: var(--nx-surface-2); border-color: var(--nx-band); }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-pagehead .nx-jp-datesclear { background: var(--nx-surface); border-color: var(--nx-line-strong); color: var(--nx-ink); }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-pagehead .nx-jp-datesclear:hover { background: var(--nx-hover); }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-pagehead .nx-jp-work input { accent-color: var(--nx-accent); }
 .nx-vbs-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 12px 16px 0; font-size: 13px; }
 .nx-vbs-crumb { padding: 2px 4px; border: 0; background: none; color: #1d5fae; font: inherit; font-weight: 600; cursor: pointer; border-radius: 4px; }
 .nx-vbs-crumb:hover { text-decoration: underline; }

@@ -152,20 +152,48 @@ html[data-nx-theme="smoky"] { --nx-band: #4b5461; --nx-band-ink: #e4e7eb; --nx-n
 html[data-nx-theme="slate"] { --nx-band: #3d5170; --nx-band-ink: #dfe6f0; --nx-nav-bg: #1e2a3a; --nx-nav-edge: #151e2a; }
 html[data-nx-theme="forest"] { --nx-band: #2f5b42; --nx-band-ink: #dcebe1; --nx-nav-bg: #1b3326; --nx-nav-edge: #13261b; }
 html[data-nx-theme="ember"] { --nx-band: #8a3d2c; --nx-band-ink: #f5e3dd; --nx-nav-bg: #45211a; --nx-nav-edge: #331812; }
-/* A light menu: white, dark type, the open screen marked in the theme's colour. */
-html[data-nx-menu="light"] .nx-nav { background: var(--nx-surface); color: var(--nx-ink); border-right-color: var(--nx-line); }
-html[data-nx-menu="light"] .nx-nav-label { color: var(--nx-faint); }
-html[data-nx-menu="light"] .nx-nav-item { color: var(--nx-ink); }
-html[data-nx-menu="light"] .nx-nav-item:hover { background: var(--nx-hover); }
-html[data-nx-menu="light"] .nx-nav-item--on { background: color-mix(in srgb, var(--nx-band) 12%, #fff); color: var(--nx-band); }
-html[data-nx-menu="light"] .nx-nav-item--on::before { background: var(--nx-band); }
-html[data-nx-menu="light"] .nx-nav-item:focus-visible, html[data-nx-menu="light"] .nx-nav-foot:focus-visible { outline-color: var(--nx-band); }
-html[data-nx-menu="light"] .nx-nav-soon { background: #c3ccd6; }
-html[data-nx-menu="light"] .nx-nav-loading, html[data-nx-menu="light"] .nx-nav-foot { color: var(--nx-muted); }
-html[data-nx-menu="light"] .nx-nav-foot:hover { background: var(--nx-hover); color: var(--nx-ink); }
-html[data-nx-menu="light"] .nx-app--rail .nx-nav-group { border-top-color: var(--nx-line); }
-html[data-nx-menu="light"] .nx-nav-scroll { scrollbar-color: #c3ccd6 transparent; }
-html[data-nx-menu="light"] .nx-nav-scroll::-webkit-scrollbar-thumb { background: #c3ccd6; }
+/* A light menu (also used by the complete "All light" theme): white, dark type, the open screen marked in the theme's colour. */
+html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav { background: var(--nx-surface); color: var(--nx-ink); border-right-color: var(--nx-line); }
+html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-label { color: var(--nx-faint); }
+html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-item { color: var(--nx-ink); }
+html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-item:hover { background: var(--nx-hover); }
+html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-item--on { background: color-mix(in srgb, var(--nx-band) 12%, #fff); color: var(--nx-band); }
+html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-item--on::before { background: var(--nx-band); }
+html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-item:focus-visible, html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-foot:focus-visible { outline-color: var(--nx-band); }
+html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-soon { background: #c3ccd6; }
+html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-loading, html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-foot { color: var(--nx-muted); }
+html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-foot:hover { background: var(--nx-hover); color: var(--nx-ink); }
+html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-app--rail .nx-nav-group { border-top-color: var(--nx-line); }
+html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-scroll { scrollbar-color: #c3ccd6 transparent; }
+html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-scroll::-webkit-scrollbar-thumb { background: #c3ccd6; }
+
+/* "All light": a complete light theme — the page heads and dialog heads go light too, keeping the chosen colour as the
+   accent (the heading, the thin top strip, the primary action). Set in your menu › Colours. */
+html[data-nx-menu="all"] .nx-pagehead { background: var(--nx-surface); color: var(--nx-ink); border-bottom: 1px solid var(--nx-line); }
+html[data-nx-menu="all"] .nx-pagehead::after { height: 3px; background: var(--nx-band); }
+html[data-nx-menu="all"] .nx-pagehead h1 { color: var(--nx-ink); }
+html[data-nx-menu="all"] .nx-pagehead .nx-kicker { color: var(--nx-band); }
+html[data-nx-menu="all"] .nx-pagehead .nx-sub, html[data-nx-menu="all"] .nx-pagehead .nx-note { color: var(--nx-muted); }
+html[data-nx-menu="all"] .nx-pagehead .nx-btn { background: var(--nx-surface); border-color: var(--nx-line-strong); color: var(--nx-ink); }
+html[data-nx-menu="all"] .nx-pagehead .nx-btn:hover { background: var(--nx-hover); }
+html[data-nx-menu="all"] .nx-pagehead .nx-btn--plain { background: transparent; border-color: transparent; }
+html[data-nx-menu="all"] .nx-pagehead .nx-btn--plain:hover { background: var(--nx-hover); }
+html[data-nx-menu="all"] .nx-pagehead .nx-btn--primary { background: var(--nx-accent); border-color: var(--nx-accent); color: #fff; }
+html[data-nx-menu="all"] .nx-pagehead .nx-btn--primary:hover { background: var(--nx-accent-hover); }
+html[data-nx-menu="all"] .nx-pagehead .nx-link { color: var(--nx-accent); }
+html[data-nx-menu="all"] .nx-pagehead .nx-seg { background: var(--nx-surface-2); border: 1px solid var(--nx-line); }
+html[data-nx-menu="all"] .nx-pagehead .nx-seg-btn { color: var(--nx-muted); }
+html[data-nx-menu="all"] .nx-pagehead .nx-seg-btn--on { background: #fff; color: var(--nx-band); box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08); }
+html[data-nx-menu="all"] .nx-pagehead .nx-cm-warn { color: var(--nx-warn); }
+html[data-nx-menu="all"] .nx-pagehead .nx-cm-btn--dangertext { color: var(--nx-danger); }
+html[data-nx-menu="all"] .nx-pagehead :focus-visible { outline-color: var(--nx-accent); }
+html[data-nx-menu="all"] .nx-dialog-head { background: var(--nx-surface); color: var(--nx-ink); border-bottom: 1px solid var(--nx-line); }
+html[data-nx-menu="all"] .nx-dialog-head::after { height: 3px; background: var(--nx-band); }
+html[data-nx-menu="all"] .nx-dialog-head .nx-kicker { color: var(--nx-band); }
+html[data-nx-menu="all"] .nx-dialog-head .nx-sub { color: var(--nx-muted); }
+html[data-nx-menu="all"] .nx-dialog-head .nx-iconbtn { color: var(--nx-muted); }
+html[data-nx-menu="all"] .nx-dialog-head .nx-iconbtn:hover { background: var(--nx-hover); color: var(--nx-ink); }
+html[data-nx-menu="all"] .nx-dialog-title { color: var(--nx-ink); }
 
 /* The colour picker in your menu */
 .nx-themes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }

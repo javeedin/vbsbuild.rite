@@ -22,7 +22,8 @@ vm.runInContext(fs.readFileSync(path.join(NEXT, 'resources', 'js', 'theme.js'), 
 T.section('choices');
 T.eq('the default: Redwood teal, a dark menu', JSON.stringify(theme.normal(null)), '{"theme":"teal","menu":"dark"}');
 T.eq('an unknown theme or menu falls back', JSON.stringify(theme.normal({ theme: 'pink', menu: 'neon' })), '{"theme":"teal","menu":"dark"}');
-T.eq('six themes, two menus', [theme.THEMES.length, theme.MENUS.map((m) => m.id).join()].join(' | '), '6 | dark,light');
+T.eq('six themes, three menu modes (incl. the complete light theme)', [theme.THEMES.length, theme.MENUS.map((m) => m.id).join()].join(' | '), '6 | dark,light,all');
+T.eq('"All light" is a valid choice, kept as is', JSON.stringify(theme.normal({ theme: 'slate', menu: 'all' })), '{"theme":"slate","menu":"all"}');
 const kept = {};
 const win = { localStorage: { getItem: (k) => kept[k] || null, setItem: (k, v) => { kept[k] = v; } } };
 T.eq('nothing kept: the default', theme.load(win).theme, 'teal');
@@ -46,7 +47,8 @@ theme.THEMES.forEach((t) => {
   T.eq(t.label + ': its colours in next.css match the picker', [val(block, 'nx-nav-bg'), val(block, 'nx-band')].join(), [t.nav, t.band].join());
 });
 T.check('the menu reads its own colour (not the page head\'s)', /\.nx-nav \{ background: var\(--nx-nav-bg\)/.test(css));
-T.check('a light menu is styled', /html\[data-nx-menu="light"\] \.nx-nav \{ background: var\(--nx-surface\)/.test(css));
+T.check('a light menu is styled (light + all modes)', /html:is\(\[data-nx-menu="light"\],\[data-nx-menu="all"\]\) \.nx-nav \{ background: var\(--nx-surface\)/.test(css));
+T.check('"All light" also lightens the page heads and dialog heads', /html\[data-nx-menu="all"\] \.nx-pagehead \{ background: var\(--nx-surface\)/.test(css) && /html\[data-nx-menu="all"\] \.nx-dialog-head \{ background: var\(--nx-surface\)/.test(css));
 
 T.section('readable');
 const lum = (h) => {

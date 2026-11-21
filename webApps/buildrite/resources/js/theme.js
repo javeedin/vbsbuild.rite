@@ -14,7 +14,9 @@ define([], function () {
     { id: 'forest', label: 'Forest', nav: '#1b3326', band: '#2f5b42' },
     { id: 'ember', label: 'Ember', nav: '#45211a', band: '#8a3d2c' }
   ];
-  var MENUS = [{ id: 'dark', label: 'Dark menu' }, { id: 'light', label: 'Light menu' }];
+  // dark = the menu dark and the page heads in colour; light = the menu light, the page heads still in colour;
+  // all = a complete light theme (the menu, the page heads and the dialogs all light, the colour kept as the accent).
+  var MENUS = [{ id: 'dark', label: 'Dark menu' }, { id: 'light', label: 'Light menu' }, { id: 'all', label: 'All light' }];
   var DEFAULT = { theme: 'teal', menu: 'dark' };
 
   function known(list, id) { return list.some(function (x) { return x.id === id; }); }
