@@ -93,14 +93,17 @@ T.check('no match for a different method or path → null', R.callForApi({ metho
 T.section('scenarioFromFlow (a recorded walkthrough → ordered scenario steps)');
 const flowFx = { name: 'Open a request', pages: [
   { id: 'p1', page: 'portalapp/customer-portal/request-list', calls: [
+    { method: 'GET', url: 'https://host/version_171/resources/css/app.css', path: '/version_171/resources/css/app.css', status: 200 }, // asset → dropped
+    { method: 'GET', url: 'https://host/services/eqp-v1/openapi3.json', path: '/services/eqp-v1/openapi3.json', status: 200 }, // descriptor → dropped
+    { method: 'GET', url: 'https://host/_currentuser', path: '/_currentuser', status: 200 }, // framework → dropped
     { method: 'get', url: 'https://host/crm/v1/requests?q=open', path: '/crm/v1/requests', query: 'q=open', status: 200, respKind: 'json', table: { columns: ['id'], rows: [['7']], total: 3 } },
     { method: 'get', url: 'https://host/crm/v1/requests?q=open', path: '/crm/v1/requests', query: 'q=open', status: 200 }, // identical in a row → collapsed
+    { method: 'GET', url: 'https://host/crm/v1/requests/7', path: '/crm/v1/requests/7', status: 200 }, // belongs to p2's sheet — matched by the flow-wide catalog
   ] },
   { id: 'p2', page: 'portalapp/customer-portal/project-create-request', calls: [
-    { method: 'GET', url: 'https://host/crm/v1/requests/7', path: '/crm/v1/requests/7', status: 200 },
     { method: 'POST', url: 'https://host/crm/v1/requests', path: '/crm/v1/requests', body: '{"name":"New"}', status: 201 },
     { method: 'POST', url: 'https://host/xmlpserver/services/v2/ReportService', path: '/xmlpserver/services/v2/ReportService', body: '<soap><ns:reportAbsolutePath>/Custom/CRM/REQUESTS.xdo</ns:reportAbsolutePath></soap>', status: 200, respKind: 'bip', table: { columns: ['NUM'], rows: [['R-1']], total: 1 } },
-    { method: 'GET', url: 'https://host/no/catalog/match', path: '/no/catalog/match', status: 200 }, // no catalog API → unmatched
+    { method: 'GET', url: 'https://host/no/catalog/match', path: '/no/catalog/match', status: 200 }, // a genuine call, no catalog API → unmatched
   ] },
 ] };
 const apisByPage = {
@@ -119,6 +122,9 @@ T.check('a path like /requests/{id} matches /requests/7 and captures { id: 7 } f
 T.check('a POST carries the captured body, is marked as a write, expects 201', sf.steps[2].endpoint === 'crm/createRequest' && sf.steps[2].body === '{"name":"New"}' && sf.steps[2].writes === true && sf.steps[2].expect.status === '201', JSON.stringify(sf.steps[2]));
 T.check('a BI Publisher run becomes a report step with the path from its body', !!sf.steps[3].report && sf.steps[3].report.path === '/Custom/CRM/REQUESTS.xdo' && sf.steps[3].report.name === 'REQUESTS' && sf.steps[3].endpoint === 'bip/runReport', JSON.stringify(sf.steps[3]));
 T.check('a call with no catalog API is reported (unmatched), never invented', sf.unmatched.length === 1 && sf.unmatched[0].method === 'GET' && sf.unmatched[0].path === '/no/catalog/match' && sf.matched === 4, JSON.stringify(sf.unmatched));
+T.check('static assets / framework resources (css, openapi, /_currentuser) are dropped silently, not "left out"', sf.skipped === 3 && !sf.unmatched.some((u) => /\.css|openapi|_currentuser/.test(u.path)), 'skipped=' + sf.skipped + ' ' + JSON.stringify(sf.unmatched));
+T.check('a call that fires on one page but lives in another page’s sheet still becomes a step (flow-wide catalog)', sf.steps[1].endpoint === 'crm/getRequest' && sf.steps[1].page === 'portalapp/customer-portal/request-list' && sf.steps[1].params.id === '7', JSON.stringify(sf.steps[1]));
+T.check('isAssetCall flags page scaffolding and passes a real API', R.isAssetCall({ path: '/version_9/resources/js/app.js', url: 'https://h/version_9/resources/js/app.js' }) && R.isAssetCall({ url: 'https://h/services/catalog.json' }) && !R.isAssetCall({ url: 'https://h/crm/v1/requests', path: '/crm/v1/requests' }));
 T.check('step ids renumbered s1..sN, pages in flow order', sf.steps.map((s) => s.id).join(',') === 's1,s2,s3,s4' && sf.pages.join(',') === 'portalapp/customer-portal/request-list,portalapp/customer-portal/project-create-request');
 T.check('no pages / no apis: nothing built, nothing thrown', R.scenarioFromFlow(null, null).steps.length === 0 && R.scenarioFromFlow({ pages: [] }, {}).matched === 0);
 T.check('queryParams decodes values; isReportCall / reportPathOf read a SOAP run', R.queryParams('a=1&b=two%20words&c').b === 'two words' && R.isReportCall({ url: 'https://h/xmlpserver/x' }) && R.reportPathOf('<x><reportAbsolutePath>/A/B.xdo</reportAbsolutePath></x>') === '/A/B.xdo');

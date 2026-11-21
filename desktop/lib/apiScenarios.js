@@ -657,16 +657,17 @@ function open(o) {
       const built = FR.scenarioFromFlow(flow, apisByPage);
       if (!built.steps.length) {
         return no(built.unmatched.length
-          ? 'None of the ' + built.unmatched.length + ' recorded call(s) match an API in these pages’ technical sheets, so there is nothing to run. Build the pages’ sheets (Application pages), then try again.'
-          : 'The recording captured no API calls to turn into a scenario.');
+          ? 'None of the ' + built.unmatched.length + ' business API call(s) in this recording match an API in these pages’ technical sheets, so there is nothing to run. Build the pages’ sheets (Application pages), then try again.'
+          : 'The recording captured no business API calls to turn into a scenario (only page resources like scripts and styles).');
       }
       const label = str(flow.name) || 'recording';
       const first = built.pages.filter((pg) => fb[pg])[0] || built.pages[0] || str((flow.pages && flow.pages[0] && flow.pages[0].page) || '');
       const journey = built.pages.map((pg) => ({ page: pg, label: str((fb[pg] && fb[pg].label) || pg.split('/').pop()) }));
-      let notes = 'Built from the recorded walkthrough “' + label + '”: its captured API calls in the order they fired, each pre-filled with the data the app sent and expecting the status it returned. Check the values, then Run.';
+      let notes = 'Built from the recorded walkthrough “' + label + '”: its captured API calls in the order they fired, across ' + built.pages.length + ' page(s), each pre-filled with the data the app sent and expecting the status it returned. Check the values, then Run. (Page resources — scripts, styles, descriptors — are not steps.)';
       if (built.unmatched.length) {
-        notes += ' ' + built.unmatched.length + ' recorded call(s) had no matching API in these pages’ sheets and were left out: '
-          + built.unmatched.slice(0, 8).map((u) => u.method + ' ' + u.path).join(', ') + (built.unmatched.length > 8 ? '…' : '') + '.';
+        notes += ' ' + built.unmatched.length + ' business call(s) had no matching API in these pages’ sheets and were left out: '
+          + built.unmatched.slice(0, 8).map((u) => u.method + ' ' + u.path).join(', ') + (built.unmatched.length > 8 ? '…' : '')
+          + '. Build those pages’ technical sheets (Application pages) so they become steps too.';
       }
       const s = clean({ page: first, name: 'From recording — ' + label, kind: 'happy', steps: built.steps,
         journey: journey.length ? journey : [{ page: first, label }], notes }, by, null);

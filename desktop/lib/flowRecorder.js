@@ -224,6 +224,21 @@ function pathParamsOf(apiPath, urlPath) {
   a.forEach((seg, idx) => { const m = /^\{(.+)\}$/.exec(seg); if (m) out[m[1]] = dec(u[off + idx] || ''); });
   return out;
 }
+/** Is a captured call a static asset or framework/resource load, not a business API? These are the page's scaffolding —
+ *  CSS / JS / fonts / images, VBCS versioned resources (/version_NNN/…, /resources/…), the OpenAPI / app-flow / catalog
+ *  descriptors, and the shell's own calls (/_currentuser). They are dropped from a scenario silently, never "left out". */
+function isAssetCall(c) {
+  if (!c || typeof c !== 'object') return true;
+  const u = str(c.url);
+  const p = str(c.path || parse(u).path).replace(/[?#].*$/, '');
+  if (!p || p === '/') return true;
+  // by file extension — real Fusion / APEX / VBCS REST endpoints carry no extension
+  if (/\.(css|js|mjs|cjs|map|json|jsonp|xml|html?|txt|md|markdown|wasm|woff2?|ttf|eot|otf|svg|png|jpe?g|gif|ico|webp|avif|bmp|mp4|webm|csv)$/i.test(p)) return true;
+  // VBCS / framework resource paths and well-known non-business endpoints
+  if (/\/version_\d+\/|\/resources\/|\/webapps\/|\/deployments\/|\/dynamicLayouts?\/|requirejs|\/vb\/|\/fnd\/|\bopenapi3?\b|\bapp-flow\b|\/_currentuser\b|\/describe\b/i.test(u)) return true;
+  if (/(^|\/)(fonts?|images?|img|icons?|assets|static|cdn|css|js)\//i.test(p)) return true;
+  return false;
+}
 /** Is a captured call a BI Publisher report run (its SOAP transport), by its url, decoded kind, or run-report body? */
 function isReportCall(c) {
   if (!c) return false;
@@ -273,46 +288,59 @@ function sameSent(a, b) {
 }
 /**
  * Build ordered API-scenario steps from a recorded flow, so a walkthrough becomes a runnable scenario — only when a
- * person asks for it, never on its own. Each captured call becomes a step in the order it fired (pages in flow order),
- * pre-filled with the data the app sent (the query as params, the request body) and expecting the status it returned
- * (and a row when its answer had rows). A call is matched to the page's catalog so the scenario runner can resolve it:
- * REST by method + path pattern, a BI Publisher run by the report path in its body (else the page's next report).
- * Calls with no catalog match are reported (unmatched), never invented.
+ * person asks for it, never on its own. Each captured business call becomes a step in the order it fired (pages in flow
+ * order), pre-filled with the data the app sent (the query as params, the request body) and expecting the status it
+ * returned (and a row when its answer had rows). A call is matched so the scenario runner can resolve it: REST by method
+ * + path pattern, a BI Publisher run by the report path in its body. The match is made against the WHOLE flow's catalog
+ * (its own page first, then any page it walked through), because a call often fires on one page but belongs to another's
+ * sheet (shared services, a call made as the next page loads). Static assets and framework resources (CSS/JS, OpenAPI,
+ * app-flow, /version_…/, /_currentuser) are dropped silently — never counted as "left out". A genuine business call with
+ * no catalog match anywhere is reported (unmatched, de-duplicated), never invented.
  *   apisByPage: { <pageId>: [ { kind:'rest', endpoint, method, path, writes }
  *                           | { kind:'report', endpoint, report:{ path, name, rowTag } } ] }
- *   → { steps: [scenario step], matched, unmatched: [{ page, method, path }], pages: [pageId] }
+ *   → { steps: [scenario step], matched, unmatched: [{ page, method, path }], skipped (assets dropped), pages: [pageId] }
  */
 function scenarioFromFlow(flow, apisByPage) {
   const f = (flow && typeof flow === 'object') ? flow : {};
   const byPage = (apisByPage && typeof apisByPage === 'object') ? apisByPage : {};
   const made = [];
   const unmatched = [];
+  const seenUnmatched = {};
+  let skipped = 0;
   const pages = [];
+  // the whole flow's catalog, so a call that fired on one page but lives in another's sheet still resolves
+  const allEntries = [];
+  Object.keys(byPage).forEach((k) => { (Array.isArray(byPage[k]) ? byPage[k] : []).forEach((e) => { if (e) allEntries.push(e); }); });
+  const allRest = allEntries.filter((e) => e.kind === 'rest');
+  const allReports = allEntries.filter((e) => e.kind === 'report');
+  const usedReport = {};
+  const bestRest = (list, method, path) => list.filter((x) => str(x.method || 'GET').toUpperCase() === method && pathMatches(str(x.path), path))
+    .sort((a, b) => Math.abs(str(a.path).length - path.length) - Math.abs(str(b.path).length - path.length))[0] || null;
   (Array.isArray(f.pages) ? f.pages : []).forEach((p) => {
     const pageId = str(p && p.page);
     if (pageId && pages.indexOf(pageId) === -1) pages.push(pageId);
-    const entries = Array.isArray(byPage[pageId]) ? byPage[pageId] : [];
-    const rest = entries.filter((e) => e && e.kind === 'rest');
-    const reports = entries.filter((e) => e && e.kind === 'report');
-    const usedReport = {};
+    const own = Array.isArray(byPage[pageId]) ? byPage[pageId] : [];
+    const ownRest = own.filter((e) => e && e.kind === 'rest');
+    const ownReports = own.filter((e) => e && e.kind === 'report');
     (Array.isArray(p && p.calls) ? p.calls : []).forEach((c) => {
       if (!c || typeof c !== 'object') return;
+      if (isAssetCall(c)) { skipped++; return; } // page scaffolding, not a business call
       const method = str(c.method || 'GET').toUpperCase();
       const path = str(c.path || parse(c.url || '').path);
       if (isReportCall(c)) {
         const want = reportPathOf(c.body);
-        let e = want ? reports.filter((r) => r.report && reportPathsEqual(r.report.path, want))[0] : null;
-        if (!e) e = reports.filter((r) => r.report && !usedReport[r.report.path])[0] || reports[0] || null;
-        if (!e) { unmatched.push({ page: pageId, method: 'REPORT', path: want || path }); return; }
+        const findReport = (list) => (want ? list.filter((r) => r.report && reportPathsEqual(r.report.path, want))[0] : null)
+          || list.filter((r) => r.report && !usedReport[r.report.path])[0] || list[0] || null;
+        const e = findReport(ownReports) || findReport(allReports);
+        if (!e) { const key = 'REPORT ' + (want || path); if (!seenUnmatched[key]) { seenUnmatched[key] = 1; unmatched.push({ page: pageId, method: 'REPORT', path: want || path }); } return; }
         usedReport[str(e.report.path)] = true;
         made.push({ id: '', name: stepNameOf(e, c), endpoint: str(e.endpoint || ''),
           report: { path: str((e.report && e.report.path) || want), name: str(e.report && e.report.name), rowTag: str(e.report && e.report.rowTag) },
           params: {}, extra: '', body: '', extract: [], expect: expectFromCall(c), writes: false, page: pageId, from: 'recording' });
         return;
       }
-      const e = rest.filter((x) => str(x.method || 'GET').toUpperCase() === method && pathMatches(str(x.path), path))
-        .sort((a, b) => Math.abs(str(a.path).length - path.length) - Math.abs(str(b.path).length - path.length))[0];
-      if (!e) { unmatched.push({ page: pageId, method, path }); return; }
+      const e = bestRest(ownRest, method, path) || bestRest(allRest, method, path);
+      if (!e) { const key = method + ' ' + path; if (!seenUnmatched[key]) { seenUnmatched[key] = 1; unmatched.push({ page: pageId, method, path }); } return; }
       const params = Object.assign({}, pathParamsOf(str(e.path), path), queryParams(c.query || (str(c.url).indexOf('?') !== -1 ? str(c.url).slice(str(c.url).indexOf('?') + 1) : '')));
       made.push({ id: '', name: stepNameOf(e, c), endpoint: str(e.endpoint),
         report: null, params, extra: '', body: str(c.body || ''), extract: [], expect: expectFromCall(c), writes: !!e.writes, page: pageId, from: 'recording' });
@@ -321,7 +349,7 @@ function scenarioFromFlow(flow, apisByPage) {
   const steps = [];
   made.forEach((st) => { if (!sameSent(steps[steps.length - 1], st)) steps.push(st); });
   steps.forEach((st, i) => { st.id = 's' + (i + 1); });
-  return { steps, matched: steps.length, unmatched, pages };
+  return { steps, matched: steps.length, unmatched, skipped, pages };
 }
 
-module.exports = { matchPage, buildSteps, callForApi, pathMatches, trimCall, decodeResponse, scenarioFromFlow, queryParams, isReportCall, reportPathOf, parse, routeTail, routeOpen };
+module.exports = { matchPage, buildSteps, callForApi, pathMatches, trimCall, decodeResponse, scenarioFromFlow, queryParams, isReportCall, isAssetCall, reportPathOf, parse, routeTail, routeOpen };
