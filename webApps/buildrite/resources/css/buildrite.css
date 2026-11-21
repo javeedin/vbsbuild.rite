@@ -36,19 +36,19 @@ html[data-nx-product="buildrite"] .nx-nav-scroll { scrollbar-color: rgba(255, 25
 
 /* ── "All light": a complete light theme (menu › Colours). The menu, every page header and every dialog header go light,
       the chosen colour kept as the accent. Scoped to the product + the choice so it wins over the teal product skin above. */
-html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav { background: var(--nx-surface); color: var(--nx-ink); border-right-color: var(--nx-line); }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav { background: var(--nx-nav-smoke); color: var(--nx-ink); border-right-color: var(--nx-line); }
 html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-label { color: var(--nx-faint); }
 html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-item { color: var(--nx-ink); }
 html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-icon { opacity: 0.85; }
-html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-item:hover { background: var(--nx-hover); color: var(--nx-ink); }
-html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-item--on, html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-item--on:hover { background: color-mix(in srgb, var(--nx-band) 12%, #fff); color: var(--nx-band); }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-item:hover { background: var(--nx-nav-smoke-hover); color: var(--nx-ink); }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-item--on, html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-item--on:hover { background: #fff; color: var(--nx-band); }
 html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-item--on::before { background: var(--nx-band); }
 html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-item:focus-visible, html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-foot:focus-visible { outline-color: var(--nx-band); }
-html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-soon { background: #c3ccd6; }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-soon { background: #b9c2cd; }
 html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-loading, html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-foot { color: var(--nx-muted); }
-html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-foot:hover { background: var(--nx-hover); color: var(--nx-ink); }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-foot:hover { background: var(--nx-nav-smoke-hover); color: var(--nx-ink); }
 html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-app--rail .nx-nav-group { border-top-color: var(--nx-line); }
-html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-scroll { scrollbar-color: #c3ccd6 transparent; }
+html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-nav-scroll { scrollbar-color: #b9c2cd transparent; }
 /* page headers */
 html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-pagehead { background: var(--nx-surface); color: var(--nx-ink); border-bottom: 1px solid var(--nx-line); }
 html[data-nx-product="buildrite"][data-nx-menu="all"] .nx-pagehead::after { height: 3px; border-radius: 0; background: var(--nx-band); }

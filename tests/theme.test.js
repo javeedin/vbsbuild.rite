@@ -49,6 +49,7 @@ theme.THEMES.forEach((t) => {
 T.check('the menu reads its own colour (not the page head\'s)', /\.nx-nav \{ background: var\(--nx-nav-bg\)/.test(css));
 T.check('a light menu is styled (light + all modes)', /html:is\(\[data-nx-menu="light"\],\[data-nx-menu="all"\]\) \.nx-nav \{ background: var\(--nx-surface\)/.test(css));
 T.check('"All light" also lightens the page heads and dialog heads', /html\[data-nx-menu="all"\] \.nx-pagehead \{ background: var\(--nx-surface\)/.test(css) && /html\[data-nx-menu="all"\] \.nx-dialog-head \{ background: var\(--nx-surface\)/.test(css));
+T.check('"All light" gives the menu a smoky grey (not pure white)', /--nx-nav-smoke:\s*#[0-9a-f]{6}/i.test(css) && /html\[data-nx-menu="all"\] \.nx-nav \{ background: var\(--nx-nav-smoke\)/.test(css));
 
 T.section('readable');
 const lum = (h) => {

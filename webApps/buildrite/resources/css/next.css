@@ -20,6 +20,8 @@
   --nx-ok: #15803d;
   --nx-band: #2e5468;
   --nx-band-ink: #e2edf2;
+  --nx-nav-smoke: #e7ebf0;
+  --nx-nav-smoke-hover: #dbe1e9;
   --nx-nav-bg: #1d3846;
   --nx-nav-edge: #142a35;
   --nx-top-h: 56px;
@@ -166,6 +168,15 @@ html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-foot:hover { backgr
 html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-app--rail .nx-nav-group { border-top-color: var(--nx-line); }
 html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-scroll { scrollbar-color: #c3ccd6 transparent; }
 html:is([data-nx-menu="light"],[data-nx-menu="all"]) .nx-nav-scroll::-webkit-scrollbar-thumb { background: #c3ccd6; }
+
+/* "All light": the menu is a soft smoky grey (not pure white) so it reads as a panel beside the white content; the open
+   item sits on a white chip. (Light menu stays white; this overrides it only for "all".) */
+html[data-nx-menu="all"] .nx-nav { background: var(--nx-nav-smoke); }
+html[data-nx-menu="all"] .nx-nav-item:hover { background: var(--nx-nav-smoke-hover); }
+html[data-nx-menu="all"] .nx-nav-item--on, html[data-nx-menu="all"] .nx-nav-item--on:hover { background: #fff; color: var(--nx-band); }
+html[data-nx-menu="all"] .nx-nav-foot:hover { background: var(--nx-nav-smoke-hover); }
+html[data-nx-menu="all"] .nx-nav-scroll { scrollbar-color: #b9c2cd transparent; }
+html[data-nx-menu="all"] .nx-nav-scroll::-webkit-scrollbar-thumb { background: #b9c2cd; }
 
 /* "All light": a complete light theme — the page heads and dialog heads go light too, keeping the chosen colour as the
    accent (the heading, the thin top strip, the primary action). Set in your menu › Colours. */
