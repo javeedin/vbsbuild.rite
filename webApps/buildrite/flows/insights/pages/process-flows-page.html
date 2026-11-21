@@ -44,7 +44,8 @@
               </template></oj-bind-for-each>
             </ol>
           </oj-bind-if>
-          <div class="nx-note" id="pfRecCount"><oj-bind-text value="[[ ($variables.recording.steps ? $variables.recording.steps.length : 0) + ' screen(s) captured' + ($variables.recording.auto && $variables.recording.skipped ? ' · ' + $variables.recording.skipped + ' other screen(s) skipped' : '') ]]"></oj-bind-text></div>
+          <div class="nx-note" id="pfRecCount"><oj-bind-text value="[[ ($variables.recording.steps ? $variables.recording.steps.length : 0) + ' screen(s) captured' + ($variables.recording.auto && $variables.recording.skipped ? ' · ' + $variables.recording.skipped + ' other screen(s) skipped' : '') + ' · ' + ($variables.recording.calls || 0) + ' API call(s) with their data' ]]"></oj-bind-text></div>
+          <oj-bind-if test="[[ !!$variables.recording.netError ]]"><div class="nx-sc-err" id="pfRecNetErr"><oj-bind-text value="[[ $variables.recording.netError ]]"></oj-bind-text></div></oj-bind-if>
         </div>
         <div class="nx-dialog-foot nx-pf-recfoot">
           <button type="button" class="nx-btn nx-btn--plain" id="pfRecCancel" data-op="recCancel" on-click="[[ $listeners.onPf ]]" :disabled="[[ $variables.recording.busy ]]">Cancel</button>
@@ -149,7 +150,7 @@
             <datalist id="pfPageList"><oj-bind-for-each data="[[ $variables.pages ]]"><template data-oj-as="p"><option :value="[[ p.data.label ]]"></option></template></oj-bind-for-each></datalist>
             <input type="file" id="pfShotFile" accept="image/*" style="display:none">
             <oj-bind-if test="[[ ($variables.flow.pages || []).length === 0 ]]"><div class="nx-empty" id="pfNoPages">No page yet. Add the start page below.</div></oj-bind-if>
-            <oj-bind-for-each data="[[ $functions.pageRows($variables.flow, $variables.pageApis, $variables.apisOpen, $variables.apiTests, $variables.apiData) ]]"><template data-oj-as="p">
+            <oj-bind-for-each data="[[ $functions.pageRows($variables.flow, $variables.pageApis, $variables.apisOpen, $variables.apiTests, $variables.apiData, $variables.recCallsOpen) ]]"><template data-oj-as="p">
               <div class="nx-pf-prow" :data-idx="[[ p.data.idx ]]">
                 <div class="nx-pf-prowtop">
                   <span class="nx-pf-num"><oj-bind-text value="[[ p.data.label ]]"></oj-bind-text></span>
@@ -165,6 +166,7 @@
                   </div>
                   <div class="nx-pf-pacts">
                     <button type="button" :class="[[ 'nx-iconbtn nx-iconbtn--sm nx-pf-apisbtn' + (p.data.apisOpen ? ' nx-pf-apisbtn--on' : '') ]]" data-op="apisToggle" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" :title="[[ 'List this page\'s APIs' ]]"><span class="oj-ux-ico-code" aria-hidden="true"></span><oj-bind-if test="[[ p.data.apisCount !== null ]]"><span class="nx-pf-apisn"><oj-bind-text value="[[ p.data.apisCount ]]"></oj-bind-text></span></oj-bind-if></button>
+                    <oj-bind-if test="[[ p.data.recCount > 0 ]]"><button type="button" :class="[[ 'nx-iconbtn nx-iconbtn--sm nx-pf-recbtn' + (p.data.recOpen ? ' nx-pf-apisbtn--on' : '') ]]" data-op="recToggle" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" title="The data captured for every call on this page (request JSON / query, decoded response)"><span class="oj-ux-ico-data" aria-hidden="true"></span><span class="nx-pf-apisn"><oj-bind-text value="[[ p.data.recCount ]]"></oj-bind-text></span></button></oj-bind-if>
                     <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-op="moveUp" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" :disabled="[[ p.data.first ]]" title="Up"><span class="oj-ux-ico-arrow-up" aria-hidden="true"></span></button>
                     <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-op="moveDown" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" :disabled="[[ p.data.last ]]" title="Down"><span class="oj-ux-ico-arrow-down" aria-hidden="true"></span></button>
                     <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-flib-del" data-op="removePage" :data-idx="[[ p.data.idx ]]" on-click="[[ $listeners.onPf ]]" title="Remove"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
@@ -239,6 +241,32 @@
                           </template></oj-bind-for-each>
                         </ul>
                       </oj-bind-if>
+                    </div>
+                  </oj-bind-if>
+                  <!-- every call captured on this page while recording, with its data (not only the ones that map to an API) -->
+                  <oj-bind-if test="[[ p.data.recOpen ]]">
+                    <div class="nx-pf-apis nx-pf-reccalls">
+                      <div class="nx-pf-apihead"><oj-bind-text value="[[ p.data.recCount + (p.data.recCount === 1 ? ' call captured here, with its data' : ' calls captured here, with their data') ]]"></oj-bind-text></div>
+                      <ul class="nx-pf-apilist">
+                        <oj-bind-for-each data="[[ p.data.recorded ]]"><template data-oj-as="c">
+                          <li class="nx-pf-apirow">
+                            <div class="nx-pf-apimain">
+                              <span :class="[[ 'nx-pg-method nx-sc-apim nx-pg-method--' + (c.data.method || '').toLowerCase() ]]"><oj-bind-text value="[[ c.data.method ]]"></oj-bind-text></span>
+                              <span class="nx-pf-apiname"><code><oj-bind-text value="[[ c.data.path ]]"></oj-bind-text></code></span>
+                              <oj-bind-if test="[[ !!c.data.status ]]"><span class="nx-min-flex"></span><span class="nx-pf-apidv"><oj-bind-text value="[[ 'HTTP ' + c.data.status ]]"></oj-bind-text></span></oj-bind-if>
+                              <oj-bind-if test="[[ !!c.data.kind ]]"><span class="nx-pf-apikind"><oj-bind-text value="[[ c.data.kind === 'bip' ? 'BIP XML' : (c.data.kind === 'json' ? 'JSON' : (c.data.kind === 'xml' ? 'XML' : 'Text')) ]]"></oj-bind-text></span></oj-bind-if>
+                            </div>
+                            <div class="nx-pf-apidetail">
+                              <oj-bind-if test="[[ !!c.data.query ]]"><div class="nx-pf-apidrow"><span class="nx-pf-apidk">Query</span><code class="nx-pf-apidv"><oj-bind-text value="[[ c.data.query ]]"></oj-bind-text></code></div></oj-bind-if>
+                              <oj-bind-if test="[[ !!c.data.body ]]"><div class="nx-pf-apidrow nx-pf-apidrow--block"><span class="nx-pf-apidk">Request body</span><pre class="nx-pf-apidpre"><oj-bind-text value="[[ c.data.body ]]"></oj-bind-text></pre></div></oj-bind-if>
+                              <oj-bind-if test="[[ !!c.data.tableInfo ]]"><div class="nx-pf-apidrow"><span class="nx-pf-apidk">Data</span><span class="nx-pf-apidv"><oj-bind-text value="[[ c.data.tableInfo ]]"></oj-bind-text></span></div></oj-bind-if>
+                              <oj-bind-if test="[[ !!c.data.tableText ]]"><div class="nx-pf-apidrow nx-pf-apidrow--block"><span class="nx-pf-apidk">Rows</span><pre class="nx-pf-apidpre nx-pf-apitbl"><oj-bind-text value="[[ c.data.tableText ]]"></oj-bind-text></pre></div></oj-bind-if>
+                              <oj-bind-if test="[[ !!c.data.resp ]]"><div class="nx-pf-apidrow nx-pf-apidrow--block"><span class="nx-pf-apidk">Response</span><pre class="nx-pf-apidpre"><oj-bind-text value="[[ c.data.resp ]]"></oj-bind-text></pre></div></oj-bind-if>
+                              <oj-bind-if test="[[ !c.data.query && !c.data.body && !c.data.resp && !c.data.tableText ]]"><div class="nx-note">No request or response body was captured for this call.</div></oj-bind-if>
+                            </div>
+                          </li>
+                        </template></oj-bind-for-each>
+                      </ul>
                     </div>
                   </oj-bind-if>
                 </div>

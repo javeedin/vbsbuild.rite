@@ -120,13 +120,14 @@ define([], () => {
         isDialog: s.kind === 'dialog', kindLabel: s.kind === 'dialog' ? 'Dialog' : 'Screen', url: loc(s.url) }));
     }
     /** The editor's page rows: position label, the screenshot (if any), and the APIs list state for the matched page. */
-    pageRows(flow, pageApis, apisOpen, apiTests, apiData) {
+    pageRows(flow, pageApis, apisOpen, apiTests, apiData, recCallsOpen) {
       const pages = (flow && flow.pages) || [];
       const last = pages.length - 1;
       const pa = pageApis || {};
       const open = apisOpen || {};
       const tests = apiTests || {};
       const dOpen = apiData || {};
+      const rOpen = recCallsOpen || {};
       return pages.map((p, i) => {
         const api = p.page && pa[p.page] ? pa[p.page] : null;
         const isOpen = !!open[p.id];
@@ -151,7 +152,17 @@ define([], () => {
             response: t && !t.running && t.body ? t.body : '',
             needsConfirm: !!(t && !t.running && t.needsConfirm) };
         });
+        // every call captured on this page while recording, with its data — shown regardless of whether it maps to a
+        // catalog API, so the recorded JSON (query/body for a request, the decoded response) is always visible
+        const recThis = !!rOpen[p.id];
+        const recorded = recThis ? calls.map((c) => ({
+          method: String((c && c.method) || 'GET').toUpperCase(), path: loc((c && (c.path || c.url)) || ''),
+          query: (c && c.query) || '', body: (c && c.body) || '',
+          status: c && c.status != null && c.status !== '' ? String(c.status) : '',
+          kind: (c && c.respKind) || '', resp: (c && c.response) || '',
+          tableInfo: c && c.table ? tableInfo(c) : '', tableText: c && c.table ? tableText(c.table) : '' })) : [];
         return {
+          recOpen: recThis, recCount: calls.length, recorded: recorded,
           id: p.id, page: p.page || '', name: p.name || '', note: p.note || '', idx: i,
           url: loc(p.url), fullUrl: p.url || '', kind: p.kind || '', isDialog: p.kind === 'dialog', kindLabel: p.kind === 'dialog' ? 'Dialog' : (p.kind === 'page' ? 'Screen' : ''),
           label: i === 0 ? 'Start' : (i === last ? 'End' : String(i + 1)), first: i === 0, last: i === last,

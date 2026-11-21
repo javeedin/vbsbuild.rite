@@ -254,6 +254,14 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await page.waitForSelector(dataRow1 + ' .nx-pf-apiresult--ok', { timeout: 10000 });
     const wrote = env.writes[env.writes.length - 1];
     T.check('Run anyway sends the POST with the captured body (201)', env.writes.length === beforeWrites + 1 && wrote && wrote.method === 'POST' && /\/shop\/v1\/orders$/.test(wrote.path) && wrote.body && wrote.body.note === 'from the recording' && /201/.test(await text(dataRow1 + ' .nx-pf-apiresline')), JSON.stringify(wrote && { m: wrote.method, p: wrote.path, b: wrote.body }));
+    // the page's "Recorded calls" view shows every captured call's data (request + decoded response), match or not
+    await page.click(prow(0) + ' [data-op="recToggle"]');
+    await page.waitForSelector(prow(0) + ' .nx-pf-reccalls', { timeout: 10000 });
+    const recText = await text(prow(0) + ' .nx-pf-reccalls');
+    T.check('Recorded calls shows the captured GET, its query and the decoded response JSON', /GET \/shop\/v1\/orders/.test(recText) && /status=open/.test(recText) && /items/.test(recText), recText.slice(0, 200));
+    await page.click(prow(0) + ' [data-op="recToggle"]');
+    await page.waitForFunction((sel) => !document.querySelector(sel), prow(0) + ' .nx-pf-reccalls', { timeout: 5000 });
+    T.check('Recorded calls collapses again', !(await page.$(prow(0) + ' .nx-pf-reccalls')));
     await page.click('#pfBack');
     await page.waitForSelector('#pfEmpty', { timeout: 10000 });
 

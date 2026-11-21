@@ -172,6 +172,9 @@ function buildSteps(nav, pages, calls) {
     const cp = pathOf(cu);
     let target = null;
     for (let i = steps.length - 1; i >= 0; i--) { const s = steps[i]; if ((p && s.page === p.id) || pathOf(s.url) === cp) { target = s; break; } }
+    // a call whose page matches no step (fired during a transition, or on a URL we didn't capture as a screen) is kept
+    // on the nearest step rather than lost — the data was recorded, so it should be visible
+    if (!target) target = steps[steps.length - 1] || null;
     if (!target) return;
     (byStep[target.id] = byStep[target.id] || []).push(trimCall(c));
   });

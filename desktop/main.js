@@ -571,34 +571,50 @@ function attachRecorderNet(w) {
   const wc = w.webContents;
   if (wc.__brRecNet) return;
   const dbg = wc.debugger;
-  try { if (!dbg.isAttached()) dbg.attach('1.3'); } catch (e) { return; } // DevTools already open, etc. — skip capture
+  try { if (!dbg.isAttached()) dbg.attach('1.3'); } catch (e) { if (recState) recState.netError = 'Could not watch the app\'s network: ' + (e && e.message) + ' (close the app window\'s developer tools, then record again).'; return; }
   wc.__brRecNet = true;
-  const pend = {}; // requestId → { method, url, body, status, mime }
-  const want = (type) => { const t = String(type || '').toLowerCase(); return t === 'xhr' || t === 'fetch'; };
+  const pend = {}; // requestId → { pageUrl, method, url, body, hasPostData, type, status, mime }
+  // what to keep: an XHR / fetch (the request-time type is unreliable for these, so decide at the response), or any
+  // api-shaped answer that is not a page asset. Page scaffolding (documents, scripts, styles, images, fonts, media) is dropped.
+  const apiMime = (m) => /json|xml|urlencoded|text\/plain|javascript|soap|graphql/i.test(String(m || ''));
+  const apiType = (t) => { const x = String(t || '').toLowerCase(); return x === 'xhr' || x === 'fetch' || x === 'eventsource'; };
+  const assetType = (t) => { const x = String(t || '').toLowerCase(); return x === 'document' || x === 'stylesheet' || x === 'script' || x === 'image' || x === 'font' || x === 'media' || x === 'texttrack' || x === 'manifest'; };
   dbg.on('message', (e, method, params) => {
     if (!recState || !recState.running) return;
     try {
       if (method === 'Network.requestWillBeSent') {
-        if (!want(params.type)) return;
         const r = params.request || {};
-        pend[params.requestId] = { pageUrl: (recState.curUrl || (w.isDestroyed() ? '' : wc.getURL())), method: r.method || 'GET', url: r.url || '', body: (r.postData || '').slice(0, REC_CAP), status: '', mime: '' };
+        // capture every request now; what to keep is decided once the response type / mime is known
+        pend[params.requestId] = { pageUrl: (recState.curUrl || (w.isDestroyed() ? '' : wc.getURL())), method: r.method || 'GET', url: r.url || '',
+          body: (r.postData || '').slice(0, REC_CAP), hasPostData: !!r.hasPostData, type: params.type || '', status: '', mime: '' };
       } else if (method === 'Network.responseReceived') {
         const p = pend[params.requestId]; if (!p) return;
-        p.status = (params.response && params.response.status) || ''; p.mime = (params.response && params.response.mimeType) || '';
+        p.status = (params.response && params.response.status) || '';
+        p.mime = (params.response && params.response.mimeType) || '';
+        if (params.type) p.type = params.type; // the resource type is reliable here
+      } else if (method === 'Network.loadingFailed') {
+        delete pend[params.requestId];
       } else if (method === 'Network.loadingFinished') {
         const p = pend[params.requestId]; if (!p) return;
         delete pend[params.requestId];
+        const keep = apiType(p.type) || (apiMime(p.mime) && !assetType(p.type));
+        if (!keep) return;
         // keep the response generously here (a BIP answer is big base64); flowRecorder.trimCall decodes + trims it on save
-        const finish = (resp) => { if (recState && recState.running) recState.calls.push(Object.assign(p, { response: String(resp || '').slice(0, 900000) })); };
-        if (/json|text|xml|urlencoded/i.test(p.mime)) {
-          dbg.sendCommand('Network.getResponseBody', { requestId: params.requestId })
-            .then((b) => finish(b && b.body && b.base64Encoded ? Buffer.from(b.body, 'base64').toString('utf8') : (b && b.body) || ''))
-            .catch(() => finish(''));
-        } else finish('');
+        const push = (resp) => { if (recState && recState.running) { recState.calls.push(Object.assign(p, { response: String(resp || '').slice(0, 900000) })); recState.netCount = (recState.netCount || 0) + 1; } };
+        const getBody = () => dbg.sendCommand('Network.getResponseBody', { requestId: params.requestId })
+          .then((b) => push(b && b.body && b.base64Encoded ? Buffer.from(b.body, 'base64').toString('utf8') : (b && b.body) || ''))
+          .catch(() => push(''));
+        // a POST / PUT / PATCH whose JSON body was too large to ride along in the event — fetch it, then the response
+        if (p.hasPostData && !p.body && /^(post|put|patch)$/i.test(p.method)) {
+          dbg.sendCommand('Network.getRequestPostData', { requestId: params.requestId })
+            .then((d) => { if (d && d.postData) p.body = String(d.postData).slice(0, REC_CAP); }).catch(() => {}).then(getBody);
+        } else getBody();
       }
     } catch (err) { /* a malformed CDP event — ignore */ }
   });
-  try { dbg.sendCommand('Network.enable', { maxResourceBufferSize: 10 * 1024 * 1024, maxTotalBufferSize: 50 * 1024 * 1024 }); } catch (e) { /* ignore */ }
+  dbg.sendCommand('Network.enable', { maxResourceBufferSize: 20 * 1024 * 1024, maxTotalBufferSize: 100 * 1024 * 1024 })
+    .then(() => { if (recState) { recState.netOn = true; recState.netError = ''; } })
+    .catch((er) => { if (recState) recState.netError = 'Could not watch the app\'s network: ' + (er && er.message); });
   w.on('closed', () => { try { if (dbg.isAttached()) dbg.detach(); } catch (e) { /* gone */ } });
 }
 // Injected into the run window. It shows a floating, draggable "Capture this screen" bar (bottom-centre) so you pick
@@ -738,7 +754,7 @@ function flowRecorder() {
       const useApp = app || runAppOf(c);
       const p = await buildWorkspace(c, useApp, 'Record a flow');
       if (!p.ok) return { ok: false, error: p.error };
-      recState = { running: true, nav: [], calls: [], curUrl: '', app: useApp, auto: true, lastPush: 0, shotEntry: null, refresh: null };
+      recState = { running: true, nav: [], calls: [], curUrl: '', app: useApp, auto: true, lastPush: 0, shotEntry: null, refresh: null, netCount: 0, netOn: false, netError: '' };
       const w = openRunWindow(p.url + '/', 'Recording a flow — ' + c.projectName + ' (' + useApp + ')');
       attachRecorder(w);
       return { ok: true, app: useApp };
@@ -746,6 +762,8 @@ function flowRecorder() {
     async status() {
       return { ok: true, running: !!(recState && recState.running), auto: !!(recState && recState.auto),
         url: (runWin && !runWin.isDestroyed()) ? runWin.webContents.getURL() : '',
+        // how many API calls have been captured so far (with their data), and whether the network watch is live / why not
+        calls: recState ? recState.calls.length : 0, netOn: !!(recState && recState.netOn), netError: (recState && recState.netError) || '',
         // url + title + kind + screen (no shot: keep the live poll light) so the panel can show screens and dialogs live
         nav: recState ? recState.nav.map((x) => ({ url: x.url, title: x.title, kind: x.kind, screen: x.screen, manual: x.manual })) : [] };
     },

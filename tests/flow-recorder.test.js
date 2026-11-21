@@ -68,10 +68,11 @@ const nav2 = [
 const calls = [
   { pageUrl: 'https://host/vp/shell/customer-portal/request-list', method: 'get', url: 'https://host/crm/v1/requests?q=open', body: '', status: 200, response: '{"items":[]}' },
   { pageUrl: 'https://host/vp/shell/customer-portal/project-create-request', method: 'POST', url: 'https://host/crm/v1/requests', body: '{"name":"New"}', status: 201, response: '{"id":7}' },
-  { pageUrl: 'https://host/nowhere', method: 'GET', url: 'https://host/x', status: 200 }, // page matches nothing → dropped
+  { pageUrl: 'https://host/nowhere', method: 'GET', url: 'https://host/x', status: 200 }, // page matches no step → kept on the nearest step, not lost
 ];
 const r2 = R.buildSteps(nav2, PAGES, calls);
-T.check('calls are attached to the step whose page was open when they fired', (r2.steps[0].calls || []).length === 1 && r2.steps[0].calls[0].url.indexOf('/crm/v1/requests') !== -1 && (r2.steps[1].calls || []).length === 1 && r2.steps[1].calls[0].method === 'POST', JSON.stringify((r2.steps[0].calls || []).map((c) => c.method + ' ' + c.path)));
+T.check('calls are attached to the step whose page was open when they fired', (r2.steps[0].calls || []).length === 1 && r2.steps[0].calls[0].url.indexOf('/crm/v1/requests') !== -1 && (r2.steps[1].calls || []).some((c) => c.method === 'POST'), JSON.stringify((r2.steps[0].calls || []).map((c) => c.method + ' ' + c.path)));
+T.check('a captured call whose page matches no step is kept on the nearest step (never lost)', (r2.steps[1].calls || []).length === 2 && (r2.steps[1].calls || []).some((c) => c.path === '/x') && ((r2.steps[0].calls || []).length + (r2.steps[1].calls || []).length) === 3, JSON.stringify((r2.steps[1].calls || []).map((c) => c.method + ' ' + c.path)));
 T.check('a call trims to method/url/path/query/body/status/response within the cap (response made readable)', r2.steps[0].calls[0].path === '/crm/v1/requests' && r2.steps[0].calls[0].query === 'q=open' && r2.steps[1].calls[0].body === '{"name":"New"}' && r2.steps[1].calls[0].status === 201 && JSON.parse(r2.steps[1].calls[0].response).id === 7 && r2.steps[1].calls[0].respKind === 'json', JSON.stringify(r2.steps[1].calls[0]));
 
 T.section('decodeResponse (JSON / BIP XML made readable)');

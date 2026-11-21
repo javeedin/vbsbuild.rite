@@ -83,7 +83,7 @@ define([
     PC.recordStatus().then((r) => {
       if (!recOn || !v.recording) return;
       const b = r.body || {};
-      if (r.ok) v.recording = Object.assign({}, v.recording, { running: !!b.running, steps: b.steps || [], skipped: b.skipped || 0, auto: typeof b.auto === 'boolean' ? b.auto : v.recording.auto });
+      if (r.ok) v.recording = Object.assign({}, v.recording, { running: !!b.running, steps: b.steps || [], skipped: b.skipped || 0, auto: typeof b.auto === 'boolean' ? b.auto : v.recording.auto, calls: b.calls || 0, netError: b.netError || '' });
       recTimer = setTimeout(() => recPoll(v), 1500);
     }).catch(() => { if (recOn) recTimer = setTimeout(() => recPoll(v), 1500); });
   }
@@ -193,7 +193,7 @@ define([
       if (op === 'search') { v.q = String(input || ''); await loadList(); return; }
       if (op === 'new') {
         MODEL = { id: '', name: '', description: '', area: '', owner: '', status: 'draft', pages: [newPage()] };
-        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.view = 'edit';
+        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.recCallsOpen = {}; v.view = 'edit';
         render(v);
         setTimeout(() => { const el = byId('pf-name'); if (el) el.focus(); }, 80);
         return;
@@ -203,7 +203,7 @@ define([
         if (!r.ok) { say(false, (r.body && r.body.error) || 'It could not be opened.'); return; }
         MODEL = Object.assign({ pages: [] }, copy(r.body.flow));
         if (!MODEL.pages.length) MODEL.pages = [newPage()];
-        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.view = 'edit';
+        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.recCallsOpen = {}; v.view = 'edit';
         render(v);
         return;
       }
@@ -221,7 +221,7 @@ define([
       if (op === 'back') {
         if (MODEL) foldRows(v);
         if (dirty(v) && !window.confirm('Leave without saving? Your changes to this process flow are lost.')) return;
-        MODEL = null; v.flow = null; v.saved = null; v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.view = 'edit';
+        MODEL = null; v.flow = null; v.saved = null; v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.recCallsOpen = {}; v.view = 'edit';
         await loadList();
         return;
       }
@@ -230,7 +230,7 @@ define([
       if (op === 'recStart') {
         const r = await PC.recordStart('');
         if (!r.ok) { say(false, (r.body && r.body.error) || 'Recording needs the desktop app with your workspace set up.'); return; }
-        v.recording = { running: true, steps: [], skipped: 0, busy: false, error: '', auto: true };
+        v.recording = { running: true, steps: [], skipped: 0, busy: false, error: '', auto: true, calls: 0, netError: '' };
         recOn = true;
         recTimer = setTimeout(() => recPoll(v), 1200);
         return;
@@ -270,7 +270,7 @@ define([
         // open the editor pre-filled with the recorded pages — the user names it and Saves
         MODEL = { id: '', name: '', description: '', area: '', owner: '', status: 'draft',
           pages: pages.map((p, i) => { const pg = { id: p.id || ('p' + (i + 1)), page: p.page || '', name: p.name || '', note: '' }; if (p.url) pg.url = p.url; if (p.kind) pg.kind = p.kind; if (p.shot && p.shot.data) pg.shot = { src: 'page', data: p.shot.data }; if (p.calls && p.calls.length) pg.calls = p.calls; return pg; }) };
-        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.view = 'edit'; v.recording = null;
+        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.recCallsOpen = {}; v.view = 'edit'; v.recording = null;
         render(v);
         setTimeout(() => { const el = byId('pf-name'); if (el) el.focus(); }, 80);
         say(true, pages.length + ' page(s) recorded — name it and Save.');
@@ -373,6 +373,16 @@ define([
         v.pageApis = Object.assign({}, v.pageApis || {}, { [pageId]: { loading: true, list: null, error: '' } });
         const r = await SC.apis(pageId);
         v.pageApis = Object.assign({}, v.pageApis || {}, { [pageId]: { loading: false, list: r.ok ? mapApis(r.body.apis) : [], error: r.ok ? '' : ((r.body && r.body.error) || 'Could not read the APIs.') } });
+        return;
+      }
+      // ── show / hide the page's recorded calls (every captured call's data, matched to a catalog API or not) ──
+      if (op === 'recToggle') {
+        if (!MODEL || !MODEL.pages[i]) return;
+        foldRows(v);
+        const rid = MODEL.pages[i].id;
+        const r = Object.assign({}, v.recCallsOpen || {});
+        r[rid] = !r[rid];
+        v.recCallsOpen = r;
         return;
       }
       // ── show / hide an API's captured request (the data recorded for it) ──
