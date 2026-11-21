@@ -134,6 +134,15 @@ h2::before{content:'';width:4px;height:17px;background:#2e6fd8;border-radius:2px
 .apis li:first-child{border-top:0}
 .m{display:inline-block;font-size:7.5pt;font-weight:700;color:#13315c;background:#e8eefb;border-radius:5px;padding:2px 6px;min-width:48px;text-align:center}
 .apis code{font-size:8.5pt;color:#6b7886;overflow-wrap:anywhere}
+.apis li{flex-direction:column;align-items:stretch}
+.api-head{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}
+.calldata{margin:6px 0 2px 2px;padding:7px 10px;border-left:3px solid #cfe0fb;background:#f7f9fc;border-radius:0 8px 8px 0;display:grid;gap:4px}
+.cd-row{display:grid;gap:2px}
+.cd-k{font-size:7pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6b7886}
+.cd-v{font-size:9pt;color:#22303c;overflow-wrap:anywhere}
+.cd-kind{display:inline-block;margin-left:6px;font-size:7pt;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:#2e6fd8;background:#eaf1fd;border:1px solid #cfe0fb;border-radius:999px;padding:0 6px}
+.cd-pre{margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:8pt;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;color:#22303c;background:#fff;border:1px solid #e6eaef;border-radius:6px;padding:5px 7px;max-height:260px;overflow:auto}
+.cd-tbl{white-space:pre;overflow-wrap:normal}
 .chip{font-size:7.5pt;font-weight:700;color:#8a4b00;background:#fdecd2;border-radius:999px;padding:1px 8px}
 .foot{margin-top:30px;padding-top:10px;border-top:1px solid #e3e8ee;font-size:8.5pt;color:#6b7886}
 .empty{color:#6b7886;font-style:italic}`;
@@ -143,17 +152,77 @@ function paras(text) {
   if (!t) return '<p class="empty">No description yet.</p>';
   return t.split(/\n{2,}/).map((p) => '<p>' + esc(p.trim()).replace(/\n/g, '<br>') + '</p>').join('');
 }
+// Match a recorded call to a catalog API by method + path pattern (mirrors flowRecorder.callForApi), so the document can
+// show the data captured for each API, and know which recorded calls did not map to one.
+function docPathOf(u) { const s = str(u).replace(/#.*$/, ''); const q = s.indexOf('?'); return (q === -1 ? s : s.slice(0, q)).replace(/^[a-z]+:\/\/[^/]+/i, '').replace(/\/+$/, '') || '/'; }
+function docPathMatches(apiPath, got) {
+  const pat = str(apiPath).replace(/[?#].*$/, '').replace(/\/+$/, '');
+  const g = str(got).replace(/\/+$/, '');
+  if (!pat) return false;
+  if (g === pat || (pat.length && g.slice(-pat.length) === pat)) return true;
+  try { return new RegExp(pat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\{[^/}]+\\\}/g, '[^/]+') + '$').test(g); } catch (e) { return false; }
+}
+function docCallFor(api, calls) {
+  if (!api || !api.path || !calls || !calls.length) return null;
+  const m = str(api.method || 'GET').toUpperCase();
+  const hits = calls.filter((c) => str(c.method || 'GET').toUpperCase() === m && docPathMatches(api.path, c.path || docPathOf(c.url)));
+  hits.sort((a, b) => Math.abs(str(a.path || docPathOf(a.url)).length - api.path.length) - Math.abs(str(b.path || docPathOf(b.url)).length - api.path.length));
+  return hits[0] || null;
+}
+/** The data captured for one call, as document HTML: its query / request body (JSON) and its decoded response (JSON, or
+ *  a BI Publisher row table). Empty string when there is no call. */
+function callDataHtml(c) {
+  if (!isObj(c)) return '';
+  const row = (k, v) => (v ? '<div class="cd-row"><span class="cd-k">' + esc(k) + '</span><span class="cd-v">' + esc(v) + '</span></div>' : '');
+  const pre = (k, v, cls) => (v ? '<div class="cd-row"><span class="cd-k">' + esc(k) + '</span><pre class="cd-pre' + (cls ? ' ' + cls : '') + '">' + esc(v) + '</pre></div>' : '');
+  const kind = c.respKind === 'bip' ? 'BIP XML' : c.respKind === 'json' ? 'JSON' : c.respKind === 'xml' ? 'XML' : c.respKind === 'text' ? 'Text' : '';
+  let rows = '';
+  if (isObj(c.table) && Array.isArray(c.table.columns) && c.table.columns.length) {
+    const head = c.table.columns.join('  |  ');
+    const body = (Array.isArray(c.table.rows) ? c.table.rows : []).map((r) => (Array.isArray(r) ? r.join('  |  ') : '')).join('\n');
+    const n = typeof c.table.total === 'number' ? c.table.total : (c.table.rows ? c.table.rows.length : 0);
+    rows = pre('Rows (' + n + (c.table.from ? ' · ' + c.table.from : '') + ')', head + '\n' + '-'.repeat(Math.min(head.length, 80)) + '\n' + body, 'cd-tbl');
+  }
+  const statusLine = (c.status !== undefined && c.status !== null && c.status !== '' ? 'HTTP ' + c.status : '') + (kind ? (c.status ? ' · ' : '') + kind : '');
+  return '<div class="calldata">'
+    + row('Request', (str(c.method || 'GET').toUpperCase()) + ' ' + (c.path || docPathOf(c.url)))
+    + row('Query', c.query)
+    + pre('Request body', c.body)
+    + row('Response', statusLine)
+    + rows
+    + pre('Response body', c.response)
+    + '</div>';
+}
 /** The whole document: a cover banner, a facts grid, the description, then the pages as a vertical card timeline. */
 function renderDocument(flow, opts) {
   const o = opts || {};
   const f = cleanFlow(flow, flow && flow.updatedBy, flow, { keepApis: true });
   const pages = f.pages;
   const date = o.date || new Date().toISOString().slice(0, 10);
-  const apiList = (p) => (p.apis && p.apis.length
-    ? '<div class="apis"><h4>APIs on this page (' + p.apis.length + ')</h4><ul>'
-      + p.apis.map((a) => '<li><span class="m">' + esc(a.method || 'CALL') + '</span><b>' + esc(a.name || '') + '</b>'
-        + (a.path ? ' <code>' + esc(a.path) + '</code>' : '') + (a.writes ? ' <span class="chip">changes data</span>' : '') + '</li>').join('')
-      + '</ul></div>' : '');
+  const apiList = (p) => {
+    const calls = (p.calls && p.calls.length) ? p.calls : [];
+    const used = [];
+    const list = (p.apis && p.apis.length)
+      ? '<div class="apis"><h4>APIs on this page (' + p.apis.length + ')</h4><ul>'
+        + p.apis.map((a) => {
+          const call = docCallFor(a, calls);
+          if (call) used.push(call);
+          return '<li><div class="api-head"><span class="m">' + esc(a.method || 'CALL') + '</span><b>' + esc(a.name || '') + '</b>'
+            + (a.path ? ' <code>' + esc(a.path) + '</code>' : '') + (a.writes ? ' <span class="chip">changes data</span>' : '') + '</div>'
+            + callDataHtml(call) + '</li>';
+        }).join('')
+        + '</ul></div>'
+      : '';
+    // recorded calls that did not map to a catalog API — still shown, so the captured data is never hidden
+    const extra = calls.filter((c) => used.indexOf(c) === -1);
+    const extraHtml = extra.length
+      ? '<div class="apis"><h4>Other recorded calls (' + extra.length + ')</h4><ul>'
+        + extra.map((c) => '<li><div class="api-head"><span class="m">' + esc(str(c.method || 'GET').toUpperCase()) + '</span>'
+          + '<code>' + esc(c.path || docPathOf(c.url)) + '</code></div>' + callDataHtml(c) + '</li>').join('')
+        + '</ul></div>'
+      : '';
+    return list + extraHtml;
+  };
   const shotImg = (p) => (p.shot && p.shot.data ? '<div class="shot"><img src="' + p.shot.data + '" alt="Screenshot of ' + esc(p.name || p.page) + '"></div>' : '');
   const fact = (k, v) => (v ? '<div class="fact"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div></div>' : '');
   const metaBits = [f.area, f.owner ? 'Owner: ' + f.owner : '', date].filter(Boolean).map((x) => esc(x)).join('<b> · </b>');

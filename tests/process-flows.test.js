@@ -75,6 +75,17 @@ const T = H.makeAsserter();
   T.check('an over-long body / response is capped', overCall.pages[0].calls[0].body.length <= 24000 && overCall.pages[0].calls[0].response.length <= 24000);
   const noCalls = P.cleanFlow({ name: 'Rec', pages: [{ name: 'A' }] });
   T.check('a page with no calls stores none', !noCalls.pages[0].calls);
+  // the document shows the captured JSON under each API (query for a GET, body for a POST, the decoded response), and
+  // lists recorded calls that did not map to a catalog API so nothing is hidden
+  const docData = P.renderDocument({ name: 'Doc', pages: [{ name: 'A', page: 'app/a',
+    apis: [{ method: 'GET', name: 'List requests', path: '/crm/v1/requests' }, { method: 'POST', name: 'Create', path: '/crm/v1/requests', writes: true }],
+    calls: [
+      { method: 'GET', url: 'https://h/crm/v1/requests?q=open', path: '/crm/v1/requests', query: 'q=open', status: 200, respKind: 'json', response: '{\n  "items": []\n}' },
+      { method: 'POST', url: 'https://h/crm/v1/requests', path: '/crm/v1/requests', body: '{"title":"x"}', status: 201, respKind: 'json', response: '{\n  "id": 7\n}' },
+      { method: 'GET', url: 'https://h/other/thing', path: '/other/thing', status: 200 } ] }] }, {});
+  T.check('the document shows the captured request data under each API (GET query, POST body)', /class="calldata"/.test(docData) && docData.indexOf('q=open') !== -1 && /Request body/.test(docData) && docData.indexOf('title') !== -1);
+  T.check('the document shows the decoded response JSON for the calls (HTML-escaped)', /Response body/.test(docData) && docData.indexOf('items') !== -1 && docData.indexOf('&quot;id&quot;: 7') !== -1);
+  T.check('a recorded call with no matching API is listed under "Other recorded calls"', /Other recorded calls \(1\)/.test(docData) && /\/other\/thing/.test(docData));
 
   T.section('a step records its url and whether it is a screen or a dialog');
   const withKind = P.cleanFlow({ name: 'Kinds', pages: [
