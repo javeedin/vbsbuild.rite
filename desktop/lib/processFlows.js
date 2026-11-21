@@ -141,8 +141,14 @@ h2::before{content:'';width:4px;height:17px;background:#2e6fd8;border-radius:2px
 .cd-k{font-size:7pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6b7886}
 .cd-v{font-size:9pt;color:#22303c;overflow-wrap:anywhere}
 .cd-kind{display:inline-block;margin-left:6px;font-size:7pt;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:#2e6fd8;background:#eaf1fd;border:1px solid #cfe0fb;border-radius:999px;padding:0 6px}
-.cd-pre{margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:8pt;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;color:#22303c;background:#fff;border:1px solid #e6eaef;border-radius:6px;padding:5px 7px;max-height:260px;overflow:auto}
+.cd-pre{margin:3px 0 0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:8pt;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;color:#22303c;background:#fff;border:1px solid #e6eaef;border-radius:6px;padding:5px 7px;max-height:280px;overflow:auto}
 .cd-tbl{white-space:pre;overflow-wrap:normal}
+.cd-det{margin:0}
+.cd-det>summary{cursor:pointer;font-size:7pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6b7886;padding:2px 0;list-style:none;user-select:none}
+.cd-det>summary::-webkit-details-marker{display:none}
+.cd-det>summary::before{content:"\\25B8  ";color:#9aa6b2}
+.cd-det[open]>summary::before{content:"\\25BE  ";color:#9aa6b2}
+@media print{.cd-det>:not(summary){display:block !important}.cd-pre{max-height:none}}
 .chip{font-size:7.5pt;font-weight:700;color:#8a4b00;background:#fdecd2;border-radius:999px;padding:1px 8px}
 .foot{margin-top:30px;padding-top:10px;border-top:1px solid #e3e8ee;font-size:8.5pt;color:#6b7886}
 .empty{color:#6b7886;font-style:italic}`;
@@ -169,28 +175,35 @@ function docCallFor(api, calls) {
   hits.sort((a, b) => Math.abs(str(a.path || docPathOf(a.url)).length - api.path.length) - Math.abs(str(b.path || docPathOf(b.url)).length - api.path.length));
   return hits[0] || null;
 }
-/** The data captured for one call, as document HTML: its query / request body (JSON) and its decoded response (JSON, or
- *  a BI Publisher row table). Empty string when there is no call. */
+/** JSON pretty-printed when the text is JSON (so a one-line request body reads nicely); otherwise the text as is. */
+function prettyMaybeJson(t) {
+  const s = str(t).trim();
+  if (!s || !/^[[{]/.test(s)) return str(t);
+  try { return JSON.stringify(JSON.parse(s), null, 2); } catch (e) { return str(t); }
+}
+/** The data captured for one call, as document HTML: its query / request body and its decoded response (JSON pretty, or a
+ *  BI Publisher row table), each large block in a collapsible <details> (expand / collapse). Empty when there is no call. */
 function callDataHtml(c) {
   if (!isObj(c)) return '';
   const row = (k, v) => (v ? '<div class="cd-row"><span class="cd-k">' + esc(k) + '</span><span class="cd-v">' + esc(v) + '</span></div>' : '');
-  const pre = (k, v, cls) => (v ? '<div class="cd-row"><span class="cd-k">' + esc(k) + '</span><pre class="cd-pre' + (cls ? ' ' + cls : '') + '">' + esc(v) + '</pre></div>' : '');
+  const det = (label, v, open, cls) => (v ? '<details class="cd-det"' + (open ? ' open' : '') + '><summary>' + esc(label) + '</summary><pre class="cd-pre' + (cls ? ' ' + cls : '') + '">' + esc(v) + '</pre></details>' : '');
   const kind = c.respKind === 'bip' ? 'BIP XML' : c.respKind === 'json' ? 'JSON' : c.respKind === 'xml' ? 'XML' : c.respKind === 'text' ? 'Text' : '';
   let rows = '';
   if (isObj(c.table) && Array.isArray(c.table.columns) && c.table.columns.length) {
     const head = c.table.columns.join('  |  ');
     const body = (Array.isArray(c.table.rows) ? c.table.rows : []).map((r) => (Array.isArray(r) ? r.join('  |  ') : '')).join('\n');
     const n = typeof c.table.total === 'number' ? c.table.total : (c.table.rows ? c.table.rows.length : 0);
-    rows = pre('Rows (' + n + (c.table.from ? ' · ' + c.table.from : '') + ')', head + '\n' + '-'.repeat(Math.min(head.length, 80)) + '\n' + body, 'cd-tbl');
+    rows = det('Rows (' + n + (c.table.from ? ' · ' + c.table.from : '') + ')', head + '\n' + '-'.repeat(Math.min(head.length, 80)) + '\n' + body, true, 'cd-tbl');
   }
   const statusLine = (c.status !== undefined && c.status !== null && c.status !== '' ? 'HTTP ' + c.status : '') + (kind ? (c.status ? ' · ' : '') + kind : '');
+  // request body open (usually small), the decoded rows open (the useful bit), the raw response body collapsed by default
   return '<div class="calldata">'
     + row('Request', (str(c.method || 'GET').toUpperCase()) + ' ' + (c.path || docPathOf(c.url)))
     + row('Query', c.query)
-    + pre('Request body', c.body)
+    + det('Request body', prettyMaybeJson(c.body), true)
     + row('Response', statusLine)
     + rows
-    + pre('Response body', c.response)
+    + det('Response body' + (kind ? ' (' + kind + ')' : ''), c.response, !rows)
     + '</div>';
 }
 /** The whole document: a cover banner, a facts grid, the description, then the pages as a vertical card timeline. */

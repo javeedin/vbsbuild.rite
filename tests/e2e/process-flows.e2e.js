@@ -258,7 +258,11 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await page.click(prow(0) + ' [data-op="recToggle"]');
     await page.waitForSelector(prow(0) + ' .nx-pf-reccalls', { timeout: 10000 });
     const recText = await text(prow(0) + ' .nx-pf-reccalls');
-    T.check('Recorded calls shows the captured GET, its query and the decoded response JSON', /GET \/shop\/v1\/orders/.test(recText) && /status=open/.test(recText) && /items/.test(recText), recText.slice(0, 200));
+    T.check('Recorded calls shows the captured GET and its query', /GET \/shop\/v1\/orders/.test(recText) && /status=open/.test(recText), recText.slice(0, 160));
+    // the response body is a collapsible <details>; expand it and the decoded JSON shows
+    await page.click(prow(0) + ' .nx-pf-reccalls details.nx-pf-apidet summary');
+    await settle(page, 80);
+    T.check('expanding a call’s Response body shows the decoded JSON', /items/.test(await text(prow(0) + ' .nx-pf-reccalls details.nx-pf-apidet[open]')));
     await page.click(prow(0) + ' [data-op="recToggle"]');
     await page.waitForFunction((sel) => !document.querySelector(sel), prow(0) + ' .nx-pf-reccalls', { timeout: 5000 });
     T.check('Recorded calls collapses again', !(await page.$(prow(0) + ' .nx-pf-reccalls')));

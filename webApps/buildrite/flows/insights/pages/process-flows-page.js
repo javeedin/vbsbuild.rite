@@ -47,6 +47,12 @@ define([], () => {
     const rows = (Array.isArray(tb.rows) ? tb.rows : []).map((r) => (Array.isArray(r) ? r.join('  |  ') : ''));
     return head + '\n' + '-'.repeat(Math.min(head.length, 120)) + '\n' + rows.join('\n');
   }
+  /** A request/response body pretty-printed when it is JSON (so a one-line POST body reads nicely); else as it is. */
+  function prettyBody(t) {
+    const s = String(t == null ? '' : t).trim();
+    if (!s || (s[0] !== '{' && s[0] !== '[')) return String(t == null ? '' : t);
+    try { return JSON.stringify(JSON.parse(s), null, 2); } catch (e) { return String(t == null ? '' : t); }
+  }
   /** A one-line summary of the decoded response (what kind it is, how many rows). */
   function tableInfo(call) {
     const tb = call && call.table;
@@ -143,7 +149,7 @@ define([], () => {
             hasData: !!call, dataText: call ? callText(call) : '', dataOpen: !!dOpen[tkey],
             // the captured request/response, shown in the expand/collapse panel
             callMethod: String(mth).toUpperCase(), callPath: (call && (call.path || call.url)) || '', callQuery: (call && call.query) || '',
-            callBody: (call && call.body) || '', callResp: (call && call.response) || '', callStatus: call && call.status != null && call.status !== '' ? String(call.status) : '',
+            callBody: call ? prettyBody(call.body) : '', callResp: (call && call.response) || '', callStatus: call && call.status != null && call.status !== '' ? String(call.status) : '',
             callKind: (call && call.respKind) || '', callTableText: call && call.table ? tableText(call.table) : '', callTableInfo: call && call.table ? tableInfo(call) : '',
             running: !!(t && t.running),
             result: t && !t.running ? t : null,
@@ -157,7 +163,7 @@ define([], () => {
         const recThis = !!rOpen[p.id];
         const recorded = recThis ? calls.map((c) => ({
           method: String((c && c.method) || 'GET').toUpperCase(), path: loc((c && (c.path || c.url)) || ''),
-          query: (c && c.query) || '', body: (c && c.body) || '',
+          query: (c && c.query) || '', body: prettyBody(c && c.body),
           status: c && c.status != null && c.status !== '' ? String(c.status) : '',
           kind: (c && c.respKind) || '', resp: (c && c.response) || '',
           tableInfo: c && c.table ? tableInfo(c) : '', tableText: c && c.table ? tableText(c.table) : '' })) : [];
