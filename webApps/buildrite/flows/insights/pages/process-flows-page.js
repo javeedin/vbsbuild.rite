@@ -40,12 +40,22 @@ define([], () => {
     if (c.status != null) bits.push('was ' + c.status);
     return bits.join(' · ');
   }
-  /** The decoded response rows as a readable text table (columns header + rows). */
+  /** The decoded response rows as an aligned monospace table: columns padded to a common width (capped), all-empty
+   *  columns dropped, long values clipped — so it reads as a grid, not ragged pipes. */
   function tableText(tb) {
     if (!tb || !Array.isArray(tb.columns) || !tb.columns.length) return '';
-    const head = tb.columns.join('  |  ');
-    const rows = (Array.isArray(tb.rows) ? tb.rows : []).map((r) => (Array.isArray(r) ? r.join('  |  ') : ''));
-    return head + '\n' + '-'.repeat(Math.min(head.length, 120)) + '\n' + rows.join('\n');
+    const S = (v) => String(v == null ? '' : v);
+    const cols = tb.columns.map(S);
+    const data = (Array.isArray(tb.rows) ? tb.rows : []).map((r) => (Array.isArray(r) ? r.map(S) : []));
+    let keep = cols.map((_, i) => data.some((r) => S(r[i]).trim() !== ''));
+    if (!keep.some(Boolean)) keep = cols.map(() => true);
+    const idx = cols.map((_, i) => i).filter((i) => keep[i]);
+    const CAP = 34;
+    const w = idx.map((i) => Math.min(CAP, Math.max(cols[i].length, 1, ...data.map((r) => S(r[i]).length))));
+    const pad = (s, n) => { let v = S(s); if (v.length > n) v = v.slice(0, n - 1) + '…'; return v + ' '.repeat(Math.max(0, n - v.length)); };
+    const line = (cells) => idx.map((i, k) => pad(cells[i], w[k])).join(' | ');
+    const sep = w.map((n) => '-'.repeat(n)).join('-+-');
+    return line(cols) + '\n' + sep + '\n' + data.map(line).join('\n');
   }
   /** A request/response body pretty-printed when it is JSON (so a one-line POST body reads nicely); else as it is. */
   function prettyBody(t) {

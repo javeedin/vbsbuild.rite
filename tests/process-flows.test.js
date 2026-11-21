@@ -86,6 +86,11 @@ const T = H.makeAsserter();
   T.check('the document shows the captured request data under each API (GET query, POST body)', /class="calldata"/.test(docData) && docData.indexOf('q=open') !== -1 && /Request body/.test(docData) && docData.indexOf('title') !== -1);
   T.check('the document shows the decoded response JSON for the calls (HTML-escaped)', /Response body/.test(docData) && docData.indexOf('items') !== -1 && docData.indexOf('&quot;id&quot;: 7') !== -1);
   T.check('a recorded call with no matching API is listed under "Other recorded calls"', /Other recorded calls \(1\)/.test(docData) && /\/other\/thing/.test(docData));
+  // the decoded rows render as an aligned table: columns padded to a common width, an all-empty column dropped
+  const docTbl = P.renderDocument({ name: 'Doc', pages: [{ name: 'A', page: 'app/a', calls: [
+    { method: 'GET', url: 'https://h/things', path: '/things', status: 200, respKind: 'json',
+      table: { columns: ['ID', 'NAME', 'EMPTY'], rows: [['1', 'Alpha', ''], ['22', 'Bo', '']], total: 2, from: 'items' } }] }] }, {});
+  T.check('rows render as an aligned table (padded columns, all-empty column dropped)', /ID \| NAME/.test(docTbl) && /1\s+\| Alpha/.test(docTbl) && docTbl.indexOf('EMPTY') === -1 && /-\+-/.test(docTbl), docTbl.slice(docTbl.indexOf('Rows ('), docTbl.indexOf('Rows (') + 160));
 
   T.section('a step records its url and whether it is a screen or a dialog');
   const withKind = P.cleanFlow({ name: 'Kinds', pages: [

@@ -175,6 +175,22 @@ function docCallFor(api, calls) {
   hits.sort((a, b) => Math.abs(str(a.path || docPathOf(a.url)).length - api.path.length) - Math.abs(str(b.path || docPathOf(b.url)).length - api.path.length));
   return hits[0] || null;
 }
+/** A decoded row table as an aligned monospace table: columns padded to a common width (capped), all-empty columns
+ *  dropped, long values clipped — so it reads as a grid rather than ragged pipes. */
+function alignedTable(columns, rows) {
+  const cols = (Array.isArray(columns) ? columns : []).map(str);
+  if (!cols.length) return '';
+  const data = (Array.isArray(rows) ? rows : []).map((r) => (Array.isArray(r) ? r.map(str) : []));
+  let keep = cols.map((_, i) => data.some((r) => str(r[i]).trim() !== ''));
+  if (!keep.some(Boolean)) keep = cols.map(() => true);
+  const idx = cols.map((_, i) => i).filter((i) => keep[i]);
+  const CAP = 34;
+  const w = idx.map((i) => Math.min(CAP, Math.max(cols[i].length, 1, ...data.map((r) => str(r[i]).length))));
+  const pad = (s, n) => { let v = str(s); if (v.length > n) v = v.slice(0, n - 1) + '…'; return v + ' '.repeat(Math.max(0, n - v.length)); };
+  const line = (cells) => idx.map((i, k) => pad(cells[i], w[k])).join(' | ');
+  const sep = w.map((n) => '-'.repeat(n)).join('-+-');
+  return line(cols) + '\n' + sep + '\n' + data.map(line).join('\n');
+}
 /** JSON pretty-printed when the text is JSON (so a one-line request body reads nicely); otherwise the text as is. */
 function prettyMaybeJson(t) {
   const s = str(t).trim();
@@ -190,10 +206,8 @@ function callDataHtml(c) {
   const kind = c.respKind === 'bip' ? 'BIP XML' : c.respKind === 'json' ? 'JSON' : c.respKind === 'xml' ? 'XML' : c.respKind === 'text' ? 'Text' : '';
   let rows = '';
   if (isObj(c.table) && Array.isArray(c.table.columns) && c.table.columns.length) {
-    const head = c.table.columns.join('  |  ');
-    const body = (Array.isArray(c.table.rows) ? c.table.rows : []).map((r) => (Array.isArray(r) ? r.join('  |  ') : '')).join('\n');
     const n = typeof c.table.total === 'number' ? c.table.total : (c.table.rows ? c.table.rows.length : 0);
-    rows = det('Rows (' + n + (c.table.from ? ' · ' + c.table.from : '') + ')', head + '\n' + '-'.repeat(Math.min(head.length, 80)) + '\n' + body, true, 'cd-tbl');
+    rows = det('Rows (' + n + (c.table.from ? ' · ' + c.table.from : '') + ')', alignedTable(c.table.columns, c.table.rows), true, 'cd-tbl');
   }
   const statusLine = (c.status !== undefined && c.status !== null && c.status !== '' ? 'HTTP ' + c.status : '') + (kind ? (c.status ? ' · ' : '') + kind : '');
   // request body open (usually small), the decoded rows open (the useful bit), the raw response body collapsed by default
