@@ -241,6 +241,63 @@ define([], () => {
       if (savedAt) { const s = when(savedAt); bits.push('saved ' + (s || '')); } else if (g) bits.push('not saved yet');
       return bits.join(' · ');
     }
+
+    // ── Edge paths (AI) from the recording (the dialog; the model is built in the chain, resources/js/edgePaths) ──
+    edgeHas(model) { return !!(model && (((model.steps || []).some((s) => (s.edges || []).length)) || (model.general || []).length)); }
+    edgeTitle(flow, model) {
+      const nm = (flow && flow.name) || 'Recording';
+      const n = (model && model.counts && model.counts.edges) || 0;
+      return nm + (n ? ' · ' + n + ' edge path' + (n === 1 ? '' : 's') : '');
+    }
+    edgeChips(model) {
+      if (!this.edgeHas(model)) return [];
+      const c = (model && model.counts) || {};
+      const out = [(c.edges || 0) + ' edge path' + ((c.edges || 0) === 1 ? '' : 's'), (c.stepsWithEdges || 0) + ' of ' + (c.steps || 0) + ' step' + ((c.steps || 0) === 1 ? '' : 's')];
+      if (c.high) out.push(c.high + ' high');
+      if (c.medium) out.push(c.medium + ' medium');
+      if (c.low) out.push(c.low + ' low');
+      return out;
+    }
+    edgeExports() {
+      return [
+        { op: 'edgePdf', label: 'PDF', icon: 'oj-ux-ico-file-pdf' },
+        { op: 'edgeExcel', label: 'Excel (.xlsx)', icon: 'oj-ux-ico-file-excel' },
+        { op: 'edgeHtml', label: 'Web page (.html)', icon: 'oj-ux-ico-file-html' },
+        { op: 'edgeCsv', label: 'CSV', icon: 'oj-ux-ico-file-csv' }
+      ];
+    }
+    edgeSevOptions(cur) { return [{ id: 'high', label: 'High' }, { id: 'medium', label: 'Medium' }, { id: 'low', label: 'Low' }].map((o) => ({ id: o.id, label: o.label, on: (cur || 'medium') === o.id })); }
+    // The By step tab: every step (and the flow-wide group last) with its editable edge paths. `s` is the step index or 'g'.
+    edgeSteps(model, checks) {
+      const ch = checks || {};
+      const steps = (model && model.steps) || [];
+      const n = steps.length;
+      const edgeOf = (e, ei, pfx) => ({ e: ei, name: e.name || '', trigger: e.trigger || '', expected: e.expected || '', stresses: e.stresses || '', severity: e.severity || 'medium', sevOptions: this.edgeSevOptions(e.severity), covered: ch[pfx + ':' + ei] === true });
+      const out = steps.map((s, si) => ({
+        s: String(si), name: s.name || '', isFlow: false, calls: (s.calls || []).length,
+        tag: si === 0 ? 'Start' : (si === n - 1 ? 'End' : 'Step ' + (si + 1)),
+        edges: (s.edges || []).map((e, ei) => edgeOf(e, ei, String(si)))
+      }));
+      out.push({ s: 'g', name: 'Across the whole flow', isFlow: true, calls: 0, tag: 'Flow', edges: ((model && model.general) || []).map((e, ei) => edgeOf(e, ei, 'g')) });
+      return out;
+    }
+    // The Checklist tab: every edge path numbered, with whether it is ticked as covered (checks: { "s:e": true }).
+    edgeChecklist(model, checks) {
+      const ch = checks || {};
+      const out = [];
+      let n = 0;
+      ((model && model.steps) || []).forEach((s, si) => (s.edges || []).forEach((e, ei) => { n++; out.push({ num: n, step: s.name || '', key: si + ':' + ei, name: e.name || '', severity: e.severity || 'medium', expected: e.expected || '', covered: ch[si + ':' + ei] === true }); }));
+      ((model && model.general) || []).forEach((e, ei) => { n++; out.push({ num: n, step: 'Across the whole flow', key: 'g:' + ei, name: e.name || '', severity: e.severity || 'medium', expected: e.expected || '', covered: ch['g:' + ei] === true }); });
+      return out;
+    }
+    edgeStamp(source, generatedAt, savedAt) {
+      const when = (iso) => { try { const d = new Date(iso); return isNaN(d.getTime()) ? '' : d.toLocaleString(); } catch (e) { return ''; } };
+      const g = when(generatedAt);
+      const bits = [];
+      if (g) bits.push((source === 'auto' ? 'Suggested from the APIs' : 'Drafted by AI') + ' · ' + g);
+      if (savedAt) { const s = when(savedAt); bits.push('saved ' + (s || '')); } else if (g) bits.push('not saved yet');
+      return bits.join(' · ');
+    }
   }
   return PageModule;
 });

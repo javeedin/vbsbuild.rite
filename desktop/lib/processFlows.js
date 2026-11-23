@@ -88,6 +88,33 @@ function cleanFeatureList(ff, by, savedAt) {
   };
 }
 
+// The saved edge-path list for a flow (from "Edge paths (AI)"): the happy path's steps each with their edge cases
+// (trigger, expected behaviour, what they stress, severity) and a flow-wide group, when the AI drafted them, and when they
+// were saved. The model is rebuilt from this against the flow's current pages when the dialog reopens.
+const SEV3 = { high: 1, medium: 1, low: 1 };
+function cleanEdgeList(ep, by, savedAt) {
+  if (!isObj(ep)) return undefined;
+  const draft = (Array.isArray(ep.draft) ? ep.draft : []).slice(0, 80).map((d) => {
+    const o = isObj(d) ? d : {};
+    return {
+      pageKey: cut(o.pageKey, 20).trim().toUpperCase() || '*',
+      edges: (Array.isArray(o.edges) ? o.edges : []).slice(0, 20).map((e) => {
+        const g = isObj(e) ? e : {};
+        return { name: cut(g.name, MAX.name).trim(), trigger: cut(g.trigger, 600).trim(), expected: cut(g.expected, 600).trim(),
+          stresses: cut(g.stresses, 300).trim(), severity: SEV3[str(g.severity).toLowerCase()] ? str(g.severity).toLowerCase() : 'medium' };
+      }).filter((e) => e.name),
+    };
+  }).filter((d) => d.edges.length);
+  if (!draft.length) return undefined;
+  const checks = {};
+  if (isObj(ep.checks)) Object.keys(ep.checks).slice(0, 4000).forEach((k) => { if (ep.checks[k] === true && /^(?:\d+|g):\d+$/.test(k)) checks[k] = true; });
+  return {
+    source: cut(ep.source, 20), generatedAt: cut(ep.generatedAt, 40),
+    savedAt: cut(ep.savedAt, 40) || str(savedAt) || new Date().toISOString(), savedBy: str(by) || cut(ep.savedBy, 120),
+    draft: draft, checks: checks,
+  };
+}
+
 function cleanFlow(flow, by, old, opts) {
   const f = isObj(flow) ? flow : {};
   const keepApis = !!(opts && opts.keepApis);
@@ -106,6 +133,7 @@ function cleanFlow(flow, by, old, opts) {
   }).filter((p) => p.name || p.page).slice(0, MAX.pages);
   const at = (old && old.createdAt) || null;
   const features = cleanFeatureList(f.features, by, opts && opts.savedAt);
+  const edges = cleanEdgeList(f.edges, by, opts && opts.savedAt);
   const out = {
     id: old ? old.id : str(f.id),
     name: cut(f.name, MAX.name).trim() || 'Untitled process flow',
@@ -115,6 +143,7 @@ function cleanFlow(flow, by, old, opts) {
     created: (old && old.created) || str(by), createdAt: at,
     updatedBy: str(by) };
   if (features) out.features = features;
+  if (edges) out.edges = edges;
   return out;
 }
 

@@ -42,6 +42,17 @@ const T = H.makeAsserter();
   T.check('the feature list is kept with the flow (source, when drafted, savedAt stamped, savedBy)', !!wf.features && wf.features.source === 'ai' && wf.features.generatedAt === '2026-11-19T10:59:00.000Z' && wf.features.savedAt === '2026-11-19T11:00:00.000Z' && wf.features.savedBy === 'sam');
   T.check('its draft is cleaned (empty feature dropped, blank capability dropped) and ticks kept only for valid keys', wf.features.draft.length === 1 && wf.features.draft[0].name === 'Order capture' && wf.features.draft[0].capabilities.length === 1 && wf.features.checks['0:0'] === false && !('bad' in wf.features.checks));
   T.check('it survives a reopen from disk', P.open({ dir }).get('PF-0001').flow.features.draft[0].pageKeys.join() === 'P1,P2');
+  // the edge paths saved with a flow (from "Edge paths (AI)")
+  clock = new Date('2026-11-19T11:05:00Z');
+  const we = s.save(Object.assign({}, s.get('PF-0001').flow, { edges: { source: 'ai', generatedAt: '2026-11-19T11:04:00.000Z',
+    draft: [{ pageKey: 'P1', edges: [{ name: 'No matching items', trigger: 'the search returns nothing', expected: 'show an empty state', stresses: 'GET /items', severity: 'low' }, { name: '', severity: 'x' }] },
+      { pageKey: '*', edges: [{ name: 'Session expires', trigger: 'it times out', expected: 'sign in again', severity: 'nope' }] }, { pageKey: 'P2', edges: [] }],
+    checks: { '0:0': true, 'g:0': true, 'bad': true, '1:0': false } } }), 'sam').flow;
+  T.check('the edge list is kept with the flow (source, when drafted, savedAt stamped, savedBy)', !!we.edges && we.edges.source === 'ai' && we.edges.generatedAt === '2026-11-19T11:04:00.000Z' && we.edges.savedAt === '2026-11-19T11:05:00.000Z' && we.edges.savedBy === 'sam');
+  T.check('its draft is cleaned (nameless edge dropped, empty group dropped, severity normalised) and only covered ticks kept for valid keys',
+    we.edges.draft.length === 2 && we.edges.draft[0].pageKey === 'P1' && we.edges.draft[0].edges.length === 1 && we.edges.draft[1].pageKey === '*' && we.edges.draft[1].edges[0].severity === 'medium'
+    && we.edges.checks['0:0'] === true && we.edges.checks['g:0'] === true && !('bad' in we.edges.checks) && !('1:0' in we.edges.checks), JSON.stringify(we.edges.checks));
+  T.check('the edge list survives a reopen from disk', P.open({ dir }).get('PF-0001').flow.edges.draft[0].edges[0].name === 'No matching items');
   T.check('removed; a second remove says no such flow', s.remove('PF-0002').ok === true && s.list('').flows.length === 1 && s.remove('PF-0002').ok === false);
   T.check('kept on disk as JSON, no temp left', fs.existsSync(path.join(dir, 'PF-0001.json')) && !fs.existsSync(path.join(dir, 'PF-0001.json.tmp')));
   T.check('a restart reads it back', P.open({ dir }).get('PF-0001').flow.name === 'Equipment rental v2');

@@ -8,8 +8,9 @@ define([
   'resources/js/shellBus',
   'resources/js/flowModel',
   'resources/js/flowFeatures',
+  'resources/js/edgePaths',
   'resources/js/minutesClient',
-], (ActionChain, PC, PagesPC, SC, API, exportKit, bus, FM, FF, M) => {
+], (ActionChain, PC, PagesPC, SC, API, exportKit, bus, FM, FF, EP, M) => {
   'use strict';
 
   // Process Flows: one screen — a list of flows and an editor. Ops (data-op):
@@ -160,6 +161,46 @@ define([
       v.featNote = 'Drafted ' + v.featModel.counts.features + ' feature(s) with AI. Edit the names, then Save.';
     } catch (e) { v.featErr = String((e && e.message) || e); } finally { v.featBusy = ''; }
   }
+
+  // ── Edge paths (AI) from the recording (the dialog) ──
+  // The draft is the steps (page order) each with their edge paths, plus a flow-wide '*' group last — so every step (even
+  // one with no edges yet) and the flow-wide group are editable by a stable index.
+  const edgeToDraft = (model) => ((model && model.steps) || []).map((s) => ({ pageKey: s.key, edges: (s.edges || []).map((e) => Object.assign({}, e)) }))
+    .concat([{ pageKey: '*', edges: ((model && model.general) || []).map((e) => Object.assign({}, e)) }]);
+  // Build the model from a draft and mirror it back; `source` ('ai' | 'auto') stamps a fresh build time (edits keep it).
+  function edgeSet(v, drafted, source) {
+    v.edgeModel = EP.build(readEditor(v), drafted);
+    v.edgeDraft = edgeToDraft(v.edgeModel);
+    v.edgeSummary = EP.summary(v.edgeModel);
+    v.edgeChecks = {};
+    if (source) { v.edgeGeneratedAt = new Date().toISOString(); v.edgeSource = source; v.edgeSavedAt = ''; }
+  }
+  // Rebuild after an in-place text edit without clearing the ticks or the build time (indices are unchanged).
+  function edgeRebuild(v) { v.edgeModel = EP.build(readEditor(v), v.edgeDraft || []); v.edgeDraft = edgeToDraft(v.edgeModel); v.edgeSummary = EP.summary(v.edgeModel); }
+  // Load an edge list saved on the flow (rebuilt against the current pages), with its timestamps.
+  function edgeLoadSaved(v, saved) {
+    v.edgeDraft = (saved.draft || []).map((d) => ({ pageKey: d.pageKey, edges: (d.edges || []).map((e) => Object.assign({}, e)) }));
+    v.edgeModel = EP.build(readEditor(v), v.edgeDraft);
+    v.edgeDraft = edgeToDraft(v.edgeModel);
+    v.edgeSummary = EP.summary(v.edgeModel);
+    v.edgeChecks = (saved.checks && typeof saved.checks === 'object') ? Object.assign({}, saved.checks) : {};
+    v.edgeGeneratedAt = saved.generatedAt || ''; v.edgeSavedAt = saved.savedAt || ''; v.edgeSource = saved.source || 'ai';
+  }
+  async function edgeRunAi(context, v) {
+    v.edgeBusy = 'ai'; v.edgeErr = '';
+    try {
+      const p = EP.prompt(readEditor(v));
+      const r = await M.aiChat(p.system, p.user, 'edge-paths', 16000);
+      if (!(r.ok && r.body && r.body.ok && r.body.text)) { v.edgeErr = (r.body && r.body.error) || 'The AI did not answer.'; return; }
+      const drafted = EP.parse(r.body.text);
+      if (!drafted.length) { v.edgeErr = 'The AI did not return any edge paths. Try again, or use Suggest from the APIs.'; return; }
+      edgeSet(v, drafted, 'ai');
+      v.edgeNote = 'Drafted ' + v.edgeModel.counts.edges + ' edge path(s) with AI. Review, edit, then Save.';
+    } catch (e) { v.edgeErr = String((e && e.message) || e); } finally { v.edgeBusy = ''; }
+  }
+  // An edit key is "<step>:<edge>" where <step> is a step index (0…) or 'g' for the flow-wide group; map it to its draft entry.
+  const edgeEntry = (v, s) => { const d = v.edgeDraft || []; return s === 'g' ? d[d.length - 1] : d[Number(s)]; };
+
   /** Read the page rows' inputs from the DOM into MODEL (name / note, and the matched catalog page). pedit keeps MODEL
    *  current on every keystroke, but this is called before any structural change or save so MODEL always matches what is
    *  on screen, whatever the timing of pedit's action chain. The rows match MODEL 1-to-1 here (no re-render yet). */
@@ -672,6 +713,133 @@ define([
           const res = await exportKit.run(op === 'featExcel' ? 'xlsx' : 'csv', Object.assign({ name: base, title: meta.title }, opts));
           v.featNote = (res && res.message) || 'Exported.';
         } catch (e) { v.featErr = 'The export failed: ' + String((e && e.message) || e); }
+        return;
+      }
+
+      // ── Edge paths (AI) from the recording: for each step of the happy path, the edge cases that can go differently —
+      //    trigger, the behaviour the app should have, what it stresses, a severity — editable, checkable, exportable
+      //    (resources/js/edgePaths). ──
+      if (op === 'makeEdges') {
+        if (!MODEL || v.busy) return;
+        foldRows(v);
+        const f = readEditor(v);
+        if (!(f.pages || []).length) { say(false, 'This process flow has no pages to work out edge paths from.'); return; }
+        v.edgeDlg = true; v.edgeErr = ''; v.edgeNote = ''; v.edgeModel = null; v.edgeDraft = null; v.edgeSummary = null; v.edgeChecks = {}; v.edgeTab = 'steps'; v.edgePreview = '';
+        v.edgeGeneratedAt = ''; v.edgeSavedAt = ''; v.edgeSource = '';
+        const saved = MODEL && MODEL.edges;
+        if (saved && Array.isArray(saved.draft) && saved.draft.length) {
+          edgeLoadSaved(v, saved);
+          try { const a = await M.aiSettings(); v.aiReady = !!(a.ok && a.body && a.body.active); } catch (e) { v.aiReady = false; }
+          v.edgeNote = 'Loaded the saved edge paths. Re-draft with AI to refresh them, or edit and Save.';
+          return;
+        }
+        try { const a = await M.aiSettings(); v.aiReady = !!(a.ok && a.body && a.body.active); } catch (e) { v.aiReady = false; }
+        if (v.aiReady) await edgeRunAi(context, v);
+        else { edgeSet(v, EP.autoDraft(f), 'auto'); v.edgeNote = 'Ask AI is not set up, so the edge paths were derived from each page\'s API calls. Set up Ask AI on the Jira stories screen to draft with AI.'; }
+        return;
+      }
+      if (op === 'edgeClose') { v.edgeDlg = false; v.edgePreview = ''; return; }
+      // PDF preview: Save as PDF (a real file via the desktop's HTML→PDF), Print (fallback), or close the preview
+      if (op === 'edgePdfSave') {
+        if (!v.edgePreview || v.edgePdfBusy) return;
+        v.edgePdfBusy = 'pdf'; v.edgeErr = '';
+        try {
+          const base = 'edge-paths-' + (f0IdOf(v) || 'recording');
+          const r = await SC.pdf(v.edgePreview, base);
+          const b = r.body || {};
+          if (r.ok && b.base64) {
+            const bin = atob(b.base64); const bytes = new Uint8Array(bin.length);
+            for (let k = 0; k < bin.length; k++) bytes[k] = bin.charCodeAt(k);
+            exportKit.download(base + '.pdf', 'application/pdf', bytes);
+            v.edgePreview = ''; v.edgeNote = 'Saved ' + base + '.pdf.';
+          } else if (b.noPdf) {
+            exportKit.printDocument(v.edgePreview);
+            v.edgeNote = 'Saving a PDF needs the desktop app — use Print and choose “Save as PDF”.';
+          } else { v.edgeErr = (b && b.error) || 'The PDF could not be made.'; }
+        } catch (e) { v.edgeErr = String((e && e.message) || e); } finally { v.edgePdfBusy = ''; }
+        return;
+      }
+      if (op === 'edgePrint') { if (v.edgePreview) exportKit.printDocument(v.edgePreview); return; }
+      if (op === 'edgePrevClose') { v.edgePreview = ''; return; }
+      if (op === 'edgeTab') { v.edgeTab = (key === 'summary' || key === 'checklist') ? key : 'steps'; return; }
+      if (op === 'edgeAi') { if (!v.aiReady) { v.edgeErr = 'Ask AI is not set up. Set it up on the Jira stories screen, or use Suggest from the APIs.'; return; } await edgeRunAi(context, v); return; }
+      if (op === 'edgeAuto') { v.edgeErr = ''; edgeSet(v, EP.autoDraft(readEditor(v)), 'auto'); v.edgeNote = 'Suggested edge paths from each page\'s API calls. Edit them, or Draft with AI.'; return; }
+      // Save the edge paths with the process flow (persisted on the flow; restored next time the dialog opens)
+      if (op === 'edgeSave') {
+        if (!v.edgeModel || v.edgeSaving) return;
+        const f = readEditor(v);
+        if (!String(f.name || '').trim()) { v.edgeErr = 'Give the process flow a name first (top of the editor), then Save.'; return; }
+        v.edgeSaving = true; v.edgeErr = '';
+        try {
+          f.edges = { source: v.edgeSource || 'ai', generatedAt: v.edgeGeneratedAt || '', savedAt: new Date().toISOString(), draft: v.edgeDraft || [], checks: v.edgeChecks || {} };
+          const r = await PC.save(f);
+          if (!r.ok || !r.body || !r.body.flow) { v.edgeErr = (r.body && r.body.error) || 'The edge paths could not be saved.'; return; }
+          MODEL = Object.assign({ pages: [] }, copy(r.body.flow));
+          if (!MODEL.pages.length) MODEL.pages = [newPage()];
+          v.saved = baseline(v);
+          if (MODEL.edges && MODEL.edges.savedAt) v.edgeSavedAt = MODEL.edges.savedAt;
+          await loadList();
+          v.edgeNote = 'Saved the edge paths with the flow (' + stampTime(v.edgeSavedAt) + ').';
+        } catch (e) { v.edgeErr = String((e && e.message) || e); } finally { v.edgeSaving = ''; }
+        return;
+      }
+      // an edge path: edit a field, change its severity, tick / untick "covered", add one, remove one
+      if (op === 'edgeEdit') {
+        const m = /^(\d+|g):(\d+):(name|trigger|expected|stresses)$/.exec(String(key || ''));
+        if (!m) return;
+        const entry = edgeEntry(v, m[1]);
+        if (!entry || !entry.edges || !entry.edges[Number(m[2])]) return;
+        entry.edges[Number(m[2])][m[3]] = String(input || '').slice(0, m[3] === 'name' ? 200 : (m[3] === 'stresses' ? 300 : 600));
+        edgeRebuild(v);
+        return;
+      }
+      if (op === 'edgeSev') {
+        const m = /^(\d+|g):(\d+)$/.exec(String(key || ''));
+        if (!m) return;
+        const entry = edgeEntry(v, m[1]);
+        if (!entry || !entry.edges || !entry.edges[Number(m[2])]) return;
+        const sev = String(value || input || '').toLowerCase();
+        entry.edges[Number(m[2])].severity = (sev === 'high' || sev === 'low') ? sev : 'medium';
+        edgeRebuild(v);
+        return;
+      }
+      if (op === 'edgeCheck') {
+        const k = String(key || '');
+        if (!/^(\d+|g):\d+$/.test(k)) return;
+        const cur = (v.edgeChecks || {})[k] === true;
+        v.edgeChecks = Object.assign({}, v.edgeChecks || {}, { [k]: !cur });
+        return;
+      }
+      if (op === 'edgeAdd') {
+        const entry = edgeEntry(v, String(key));
+        if (!entry) return;
+        entry.edges = (entry.edges || []).concat({ name: 'New edge path', trigger: '', expected: '', stresses: '', severity: 'medium' });
+        edgeSet(v, v.edgeDraft); // indices change → mirror and reset ticks
+        return;
+      }
+      if (op === 'edgeDel') {
+        const m = /^(\d+|g):(\d+)$/.exec(String(key || ''));
+        if (!m) return;
+        const entry = edgeEntry(v, m[1]);
+        if (!entry || !entry.edges) return;
+        entry.edges.splice(Number(m[2]), 1);
+        edgeSet(v, v.edgeDraft); // indices change → mirror and reset ticks
+        return;
+      }
+      if (op === 'edgePdf' || op === 'edgeHtml' || op === 'edgeExcel' || op === 'edgeCsv') {
+        if (!v.edgeModel) return;
+        const base = 'edge-paths-' + (f0IdOf(v) || 'recording');
+        const meta = { flow: (readEditor(v).name || 'recording'), date: new Date().toISOString().slice(0, 10), title: 'Edge paths — ' + (readEditor(v).name || 'recording') };
+        try {
+          if (op === 'edgePdf') { v.edgePreview = EP.documentHtml(v.edgeModel, meta); v.edgeNote = ''; return; } // show the preview; Save as PDF is in it
+          if (op === 'edgeHtml') { exportKit.download(base + '.html', 'text/html;charset=utf-8', EP.documentHtml(v.edgeModel, meta)); v.edgeNote = 'Saved the edge paths as a web page.'; return; }
+          // Excel / CSV follow the tab: Summary = the risk summary, Checklist = each edge with Covered, By step = the full table
+          const opts = v.edgeTab === 'summary' ? { rows: EP.summaryRows(v.edgeModel), columns: EP.SUM_COLUMNS }
+            : v.edgeTab === 'checklist' ? { rows: EP.checkRows(v.edgeModel, v.edgeChecks || {}), columns: EP.CHECK_COLUMNS }
+              : { rows: EP.rows(v.edgeModel), columns: EP.COLUMNS };
+          const res = await exportKit.run(op === 'edgeExcel' ? 'xlsx' : 'csv', Object.assign({ name: base, title: meta.title }, opts));
+          v.edgeNote = (res && res.message) || 'Exported.';
+        } catch (e) { v.edgeErr = 'The export failed: ' + String((e && e.message) || e); }
         return;
       }
 
