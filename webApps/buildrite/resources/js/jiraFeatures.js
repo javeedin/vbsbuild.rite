@@ -96,17 +96,42 @@ define([], function () {
     return { system: SYSTEM, user: user };
   }
 
-  /** The ```features block (or the first JSON array) → [{ name, description, storyKeys:[…] }]; [] when none. */
+  /** Every complete top-level {…} object inside the first [ … ] of `body`, string-aware (a truncated last one is skipped). */
+  function salvage(body) {
+    var out = [];
+    var start = body.indexOf('[');
+    if (start === -1) return out;
+    var depth = 0, objStart = -1, inStr = false, escq = false;
+    for (var i = start + 1; i < body.length; i++) {
+      var ch = body.charAt(i);
+      if (inStr) {
+        if (escq) escq = false;
+        else if (ch === '\\') escq = true;
+        else if (ch === '"') inStr = false;
+        continue;
+      }
+      if (ch === '"') { inStr = true; continue; }
+      if (ch === '{') { if (depth === 0) objStart = i; depth++; continue; }
+      if (ch === '}') { depth--; if (depth === 0 && objStart !== -1) { try { out.push(JSON.parse(body.slice(objStart, i + 1))); } catch (e) { /* skip a broken object */ } objStart = -1; } continue; }
+      if (ch === ']' && depth === 0) break; // the array closed
+    }
+    return out;
+  }
+
+  /**
+   * The ```features block (or the first JSON array) → [{ name, description, storyKeys:[…] }]; [] when none. Tolerant of a
+   * {"features":[…]} wrapper and of a truncated answer (a long feature list can be cut off): the complete objects are kept.
+   */
   function parse(text) {
     var t = S(text);
     var m = /```(?:features|json)?\s*([\s\S]*?)```/i.exec(t);
     var body = m ? m[1] : t;
-    var a = body.indexOf('[');
-    var b = body.lastIndexOf(']');
-    if (a === -1 || b === -1 || b < a) return [];
-    var arr;
-    try { arr = JSON.parse(body.slice(a, b + 1)); } catch (e) { return []; }
-    if (!Array.isArray(arr)) return [];
+    var arr = null;
+    var a = body.indexOf('['), b = body.lastIndexOf(']');
+    if (a !== -1 && b > a) { try { var j = JSON.parse(body.slice(a, b + 1)); if (Array.isArray(j)) arr = j; } catch (e) { /* messy or truncated */ } }
+    if (!arr) { try { var o = JSON.parse(body.trim()); if (o && Array.isArray(o.features)) arr = o.features; else if (Array.isArray(o)) arr = o; } catch (e) { /* not clean JSON */ } }
+    if (!arr) arr = salvage(body); // truncated / trailing prose: keep the complete objects
+    if (!arr || !arr.length) return [];
     return arr.filter(function (f) { return f && typeof f === 'object'; }).map(function (f) {
       return { name: S(f.name).trim(), description: S(f.description).trim(),
         storyKeys: uniq((Array.isArray(f.storyKeys) ? f.storyKeys : (Array.isArray(f.keys) ? f.keys : [])).map(function (k) { return S(k).trim().toUpperCase(); }).filter(Boolean)) };

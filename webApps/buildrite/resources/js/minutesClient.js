@@ -123,7 +123,7 @@ define([], function () {
     aiSave: function (form) { return sql('ai/settings', 'POST', form); },
     aiModels: function (provider) { return sql('ai/models', 'POST', { provider: provider }); },
     // feature: which feature asks (AI settings may give it its own AI): 'minutes' unless said
-    aiChat: function (system, user, feature) { return sql('ai/chat', 'POST', { system: system, user: user, feature: feature || 'minutes' }); },
+    aiChat: function (system, user, feature, maxTokens) { return sql('ai/chat', 'POST', { system: system, user: user, feature: feature || 'minutes', maxTokens: maxTokens || undefined }); },
     recording: recording, startRec: startRec, stopRec: stopRec, cancelRec: cancelRec,
     copy: copy, copyHtml: copyHtml, mailto: mailto, download: download
   };

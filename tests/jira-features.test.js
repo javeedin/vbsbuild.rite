@@ -38,6 +38,11 @@ const ai = 'Sure, here you go:\n```features\n[{"name":"Equipment Catalogue","des
 const drafted = F.parse(ai);
 T.check('the ```features block is parsed, keys upper-cased and de-duplicated', drafted.length === 2 && drafted[0].name === 'Equipment Catalogue' && drafted[0].storyKeys.join() === 'EQR-1,EQR-2' && drafted[1].storyKeys.join() === 'EQR-3', JSON.stringify(drafted));
 T.check('no block / not JSON → empty, nothing thrown', F.parse('no json here').length === 0 && F.parse('').length === 0 && F.parse(null).length === 0);
+// a long answer that the model cut off (no closing ] or fence): keep every complete feature, drop the half-written last one
+const truncated = '```features\n[{"name":"Equipment Catalogue","description":"Browse and filter","storyKeys":["EQR-1","EQR-2"]},{"name":"Fusion Sync","description":"Keep items in step","storyKeys":["EQR-3"]},{"name":"Half written","descripti';
+const sal = F.parse(truncated);
+T.check('a truncated answer is salvaged: the whole features kept, the cut-off one dropped', sal.length === 2 && sal[0].name === 'Equipment Catalogue' && sal[1].storyKeys.join() === 'EQR-3', JSON.stringify(sal));
+T.check('a {"features":[…]} wrapper is accepted too', F.parse('{"features":[{"name":"X","storyKeys":["EQR-1"]}]}').length === 1 && F.parse('{"features":[{"name":"X","storyKeys":["EQR-1"]}]}')[0].name === 'X');
 
 T.section('build the model');
 const m = F.build(issues, drafted);

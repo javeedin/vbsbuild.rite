@@ -47,7 +47,9 @@ define([
         v.busy = 'ai'; v.error = '';
         try {
           const p = JFEAT.prompt(v.stories);
-          const r = await M.aiChat(p.system, p.user, 'features');
+          // a feature list for a whole backlog is long (a line per feature, every story key) — ask for a big budget so
+          // the JSON is not cut off; the parser salvages a truncated answer too.
+          const r = await M.aiChat(p.system, p.user, 'features', 16000);
           if (!(r.ok && r.body && r.body.ok && r.body.text)) { v.error = (r.body && r.body.error) || 'The AI did not answer.'; return; }
           const drafted = JFEAT.parse(r.body.text);
           if (!drafted.length) { v.error = 'The AI did not return a feature list. Try again, or use Auto-group.'; return; }
