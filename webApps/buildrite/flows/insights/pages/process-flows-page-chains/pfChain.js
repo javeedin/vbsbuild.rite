@@ -543,7 +543,7 @@ define([
         return;
       }
       if (op === 'featClose') { v.featDlg = false; return; }
-      if (op === 'featTab') { v.featTab = key === 'pages' ? 'pages' : 'caps'; return; }
+      if (op === 'featTab') { v.featTab = (key === 'pages' || key === 'summary') ? key : 'caps'; return; }
       if (op === 'featAi') { if (!v.aiReady) { v.featErr = 'Ask AI is not set up. Set it up on the Jira stories screen, or use Group by page.'; return; } await featRunAi(context, v); return; }
       if (op === 'featAuto') { v.featErr = ''; featSet(v, FF.autoDraft(readEditor(v))); v.featNote = 'Grouped one feature per page. Rename them, or Draft with AI.'; return; }
       if (op === 'featEdit') {
