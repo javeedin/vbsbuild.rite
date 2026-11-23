@@ -99,6 +99,7 @@
           <oj-bind-if test="[[ $functions.hasRecordedCalls($variables.flow) ]]">
             <button type="button" class="nx-btn" id="pfMakeScenario" data-op="makeScenario" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]" title="Turn this recording's captured API calls, in the order they fired, into an API Scenario you can run"><span class="oj-ux-ico-flow" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'scenario' ? 'Creating…' : 'Create scenario from the recording' ]]"></oj-bind-text></button>
             <button type="button" class="nx-btn" id="pfMakeFlow" data-op="makeFlow" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]" title="Turn this recording into a Saved Flow (lanes, steps and a diagram) you can edit, run and export"><span class="oj-ux-ico-network-flow-diagram" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'flow' ? 'Creating…' : 'Create flow from the recording' ]]"></oj-bind-text></button>
+            <button type="button" class="nx-btn" id="pfMakeFeatures" data-op="makeFeatures" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]" title="Ask the AI to group the pages and their API calls into a product feature list you can edit and export"><span class="oj-ux-ico-category" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'features' ? 'Drafting…' : 'Features list from the recording' ]]"></oj-bind-text></button>
           </oj-bind-if>
           <button type="button" class="nx-btn nx-btn--cta" id="pfSave" data-op="save" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]"><span class="oj-ux-ico-save" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'save' ? 'Saving…' : 'Save' ]]"></oj-bind-text></button>
         </div>
@@ -277,5 +278,71 @@
         </oj-bind-if>
       </div>
     </oj-bind-if>
+  </oj-bind-if>
+
+  <!-- Features list from the recording: the pages + their API calls grouped into product features (AI or by page), editable and exportable -->
+  <oj-bind-if test="[[ $variables.featDlg ]]">
+    <div class="nx-pf-featback" data-op="featClose" on-click="[[ $listeners.onPf ]]"></div>
+    <div class="nx-dialog nx-pf-featdlg" role="dialog" aria-modal="true" aria-label="Feature list from the recording">
+      <div class="nx-pf-feathead">
+        <div>
+          <div class="nx-kicker">Features from the recording</div>
+          <h2 id="pfFeatTitle"><oj-bind-text value="[[ $functions.featTitle($variables.flow, $variables.featModel) ]]"></oj-bind-text></h2>
+        </div>
+        <button type="button" class="nx-iconbtn" id="pfFeatClose" data-op="featClose" on-click="[[ $listeners.onPf ]]" aria-label="Close"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+      </div>
+      <div class="nx-pf-featbar">
+        <button type="button" class="nx-btn nx-btn--sm" id="pfFeatAi" data-op="featAi" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.featBusy || !$variables.aiReady ]]" :title="[[ $variables.aiReady ? 'Ask the AI to group the pages into features' : 'Set up Ask AI on the Jira stories screen to draft with AI' ]]"><span class="oj-ux-ico-brain" aria-hidden="true"></span><oj-bind-text value="[[ $variables.featBusy === 'ai' ? 'Drafting…' : 'Draft with AI' ]]"></oj-bind-text></button>
+        <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="pfFeatAuto" data-op="featAuto" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.featBusy ]]" title="One feature per page, without AI"><span class="oj-ux-ico-magic-wand" aria-hidden="true"></span>Group by page</button>
+        <div class="nx-pf-featexp" id="pfFeatExport">
+          <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" :disabled="[[ !$functions.featHas($variables.featModel) ]]" aria-haspopup="true"><span class="oj-ux-ico-export" aria-hidden="true"></span>Export<span class="oj-ux-ico-chevron-down" aria-hidden="true"></span></button>
+          <div class="nx-pf-featmenu" role="menu">
+            <oj-bind-for-each data="[[ $functions.featExports() ]]"><template data-oj-as="x">
+              <button type="button" class="nx-pf-featmi" role="menuitem" :data-op="[[ x.data.op ]]" on-click="[[ $listeners.onPf ]]"><span :class="[[ x.data.icon ]]" aria-hidden="true"></span><oj-bind-text value="[[ x.data.label ]]"></oj-bind-text></button>
+            </template></oj-bind-for-each>
+          </div>
+        </div>
+      </div>
+      <oj-bind-if test="[[ !!$variables.featErr ]]"><div class="nx-sc-err" id="pfFeatErr"><oj-bind-text value="[[ $variables.featErr ]]"></oj-bind-text></div></oj-bind-if>
+      <oj-bind-if test="[[ $variables.featBusy === 'ai' ]]"><div class="nx-empty" id="pfFeatDrafting"><span class="nx-spin" aria-hidden="true"></span> The AI is grouping the pages into features…</div></oj-bind-if>
+      <div class="nx-pf-featbody">
+        <oj-bind-if test="[[ !$functions.featHas($variables.featModel) && $variables.featBusy !== 'ai' && !$variables.featErr ]]">
+          <div class="nx-empty" id="pfFeatNone">No features yet. Press <b>Draft with AI</b> to group the pages into product features, or <b>Group by page</b>.</div>
+        </oj-bind-if>
+        <oj-bind-if test="[[ $functions.featHas($variables.featModel) ]]">
+          <div class="nx-pf-featchips"><oj-bind-for-each data="[[ $functions.featChips($variables.featModel) ]]"><template data-oj-as="c"><span class="nx-pf-featchip"><oj-bind-text value="[[ c.data ]]"></oj-bind-text></span></template></oj-bind-for-each></div>
+          <oj-bind-for-each data="[[ $functions.featRows($variables.featModel) ]]">
+            <template data-oj-as="f">
+              <section class="nx-pf-featcard" :data-idx="[[ f.data.idx ]]">
+                <input type="text" class="nx-pf-featname" :value="[[ f.data.name ]]" :data-key="[[ $functions.editKey('name', f.data.idx) ]]" data-op="featEdit" on-change="[[ $listeners.onPf ]]" aria-label="Feature name" placeholder="Feature name">
+                <input type="text" class="nx-pf-featdesc" :value="[[ f.data.description ]]" :data-key="[[ $functions.editKey('desc', f.data.idx) ]]" data-op="featEdit" on-change="[[ $listeners.onPf ]]" aria-label="One-line description" placeholder="One line about what it does">
+                <div class="nx-pf-featpages">
+                  <oj-bind-for-each data="[[ f.data.pages ]]"><template data-oj-as="p">
+                    <div class="nx-pf-featpage">
+                      <div class="nx-pf-featpn"><span class="oj-ux-ico-document" aria-hidden="true"></span><oj-bind-text value="[[ p.data.name ]]"></oj-bind-text></div>
+                      <oj-bind-for-each data="[[ p.data.calls ]]"><template data-oj-as="c">
+                        <div class="nx-pf-featcall"><span class="nx-pf-featm"><oj-bind-text value="[[ c.data.method ]]"></oj-bind-text></span><code><oj-bind-text value="[[ c.data.path ]]"></oj-bind-text></code></div>
+                      </template></oj-bind-for-each>
+                      <oj-bind-if test="[[ p.data.calls.length === 0 ]]"><div class="nx-pf-featnocalls">no API calls</div></oj-bind-if>
+                    </div>
+                  </template></oj-bind-for-each>
+                </div>
+              </section>
+            </template>
+          </oj-bind-for-each>
+          <oj-bind-if test="[[ $functions.featUngrouped($variables.featModel).length > 0 ]]">
+            <section class="nx-pf-featcard nx-pf-featcard--ung">
+              <div class="nx-pf-featname nx-pf-featname--ung">Not grouped yet</div>
+              <div class="nx-pf-featpages">
+                <oj-bind-for-each data="[[ $functions.featUngrouped($variables.featModel) ]]"><template data-oj-as="p">
+                  <div class="nx-pf-featpage"><div class="nx-pf-featpn"><span class="oj-ux-ico-document" aria-hidden="true"></span><oj-bind-text value="[[ p.data.name ]]"></oj-bind-text></div></div>
+                </template></oj-bind-for-each>
+              </div>
+            </section>
+          </oj-bind-if>
+        </oj-bind-if>
+      </div>
+      <oj-bind-if test="[[ !!$variables.featNote ]]"><div class="nx-pf-featnote" id="pfFeatNote"><oj-bind-text value="[[ $variables.featNote ]]"></oj-bind-text></div></oj-bind-if>
+    </div>
   </oj-bind-if>
 </div>

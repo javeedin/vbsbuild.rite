@@ -193,6 +193,37 @@ define([], () => {
           apisLabel: (api && api.list ? 'APIs (' + api.list.length + ')' : 'APIs') };
       });
     }
+
+    // ── Features list from the recording (the dialog; the model is built in the chain, resources/js/flowFeatures) ──
+    featTitle(flow, model) {
+      const nm = (flow && flow.name) || 'Recording';
+      const n = (model && model.features || []).length;
+      return nm + (n ? ' · ' + n + ' feature' + (n === 1 ? '' : 's') : '');
+    }
+    featHas(model) { return !!(model && ((model.features || []).length || (model.ungrouped || []).length)); }
+    editKey(field, idx) { return field + ':' + idx; }
+    featChips(model) {
+      if (!this.featHas(model)) return [];
+      const c = (model && model.counts) || {};
+      const out = [(model.features || []).length + ' feature' + ((model.features || []).length === 1 ? '' : 's'), (c.pages || 0) + ' page' + ((c.pages || 0) === 1 ? '' : 's') + ' placed', (c.calls || 0) + ' API call' + ((c.calls || 0) === 1 ? '' : 's')];
+      if (c.ungrouped) out.push(c.ungrouped + ' not grouped');
+      return out;
+    }
+    featExports() {
+      return [
+        { op: 'featPdf', label: 'PDF (print)', icon: 'oj-ux-ico-file-pdf' },
+        { op: 'featExcel', label: 'Excel (.xlsx)', icon: 'oj-ux-ico-file-excel' },
+        { op: 'featHtml', label: 'Web page (.html)', icon: 'oj-ux-ico-file-html' },
+        { op: 'featCsv', label: 'CSV', icon: 'oj-ux-ico-file-csv' }
+      ];
+    }
+    featRows(model) {
+      return ((model && model.features) || []).map((f, i) => ({
+        idx: i, name: f.name || '', description: f.description || '',
+        pages: (f.pages || []).map((p) => ({ name: p.name, calls: (p.calls || []).map((c) => ({ method: c.method, path: c.path })) }))
+      }));
+    }
+    featUngrouped(model) { return ((model && model.ungrouped) || []).map((p) => ({ name: p.name })); }
   }
   return PageModule;
 });

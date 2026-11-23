@@ -7,7 +7,9 @@ define([
   'resources/js/exportKit',
   'resources/js/shellBus',
   'resources/js/flowModel',
-], (ActionChain, PC, PagesPC, SC, API, exportKit, bus, FM) => {
+  'resources/js/flowFeatures',
+  'resources/js/minutesClient',
+], (ActionChain, PC, PagesPC, SC, API, exportKit, bus, FM, FF, M) => {
   'use strict';
 
   // Process Flows: one screen — a list of flows and an editor. Ops (data-op):
@@ -118,6 +120,23 @@ define([
    *  from MODEL, not the DOM), so a freshly opened or just-saved flow is never falsely "dirty". */
   function baseline(v) {
     return copy(normFlow(MODEL || {}, (id, fb) => String(fb == null ? '' : fb), pagesByLabelOf(v)));
+  }
+
+  // ── Features list from the recording (the dialog) ──
+  const featToDraft = (model) => ((model && model.features) || []).map((f) => ({ name: f.name, description: f.description, pageKeys: (f.pages || []).map((p) => p.key) }));
+  const f0IdOf = (v) => { const f = readEditor(v); return f.id ? String(f.id).toLowerCase() : ''; };
+  function featSet(v, drafted) { v.featModel = FF.build(readEditor(v), drafted); v.featDraft = featToDraft(v.featModel); }
+  async function featRunAi(context, v) {
+    v.featBusy = 'ai'; v.featErr = '';
+    try {
+      const p = FF.prompt(readEditor(v));
+      const r = await M.aiChat(p.system, p.user, 'features', 16000);
+      if (!(r.ok && r.body && r.body.ok && r.body.text)) { v.featErr = (r.body && r.body.error) || 'The AI did not answer.'; return; }
+      const drafted = FF.parse(r.body.text);
+      if (!drafted.length) { v.featErr = 'The AI did not return a feature list. Try again, or use Group by page.'; return; }
+      featSet(v, drafted);
+      v.featNote = 'Drafted ' + v.featModel.counts.features + ' feature(s) with AI. Edit the names, then export.';
+    } catch (e) { v.featErr = String((e && e.message) || e); } finally { v.featBusy = ''; }
   }
   /** Read the page rows' inputs from the DOM into MODEL (name / note, and the matched catalog page). pedit keeps MODEL
    *  current on every keystroke, but this is called before any structural change or save so MODEL always matches what is
@@ -504,6 +523,45 @@ define([
           say(true, 'Flow “' + g.id + ' · ' + g.name + '” created (' + (flow.actions || []).length + ' step group(s), ' + steps + ' step(s)) — opening it in Page Flows.');
           bus.open({ record: 'saved-flow', params: { flowId: g.id, title: g.id + ' · ' + g.name } });
         } finally { v.busy = ''; }
+        return;
+      }
+
+      // ── Features list from the recording: group the pages + their API calls into a product feature list (AI or by page),
+      //    shown in a dialog, editable, exported to PDF / Excel / web page / CSV (resources/js/flowFeatures). ──
+      if (op === 'makeFeatures') {
+        if (!MODEL || v.busy) return;
+        foldRows(v);
+        const f = readEditor(v);
+        if (!(f.pages || []).length) { say(false, 'This process flow has no pages to build a feature list from.'); return; }
+        v.featDlg = true; v.featErr = ''; v.featNote = ''; v.featModel = null; v.featDraft = null;
+        try { const a = await M.aiSettings(); v.aiReady = !!(a.ok && a.body && a.body.active); } catch (e) { v.aiReady = false; }
+        if (v.aiReady) await featRunAi(context, v);
+        else { featSet(v, FF.autoDraft(f)); v.featNote = 'Ask AI is not set up, so the pages were grouped one feature per page. Set up Ask AI on the Jira stories screen to draft with AI.'; }
+        return;
+      }
+      if (op === 'featClose') { v.featDlg = false; return; }
+      if (op === 'featAi') { if (!v.aiReady) { v.featErr = 'Ask AI is not set up. Set it up on the Jira stories screen, or use Group by page.'; return; } await featRunAi(context, v); return; }
+      if (op === 'featAuto') { v.featErr = ''; featSet(v, FF.autoDraft(readEditor(v))); v.featNote = 'Grouped one feature per page. Rename them, or Draft with AI.'; return; }
+      if (op === 'featEdit') {
+        const m = /^(name|desc):(\d+)$/.exec(String(key || ''));
+        if (!m || !v.featDraft || !v.featDraft[Number(m[2])]) return;
+        const i = Number(m[2]);
+        if (m[1] === 'name') v.featDraft[i].name = String(input || '').slice(0, 200);
+        else v.featDraft[i].description = String(input || '').slice(0, 600);
+        v.featModel = FF.build(readEditor(v), v.featDraft);
+        v.featDraft = featToDraft(v.featModel);
+        return;
+      }
+      if (op === 'featPdf' || op === 'featHtml' || op === 'featExcel' || op === 'featCsv') {
+        if (!v.featModel) return;
+        const base = 'features-' + (f0IdOf(v) || 'recording');
+        const meta = { flow: (readEditor(v).name || 'recording'), date: new Date().toISOString().slice(0, 10), title: 'Feature list — ' + (readEditor(v).name || 'recording') };
+        try {
+          if (op === 'featPdf') { exportKit.printDocument(FF.documentHtml(v.featModel, meta)); v.featNote = 'Choose "Save as PDF" in the print dialog.'; return; }
+          if (op === 'featHtml') { exportKit.download(base + '.html', 'text/html;charset=utf-8', FF.documentHtml(v.featModel, meta)); v.featNote = 'Saved the feature list as a web page.'; return; }
+          const res = await exportKit.run(op === 'featExcel' ? 'xlsx' : 'csv', { rows: FF.rows(v.featModel), columns: FF.COLUMNS, name: base, title: meta.title });
+          v.featNote = (res && res.message) || 'Exported.';
+        } catch (e) { v.featErr = 'The export failed: ' + String((e && e.message) || e); }
         return;
       }
 

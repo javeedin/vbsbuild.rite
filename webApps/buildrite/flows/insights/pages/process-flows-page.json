@@ -19,7 +19,14 @@
     "apiTests": { "type": "any", "defaultValue": {}, "description": "Per-API test state, keyed by '<pageId>|<apiIdx>': { running, ok, status, ms, rows, body, needsConfirm, message, error }." },
     "apiData": { "type": "any", "defaultValue": {}, "description": "Which APIs have their captured-data panel expanded, keyed by '<pageId>|<apiIdx>'." },
     "recCallsOpen": { "type": "any", "defaultValue": {}, "description": "Which editor rows have their recorded-calls panel (all captured calls with their data) open, by row id." },
-    "recording": { "type": "any", "defaultValue": null, "description": "A live recording from the real app: { running, steps: [{ name }], skipped, busy, error }." }
+    "recording": { "type": "any", "defaultValue": null, "description": "A live recording from the real app: { running, steps: [{ name }], skipped, busy, error }." },
+    "aiReady": { "type": "boolean", "defaultValue": false, "description": "Whether the shared Ask AI is set up (for the Features list draft)." },
+    "featDlg": { "type": "boolean", "defaultValue": false, "description": "The 'Features list from the recording' dialog is open." },
+    "featBusy": { "type": "string", "defaultValue": "", "description": "A running feature-list action: 'ai'." },
+    "featErr": { "type": "string", "defaultValue": "", "description": "An error in the feature-list dialog." },
+    "featNote": { "type": "string", "defaultValue": "", "description": "A status line in the feature-list dialog." },
+    "featModel": { "type": "any", "defaultValue": null, "description": "The built feature list: features → their pages + calls, and the ungrouped (flowFeatures.build)." },
+    "featDraft": { "type": "any", "defaultValue": null, "description": "The current grouping [{ name, description, pageKeys }] — mirrors featModel, what editing changes." }
   },
   "eventListeners": {
     "vbEnter": { "chains": [ { "chain": "pfChain", "parameters": { "op": "load", "idx": "", "key": "", "value": "", "input": "" } } ] },
