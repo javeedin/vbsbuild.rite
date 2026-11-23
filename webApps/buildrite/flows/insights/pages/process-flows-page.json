@@ -45,6 +45,7 @@
     "edgeDraft": { "type": "any", "defaultValue": null, "description": "The current edit draft [{ pageKey, edges:[…] }] (step order, the flow-wide '*' group last) — what editing changes." },
     "edgeTab": { "type": "string", "defaultValue": "steps", "description": "The edge-paths dialog tab: 'steps' (edges per step), 'checklist' (every edge, ticked when covered) or 'summary' (risk summary)." },
     "edgeChecks": { "type": "any", "defaultValue": {}, "description": "Which edge paths are ticked as covered, by 's:e' / 'g:e' (true = covered)." },
+    "edgeTests": { "type": "any", "defaultValue": {}, "description": "Per-edge run result, keyed 's:e': { running, ran, needsConfirm, verdict, pass, text, status, ms, rows, body, planNote, expectLabel, reqText } (edgeTest.plan/grade)." },
     "edgeSummary": { "type": "any", "defaultValue": null, "description": "The risk summary for the Summary tab: { overview, bySeverity, top } (edgePaths.summary)." },
     "edgeSource": { "type": "string", "defaultValue": "", "description": "How the current edge list was built: 'ai' or 'auto'." },
     "edgeGeneratedAt": { "type": "string", "defaultValue": "", "description": "When the edge paths were drafted (ISO)." },

@@ -109,6 +109,28 @@ define([], () => {
     document.addEventListener('change', (ev) => { if (ev.target && ev.target.id === 'pfShotFile') { const f = (ev.target.files || [])[0]; if (f && /^image\//.test(f.type)) stash(pendRow, f); ev.target.value = ''; } });
   }
 
+  // Whether an edge path can be exercised by an API call (mirrors edgeTest.classify's env exclusion, kept in step with it):
+  // it needs an API path in `stresses`, and must not be a UI / outside-system / timing edge.
+  const EDGE_ENV = /unavailable|times? ?out|timeout|\bdown\b|\bslow\b|network|outage|offline|concurren|conflict|session|expire|cancel|leaves|\bleave\b|navigat|\bback\b|fails to load|\bload\b|disabled while/;
+  function edgeRunnable(e) {
+    if (!/\//.test(String((e && e.stresses) || ''))) return false;
+    return !EDGE_ENV.test((String((e && e.name) || '') + ' ' + String((e && e.trigger) || '')).toLowerCase());
+  }
+  // One edge's run result as the UI shows it (colour class, a mark, the lines), from the edgeTests entry.
+  function edgeTestView(t) {
+    if (!t) return null;
+    const cls = t.running ? 'run' : (t.needsConfirm ? 'warn' : (t.verdict === 'pass' ? 'ok' : (t.verdict === 'fail' ? 'bad' : 'warn')));
+    return {
+      running: !!t.running, needsConfirm: !!t.needsConfirm, message: t.message || '', cls: cls,
+      icon: t.running ? '' : (t.needsConfirm ? '!' : (t.verdict === 'pass' ? '✓' : (t.verdict === 'fail' ? '✗' : '–'))),
+      text: t.text || '', reqText: t.reqText || '', planNote: t.planNote || '', expectLabel: t.expectLabel || '',
+      status: (t.status !== undefined && t.status !== null && t.status !== '') ? String(t.status) : '',
+      ms: (t.ms !== undefined && t.ms !== null && t.ms !== '') ? String(t.ms) : '',
+      rows: (t.rows !== undefined && t.rows !== null && t.rows !== '') ? String(t.rows) : '',
+      body: t.body || ''
+    };
+  }
+
   class PageModule {
     constructor(context) {
       const helper = context && typeof context.getEventHelper === 'function' ? context.getEventHelper() : null;
@@ -268,11 +290,17 @@ define([], () => {
     }
     edgeSevOptions(cur) { return [{ id: 'high', label: 'High' }, { id: 'medium', label: 'Medium' }, { id: 'low', label: 'Low' }].map((o) => ({ id: o.id, label: o.label, on: (cur || 'medium') === o.id })); }
     // The By step tab: every step (and the flow-wide group last) with its editable edge paths. `s` is the step index or 'g'.
-    edgeSteps(model, checks) {
+    edgeSteps(model, checks, tests) {
       const ch = checks || {};
+      const ts = tests || {};
       const steps = (model && model.steps) || [];
       const n = steps.length;
-      const edgeOf = (e, ei, pfx) => ({ e: ei, name: e.name || '', trigger: e.trigger || '', expected: e.expected || '', stresses: e.stresses || '', severity: e.severity || 'medium', sevOptions: this.edgeSevOptions(e.severity), covered: ch[pfx + ':' + ei] === true });
+      const edgeOf = (e, ei, pfx) => {
+        const t = edgeTestView(ts[pfx + ':' + ei]);
+        return { e: ei, name: e.name || '', trigger: e.trigger || '', expected: e.expected || '', stresses: e.stresses || '',
+          severity: e.severity || 'medium', sevOptions: this.edgeSevOptions(e.severity), covered: ch[pfx + ':' + ei] === true,
+          runnable: pfx !== 'g' && edgeRunnable(e), testRunning: !!(t && t.running), test: t };
+      };
       const out = steps.map((s, si) => ({
         s: String(si), name: s.name || '', isFlow: false, calls: (s.calls || []).length,
         tag: si === 0 ? 'Start' : (si === n - 1 ? 'End' : 'Step ' + (si + 1)),

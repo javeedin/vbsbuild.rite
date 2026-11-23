@@ -9,8 +9,9 @@ define([
   'resources/js/flowModel',
   'resources/js/flowFeatures',
   'resources/js/edgePaths',
+  'resources/js/edgeTest',
   'resources/js/minutesClient',
-], (ActionChain, PC, PagesPC, SC, API, exportKit, bus, FM, FF, EP, M) => {
+], (ActionChain, PC, PagesPC, SC, API, exportKit, bus, FM, FF, EP, ET, M) => {
   'use strict';
 
   // Process Flows: one screen — a list of flows and an editor. Ops (data-op):
@@ -172,7 +173,7 @@ define([
     v.edgeModel = EP.build(readEditor(v), drafted);
     v.edgeDraft = edgeToDraft(v.edgeModel);
     v.edgeSummary = EP.summary(v.edgeModel);
-    v.edgeChecks = {};
+    v.edgeChecks = {}; v.edgeTests = {};
     if (source) { v.edgeGeneratedAt = new Date().toISOString(); v.edgeSource = source; v.edgeSavedAt = ''; }
   }
   // Rebuild after an in-place text edit without clearing the ticks or the build time (indices are unchanged).
@@ -184,6 +185,7 @@ define([
     v.edgeDraft = edgeToDraft(v.edgeModel);
     v.edgeSummary = EP.summary(v.edgeModel);
     v.edgeChecks = (saved.checks && typeof saved.checks === 'object') ? Object.assign({}, saved.checks) : {};
+    v.edgeTests = {};
     v.edgeGeneratedAt = saved.generatedAt || ''; v.edgeSavedAt = saved.savedAt || ''; v.edgeSource = saved.source || 'ai';
   }
   async function edgeRunAi(context, v) {
@@ -724,7 +726,7 @@ define([
         foldRows(v);
         const f = readEditor(v);
         if (!(f.pages || []).length) { say(false, 'This process flow has no pages to work out edge paths from.'); return; }
-        v.edgeDlg = true; v.edgeErr = ''; v.edgeNote = ''; v.edgeModel = null; v.edgeDraft = null; v.edgeSummary = null; v.edgeChecks = {}; v.edgeTab = 'steps'; v.edgePreview = '';
+        v.edgeDlg = true; v.edgeErr = ''; v.edgeNote = ''; v.edgeModel = null; v.edgeDraft = null; v.edgeSummary = null; v.edgeChecks = {}; v.edgeTests = {}; v.edgeTab = 'steps'; v.edgePreview = '';
         v.edgeGeneratedAt = ''; v.edgeSavedAt = ''; v.edgeSource = '';
         const saved = MODEL && MODEL.edges;
         if (saved && Array.isArray(saved.draft) && saved.draft.length) {
@@ -840,6 +842,47 @@ define([
           const res = await exportKit.run(op === 'edgeExcel' ? 'xlsx' : 'csv', Object.assign({ name: base, title: meta.title }, opts));
           v.edgeNote = (res && res.message) || 'Exported.';
         } catch (e) { v.edgeErr = 'The export failed: ' + String((e && e.message) || e); }
+        return;
+      }
+      // Run one API-level edge path: mutate the recorded happy-path request to the edge condition, send it through the API
+      // tester, and grade the response against what the edge expects (edgeRunGo = after a "changes data" confirm). A pass
+      // auto-ticks the edge as covered (edgeTest.plan / grade; resources/js/edgeTest).
+      if (op === 'edgeRun' || op === 'edgeRunGo') {
+        const mm = /^(\d+):(\d+)$/.exec(String(key || '')); // page steps only; the flow-wide group ('g') is not API-runnable
+        if (!mm) return;
+        const si = Number(mm[1]), ei = Number(mm[2]);
+        const steps = (v.edgeModel && v.edgeModel.steps) || [];
+        const edge = steps[si] && steps[si].edges[ei];
+        if (!edge) return;
+        const setT = (st) => { v.edgeTests = Object.assign({}, v.edgeTests || {}, { [key]: st }); };
+        if (!ET.runnable(edge)) { setT({ ran: true, verdict: 'na', text: 'This edge is about the screen or an outside system — verify it by hand, then tick it covered.' }); return; }
+        foldRows(v);
+        const pg = (MODEL && MODEL.pages) || [];
+        const page = pg[si];
+        if (!page) { setT({ ran: true, verdict: 'na', text: 'The step could not be matched to a page.' }); return; }
+        setT({ running: true });
+        try {
+          const list = page.page ? await apisForPage(v, page.page) : [];
+          const em = ET.methodOf(edge), ep = ET.pathOf(edge);
+          const api = list.filter((a) => String(a.method || 'GET').toUpperCase() === em && pathMatches(a.path, ep))[0]
+            || list.filter((a) => pathMatches(a.path, ep) || pathMatches(ep, a.path))[0] || null;
+          if (!api || !api.endpoint) { setT({ ran: true, verdict: 'na', text: 'Couldn’t match “' + edge.stresses + '” to an API on this page — open the page’s APIs and Test it with your own data.' }); return; }
+          if (api.report) { setT({ ran: true, verdict: 'na', text: 'This is a BI Publisher report — run it from Oracle BIP Reporting.' }); return; }
+          const base = reqFromCall(api, callForApi(api, page.calls || []));
+          const plan = ET.plan(edge, { params: base.params, query: base.extra, body: base.body });
+          const expect = ET.classify(edge).expect;
+          const confirm = op === 'edgeRunGo';
+          let r = (await API.run({ endpoint: api.endpoint, params: plan.params, extra: plan.query, body: plan.body, confirm })).body || {};
+          // duplicate submission: the real test is the second send (only when the first went through, not a confirm gate)
+          if (plan.twice && r.ok && !r.needsConfirm) r = (await API.run({ endpoint: api.endpoint, params: plan.params, extra: plan.query, body: plan.body, confirm: true })).body || {};
+          const result = { status: (r.status !== undefined && r.status !== null) ? r.status : null, ok: !!r.ok, rows: r.table ? r.table.total : null, error: r.fault || r.error || '' };
+          const g = r.needsConfirm ? null : ET.grade(expect, result);
+          setT({ ran: true, running: false, needsConfirm: !!r.needsConfirm, message: r.needsConfirm ? (r.error || 'This changes data — Run anyway to send it.') : '',
+            reqText: plan.method + ' ' + ep, planNote: plan.note, expectLabel: (expect && expect.label) || '',
+            status: result.status, ms: (r.ms != null ? r.ms : null), rows: result.rows, body: trimResp(r.pretty),
+            verdict: g ? g.verdict : '', pass: g ? g.pass : false, text: g ? g.text : '' });
+          if (g && g.pass) v.edgeChecks = Object.assign({}, v.edgeChecks || {}, { [key]: true }); // a pass marks it covered
+        } catch (e) { setT({ ran: true, running: false, verdict: 'fail', pass: false, text: String((e && e.message) || e) }); }
         return;
       }
 

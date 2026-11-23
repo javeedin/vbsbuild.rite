@@ -475,7 +475,7 @@
 
           <!-- By step tab: each step with its editable edge paths (trigger → expected, severity, covered) -->
           <oj-bind-if test="[[ $variables.edgeTab === 'steps' ]]">
-            <oj-bind-for-each data="[[ $functions.edgeSteps($variables.edgeModel, $variables.edgeChecks) ]]"><template data-oj-as="st">
+            <oj-bind-for-each data="[[ $functions.edgeSteps($variables.edgeModel, $variables.edgeChecks, $variables.edgeTests) ]]"><template data-oj-as="st">
               <section :class="[[ 'nx-pf-featcard nx-pf-edgestep' + (st.data.isFlow ? ' nx-pf-edgestep--flow' : '') ]]">
                 <div class="nx-pf-edgesteph">
                   <span :class="[[ 'nx-pf-edgetag' + (st.data.isFlow ? ' nx-pf-edgetag--flow' : '') ]]"><oj-bind-text value="[[ st.data.tag ]]"></oj-bind-text></span>
@@ -490,6 +490,9 @@
                       <select :class="[[ 'nx-pf-edgesev nx-pf-edgesev--' + e.data.severity ]]" :data-key="[[ st.data.s + ':' + e.data.e ]]" data-op="edgeSev" on-change="[[ $listeners.onPf ]]" aria-label="Severity">
                         <oj-bind-for-each data="[[ e.data.sevOptions ]]"><template data-oj-as="o"><option :value="[[ o.data.id ]]" :selected="[[ o.data.on ]]"><oj-bind-text value="[[ o.data.label ]]"></oj-bind-text></option></template></oj-bind-for-each>
                       </select>
+                      <oj-bind-if test="[[ e.data.runnable ]]">
+                        <button type="button" class="nx-btn nx-btn--sm nx-pf-edgerun" :data-key="[[ st.data.s + ':' + e.data.e ]]" data-op="edgeRun" on-click="[[ $listeners.onPf ]]" :disabled="[[ e.data.testRunning ]]" title="Run this edge: send the mutated request and check the response"><span class="oj-ux-ico-play" aria-hidden="true"></span><oj-bind-text value="[[ e.data.testRunning ? 'Running…' : 'Run' ]]"></oj-bind-text></button>
+                      </oj-bind-if>
                       <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-pf-capdel" :data-key="[[ st.data.s + ':' + e.data.e ]]" data-op="edgeDel" on-click="[[ $listeners.onPf ]]" aria-label="Remove this edge path" title="Remove"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
                     </div>
                     <div class="nx-pf-edgefields">
@@ -497,6 +500,23 @@
                       <label class="nx-pf-edgef"><span class="nx-pf-edgefk">Expected</span><input type="text" :value="[[ e.data.expected ]]" :data-key="[[ st.data.s + ':' + e.data.e + ':expected' ]]" data-op="edgeEdit" on-change="[[ $listeners.onPf ]]" placeholder="What the app should do"></label>
                       <label class="nx-pf-edgef"><span class="nx-pf-edgefk">Stresses</span><input type="text" :value="[[ e.data.stresses ]]" :data-key="[[ st.data.s + ':' + e.data.e + ':stresses' ]]" data-op="edgeEdit" on-change="[[ $listeners.onPf ]]" placeholder="API call / validation"></label>
                     </div>
+                    <!-- the run result: what was sent, what was expected, and the verdict (a pass ticks it covered) -->
+                    <oj-bind-if test="[[ !!e.data.test ]]">
+                      <div :class="[[ 'nx-pf-edgeres nx-pf-edgeres--' + e.data.test.cls ]]">
+                        <oj-bind-if test="[[ e.data.test.running ]]"><div class="nx-pf-edgeresline"><span class="nx-spin" aria-hidden="true"></span> Running the edge request…</div></oj-bind-if>
+                        <oj-bind-if test="[[ !e.data.test.running ]]">
+                          <div class="nx-pf-edgeresline">
+                            <span class="nx-pf-edgeverdict"><oj-bind-text value="[[ e.data.test.icon ]]"></oj-bind-text></span>
+                            <span class="nx-pf-edgeverdicttext"><oj-bind-text value="[[ e.data.test.text ]]"></oj-bind-text></span>
+                            <oj-bind-if test="[[ e.data.test.needsConfirm ]]"><button type="button" class="nx-btn nx-btn--sm nx-btn--cta nx-pf-edgeanyway" :data-key="[[ st.data.s + ':' + e.data.e ]]" data-op="edgeRunGo" on-click="[[ $listeners.onPf ]]">Run anyway</button></oj-bind-if>
+                          </div>
+                          <oj-bind-if test="[[ !!e.data.test.reqText ]]">
+                            <div class="nx-pf-edgeresmeta">Sent <code><oj-bind-text value="[[ e.data.test.reqText ]]"></oj-bind-text></code><oj-bind-if test="[[ !!e.data.test.planNote ]]"> · <oj-bind-text value="[[ e.data.test.planNote ]]"></oj-bind-text></oj-bind-if><oj-bind-if test="[[ !!e.data.test.expectLabel ]]"> · expected <oj-bind-text value="[[ e.data.test.expectLabel ]]"></oj-bind-text></oj-bind-if><oj-bind-if test="[[ !!e.data.test.status ]]"> · HTTP <oj-bind-text value="[[ e.data.test.status ]]"></oj-bind-text></oj-bind-if><oj-bind-if test="[[ !!e.data.test.ms ]]"> · <oj-bind-text value="[[ e.data.test.ms ]]"></oj-bind-text> ms</oj-bind-if><oj-bind-if test="[[ !!e.data.test.rows ]]"> · <oj-bind-text value="[[ e.data.test.rows ]]"></oj-bind-text> row(s)</oj-bind-if></div>
+                          </oj-bind-if>
+                          <oj-bind-if test="[[ !!e.data.test.body ]]"><details class="nx-pf-edgeresbody"><summary>Response</summary><pre><oj-bind-text value="[[ e.data.test.body ]]"></oj-bind-text></pre></details></oj-bind-if>
+                        </oj-bind-if>
+                      </div>
+                    </oj-bind-if>
                   </div>
                 </template></oj-bind-for-each>
                 <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-pf-capadd" :data-key="[[ st.data.s ]]" data-op="edgeAdd" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span>Add an edge path</button>
