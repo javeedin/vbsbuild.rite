@@ -7,6 +7,7 @@
     "jira": { "path": "pages/jira-page" },
     "jira-sprint": { "path": "pages/jira-sprint-page" },
     "jira-progress": { "path": "pages/jira-progress-page" },
+    "jira-features": { "path": "pages/jira-features-page" },
     "projects": { "path": "pages/projects-page" },
     "vbs-project": { "path": "pages/vbs-project-page" },
     "vbs-setup": { "path": "pages/vbs-setup-page" },

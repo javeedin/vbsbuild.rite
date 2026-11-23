@@ -355,6 +355,8 @@ async function buildRiteOptions() {
     fddStore: await fddStore(),
     // Saved AI analyses: each run kept on this PC, so an analysis opens without asking the AI again
     analysisStore: analysisStore(),
+    // Saved feature lists: a project's Jira stories grouped into product features, kept on this PC
+    featuresStore: featuresStore(),
     // The Application pages catalog: technical sheets of your workspace's VB pages and the Jira stories mapped to them
     pagesStore: await pagesStore(),
     // Code fix: AI-proposed changes to a page, written into your working folder only when approved
@@ -1046,6 +1048,12 @@ function analysisStore() {
   if (!analysisStoreInst) analysisStoreInst = require('./lib/analyses').open({ file: path.join(app.getPath('userData'), 'ai-analyses.json') });
   return analysisStoreInst;
 }
+// Saved feature lists, for Features: the grouping of a project's Jira stories into features (feature-lists.json).
+let featuresStoreInst = null;
+function featuresStore() {
+  if (!featuresStoreInst) featuresStoreInst = require('./lib/featureLists').open({ file: path.join(app.getPath('userData'), 'feature-lists.json') });
+  return featuresStoreInst;
+}
 // Issues (Build.Rite): logged against a page, written up and analyzed by the AI (with the FDD), approved (in the app, and
 // an approval email from Microsoft 365), then applied by the agent on a branch of its own with a pull request; Jira kept
 // up to date (lib/issues.js). Shared with everyone on the data branch.
@@ -1486,7 +1494,7 @@ ipcMain.handle('signin:cancel', (event) => {
  * ------------------------------------------------------------------------- */
 
 const SETTINGS_FILES = ['vbs-connections.json', 'jira-connection.json', 'ai-settings.json', 'sql-connections.json', 'graph.json',
-  'minutes.duckdb', 'followups.duckdb', 'issues.json', 'code-fixes.json', 'ai-analyses.json', 'api-tests.json', 'run-as.json', 'local-identity.json'];
+  'minutes.duckdb', 'followups.duckdb', 'issues.json', 'code-fixes.json', 'ai-analyses.json', 'feature-lists.json', 'api-tests.json', 'run-as.json', 'local-identity.json'];
 async function importSettings() {
   const r = await dialog.showOpenDialog(win || undefined, { title: 'The folder your settings are in (another desktop app\'s data folder)', defaultPath: app.getPath('appData'), properties: ['openDirectory'] });
   if (r.canceled || !r.filePaths[0]) return;

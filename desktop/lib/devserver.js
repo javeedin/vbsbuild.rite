@@ -268,6 +268,8 @@ function time() {
  *                                        header; voice→text reuses o.transcribe, "Format by AI" reuses o.aiStore (/__sql/ai/chat)
  * @param {object}   [o.analysisStore]    Saved AI analyses (lib/analyses.js), for Build.Rite's Analyze with AI: kept on this PC so
  *                                        an analysis opens without asking the AI again: /__ai/* to this PC only, behind X-Build-Rite-AI
+ * @param {object}   [o.featuresStore]    Saved feature lists (lib/featureLists.js), for Build.Rite's Features: a project's Jira stories
+ *                                        grouped into product features, kept on this PC: /__features/* to this PC only, behind X-Build-Rite-Features
  * @param {object}   [o.vbsStore]         Setup → Organizations & projects (lib/vbs.js, Build.Rite): VB Studio organizations and projects,
  *                                        their sign-in kept on this PC: /__vbs/* to this PC only, behind the X-Build-Rite-Vbs header
  * @param {Function} [o.vbsFind]          (url) => opens VB Studio in a window of the desktop app, read as its pages load (Find in VB Studio)
@@ -827,6 +829,40 @@ function createDevServer(o) {
           if (pathname === '/__ai/remove' && post) return jsonA(200, as.remove(b.key));
           return jsonA(404, { error: 'Not found' });
         })().catch((e) => jsonA(200, { ok: false, error: e.message }));
+        return undefined;
+      }
+      if (pathname.startsWith('/__features/')) {
+        // Saved feature lists (lib/featureLists.js): a project's Jira stories grouped into product features, kept on this
+        // PC, by its own name, and only the app's own page (it sends X-Build-Rite-Features, which a page of another site
+        // cannot send without a preflight this server never allows).
+        const host = String(req.headers.host || '').replace(/:\d+$/, '');
+        if (!isLoopback(req.socket.remoteAddress) || !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(host)) {
+          return send(res, 404, 'text/plain; charset=utf-8', 'Not found');
+        }
+        const jsonFe = (status, body) => send(res, status, 'application/json', JSON.stringify(body), { 'Cache-Control': 'no-store' });
+        if (!o.featuresStore) return jsonFe(200, { ok: false, error: 'Saved feature lists are not set up in this app.' });
+        const origin = req.headers.origin;
+        if (req.headers['x-build-rite-features'] !== '1' || (origin && origin !== `http://${req.headers.host}`)) {
+          return send(res, 403, 'application/json', JSON.stringify({ error: 'Refused: not from Build.Rite on this PC.' }));
+        }
+        const fe = o.featuresStore;
+        const bodyOf = () => new Promise((resolve, reject) => {
+          const chunks = [];
+          let size = 0;
+          req.on('data', (c) => { size += c.length; if (size <= 8 * 1024 * 1024) chunks.push(c); });
+          req.on('end', () => (size > 8 * 1024 * 1024 ? reject(new Error('Too large')) : resolve(Buffer.concat(chunks).toString('utf8'))));
+          req.on('error', reject);
+        });
+        const post = req.method === 'POST';
+        const who = () => { try { const id = o.getIdentity && o.getIdentity(); return (id && (id.displayName || id.username)) || ''; } catch (e) { return ''; } };
+        (async () => {
+          const b = post ? JSON.parse((await bodyOf()) || '{}') : {};
+          if (pathname === '/__features/index' && req.method === 'GET') return jsonFe(200, fe.index());
+          if (pathname === '/__features/get' && req.method === 'GET') return jsonFe(200, fe.get(u.searchParams.get('project') || ''));
+          if (pathname === '/__features/save' && post) return jsonFe(200, fe.save(Object.assign({}, b, { by: b.by || who() })));
+          if (pathname === '/__features/remove' && post) return jsonFe(200, fe.remove(b.project));
+          return jsonFe(404, { error: 'Not found' });
+        })().catch((e) => jsonFe(200, { ok: false, error: e.message }));
         return undefined;
       }
       if (pathname.startsWith('/__pages/')) {

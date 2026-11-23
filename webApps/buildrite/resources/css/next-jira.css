@@ -1869,3 +1869,60 @@ details.nx-fx-tests > summary::-webkit-details-marker { display: none; }
 details.nx-fx-tests > summary::before { content: '▸'; color: #6b7785; font-size: 11px; }
 details.nx-fx-tests[open] > summary::before { content: '▾'; }
 @media (max-width: 720px) { .nx-fx-step { flex-wrap: wrap; } .nx-fx-stepbody { flex-basis: calc(100% - 40px); } }
+
+/* ------------------------------------------------------------------ *
+ * Features (insights/jira-features): the product's feature list from every Jira story — features, each a card with an
+ * editable name and one-line description, a status roll-up and its stories; the not-grouped-yet section; the export menu.
+ * ------------------------------------------------------------------ */
+.nx-jf-actions { flex-wrap: wrap; gap: 8px; align-items: center; }
+.nx-jf-search select { height: 34px; border: 1px solid var(--nx-line); border-radius: 8px; background: #fff; color: var(--nx-ink); font: inherit; padding: 0 28px 0 10px; cursor: pointer; }
+.nx-vis-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.nx-jf-exp { position: relative; display: inline-block; }
+.nx-jf-expbtn { gap: 6px; }
+.nx-jf-expmenu { position: absolute; right: 0; top: calc(100% + 4px); min-width: 180px; background: #fff; border: 1px solid var(--nx-line); border-radius: 10px; box-shadow: var(--nx-shadow-pop); padding: 4px; z-index: 20; display: none; }
+.nx-jf-exp:hover .nx-jf-expmenu, .nx-jf-exp:focus-within .nx-jf-expmenu { display: block; }
+.nx-jf-expitem { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; border-radius: 7px; padding: 8px 10px; font: inherit; color: var(--nx-ink); text-align: left; cursor: pointer; }
+.nx-jf-expitem:hover { background: var(--nx-hover, #eef2f6); }
+.nx-jf-expitem [class^="oj-ux-ico"] { font-size: 16px; color: var(--nx-muted); }
+
+.nx-jf-connect, .nx-jf-start { padding: 18px 20px; }
+.nx-jf-connect h2, .nx-jf-start h2 { margin: 0 0 6px; font-size: 16px; }
+.nx-jf-ainote { color: var(--nx-warn); margin-top: 8px; }
+
+.nx-jf-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 10px; }
+.nx-jf-chips { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.nx-jf-count { font-size: 13px; color: var(--nx-muted); margin-right: 4px; }
+.nx-jf-count b { color: var(--nx-ink); }
+.nx-jf-chip { font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.nx-jf-chip--done { background: #e6f4ea; color: var(--nx-ok); }
+.nx-jf-chip--prog { background: #e8effc; color: #1d4f91; }
+.nx-jf-chip--todo { background: #eef1f4; color: #5a6876; }
+.nx-jf-saved { font-size: 12px; color: var(--nx-muted); }
+
+.nx-jf-feats { display: flex; flex-direction: column; gap: 12px; }
+.nx-jf-feat { padding: 14px 16px; }
+.nx-jf-feat--ungrouped { border-style: dashed; background: #fafbfc; }
+.nx-jf-feathead { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+.nx-jf-featmain { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.nx-jf-name { font-size: 16px; font-weight: 700; color: var(--nx-ink); border: 1px solid transparent; border-radius: 7px; padding: 4px 8px; margin: -4px -8px 0; background: transparent; font-family: inherit; }
+.nx-jf-name:hover { border-color: var(--nx-line); }
+.nx-jf-name:focus { border-color: var(--nx-accent, #1d4f91); background: #fff; outline: none; }
+.nx-jf-desc { font-size: 13px; color: var(--nx-muted); border: 1px solid transparent; border-radius: 7px; padding: 4px 8px; margin: 0 -8px; background: transparent; font-family: inherit; }
+.nx-jf-desc:hover { border-color: var(--nx-line); }
+.nx-jf-desc:focus { border-color: var(--nx-accent, #1d4f91); background: #fff; color: var(--nx-ink); outline: none; }
+.nx-jf-featright { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
+.nx-jf-featn { font-size: 12px; font-weight: 700; color: var(--nx-muted); }
+.nx-jf-ungname { margin: 0; font-size: 15px; }
+
+.nx-jf-stories { display: flex; flex-direction: column; gap: 2px; }
+.nx-jf-story { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; border-radius: 7px; padding: 6px 8px; text-align: left; cursor: pointer; color: var(--nx-ink); border-top: 1px solid #f0f3f6; }
+.nx-jf-story:first-child { border-top: 0; }
+.nx-jf-story:hover { background: var(--nx-hover, #eef2f6); }
+.nx-jf-key { flex: none; font: 600 12px/1 var(--nx-mono, monospace); color: #1d4f91; background: #eef4fc; border-radius: 5px; padding: 3px 6px; }
+.nx-jf-sum { flex: 1 1 auto; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-jf-st { flex: none; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.nx-jf-st--done { background: #e6f4ea; color: var(--nx-ok); }
+.nx-jf-st--prog { background: #e8effc; color: #1d4f91; }
+.nx-jf-st--todo { background: #eef1f4; color: #5a6876; }
+
+@media (max-width: 720px) { .nx-jf-featright { align-items: flex-start; } .nx-jf-sum { white-space: normal; } }

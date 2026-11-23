@@ -562,6 +562,13 @@
         }
       ]
     },
+    "onFeatures": {
+      "chains": [
+        {
+          "chain": "openFeaturesChain"
+        }
+      ]
+    },
     "onRefresh": {
       "chains": [
         {

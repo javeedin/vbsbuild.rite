@@ -11,6 +11,7 @@ define([
     async run(context, { id }) {
       if (id === 'setup') { await Actions.callChain(context, { chain: 'setupChain' }); return; }
       if (id === 'progress') { await Actions.callChain(context, { chain: 'openProgressChain' }); return; }
+      if (id === 'features') { await Actions.callChain(context, { chain: 'openFeaturesChain' }); return; }
       await Actions.callChain(context, { chain: 'exportChain', params: { format: 'xlsx' } });
     }
   }

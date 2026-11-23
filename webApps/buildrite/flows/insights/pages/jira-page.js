@@ -130,6 +130,7 @@ define(['resources/js/jiraBacklog', 'resources/js/exportKit', 'resources/js/test
       const acts = [];
       if (showSetup) acts.push({ id: 'setup', label: 'Set up transcription', icon: 'oj-ux-ico-settings', display: 'on' });
       acts.push({ id: 'progress', label: 'Daily progress', icon: 'oj-ux-ico-chart-bar', display: 'on' });
+      acts.push({ id: 'features', label: 'Features', icon: 'oj-ux-ico-category', display: 'on' });
       acts.push({ id: 'export', label: 'Export to Excel', icon: 'oj-ux-ico-download', display: n > 0 ? 'on' : 'disabled' });
       return same('actions', acts);
     }

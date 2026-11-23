@@ -1,0 +1,124 @@
+<!-- Jira · Features: from every Jira story, draft the product's feature list — features, each with a one-line description,
+     the stories under it and a status roll-up (resources/js/jiraFeatures.js). Draft with AI or auto-group without AI, edit
+     the names, save per project, export to PDF / Excel / web page / CSV. The grouping is saved; the model is rebuilt live
+     against the current stories, so a new story shows up as "not grouped yet" until it is placed. -->
+<div class="nx-page nx-jf">
+  <div class="nx-pagehead">
+    <div>
+      <div class="nx-kicker">Insights · Jira</div>
+      <h1 id="jfTitle">Features</h1>
+      <div class="nx-sub" id="jfSub"><oj-bind-text value="[[ $functions.status($variables.project, $variables.stories, $variables.model, $variables.readAt, $variables.isLoading, $variables.notConnected, $variables.error) ]]"></oj-bind-text></div>
+    </div>
+    <div class="nx-actions nx-jf-actions">
+      <label class="nx-jf-search"><span class="nx-vis-hidden">Stories</span>
+        <select id="jfSearch" :value="[[ $variables.search ]]" on-change="[[ $listeners.onSearch ]]" :disabled="[[ $variables.isLoading || !!$variables.busy ]]">
+          <oj-bind-for-each data="[[ $functions.searches() ]]"><template data-oj-as="s"><option :value="[[ s.data.key ]]"><oj-bind-text value="[[ s.data.label ]]"></oj-bind-text></option></template></oj-bind-for-each>
+        </select>
+      </label>
+      <button type="button" class="nx-btn" id="jfDraftAi" data-act="draftAi" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.isLoading || !!$variables.busy || !$variables.aiReady || !($variables.stories || []).length ]]"
+        :title="[[ $variables.aiReady ? 'Ask the AI to group every story into features' : 'Set up Ask AI on the Jira stories screen to draft with AI' ]]">
+        <span class="oj-ux-ico-brain" aria-hidden="true"></span><oj-bind-text value="[[ $functions.busyLabel($variables.busy, 'ai', 'Draft with AI') ]]"></oj-bind-text></button>
+      <button type="button" class="nx-btn nx-btn--plain" id="jfAuto" data-act="draftAuto" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.isLoading || !!$variables.busy || !($variables.stories || []).length ]]"
+        title="Group the stories without AI — by epic, then label, then type">
+        <span class="oj-ux-ico-magic-wand" aria-hidden="true"></span><oj-bind-text value="[[ $functions.busyLabel($variables.busy, 'auto', 'Auto-group') ]]"></oj-bind-text></button>
+      <button type="button" class="nx-btn nx-btn--plain" id="jfSave" data-act="save" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.isLoading || !!$variables.busy || !$variables.dirty || !$functions.hasModel($variables.model) ]]"
+        title="Keep this feature list for the project on this PC">
+        <span class="oj-ux-ico-save" aria-hidden="true"></span><oj-bind-text value="[[ $functions.busyLabel($variables.busy, 'save', 'Save') ]]"></oj-bind-text></button>
+      <div class="nx-jf-exp" id="jfExport">
+        <button type="button" class="nx-btn nx-btn--plain nx-jf-expbtn" :disabled="[[ !$functions.hasModel($variables.model) ]]" aria-haspopup="true"><span class="oj-ux-ico-export" aria-hidden="true"></span>Export<span class="oj-ux-ico-chevron-down" aria-hidden="true"></span></button>
+        <div class="nx-jf-expmenu" role="menu">
+          <oj-bind-for-each data="[[ $functions.exports() ]]"><template data-oj-as="x">
+            <button type="button" class="nx-jf-expitem" role="menuitem" :data-act="[[ x.data.act ]]" on-click="[[ $listeners.onAct ]]"><span :class="[[ x.data.icon ]]" aria-hidden="true"></span><oj-bind-text value="[[ x.data.label ]]"></oj-bind-text></button>
+          </template></oj-bind-for-each>
+        </div>
+      </div>
+      <button type="button" class="nx-btn nx-btn--plain" id="jfRefresh" data-act="refresh" on-click="[[ $listeners.onAct ]]" :disabled="[[ $variables.isLoading || !!$variables.busy ]]"><span class="oj-ux-ico-refresh" aria-hidden="true"></span>Refresh</button>
+    </div>
+  </div>
+
+  <oj-bind-if test="[[ !!$variables.note ]]"><div class="nx-flib-result nx-flib-result--ok" id="jfNote"><oj-bind-text value="[[ $variables.note ]]"></oj-bind-text></div></oj-bind-if>
+  <oj-bind-if test="[[ !!$variables.error && !$variables.notConnected ]]"><div class="nx-flib-result nx-flib-result--err" id="jfError"><oj-bind-text value="[[ $variables.error ]]"></oj-bind-text></div></oj-bind-if>
+  <oj-bind-if test="[[ $variables.isLoading ]]"><div class="nx-empty" id="jfLoading"><span class="nx-spin" aria-hidden="true"></span> Reading the stories from Jira…</div></oj-bind-if>
+  <oj-bind-if test="[[ $variables.busy === 'ai' ]]"><div class="nx-empty" id="jfDrafting"><span class="nx-spin" aria-hidden="true"></span> The AI is grouping the stories into features…</div></oj-bind-if>
+
+  <oj-bind-if test="[[ $variables.notConnected ]]">
+    <div class="nx-card nx-jf-connect" id="jfConnect">
+      <h2>Connect Jira first</h2>
+      <p class="nx-note">Features reads your Jira stories. Open <b>Jira stories</b> and connect your Jira there; then come back and refresh.</p>
+    </div>
+  </oj-bind-if>
+
+  <oj-bind-if test="[[ !$variables.isLoading && !$variables.notConnected && ($variables.stories || []).length === 0 && !$variables.error ]]">
+    <div class="nx-empty" id="jfEmpty">No stories for this search. Try another search above, or add stories in Jira.</div>
+  </oj-bind-if>
+
+  <oj-bind-if test="[[ !$variables.isLoading && !$variables.notConnected && ($variables.stories || []).length > 0 && !$functions.hasModel($variables.model) && $variables.busy !== 'ai' ]]">
+    <div class="nx-card nx-jf-start" id="jfStart">
+      <h2>Draft the feature list</h2>
+      <p class="nx-note"><b><oj-bind-text value="[[ ($variables.stories || []).length ]]"></oj-bind-text> stories</b> read. Group them into product features — <b>Draft with AI</b> lets the AI name the features and sort the stories, or <b>Auto-group</b> does it without AI (by epic, then label, then type). You can then rename features, move nothing is sent anywhere, and save.</p>
+      <oj-bind-if test="[[ !$variables.aiReady ]]"><p class="nx-note nx-jf-ainote">Ask AI is not set up, so only Auto-group is available. Set up Ask AI on the <b>Jira stories</b> screen to draft with AI.</p></oj-bind-if>
+    </div>
+  </oj-bind-if>
+
+  <oj-bind-if test="[[ $functions.hasModel($variables.model) ]]">
+    <div class="nx-jf-bar" id="jfBar">
+      <div class="nx-jf-chips" aria-label="Across every feature">
+        <span class="nx-jf-count"><b><oj-bind-text value="[[ $functions.featureCount($variables.model) ]]"></oj-bind-text></b> features · <b><oj-bind-text value="[[ $variables.model.total ]]"></oj-bind-text></b> stories</span>
+        <oj-bind-for-each data="[[ $functions.headChips($variables.model) ]]"><template data-oj-as="c"><span :class="[[ 'nx-jf-chip nx-jf-chip--' + c.data.cls ]]"><oj-bind-text value="[[ c.data.label ]]"></oj-bind-text></span></template></oj-bind-for-each>
+      </div>
+      <span class="nx-jf-saved" id="jfSaved"><oj-bind-text value="[[ $functions.savedLine($variables.savedAt, $variables.savedBy, $variables.dirty) ]]"></oj-bind-text></span>
+    </div>
+
+    <div class="nx-jf-feats" id="jfFeats">
+      <oj-bind-for-each data="[[ $functions.featureRows($variables.model) ]]">
+        <template data-oj-as="f">
+          <section class="nx-card nx-jf-feat" :data-idx="[[ f.data.idx ]]">
+            <div class="nx-jf-feathead">
+              <div class="nx-jf-featmain">
+                <input type="text" class="nx-jf-name" :value="[[ f.data.name ]]" :data-key="[[ $functions.editKey('name', f.data.idx) ]]" on-change="[[ $listeners.onEdit ]]" aria-label="Feature name" placeholder="Feature name">
+                <input type="text" class="nx-jf-desc" :value="[[ f.data.description ]]" :data-key="[[ $functions.editKey('desc', f.data.idx) ]]" on-change="[[ $listeners.onEdit ]]" aria-label="One-line description" placeholder="One line about what it is">
+              </div>
+              <div class="nx-jf-featright">
+                <span class="nx-jf-featn"><oj-bind-text value="[[ f.data.n ]]"></oj-bind-text> stor<oj-bind-text value="[[ f.data.n === 1 ? 'y' : 'ies' ]]"></oj-bind-text></span>
+                <div class="nx-jf-chips">
+                  <oj-bind-for-each data="[[ f.data.chips ]]"><template data-oj-as="c"><span :class="[[ 'nx-jf-chip nx-jf-chip--' + c.data.cls ]]"><oj-bind-text value="[[ c.data.label ]]"></oj-bind-text></span></template></oj-bind-for-each>
+                </div>
+              </div>
+            </div>
+            <div class="nx-jf-stories">
+              <oj-bind-for-each data="[[ f.data.stories ]]">
+                <template data-oj-as="s">
+                  <button type="button" class="nx-jf-story" data-act="open" :data-key="[[ s.data.key ]]" on-click="[[ $listeners.onAct ]]" :title="[[ 'Open ' + s.data.key + ' in Jira stories' ]]">
+                    <code class="nx-jf-key"><oj-bind-text value="[[ s.data.key ]]"></oj-bind-text></code>
+                    <span class="nx-jf-sum"><oj-bind-text value="[[ s.data.summary ]]"></oj-bind-text></span>
+                    <span :class="[[ 'nx-jf-st nx-jf-st--' + s.data.cls ]]"><oj-bind-text value="[[ s.data.status ]]"></oj-bind-text></span>
+                  </button>
+                </template>
+              </oj-bind-for-each>
+            </div>
+          </section>
+        </template>
+      </oj-bind-for-each>
+    </div>
+
+    <oj-bind-if test="[[ $functions.ungroupedCount($variables.model) > 0 ]]">
+      <section class="nx-card nx-jf-feat nx-jf-feat--ungrouped" id="jfUngrouped">
+        <div class="nx-jf-feathead">
+          <div class="nx-jf-featmain"><h2 class="nx-jf-ungname">Not grouped yet</h2><p class="nx-note">These stories are in no feature. Draft again, or they will be left out of the feature list.</p></div>
+          <div class="nx-jf-featright"><span class="nx-jf-featn"><oj-bind-text value="[[ $functions.ungroupedCount($variables.model) ]]"></oj-bind-text> stories</span></div>
+        </div>
+        <div class="nx-jf-stories">
+          <oj-bind-for-each data="[[ $functions.ungrouped($variables.model) ]]">
+            <template data-oj-as="s">
+              <button type="button" class="nx-jf-story" data-act="open" :data-key="[[ s.data.key ]]" on-click="[[ $listeners.onAct ]]" :title="[[ 'Open ' + s.data.key + ' in Jira stories' ]]">
+                <code class="nx-jf-key"><oj-bind-text value="[[ s.data.key ]]"></oj-bind-text></code>
+                <span class="nx-jf-sum"><oj-bind-text value="[[ s.data.summary ]]"></oj-bind-text></span>
+                <span :class="[[ 'nx-jf-st nx-jf-st--' + s.data.cls ]]"><oj-bind-text value="[[ s.data.status ]]"></oj-bind-text></span>
+              </button>
+            </template>
+          </oj-bind-for-each>
+        </div>
+      </section>
+    </oj-bind-if>
+  </oj-bind-if>
+</div>

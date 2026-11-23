@@ -139,6 +139,11 @@ define([], function () {
     'jira-progress': { flow: 'insights', page: 'jira-progress', icon: 'oj-ux-ico-chart-bar', navId: 'jira',
       key: function () { return 'daily'; },
       title: function () { return 'Jira · Daily progress'; } },
+    // Features (Jira stories → Features): from every Jira story, the product's feature list — features, their stories and a
+    // status roll-up, drafted with AI or auto-grouped — in a tab of its own (flows/insights jira-features). One tab.
+    'jira-features': { flow: 'insights', page: 'jira-features', icon: 'oj-ux-ico-category', navId: 'jira',
+      key: function () { return 'features'; },
+      title: function () { return 'Jira · Features'; } },
     // "Analyze with AI" for one Jira story ({ key }): the story + its sub-tasks and comments, an AI analysis and a
     // chatbot, in a tab of its own (flows/insights jira-analysis). Opened by the AI icon on a story.
     'jira-analysis': { flow: 'insights', page: 'jira-analysis', icon: 'oj-ux-ico-brain', navId: 'jira',

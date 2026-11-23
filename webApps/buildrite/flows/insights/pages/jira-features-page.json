@@ -1,0 +1,35 @@
+{
+  "description": "Jira · Features: from every Jira story, draft the product's feature list — features, each with a one-line description, the stories under it and a status roll-up (resources/js/jiraFeatures.js). Draft with AI or auto-group without AI, edit the names, save per project, export to PDF / Excel / HTML.",
+  "navigation": { "embeddable": "enabled" },
+  "variables": {
+    "conn": { "type": "any", "defaultValue": {}, "description": "The Jira connection (jiraBacklog): site, project, connected, name." },
+    "project": { "type": "string", "defaultValue": "", "description": "The Jira project key the features are saved under ('' = every project)." },
+    "search": { "type": "string", "defaultValue": "stories", "description": "Which jiraBacklog search the stories come from (default: All stories)." },
+    "isLoading": { "type": "boolean", "defaultValue": true },
+    "busy": { "type": "string", "defaultValue": "", "description": "A running action: 'ai' | 'auto' | 'save'." },
+    "error": { "type": "string", "defaultValue": "" },
+    "note": { "type": "string", "defaultValue": "" },
+    "notConnected": { "type": "boolean", "defaultValue": false },
+    "aiReady": { "type": "boolean", "defaultValue": true, "description": "Whether an AI is set up (else only auto-group is offered)." },
+    "readAt": { "type": "string", "defaultValue": "", "description": "When the stories were read (HH:MM)." },
+    "stories": { "type": "any[]", "defaultValue": [], "description": "The normalised stories (jiraBacklog.fromIssue)." },
+    "draft": { "type": "any", "defaultValue": null, "description": "The current grouping [{ name, description, storyKeys }] — what is saved and edited." },
+    "model": { "type": "any", "defaultValue": null, "description": "The built model: features → their stories with roll-ups, and the ungrouped (jiraFeatures.build)." },
+    "savedAt": { "type": "string", "defaultValue": "", "description": "When the saved feature list was last saved." },
+    "savedBy": { "type": "string", "defaultValue": "", "description": "Who saved it." },
+    "dirty": { "type": "boolean", "defaultValue": false, "description": "The draft changed since it was saved." }
+  },
+  "eventListeners": {
+    "vbEnter": { "chains": [ { "chain": "loadChain" } ] },
+    "onAct": { "chains": [ { "chain": "actChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "key": "{{ $event.currentTarget.dataset.key || '' }}" } } ] },
+    "onSearch": { "chains": [ { "chain": "actChain", "parameters": { "act": "search", "value": "{{ $event.target.value }}" } } ] },
+    "onEdit": { "chains": [ { "chain": "actChain", "parameters": { "act": "edit", "key": "{{ $event.currentTarget.dataset.key }}", "value": "{{ $event.target.value }}" } } ] }
+  },
+  "imports": {
+    "components": {
+      "oj-bind-for-each": { "path": "ojs/ojknockout" },
+      "oj-bind-if": { "path": "ojs/ojknockout" },
+      "oj-bind-text": { "path": "ojs/ojknockout" }
+    }
+  }
+}
