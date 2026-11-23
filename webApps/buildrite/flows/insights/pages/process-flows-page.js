@@ -211,7 +211,7 @@ define([], () => {
     }
     featExports() {
       return [
-        { op: 'featPdf', label: 'PDF (print)', icon: 'oj-ux-ico-file-pdf' },
+        { op: 'featPdf', label: 'PDF', icon: 'oj-ux-ico-file-pdf' },
         { op: 'featExcel', label: 'Excel (.xlsx)', icon: 'oj-ux-ico-file-excel' },
         { op: 'featHtml', label: 'Web page (.html)', icon: 'oj-ux-ico-file-html' },
         { op: 'featCsv', label: 'CSV', icon: 'oj-ux-ico-file-csv' }

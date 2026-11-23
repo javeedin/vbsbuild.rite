@@ -417,8 +417,9 @@
         <div class="nx-pf-pdfprev" role="dialog" aria-modal="true" aria-label="Feature list PDF preview">
           <div class="nx-pf-pdfbar">
             <span class="nx-pf-pdftitle"><span class="oj-ux-ico-file-pdf" aria-hidden="true"></span>PDF preview</span>
-            <span class="nx-pf-pdfhint">Review it, then Print and choose “Save as PDF”.</span>
-            <button type="button" class="nx-btn nx-btn--sm nx-btn--cta" id="pfFeatPrint" data-op="featPrint" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-print" aria-hidden="true"></span>Print</button>
+            <span class="nx-pf-pdfhint">Review it, then save it as a PDF file.</span>
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--cta" id="pfFeatPdfSave" data-op="featPdfSave" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.featPdfBusy ]]"><span class="oj-ux-ico-download" aria-hidden="true"></span><oj-bind-text value="[[ $variables.featPdfBusy ? 'Saving…' : 'Save as PDF' ]]"></oj-bind-text></button>
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="pfFeatPrint" data-op="featPrint" on-click="[[ $listeners.onPf ]]" title="Open the print dialog instead"><span class="oj-ux-ico-print" aria-hidden="true"></span>Print</button>
             <button type="button" class="nx-iconbtn nx-iconbtn--sm" id="pfFeatPrevClose" data-op="featPrevClose" on-click="[[ $listeners.onPf ]]" aria-label="Close preview"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
           </div>
           <iframe class="nx-pf-pdfframe" title="Feature list preview" :srcdoc="[[ $variables.featPreview ]]"></iframe>

@@ -571,7 +571,26 @@ define([
         return;
       }
       if (op === 'featClose') { v.featDlg = false; v.featPreview = ''; return; }
-      // PDF preview: Print (opens the print dialog on the previewed document), or close the preview
+      // PDF preview: Save as PDF (a real file via the desktop's HTML→PDF), Print (fallback), or close the preview
+      if (op === 'featPdfSave') {
+        if (!v.featPreview || v.featPdfBusy) return;
+        v.featPdfBusy = 'pdf'; v.featErr = '';
+        try {
+          const base = 'features-' + (f0IdOf(v) || 'recording');
+          const r = await SC.pdf(v.featPreview, base);
+          const b = r.body || {};
+          if (r.ok && b.base64) {
+            const bin = atob(b.base64); const bytes = new Uint8Array(bin.length);
+            for (let k = 0; k < bin.length; k++) bytes[k] = bin.charCodeAt(k);
+            exportKit.download(base + '.pdf', 'application/pdf', bytes);
+            v.featPreview = ''; v.featNote = 'Saved ' + base + '.pdf.';
+          } else if (b.noPdf) {
+            exportKit.printDocument(v.featPreview);
+            v.featNote = 'Saving a PDF needs the desktop app — use Print and choose “Save as PDF”.';
+          } else { v.featErr = (b && b.error) || 'The PDF could not be made.'; }
+        } catch (e) { v.featErr = String((e && e.message) || e); } finally { v.featPdfBusy = ''; }
+        return;
+      }
       if (op === 'featPrint') { if (v.featPreview) exportKit.printDocument(v.featPreview); return; }
       if (op === 'featPrevClose') { v.featPreview = ''; return; }
       if (op === 'featTab') { v.featTab = (key === 'pages' || key === 'summary') ? key : 'caps'; return; }
