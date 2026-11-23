@@ -98,6 +98,7 @@
           </div>
           <oj-bind-if test="[[ $functions.hasRecordedCalls($variables.flow) ]]">
             <button type="button" class="nx-btn" id="pfMakeScenario" data-op="makeScenario" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]" title="Turn this recording's captured API calls, in the order they fired, into an API Scenario you can run"><span class="oj-ux-ico-flow" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'scenario' ? 'Creating…' : 'Create scenario from the recording' ]]"></oj-bind-text></button>
+            <button type="button" class="nx-btn" id="pfMakeFlow" data-op="makeFlow" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]" title="Turn this recording into a Saved Flow (lanes, steps and a diagram) you can edit, run and export"><span class="oj-ux-ico-network-flow-diagram" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'flow' ? 'Creating…' : 'Create flow from the recording' ]]"></oj-bind-text></button>
           </oj-bind-if>
           <button type="button" class="nx-btn nx-btn--cta" id="pfSave" data-op="save" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]"><span class="oj-ux-ico-save" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'save' ? 'Saving…' : 'Save' ]]"></oj-bind-text></button>
         </div>

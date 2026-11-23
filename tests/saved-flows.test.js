@@ -45,6 +45,29 @@ const f0 = M.fromPage(m, NO, { name: 'Order intake', purpose: 'How a new order i
 T.check('its details, its source page, its systems as lanes, its actions and calls as steps', f0.name === 'Order intake' && f0.status === 'review' && f0.tags.join() === 'orders,intake' && f0.source.page === NO && f0.source.pageLabel === 'New Order'
   && f0.lanes.map((l) => l.id).join() === 'shop,bipService' && f0.actions.length === 2 && f0.actions[0].steps.map((s) => s.system + ':' + s.method).join() === 'shop:GET,bipService:POST' && f0.actions[1].steps[0].row === 'INT-0004', JSON.stringify(f0).slice(0, 400));
 T.check('…no name given: the page\'s', M.fromPage(m, NO, {}).name === 'New Order flow' && M.fromPage(m, 'nope', {}) === null);
+
+T.section('a flow made from a recording (Record from the app)');
+// the app makes its Fusion calls through the ORDS gateway, so recorded business calls are /ords/… and /xmlpserver/… (SOAP);
+// scaffolding (a .json descriptor, a /resources/ asset, favicon) is dropped, as in the scenario builder.
+const rec = { id: 'PF-7', name: 'Take an order', pages: [
+  { id: 'p1', page: 'shop/catalogue', name: 'Catalogue', calls: [
+    { method: 'GET', url: 'https://app.example.com/ic/builder/rt/shop/1.0/resources/version_42/catalogue.json' }, // asset: dropped
+    { method: 'GET', url: 'https://host/ords/wms/v1/catalogue', path: '/ords/wms/v1/catalogue' },
+    { method: 'GET', url: 'https://app.example.com/api/v1/items?q=code=X', path: '/api/v1/items' } ] },
+  { id: 'p2', page: 'shop/order', name: 'New order', calls: [
+    { method: 'POST', url: 'https://host/ords/shop/v1/orders', path: '/ords/shop/v1/orders', body: '{"x":1}' },
+    { method: 'POST', url: 'https://acme.oraclecloud.com/xmlpserver/services/PublicReportService', path: '/xmlpserver/services/PublicReportService' } ] },
+  { id: 'p3', page: 'shop/thanks', name: 'Thanks', calls: [{ method: 'GET', url: 'https://host/favicon.ico' }] } // only an asset: no action
+] };
+const fr = M.fromRecording(rec, { name: '', area: 'Sales', owner: 'Sam' });
+T.check('it is a recording-sourced flow, named from the recording, with the recorded pages', fr.source.kind === 'recording' && fr.source.flowId === 'PF-7' && fr.name === 'Take an order flow' && fr.owner === 'Sam' && fr.source.pages.join() === 'Catalogue,New order,Thanks', JSON.stringify(fr.source));
+T.check('a page with only scaffolding makes no action; each walked page is an action "On <page>"', fr.actions.length === 2 && fr.actions[0].trigger === 'On Catalogue' && fr.actions[1].trigger === 'On New order');
+T.check('assets are dropped; business calls become steps in order', fr.actions[0].steps.map((s) => s.method + ' ' + s.path).join(' | ') === 'GET /ords/wms/v1/catalogue | GET /api/v1/items' && fr.actions[1].steps.length === 2);
+T.check('systems become lanes (ORDS, the app, BI Publisher) and each step points to its lane', fr.lanes.map((l) => l.id).sort().join() === 'app,bip,ords' && fr.actions[0].steps[0].system === 'ords' && fr.actions[0].steps[1].system === 'app' && fr.actions[1].steps[1].system === 'bip');
+T.check('the business object is the last meaningful path segment (ids and version tags left out)', fr.actions[0].steps[0].object === 'catalogue' && fr.actions[0].steps[1].object === 'items' && fr.actions[1].steps[0].object === 'orders');
+T.check('a recording with no business calls → null', M.fromRecording({ id: 'X', name: 'Empty', pages: [{ page: 'p', name: 'P', calls: [{ method: 'GET', url: 'https://h/a.js' }] }] }, {}) === null && M.fromRecording({ pages: [] }, {}) === null);
+T.check('checking a recording-sourced flow is skipped (nothing to re-check against a page)', M.check(fr, m).skipped === true && /recording/i.test(M.check(fr, m).text));
+T.check('its drawing model renders (lanes + actions + steps)', M.toModel(fr).actions.length === 2 && M.toModel(fr).label === 'Take an order flow');
 const md = M.toModel(f0);
 T.check('its drawing\'s model: the name, status, steps, a lane name on each call', md.label === 'Order intake' && md.kicker === 'In review' && md.sub === 'New Order · 3 steps' && md.actions[0].calls[1].systemName === 'Oracle BI Publisher (SOAP)');
 

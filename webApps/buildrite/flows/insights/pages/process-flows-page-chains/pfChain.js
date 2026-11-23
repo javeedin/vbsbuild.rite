@@ -6,7 +6,8 @@ define([
   'resources/js/apiClient',
   'resources/js/exportKit',
   'resources/js/shellBus',
-], (ActionChain, PC, PagesPC, SC, API, exportKit, bus) => {
+  'resources/js/flowModel',
+], (ActionChain, PC, PagesPC, SC, API, exportKit, bus, FM) => {
   'use strict';
 
   // Process Flows: one screen — a list of flows and an editor. Ops (data-op):
@@ -463,6 +464,35 @@ define([
           const left = (b.unmatched && b.unmatched.length) ? ' (' + b.unmatched.length + ' call(s) with no matching API left out)' : '';
           say(true, 'Scenario “' + s.name + '” created with ' + ((s.steps || []).length) + ' step(s)' + left + ' — opening it in API Scenarios.');
           bus.open({ record: 'api-scenario', params: { scId: s.id, page: s.page || '', title: (s.code ? s.code + ' · ' : '') + s.name } });
+        } finally { v.busy = ''; }
+        return;
+      }
+
+      // Create flow from the recording: the pages walked become actions, their API calls (in order, scaffolding left out)
+      // become steps, and the systems they talk to become lanes — a Saved Flow you can edit, run, version and export.
+      if (op === 'makeFlow') {
+        if (!MODEL || v.busy) return;
+        foldRows(v);
+        const f = readEditor(v);
+        if (!(f.pages || []).some((p) => p.calls && p.calls.length)) {
+          say(false, 'This flow has no recorded API calls to build a flow from. Use “Record from the app” so each screen captures the calls it makes.');
+          return;
+        }
+        const flow = FM.fromRecording(f, { name: (String(f.name || 'Recording') + ' flow'), area: String(f.area || ''), owner: String(f.owner || ''), status: 'draft', purpose: 'Built from the recorded walkthrough “' + (f.name || 'recording') + '”.' });
+        if (!flow || !(flow.actions || []).some((a) => (a.steps || []).length)) {
+          say(false, 'The recording captured no business API calls to turn into a flow (only page resources like scripts and styles).');
+          return;
+        }
+        v.busy = 'flow';
+        try {
+          const r = await PagesPC.flowSave(flow, 'built from the recording “' + (f.name || 'recording') + '”');
+          const b = r.body || {};
+          if (!r.ok || !b.ok || !b.flow) { say(false, (b && b.error) || 'The flow could not be saved.'); return; }
+          const g = b.flow;
+          const steps = (flow.actions || []).reduce((n, a) => n + ((a.steps || []).length), 0);
+          try { bus.emit('saved-flows-changed', { at: Date.now() }); } catch (e) { /* no listeners */ }
+          say(true, 'Flow “' + g.id + ' · ' + g.name + '” created (' + (flow.actions || []).length + ' step group(s), ' + steps + ' step(s)) — opening it in Page Flows.');
+          bus.open({ record: 'saved-flow', params: { flowId: g.id, title: g.id + ' · ' + g.name } });
         } finally { v.busy = ''; }
         return;
       }

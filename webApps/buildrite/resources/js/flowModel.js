@@ -65,6 +65,65 @@ define(['resources/js/integrationDiagram'], function (D) {
     return f;
   }
 
+  // ── a flow from a recording ("Record from the app"): the pages walked become actions, the API calls each page made
+  //    (in the order they fired, page scaffolding left out) become its steps, and the systems they talk to become lanes. ──
+  function recPath(c) { var s = str(c.path || ''); if (!s) { s = str(c.url).replace(/#.*$/, ''); var q = s.indexOf('?'); s = (q === -1 ? s : s.slice(0, q)).replace(/^[a-z]+:\/\/[^/]+/i, ''); } return s.replace(/[?#].*$/, '').replace(/\/+$/, '') || '/'; }
+  /** A captured call that is page scaffolding (a script, style, image, descriptor…), not a business API call. */
+  function recIsAsset(c) {
+    if (!c || typeof c !== 'object') return true;
+    var u = str(c.url);
+    var p = recPath(c);
+    if (!p || p === '/') return true;
+    if (/\.(css|js|mjs|cjs|map|json|jsonp|xml|html?|txt|md|markdown|wasm|woff2?|ttf|eot|otf|svg|png|jpe?g|gif|ico|webp|avif|bmp|mp4|webm|csv)$/i.test(p)) return true;
+    if (/\/version_\d+\/|\/resources\/|\/webapps\/|\/deployments\/|\/dynamicLayouts?\/|requirejs|\/vb\/|\/fnd\/|openapi3?|app-flow|\/_currentuser\b|\/describe\b/i.test(u)) return true;
+    if (/(^|\/)(fonts?|images?|img|icons?|assets|static|cdn|css|js)\//i.test(p)) return true;
+    return false;
+  }
+  /** Which system a call talks to (a lane): BI Publisher, Oracle Fusion REST, Oracle APEX (ORDS), else the application. */
+  function recLane(c) {
+    var s = str(c.url) + ' ' + recPath(c);
+    if (/\/xmlpserver\//i.test(s)) return { id: 'bip', name: 'BI Publisher', kind: 'soap' };
+    if (/\/(fscm|hcm|crm|scm|prc|fin|expenses|atk)RestApi\//i.test(s) || /oraclecloud/i.test(str(c.url))) return { id: 'fusion', name: 'Oracle Fusion', kind: 'rest' };
+    if (/\/ords\//i.test(s)) return { id: 'ords', name: 'Oracle APEX (ORDS)', kind: 'rest' };
+    return { id: 'app', name: 'Application', kind: 'rest' };
+  }
+  /** The business object a path names: its last meaningful segment (ids, {params} and version tags left out). */
+  function recObject(path) {
+    var segs = str(path).split('/').filter(Boolean).filter(function (s) { return !/^\{.*\}$/.test(s) && !/^:/.test(s) && !/^\d+$/.test(s) && !/^v\d+$/i.test(s); });
+    return segs[segs.length - 1] || '';
+  }
+
+  /** A new flow from a recorded Process Flow ({ id, name, pages:[{ page, name, calls:[…] }] }): actions per page, steps per call. */
+  function fromRecording(recorded, d) {
+    var rf = recorded && typeof recorded === 'object' ? recorded : {};
+    var lanesById = {};
+    var laneOrder = [];
+    var actions = [];
+    var n = 0;
+    (Array.isArray(rf.pages) ? rf.pages : []).forEach(function (p, pi) {
+      var calls = (Array.isArray(p && p.calls) ? p.calls : []).filter(function (c) { return !recIsAsset(c); });
+      if (!calls.length) return;
+      var steps = calls.map(function (c) {
+        var lane = recLane(c);
+        if (!lanesById[lane.id]) { lanesById[lane.id] = { id: lane.id, name: lane.name, kind: lane.kind, kindLabel: kindLabelOf(lane.kind), host: '' }; laneOrder.push(lane.id); }
+        n++;
+        var path = recPath(c);
+        return { id: 's' + n, system: lane.id, method: str(c.method || 'GET').toUpperCase(), path: path, endpoint: path, object: recObject(path),
+          action: '', direction: 'out', summary: '', via: '', row: '', text: '', note: '', manual: false };
+      });
+      actions.push({ id: 'a' + (actions.length + 1), trigger: 'On ' + (str(p.name) || str(p.page) || ('page ' + (pi + 1))), title: '', note: '', chain: '', chains: [], steps: steps });
+    });
+    if (!actions.length) return null;
+    var f = Object.assign(details(d), {
+      app: str(rf.app || ''),
+      source: { kind: 'recording', flowId: str(rf.id || ''), flowName: str(rf.name || ''),
+        pages: (Array.isArray(rf.pages) ? rf.pages : []).map(function (p) { return str(p.name || p.page || ''); }).filter(Boolean),
+        recordedAt: str(rf.recordedAt || rf.updated || rf.at || '') },
+      lanes: laneOrder.map(function (id) { return lanesById[id]; }), actions: actions });
+    if (!f.name) f.name = (str(rf.name) || 'Recording') + ' flow';
+    return f;
+  }
+
   /** The drawing's model (D.flowSwim): its lanes, its actions and steps — a step's own words and notes shown. */
   function toModel(flow) {
     var f = flow || {};
@@ -225,6 +284,7 @@ define(['resources/js/integrationDiagram'], function (D) {
   /** The flow against the app now: the steps the page no longer makes, the calls it makes that the flow does not have. */
   function check(flow, m) {
     var f = flow || {};
+    if (f.source && f.source.kind === 'recording') return { ok: true, skipped: true, missing: [], added: [], same: 0, text: 'Built from a recording of the app — nothing to re-check against a page. Record again for a fresh capture.' };
     if (!f.source || f.source.kind !== 'page') return { ok: true, skipped: true, missing: [], added: [], same: 0, text: 'Drawn by hand — nothing to check against the app.' };
     var pf = ((m && m.pageFlows) || []).filter(function (x) { return x.page === f.source.page; })[0];
     if (!pf) return { ok: false, pageGone: true, missing: [], added: [], same: 0, text: 'The page ' + (f.source.pageLabel || f.source.page) + ' makes no call now (or is gone).' };
@@ -309,6 +369,6 @@ define(['resources/js/integrationDiagram'], function (D) {
       + '</body></html>';
   }
 
-  return { STICKY_COLORS: STICKY_COLORS, placed: placed, autoText: autoText, autoTitle: autoTitle, STATUSES: STATUSES, statusText: statusText, KIND_OPTIONS: KIND_OPTIONS, kindLabelOf: kindLabelOf, details: details, fromPage: fromPage, blank: blank, toModel: toModel, edit: edit, laneUsed: laneUsed,
+  return { STICKY_COLORS: STICKY_COLORS, placed: placed, autoText: autoText, autoTitle: autoTitle, STATUSES: STATUSES, statusText: statusText, KIND_OPTIONS: KIND_OPTIONS, kindLabelOf: kindLabelOf, details: details, fromPage: fromPage, blank: blank, fromRecording: fromRecording, toModel: toModel, edit: edit, laneUsed: laneUsed,
     check: check, addFromApp: addFromApp, rows: rows, html: html, keyOf: keyOf };
 });
