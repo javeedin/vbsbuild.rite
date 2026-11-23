@@ -223,6 +223,14 @@ define([], () => {
         pages: (f.pages || []).map((p) => ({ name: p.name, calls: (p.calls || []).map((c) => ({ method: c.method, path: c.path })) }))
       }));
     }
+    // The Features tab: each feature's distinct statements, with whether each is ticked (checks: { "i:j": false } = unticked)
+    featCaps(model, checks) {
+      const ch = checks || {};
+      return ((model && model.features) || []).map((f, i) => ({
+        idx: i, name: f.name || '',
+        caps: (f.capabilities || []).map((c, j) => ({ j: j, text: c, ok: ch[i + ':' + j] !== false }))
+      }));
+    }
     featUngrouped(model) { return ((model && model.ungrouped) || []).map((p) => ({ name: p.name })); }
   }
   return PageModule;

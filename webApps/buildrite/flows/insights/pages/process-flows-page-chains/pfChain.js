@@ -123,9 +123,12 @@ define([
   }
 
   // ── Features list from the recording (the dialog) ──
-  const featToDraft = (model) => ((model && model.features) || []).map((f) => ({ name: f.name, description: f.description, pageKeys: (f.pages || []).map((p) => p.key) }));
+  const featToDraft = (model) => ((model && model.features) || []).map((f) => ({ name: f.name, description: f.description, pageKeys: (f.pages || []).map((p) => p.key), capabilities: (f.capabilities || []).slice() }));
   const f0IdOf = (v) => { const f = readEditor(v); return f.id ? String(f.id).toLowerCase() : ''; };
-  function featSet(v, drafted) { v.featModel = FF.build(readEditor(v), drafted); v.featDraft = featToDraft(v.featModel); }
+  // Build the model from the current draft and mirror the draft back from it (so edit indices stay aligned); checks reset.
+  function featSet(v, drafted) { v.featModel = FF.build(readEditor(v), drafted); v.featDraft = featToDraft(v.featModel); v.featChecks = {}; }
+  // Rebuild after an edit without clearing the ticks (indices are unchanged by an in-place text edit).
+  function featRebuild(v) { v.featModel = FF.build(readEditor(v), v.featDraft || []); v.featDraft = featToDraft(v.featModel); }
   async function featRunAi(context, v) {
     v.featBusy = 'ai'; v.featErr = '';
     try {
@@ -533,13 +536,14 @@ define([
         foldRows(v);
         const f = readEditor(v);
         if (!(f.pages || []).length) { say(false, 'This process flow has no pages to build a feature list from.'); return; }
-        v.featDlg = true; v.featErr = ''; v.featNote = ''; v.featModel = null; v.featDraft = null;
+        v.featDlg = true; v.featErr = ''; v.featNote = ''; v.featModel = null; v.featDraft = null; v.featChecks = {}; v.featTab = 'caps';
         try { const a = await M.aiSettings(); v.aiReady = !!(a.ok && a.body && a.body.active); } catch (e) { v.aiReady = false; }
         if (v.aiReady) await featRunAi(context, v);
         else { featSet(v, FF.autoDraft(f)); v.featNote = 'Ask AI is not set up, so the pages were grouped one feature per page. Set up Ask AI on the Jira stories screen to draft with AI.'; }
         return;
       }
       if (op === 'featClose') { v.featDlg = false; return; }
+      if (op === 'featTab') { v.featTab = key === 'pages' ? 'pages' : 'caps'; return; }
       if (op === 'featAi') { if (!v.aiReady) { v.featErr = 'Ask AI is not set up. Set it up on the Jira stories screen, or use Group by page.'; return; } await featRunAi(context, v); return; }
       if (op === 'featAuto') { v.featErr = ''; featSet(v, FF.autoDraft(readEditor(v))); v.featNote = 'Grouped one feature per page. Rename them, or Draft with AI.'; return; }
       if (op === 'featEdit') {
@@ -548,18 +552,51 @@ define([
         const i = Number(m[2]);
         if (m[1] === 'name') v.featDraft[i].name = String(input || '').slice(0, 200);
         else v.featDraft[i].description = String(input || '').slice(0, 600);
-        v.featModel = FF.build(readEditor(v), v.featDraft);
-        v.featDraft = featToDraft(v.featModel);
+        featRebuild(v);
+        return;
+      }
+      // a feature statement: edit its text, tick / untick it, add one, remove one
+      if (op === 'featCapEdit') {
+        const m = /^(\d+):(\d+)$/.exec(String(key || ''));
+        if (!m || !v.featDraft || !v.featDraft[Number(m[1])]) return;
+        const caps = v.featDraft[Number(m[1])].capabilities || (v.featDraft[Number(m[1])].capabilities = []);
+        caps[Number(m[2])] = String(input || '').slice(0, 600);
+        featRebuild(v);
+        return;
+      }
+      if (op === 'featCapCheck') {
+        const k = String(key || '');
+        if (!/^\d+:\d+$/.test(k)) return;
+        const cur = (v.featChecks || {})[k] !== false;
+        v.featChecks = Object.assign({}, v.featChecks || {}, { [k]: !cur });
+        return;
+      }
+      if (op === 'featCapAdd') {
+        const i = Number(key);
+        if (!v.featDraft || !v.featDraft[i]) return;
+        v.featDraft[i].capabilities = (v.featDraft[i].capabilities || []).concat('New feature');
+        featSet(v, v.featDraft); // indices change → mirror and reset ticks
+        return;
+      }
+      if (op === 'featCapDel') {
+        const m = /^(\d+):(\d+)$/.exec(String(key || ''));
+        if (!m || !v.featDraft || !v.featDraft[Number(m[1])]) return;
+        const caps = v.featDraft[Number(m[1])].capabilities || [];
+        caps.splice(Number(m[2]), 1);
+        featSet(v, v.featDraft); // indices change → mirror and reset ticks
         return;
       }
       if (op === 'featPdf' || op === 'featHtml' || op === 'featExcel' || op === 'featCsv') {
         if (!v.featModel) return;
         const base = 'features-' + (f0IdOf(v) || 'recording');
         const meta = { flow: (readEditor(v).name || 'recording'), date: new Date().toISOString().slice(0, 10), title: 'Feature list — ' + (readEditor(v).name || 'recording') };
+        const onCaps = v.featTab !== 'pages';
         try {
           if (op === 'featPdf') { exportKit.printDocument(FF.documentHtml(v.featModel, meta)); v.featNote = 'Choose "Save as PDF" in the print dialog.'; return; }
           if (op === 'featHtml') { exportKit.download(base + '.html', 'text/html;charset=utf-8', FF.documentHtml(v.featModel, meta)); v.featNote = 'Saved the feature list as a web page.'; return; }
-          const res = await exportKit.run(op === 'featExcel' ? 'xlsx' : 'csv', { rows: FF.rows(v.featModel), columns: FF.COLUMNS, name: base, title: meta.title });
+          // Excel / CSV: the Features tab exports the distinct statements (with Kept), By page exports the page/call table
+          const opts = onCaps ? { rows: FF.capRows(v.featModel, v.featChecks || {}), columns: FF.CAP_COLUMNS } : { rows: FF.rows(v.featModel), columns: FF.COLUMNS };
+          const res = await exportKit.run(op === 'featExcel' ? 'xlsx' : 'csv', Object.assign({ name: base, title: meta.title }, opts));
           v.featNote = (res && res.message) || 'Exported.';
         } catch (e) { v.featErr = 'The export failed: ' + String((e && e.message) || e); }
         return;

@@ -303,33 +303,65 @@
           </div>
         </div>
       </div>
+      <oj-bind-if test="[[ $functions.featHas($variables.featModel) ]]">
+        <div class="nx-pf-feattabs" role="tablist">
+          <button type="button" role="tab" :class="[[ 'nx-pf-feattab' + ($variables.featTab !== 'pages' ? ' nx-pf-feattab--on' : '') ]]" :aria-selected="[[ $variables.featTab !== 'pages' ? 'true' : 'false' ]]" data-op="featTab" data-key="caps" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-list" aria-hidden="true"></span>Features</button>
+          <button type="button" role="tab" :class="[[ 'nx-pf-feattab' + ($variables.featTab === 'pages' ? ' nx-pf-feattab--on' : '') ]]" :aria-selected="[[ $variables.featTab === 'pages' ? 'true' : 'false' ]]" data-op="featTab" data-key="pages" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-document" aria-hidden="true"></span>By page</button>
+        </div>
+      </oj-bind-if>
       <oj-bind-if test="[[ !!$variables.featErr ]]"><div class="nx-sc-err" id="pfFeatErr"><oj-bind-text value="[[ $variables.featErr ]]"></oj-bind-text></div></oj-bind-if>
-      <oj-bind-if test="[[ $variables.featBusy === 'ai' ]]"><div class="nx-empty" id="pfFeatDrafting"><span class="nx-spin" aria-hidden="true"></span> The AI is grouping the pages into features…</div></oj-bind-if>
+      <oj-bind-if test="[[ $variables.featBusy === 'ai' ]]"><div class="nx-empty" id="pfFeatDrafting"><span class="nx-spin" aria-hidden="true"></span> The AI is turning the pages and their API calls into product features…</div></oj-bind-if>
       <div class="nx-pf-featbody">
         <oj-bind-if test="[[ !$functions.featHas($variables.featModel) && $variables.featBusy !== 'ai' && !$variables.featErr ]]">
-          <div class="nx-empty" id="pfFeatNone">No features yet. Press <b>Draft with AI</b> to group the pages into product features, or <b>Group by page</b>.</div>
+          <div class="nx-empty" id="pfFeatNone">No features yet. Press <b>Draft with AI</b> to turn the pages into product features, or <b>Group by page</b>.</div>
         </oj-bind-if>
         <oj-bind-if test="[[ $functions.featHas($variables.featModel) ]]">
           <div class="nx-pf-featchips"><oj-bind-for-each data="[[ $functions.featChips($variables.featModel) ]]"><template data-oj-as="c"><span class="nx-pf-featchip"><oj-bind-text value="[[ c.data ]]"></oj-bind-text></span></template></oj-bind-for-each></div>
-          <oj-bind-for-each data="[[ $functions.featRows($variables.featModel) ]]">
-            <template data-oj-as="f">
-              <section class="nx-pf-featcard" :data-idx="[[ f.data.idx ]]">
-                <input type="text" class="nx-pf-featname" :value="[[ f.data.name ]]" :data-key="[[ $functions.editKey('name', f.data.idx) ]]" data-op="featEdit" on-change="[[ $listeners.onPf ]]" aria-label="Feature name" placeholder="Feature name">
-                <input type="text" class="nx-pf-featdesc" :value="[[ f.data.description ]]" :data-key="[[ $functions.editKey('desc', f.data.idx) ]]" data-op="featEdit" on-change="[[ $listeners.onPf ]]" aria-label="One-line description" placeholder="One line about what it does">
-                <div class="nx-pf-featpages">
-                  <oj-bind-for-each data="[[ f.data.pages ]]"><template data-oj-as="p">
-                    <div class="nx-pf-featpage">
-                      <div class="nx-pf-featpn"><span class="oj-ux-ico-document" aria-hidden="true"></span><oj-bind-text value="[[ p.data.name ]]"></oj-bind-text></div>
-                      <oj-bind-for-each data="[[ p.data.calls ]]"><template data-oj-as="c">
-                        <div class="nx-pf-featcall"><span class="nx-pf-featm"><oj-bind-text value="[[ c.data.method ]]"></oj-bind-text></span><code><oj-bind-text value="[[ c.data.path ]]"></oj-bind-text></code></div>
-                      </template></oj-bind-for-each>
-                      <oj-bind-if test="[[ p.data.calls.length === 0 ]]"><div class="nx-pf-featnocalls">no API calls</div></oj-bind-if>
-                    </div>
-                  </template></oj-bind-for-each>
-                </div>
-              </section>
-            </template>
-          </oj-bind-for-each>
+
+          <!-- Features tab: the distinct feature statements, each editable and checkable -->
+          <oj-bind-if test="[[ $variables.featTab !== 'pages' ]]">
+            <oj-bind-for-each data="[[ $functions.featCaps($variables.featModel, $variables.featChecks) ]]">
+              <template data-oj-as="f">
+                <section class="nx-pf-featcard" :data-idx="[[ f.data.idx ]]">
+                  <input type="text" class="nx-pf-featname" :value="[[ f.data.name ]]" :data-key="[[ $functions.editKey('name', f.data.idx) ]]" data-op="featEdit" on-change="[[ $listeners.onPf ]]" aria-label="Feature name" placeholder="Feature name">
+                  <div class="nx-pf-caps">
+                    <oj-bind-for-each data="[[ f.data.caps ]]"><template data-oj-as="c">
+                      <div :class="[[ 'nx-pf-cap' + (c.data.ok ? '' : ' nx-pf-cap--off') ]]">
+                        <input type="checkbox" class="nx-pf-capck" :checked="[[ c.data.ok ]]" :data-key="[[ f.data.idx + ':' + c.data.j ]]" data-op="featCapCheck" on-change="[[ $listeners.onPf ]]" aria-label="Keep this feature">
+                        <input type="text" class="nx-pf-captext" :value="[[ c.data.text ]]" :data-key="[[ f.data.idx + ':' + c.data.j ]]" data-op="featCapEdit" on-change="[[ $listeners.onPf ]]" aria-label="Feature statement" placeholder="What the application lets a user do…">
+                        <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-pf-capdel" :data-key="[[ f.data.idx + ':' + c.data.j ]]" data-op="featCapDel" on-click="[[ $listeners.onPf ]]" aria-label="Remove this statement" title="Remove"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+                      </div>
+                    </template></oj-bind-for-each>
+                    <button type="button" class="nx-btn nx-btn--sm nx-btn--plain nx-pf-capadd" :data-key="[[ f.data.idx ]]" data-op="featCapAdd" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span>Add a feature</button>
+                  </div>
+                </section>
+              </template>
+            </oj-bind-for-each>
+          </oj-bind-if>
+
+          <!-- By page tab: each feature's pages and their API calls -->
+          <oj-bind-if test="[[ $variables.featTab === 'pages' ]]">
+            <oj-bind-for-each data="[[ $functions.featRows($variables.featModel) ]]">
+              <template data-oj-as="f">
+                <section class="nx-pf-featcard" :data-idx="[[ f.data.idx ]]">
+                  <input type="text" class="nx-pf-featname" :value="[[ f.data.name ]]" :data-key="[[ $functions.editKey('name', f.data.idx) ]]" data-op="featEdit" on-change="[[ $listeners.onPf ]]" aria-label="Feature name" placeholder="Feature name">
+                  <input type="text" class="nx-pf-featdesc" :value="[[ f.data.description ]]" :data-key="[[ $functions.editKey('desc', f.data.idx) ]]" data-op="featEdit" on-change="[[ $listeners.onPf ]]" aria-label="One-line description" placeholder="One line about what it does">
+                  <div class="nx-pf-featpages">
+                    <oj-bind-for-each data="[[ f.data.pages ]]"><template data-oj-as="p">
+                      <div class="nx-pf-featpage">
+                        <div class="nx-pf-featpn"><span class="oj-ux-ico-document" aria-hidden="true"></span><oj-bind-text value="[[ p.data.name ]]"></oj-bind-text></div>
+                        <oj-bind-for-each data="[[ p.data.calls ]]"><template data-oj-as="c">
+                          <div class="nx-pf-featcall"><span class="nx-pf-featm"><oj-bind-text value="[[ c.data.method ]]"></oj-bind-text></span><code><oj-bind-text value="[[ c.data.path ]]"></oj-bind-text></code></div>
+                        </template></oj-bind-for-each>
+                        <oj-bind-if test="[[ p.data.calls.length === 0 ]]"><div class="nx-pf-featnocalls">no API calls</div></oj-bind-if>
+                      </div>
+                    </template></oj-bind-for-each>
+                  </div>
+                </section>
+              </template>
+            </oj-bind-for-each>
+          </oj-bind-if>
+
           <oj-bind-if test="[[ $functions.featUngrouped($variables.featModel).length > 0 ]]">
             <section class="nx-pf-featcard nx-pf-featcard--ung">
               <div class="nx-pf-featname nx-pf-featname--ung">Not grouped yet</div>

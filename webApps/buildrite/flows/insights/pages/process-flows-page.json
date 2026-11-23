@@ -25,8 +25,10 @@
     "featBusy": { "type": "string", "defaultValue": "", "description": "A running feature-list action: 'ai'." },
     "featErr": { "type": "string", "defaultValue": "", "description": "An error in the feature-list dialog." },
     "featNote": { "type": "string", "defaultValue": "", "description": "A status line in the feature-list dialog." },
-    "featModel": { "type": "any", "defaultValue": null, "description": "The built feature list: features → their pages + calls, and the ungrouped (flowFeatures.build)." },
-    "featDraft": { "type": "any", "defaultValue": null, "description": "The current grouping [{ name, description, pageKeys }] — mirrors featModel, what editing changes." }
+    "featModel": { "type": "any", "defaultValue": null, "description": "The built feature list: features → their capabilities, pages + calls, and the ungrouped (flowFeatures.build)." },
+    "featDraft": { "type": "any", "defaultValue": null, "description": "The current grouping [{ name, description, pageKeys, capabilities }] — mirrors featModel, what editing changes." },
+    "featTab": { "type": "string", "defaultValue": "caps", "description": "The feature-list dialog tab: 'caps' (the distinct feature statements) or 'pages' (by page + API calls)." },
+    "featChecks": { "type": "any", "defaultValue": {}, "description": "Which feature statements are ticked, by 'featureIndex:capabilityIndex' ('…': false = unticked; default kept)." }
   },
   "eventListeners": {
     "vbEnter": { "chains": [ { "chain": "pfChain", "parameters": { "op": "load", "idx": "", "key": "", "value": "", "input": "" } } ] },

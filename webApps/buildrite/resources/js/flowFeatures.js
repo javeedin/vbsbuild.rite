@@ -20,6 +20,8 @@ define([], function () {
   function esc(s) { return S(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function cut(s, n) { s = S(s); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
   function uniq(a) { var seen = {}; return (a || []).filter(function (x) { var k = S(x); if (seen[k]) return false; seen[k] = 1; return true; }); }
+  /** Trim strings and drop blanks / case-insensitive duplicates (keeps the first), capped at `max` (default 12). */
+  function cleanCaps(a, max) { var seen = {}; return (Array.isArray(a) ? a : []).map(function (x) { return S(x).trim(); }).filter(function (x) { var k = x.toLowerCase(); if (!x || seen[k]) return false; seen[k] = 1; return true; }).slice(0, max || 12); }
 
   function recPath(c) { var s = S(c && c.path); if (!s) { s = S(c && c.url).replace(/#.*$/, ''); var q = s.indexOf('?'); s = (q === -1 ? s : s.slice(0, q)).replace(/^[a-z]+:\/\/[^/]+/i, ''); } return s.replace(/[?#].*$/, '').replace(/\/+$/, '') || '/'; }
   /** A captured call that is page scaffolding (a script, style, image, descriptor…), not a business API call. */
@@ -52,15 +54,19 @@ define([], function () {
   var SYSTEM = [
     'You are a product analyst. You are given the pages a user walks through in one business process, in order, and the API calls each page makes (method, path).',
     'Group the pages into the product\'s FEATURES — the user-facing capabilities this process exercises (for example "Order capture", "Credit check", "Shipment confirmation").',
+    'For EACH feature also write its CAPABILITIES: 2 to 6 DISTINCT, plain-English statements of what the application lets a user do — one concrete idea each, in a product-feature voice, for example:',
+    '  "The application lets a user raise an internal request by selecting the nearest location."',
+    '  "The equipment catalogue shows the equipment available for the selected location."',
+    'Ground each capability in the pages and their API calls (e.g. a POST means the user creates or submits something; a GET that loads a list means the screen shows that list). Do not repeat the same capability in two features.',
     'Rules:',
     '- Use ONLY the page keys given. Never invent a page, a key, or a feature that no page supports.',
     '- Put each page under exactly one feature (its best fit). Every page must appear under some feature.',
     '- A feature groups the pages (and their calls) that serve one capability; related pages belong together.',
-    '- Name each feature as a short capability (2–5 words, Title Case), not a sentence; write a one-line plain-English description of what it lets a user do, grounded in the pages and their calls.',
+    '- Name each feature as a short capability (2–5 words, Title Case), not a sentence; write a one-line description, and the capabilities list described above.',
     '- Order features in the order the process flows.',
     'Answer with ONE fenced code block and nothing else:',
     '```features',
-    '[{"name":"Feature name","description":"one line","pageKeys":["P1","P2"]}]',
+    '[{"name":"Feature name","description":"one line","pageKeys":["P1","P2"],"capabilities":["The application lets a user …","The … screen shows …"]}]',
     '```'
   ].join('\n');
 
@@ -106,7 +112,8 @@ define([], function () {
     if (!arr || !arr.length) return [];
     return arr.filter(function (f) { return f && typeof f === 'object'; }).map(function (f) {
       return { name: S(f.name).trim(), description: S(f.description).trim(),
-        pageKeys: uniq((Array.isArray(f.pageKeys) ? f.pageKeys : (Array.isArray(f.keys) ? f.keys : (Array.isArray(f.pages) ? f.pages : []))).map(function (k) { return S(k).trim().toUpperCase(); }).filter(Boolean)) };
+        pageKeys: uniq((Array.isArray(f.pageKeys) ? f.pageKeys : (Array.isArray(f.keys) ? f.keys : (Array.isArray(f.pages) ? f.pages : []))).map(function (k) { return S(k).trim().toUpperCase(); }).filter(Boolean)),
+        capabilities: cleanCaps(f.capabilities || f.features || f.statements) };
     }).filter(function (f) { return f.name; });
   }
 
@@ -128,12 +135,36 @@ define([], function () {
       list.forEach(function (p) { placed[p.key] = true; });
       var calls = [];
       list.forEach(function (p) { p.calls.forEach(function (c) { calls.push(Object.assign({ page: p.name }, c)); }); });
-      return { name: S(f.name).trim() || 'Feature', description: S(f.description).trim(), pages: list, calls: calls, counts: { pages: list.length, calls: calls.length } };
+      var desc = S(f.description).trim();
+      var caps = cleanCaps(f.capabilities);
+      if (!caps.length && desc) caps = [desc]; // no capabilities drafted (e.g. Group by page): the one-line description stands in
+      return { name: S(f.name).trim() || 'Feature', description: desc, pages: list, calls: calls, capabilities: caps, counts: { pages: list.length, calls: calls.length, capabilities: caps.length } };
     }).filter(function (f) { return f.pages.length; });
     var ungrouped = items.filter(function (p) { return !placed[p.key]; });
     var allCalls = items.reduce(function (n, p) { return n + p.calls.length; }, 0);
+    var allCaps = features.reduce(function (n, f) { return n + f.capabilities.length; }, 0);
     return { features: features, ungrouped: ungrouped, total: items.length,
-      counts: { features: features.length, pages: Object.keys(placed).length, ungrouped: ungrouped.length, calls: allCalls } };
+      counts: { features: features.length, pages: Object.keys(placed).length, ungrouped: ungrouped.length, calls: allCalls, capabilities: allCaps } };
+  }
+
+  /** The distinct feature statements across the whole model, under their feature (first occurrence wins, case-insensitive). */
+  function capList(model) {
+    var seen = {};
+    return ((model && model.features) || []).map(function (f) {
+      var items = (f.capabilities || []).filter(function (c) { var k = S(c).trim().toLowerCase(); if (!k || seen[k]) return false; seen[k] = 1; return true; });
+      return { feature: f.name, items: items };
+    }).filter(function (g) { return g.items.length; });
+  }
+  var CAP_COLUMNS = [{ key: 'num', label: '#' }, { key: 'feature', label: 'Feature' }, { key: 'capability', label: 'Capability' }, { key: 'kept', label: 'Kept' }];
+  /** Flat rows for the Capabilities CSV / Excel: each distinct statement with its feature and whether it is ticked (`checks`: { "i:j": true }). */
+  function capRows(model, checks) {
+    var ch = checks || {};
+    var out = [];
+    var n = 0;
+    ((model && model.features) || []).forEach(function (f, i) {
+      (f.capabilities || []).forEach(function (c, j) { n++; out.push({ num: n, feature: f.name, capability: c, kept: ch[i + ':' + j] === false ? 'No' : 'Yes' }); });
+    });
+    return out;
   }
 
   var COLUMNS = [
@@ -168,8 +199,9 @@ define([], function () {
         var calls = (p.calls || []).map(function (c) { return '<li><span class="ff-m">' + esc(c.method) + '</span> <code>' + esc(c.path) + '</code>' + (c.object ? ' <span class="ff-o">' + esc(c.object) + '</span>' : '') + '</li>'; }).join('');
         return '<div class="ff-page"><div class="ff-pname">' + esc(p.name) + '</div>' + (calls ? '<ul class="ff-calls">' + calls + '</ul>' : '<div class="ff-nocalls">no API calls</div>') + '</div>';
       }).join('');
+      var caps = (f.capabilities || []).length ? '<ol class="ff-caps">' + f.capabilities.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol>' : '';
       return '<section class="ff-feat' + (ung ? ' ff-feat--ung' : '') + '"><h2>' + esc(f.name) + ' <span class="ff-n">' + (f.pages || []).length + ' page' + ((f.pages || []).length === 1 ? '' : 's') + '</span></h2>'
-        + (f.description ? '<p class="ff-desc">' + esc(f.description) + '</p>' : '') + pagesHtml + '</section>';
+        + (f.description ? '<p class="ff-desc">' + esc(f.description) + '</p>' : '') + caps + pagesHtml + '</section>';
     };
     var body = (m.features || []).map(function (f) { return feat(f, false); }).join('');
     if ((m.ungrouped || []).length) body += feat({ name: 'Not grouped (' + m.ungrouped.length + ')', description: 'Pages in no feature.', pages: m.ungrouped }, true);
@@ -178,10 +210,12 @@ define([], function () {
       + '.ff-feat--ung{border-style:dashed;background:#fafbfc;}h2{font-size:15px;margin:0 0 4px;}.ff-n{color:#5a6876;font-weight:400;font-size:12px;}'
       + '.ff-desc{color:#5a6876;margin:0 0 8px;}.ff-page{margin:6px 0;}.ff-pname{font-weight:600;}.ff-calls{margin:2px 0 0;padding-left:18px;}'
       + '.ff-calls code{background:#eef4fc;color:#1d4f91;border-radius:4px;padding:1px 5px;}.ff-m{font-weight:700;color:#1d4f91;font-size:12px;}'
-      + '.ff-o{color:#5a6876;font-size:12px;}.ff-nocalls{color:#9aa6b2;font-size:12px;}';
+      + '.ff-o{color:#5a6876;font-size:12px;}.ff-nocalls{color:#9aa6b2;font-size:12px;}'
+      + '.ff-caps{margin:0 0 8px;padding-left:20px;}.ff-caps li{margin:2px 0;}';
     return '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(mt.title || 'Feature list') + '</title><style>' + css + '</style></head><body>'
       + '<h1>' + esc(mt.title || 'Feature list') + '</h1>' + head + body + '</body></html>';
   }
 
-  return { pages: pages, prompt: prompt, parse: parse, autoDraft: autoDraft, build: build, rows: rows, COLUMNS: COLUMNS, documentHtml: documentHtml, SYSTEM: SYSTEM };
+  return { pages: pages, prompt: prompt, parse: parse, autoDraft: autoDraft, build: build, rows: rows, COLUMNS: COLUMNS,
+    capList: capList, capRows: capRows, CAP_COLUMNS: CAP_COLUMNS, documentHtml: documentHtml, SYSTEM: SYSTEM };
 });

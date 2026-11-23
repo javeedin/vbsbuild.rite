@@ -1583,3 +1583,20 @@ button.nx-fsu-kpi:hover { border-color: #9db6d8; }
 .nx-pf-featm { font-weight: 700; color: #1d4f91; font-size: 11px; min-width: 42px; }
 .nx-pf-featnocalls { color: #9aa6b2; font-size: 12px; margin: 2px 0 0 20px; }
 .nx-pf-featnote { margin-top: 10px; font-size: 12.5px; color: var(--nx-ok, #15803d); }
+
+/* Features dialog — tabs (Features / By page) and the editable, checkable feature statements */
+.nx-pf-feattabs { display: flex; gap: 2px; border-bottom: 1px solid var(--nx-line, #e2e7ed); margin: 2px 0 10px; }
+.nx-pf-feattab { border: 0; background: transparent; font: inherit; font-weight: 600; color: var(--nx-muted, #5a6876); padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.nx-pf-feattab [class^="oj-ux-ico"] { font-size: 15px; }
+.nx-pf-feattab:hover { color: var(--nx-ink, #16212c); }
+.nx-pf-feattab--on { color: #1d4f91; border-bottom-color: #1d4f91; }
+.nx-pf-caps { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.nx-pf-cap { display: flex; align-items: center; gap: 8px; }
+.nx-pf-capck { flex: none; width: 16px; height: 16px; cursor: pointer; }
+.nx-pf-captext { flex: 1 1 auto; min-width: 0; font-size: 13.5px; color: var(--nx-ink, #16212c); border: 1px solid transparent; border-radius: 7px; padding: 5px 8px; background: transparent; font-family: inherit; }
+.nx-pf-captext:hover { border-color: var(--nx-line, #e2e7ed); }
+.nx-pf-captext:focus { border-color: #1d4f91; background: #fff; outline: none; }
+.nx-pf-cap--off .nx-pf-captext { color: #9aa6b2; text-decoration: line-through; }
+.nx-pf-capdel { flex: none; opacity: 0; }
+.nx-pf-cap:hover .nx-pf-capdel { opacity: 1; }
+.nx-pf-capadd { align-self: flex-start; margin-top: 2px; }
