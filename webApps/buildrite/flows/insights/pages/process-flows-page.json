@@ -34,7 +34,8 @@
     "featSource": { "type": "string", "defaultValue": "", "description": "How the current feature list was built: 'ai' or 'auto'." },
     "featGeneratedAt": { "type": "string", "defaultValue": "", "description": "When the feature list was drafted (ISO)." },
     "featSavedAt": { "type": "string", "defaultValue": "", "description": "When the feature list was last saved with the flow (ISO)." },
-    "featSaving": { "type": "any", "defaultValue": "", "description": "Truthy while the feature list is being saved." }
+    "featSaving": { "type": "any", "defaultValue": "", "description": "Truthy while the feature list is being saved." },
+    "featPreview": { "type": "string", "defaultValue": "", "description": "The feature-list document HTML shown in the PDF preview overlay ('' = closed)." }
   },
   "eventListeners": {
     "vbEnter": { "chains": [ { "chain": "pfChain", "parameters": { "op": "load", "idx": "", "key": "", "value": "", "input": "" } } ] },

@@ -411,6 +411,19 @@
         </oj-bind-if>
       </div>
       <oj-bind-if test="[[ !!$variables.featNote ]]"><div class="nx-pf-featnote" id="pfFeatNote"><oj-bind-text value="[[ $variables.featNote ]]"></oj-bind-text></div></oj-bind-if>
+
+      <!-- PDF preview: the feature-list document shown before printing, with a Print button -->
+      <oj-bind-if test="[[ !!$variables.featPreview ]]">
+        <div class="nx-pf-pdfprev" role="dialog" aria-modal="true" aria-label="Feature list PDF preview">
+          <div class="nx-pf-pdfbar">
+            <span class="nx-pf-pdftitle"><span class="oj-ux-ico-file-pdf" aria-hidden="true"></span>PDF preview</span>
+            <span class="nx-pf-pdfhint">Review it, then Print and choose “Save as PDF”.</span>
+            <button type="button" class="nx-btn nx-btn--sm nx-btn--cta" id="pfFeatPrint" data-op="featPrint" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-print" aria-hidden="true"></span>Print</button>
+            <button type="button" class="nx-iconbtn nx-iconbtn--sm" id="pfFeatPrevClose" data-op="featPrevClose" on-click="[[ $listeners.onPf ]]" aria-label="Close preview"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+          </div>
+          <iframe class="nx-pf-pdfframe" title="Feature list preview" :srcdoc="[[ $variables.featPreview ]]"></iframe>
+        </div>
+      </oj-bind-if>
     </div>
   </oj-bind-if>
 </div>

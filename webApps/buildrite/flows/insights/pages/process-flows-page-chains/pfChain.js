@@ -555,7 +555,7 @@ define([
         foldRows(v);
         const f = readEditor(v);
         if (!(f.pages || []).length) { say(false, 'This process flow has no pages to build a feature list from.'); return; }
-        v.featDlg = true; v.featErr = ''; v.featNote = ''; v.featModel = null; v.featDraft = null; v.featSummary = null; v.featChecks = {}; v.featTab = 'summary';
+        v.featDlg = true; v.featErr = ''; v.featNote = ''; v.featModel = null; v.featDraft = null; v.featSummary = null; v.featChecks = {}; v.featTab = 'summary'; v.featPreview = '';
         v.featGeneratedAt = ''; v.featSavedAt = ''; v.featSource = '';
         const savedList = MODEL && MODEL.features;
         if (savedList && Array.isArray(savedList.draft) && savedList.draft.length) {
@@ -570,7 +570,10 @@ define([
         else { featSet(v, FF.autoDraft(f), 'auto'); v.featNote = 'Ask AI is not set up, so the pages were grouped one feature per page. Set up Ask AI on the Jira stories screen to draft with AI.'; }
         return;
       }
-      if (op === 'featClose') { v.featDlg = false; return; }
+      if (op === 'featClose') { v.featDlg = false; v.featPreview = ''; return; }
+      // PDF preview: Print (opens the print dialog on the previewed document), or close the preview
+      if (op === 'featPrint') { if (v.featPreview) exportKit.printDocument(v.featPreview); return; }
+      if (op === 'featPrevClose') { v.featPreview = ''; return; }
       if (op === 'featTab') { v.featTab = (key === 'pages' || key === 'summary') ? key : 'caps'; return; }
       // Summary › technical features: show only inbound/outbound integrations (default) or include the app's own backend
       if (op === 'featExt') { v.featExternalOnly = (v.featExternalOnly === false); v.featSummary = featSummaryOf(v); return; }
@@ -641,7 +644,7 @@ define([
         const ext = { externalOnly: v.featExternalOnly !== false };
         const meta = { flow: (readEditor(v).name || 'recording'), date: new Date().toISOString().slice(0, 10), title: 'Feature list — ' + (readEditor(v).name || 'recording'), externalOnly: ext.externalOnly };
         try {
-          if (op === 'featPdf') { exportKit.printDocument(FF.documentHtml(v.featModel, meta)); v.featNote = 'Choose "Save as PDF" in the print dialog.'; return; }
+          if (op === 'featPdf') { v.featPreview = FF.documentHtml(v.featModel, meta); v.featNote = ''; return; } // show the preview; Print is in it
           if (op === 'featHtml') { exportKit.download(base + '.html', 'text/html;charset=utf-8', FF.documentHtml(v.featModel, meta)); v.featNote = 'Saved the feature list as a web page.'; return; }
           // Excel / CSV follow the tab: Summary = the refined summary, Features = the distinct statements (with Kept), By page = the page/call table
           const opts = v.featTab === 'summary' ? { rows: FF.summaryRows(v.featModel, ext), columns: FF.SUM_COLUMNS }
