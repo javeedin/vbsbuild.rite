@@ -167,6 +167,105 @@ define([], function () {
     return out;
   }
 
+  /** Which system a call's path talks to, for the technical summary. */
+  function sysOf(path) {
+    var p = S(path);
+    if (/xmlpserver|ReportWSSService|bipService/i.test(p)) return 'BI Publisher (reports)';
+    if (/mapbox|\/styles\//i.test(p)) return 'Map service';
+    if (/\/events?(\/|\b|v\d)/i.test(p)) return 'Analytics / telemetry';
+    if (/\/(fscm|hcm|crm|scm|prc|fin)RestApi\//i.test(p)) return 'Oracle Fusion REST';
+    if (/\/ords\//i.test(p)) return 'Oracle APEX (ORDS)';
+    return 'Application API';
+  }
+  var isWrite = function (m) { return /^(POST|PUT|PATCH|DELETE)$/i.test(S(m)); };
+  /** A path's last object as plain words ("customer-refs" → "customer refs"). */
+  function humanObj(object) { return S(object).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+  /** One technical feature statement for a call, in plain English ("The application fetches customer refs from …"). */
+  function techStatement(c) {
+    var sys = sysOf(c.path);
+    if (/BI Publisher/.test(sys)) return 'The application runs a BI Publisher report.';
+    if (/Map service/.test(sys)) return 'The application loads a street map from the map service.';
+    if (/Analytics/.test(sys)) return 'The application sends usage analytics / events.';
+    var obj = humanObj(c.object) || 'data';
+    var m = S(c.method).toUpperCase();
+    var short = sys.replace(' REST', '').replace(' (ORDS)', ' (ORDS)');
+    if (m === 'GET') return 'The application fetches ' + obj + ' from ' + short + '.';
+    if (m === 'POST') return 'The application submits ' + obj + ' to ' + short + '.';
+    if (m === 'PUT' || m === 'PATCH') return 'The application updates ' + obj + ' in ' + short + '.';
+    if (m === 'DELETE') return 'The application deletes ' + obj + ' in ' + short + '.';
+    return 'The application calls ' + obj + ' on ' + short + ' (' + m + ').';
+  }
+  /** Distinct technical feature statements grouped by system (what the app does over the APIs it calls). */
+  function techFeatures(model) {
+    var feats = (model && model.features) || [];
+    var bySys = {};
+    var order = [];
+    var seen = {};
+    feats.forEach(function (f) {
+      (f.calls || []).forEach(function (c) {
+        var sys = sysOf(c.path);
+        var st = techStatement(c);
+        var k = st.toLowerCase();
+        if (seen[k]) return;
+        seen[k] = 1;
+        if (!bySys[sys]) { bySys[sys] = []; order.push(sys); }
+        bySys[sys].push(st);
+      });
+    });
+    return order.map(function (s) { return { system: s, items: bySys[s] }; });
+  }
+  /**
+   * A refined, summarised view of the model, in two voices:
+   *   functional — one line per feature (the grouping is the consolidation): { name, line, caps, pages }
+   *   technical  — flow-level facts: systems and their call counts, reads vs writes, reports, distinct data objects, patterns
+   * Plus an `overview` sentence. Derived from the model (no extra AI call), so it is always available.
+   */
+  function summary(model) {
+    var feats = (model && model.features) || [];
+    var calls = [];
+    feats.forEach(function (f) { (f.calls || []).forEach(function (c) { calls.push(c); }); });
+    var sysCount = {};
+    var objSeen = {};
+    var objs = [];
+    var reads = 0, writes = 0, reports = 0, maps = false, events = false;
+    calls.forEach(function (c) {
+      var s = sysOf(c.path);
+      sysCount[s] = (sysCount[s] || 0) + 1;
+      if (isWrite(c.method)) writes++; else reads++;
+      if (/BI Publisher/.test(s)) reports++;
+      if (/Map service/.test(s)) maps = true;
+      if (/Analytics/.test(s)) events = true;
+      var o = S(c.object).trim();
+      if (o && !objSeen[o.toLowerCase()]) { objSeen[o.toLowerCase()] = 1; objs.push(o); }
+    });
+    var systems = Object.keys(sysCount).sort(function (a, b) { return sysCount[b] - sysCount[a]; }).map(function (n) { return { name: n, calls: sysCount[n] }; });
+    var functional = feats.map(function (f) {
+      return { name: f.name, line: S(f.description).trim() || S((f.capabilities || [])[0] || '').trim(), caps: (f.capabilities || []).length, pages: (f.pages || []).length };
+    });
+    var technical = [];
+    technical.push({ label: 'Systems', detail: systems.length ? systems.map(function (s) { return s.name + ' (' + s.calls + ')'; }).join(' · ') : 'none recorded' });
+    technical.push({ label: 'Operations', detail: reads + ' read' + (reads === 1 ? '' : 's') + ' · ' + writes + ' write' + (writes === 1 ? '' : 's') + (reports ? ' · ' + reports + ' report call' + (reports === 1 ? '' : 's') : '') });
+    if (objs.length) technical.push({ label: 'Data objects', detail: objs.slice(0, 16).join(', ') + (objs.length > 16 ? ' …' : '') });
+    var notes = [];
+    if (reports) notes.push('BI Publisher reports');
+    if (maps) notes.push('interactive maps / geolocation');
+    if (events) notes.push('usage analytics');
+    if (notes.length) technical.push({ label: 'Notable', detail: notes.join(', ') });
+    var overview = feats.length + ' feature' + (feats.length === 1 ? '' : 's') + ' across ' + (model && model.total || 0) + ' page' + ((model && model.total) === 1 ? '' : 's')
+      + ' and ' + calls.length + ' API call' + (calls.length === 1 ? '' : 's') + ' to ' + systems.length + ' system' + (systems.length === 1 ? '' : 's') + '.';
+    return { overview: overview, functional: functional, technical: technical, technicalFeatures: techFeatures(model), systems: systems };
+  }
+  var SUM_COLUMNS = [{ key: 'section', label: 'Section' }, { key: 'item', label: 'Item' }, { key: 'detail', label: 'Detail' }];
+  /** Flat rows for the Summary CSV / Excel: the functional one-liners, the API-derived technical features, and the technical facts. */
+  function summaryRows(model) {
+    var s = summary(model);
+    var out = [{ section: 'Overview', item: '', detail: s.overview }];
+    s.functional.forEach(function (f) { out.push({ section: 'Functional feature', item: f.name, detail: f.line }); });
+    s.technicalFeatures.forEach(function (g) { g.items.forEach(function (st) { out.push({ section: 'Technical feature', item: g.system, detail: st }); }); });
+    s.technical.forEach(function (t) { out.push({ section: 'Technical', item: t.label, detail: t.detail }); });
+    return out;
+  }
+
   var COLUMNS = [
     { key: 'feature', label: 'Feature' }, { key: 'description', label: 'Description' }, { key: 'page', label: 'Page' },
     { key: 'method', label: 'Method' }, { key: 'path', label: 'API path' }, { key: 'object', label: 'Object' }
@@ -203,9 +302,18 @@ define([], function () {
       return '<section class="ff-feat' + (ung ? ' ff-feat--ung' : '') + '"><h2>' + esc(f.name) + ' <span class="ff-n">' + (f.pages || []).length + ' page' + ((f.pages || []).length === 1 ? '' : 's') + '</span></h2>'
         + (f.description ? '<p class="ff-desc">' + esc(f.description) + '</p>' : '') + caps + pagesHtml + '</section>';
     };
-    var body = (m.features || []).map(function (f) { return feat(f, false); }).join('');
+    // a summary first: an overview, the functional features, and the API-derived technical features
+    var sm = summary(m);
+    var sumHtml = '<section class="ff-sum"><h2>Summary</h2><p class="ff-over">' + esc(sm.overview) + '</p>'
+      + '<h3>Functional features</h3><ul class="ff-fl">' + sm.functional.map(function (f) { return '<li><b>' + esc(f.name) + '</b>' + (f.line ? ' — ' + esc(f.line) : '') + '</li>'; }).join('') + '</ul>'
+      + '<h3>Technical features</h3>' + (sm.technicalFeatures.length ? sm.technicalFeatures.map(function (g) { return '<div class="ff-tg"><div class="ff-tgs">' + esc(g.system) + '</div><ul class="ff-tl">' + g.items.map(function (st) { return '<li>' + esc(st) + '</li>'; }).join('') + '</ul></div>'; }).join('') : '<p class="ff-nocalls">no API calls recorded</p>')
+      + '<h3>At a glance</h3><ul class="ff-tech">' + sm.technical.map(function (t) { return '<li><b>' + esc(t.label) + ':</b> ' + esc(t.detail) + '</li>'; }).join('') + '</ul></section>';
+    var body = sumHtml + (m.features || []).map(function (f) { return feat(f, false); }).join('');
     if ((m.ungrouped || []).length) body += feat({ name: 'Not grouped (' + m.ungrouped.length + ')', description: 'Pages in no feature.', pages: m.ungrouped }, true);
     var css = 'body{font:14px/1.5 system-ui,Segoe UI,Arial,sans-serif;color:#16212c;margin:24px;}h1{font-size:20px;margin:0 0 4px;}'
+      + '.ff-sum{border:1px solid #e2e7ed;border-radius:10px;padding:12px 16px;margin:0 0 16px;background:#f7f9fc;}.ff-sum h3{font-size:13px;margin:12px 0 4px;color:#1d4f91;}'
+      + '.ff-over{margin:0 0 4px;font-weight:600;}.ff-fl,.ff-tl,.ff-tech{margin:2px 0 0;padding-left:18px;}.ff-fl li,.ff-tl li,.ff-tech li{margin:2px 0;}'
+      + '.ff-tg{margin:4px 0;}.ff-tgs{font-weight:600;font-size:12px;color:#5a6876;}'
       + '.ff-meta{color:#5a6876;font-size:12px;margin-bottom:16px;}.ff-feat{border:1px solid #e2e7ed;border-radius:10px;padding:12px 16px;margin:0 0 12px;}'
       + '.ff-feat--ung{border-style:dashed;background:#fafbfc;}h2{font-size:15px;margin:0 0 4px;}.ff-n{color:#5a6876;font-weight:400;font-size:12px;}'
       + '.ff-desc{color:#5a6876;margin:0 0 8px;}.ff-page{margin:6px 0;}.ff-pname{font-weight:600;}.ff-calls{margin:2px 0 0;padding-left:18px;}'
@@ -217,5 +325,6 @@ define([], function () {
   }
 
   return { pages: pages, prompt: prompt, parse: parse, autoDraft: autoDraft, build: build, rows: rows, COLUMNS: COLUMNS,
-    capList: capList, capRows: capRows, CAP_COLUMNS: CAP_COLUMNS, documentHtml: documentHtml, SYSTEM: SYSTEM };
+    capList: capList, capRows: capRows, CAP_COLUMNS: CAP_COLUMNS, summary: summary, summaryRows: summaryRows, SUM_COLUMNS: SUM_COLUMNS,
+    techFeatures: techFeatures, documentHtml: documentHtml, SYSTEM: SYSTEM };
 });

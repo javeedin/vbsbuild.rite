@@ -126,9 +126,9 @@ define([
   const featToDraft = (model) => ((model && model.features) || []).map((f) => ({ name: f.name, description: f.description, pageKeys: (f.pages || []).map((p) => p.key), capabilities: (f.capabilities || []).slice() }));
   const f0IdOf = (v) => { const f = readEditor(v); return f.id ? String(f.id).toLowerCase() : ''; };
   // Build the model from the current draft and mirror the draft back from it (so edit indices stay aligned); checks reset.
-  function featSet(v, drafted) { v.featModel = FF.build(readEditor(v), drafted); v.featDraft = featToDraft(v.featModel); v.featChecks = {}; }
+  function featSet(v, drafted) { v.featModel = FF.build(readEditor(v), drafted); v.featDraft = featToDraft(v.featModel); v.featSummary = FF.summary(v.featModel); v.featChecks = {}; }
   // Rebuild after an edit without clearing the ticks (indices are unchanged by an in-place text edit).
-  function featRebuild(v) { v.featModel = FF.build(readEditor(v), v.featDraft || []); v.featDraft = featToDraft(v.featModel); }
+  function featRebuild(v) { v.featModel = FF.build(readEditor(v), v.featDraft || []); v.featDraft = featToDraft(v.featModel); v.featSummary = FF.summary(v.featModel); }
   async function featRunAi(context, v) {
     v.featBusy = 'ai'; v.featErr = '';
     try {
@@ -536,7 +536,7 @@ define([
         foldRows(v);
         const f = readEditor(v);
         if (!(f.pages || []).length) { say(false, 'This process flow has no pages to build a feature list from.'); return; }
-        v.featDlg = true; v.featErr = ''; v.featNote = ''; v.featModel = null; v.featDraft = null; v.featChecks = {}; v.featTab = 'caps';
+        v.featDlg = true; v.featErr = ''; v.featNote = ''; v.featModel = null; v.featDraft = null; v.featSummary = null; v.featChecks = {}; v.featTab = 'summary';
         try { const a = await M.aiSettings(); v.aiReady = !!(a.ok && a.body && a.body.active); } catch (e) { v.aiReady = false; }
         if (v.aiReady) await featRunAi(context, v);
         else { featSet(v, FF.autoDraft(f)); v.featNote = 'Ask AI is not set up, so the pages were grouped one feature per page. Set up Ask AI on the Jira stories screen to draft with AI.'; }
@@ -590,12 +590,13 @@ define([
         if (!v.featModel) return;
         const base = 'features-' + (f0IdOf(v) || 'recording');
         const meta = { flow: (readEditor(v).name || 'recording'), date: new Date().toISOString().slice(0, 10), title: 'Feature list — ' + (readEditor(v).name || 'recording') };
-        const onCaps = v.featTab !== 'pages';
         try {
           if (op === 'featPdf') { exportKit.printDocument(FF.documentHtml(v.featModel, meta)); v.featNote = 'Choose "Save as PDF" in the print dialog.'; return; }
           if (op === 'featHtml') { exportKit.download(base + '.html', 'text/html;charset=utf-8', FF.documentHtml(v.featModel, meta)); v.featNote = 'Saved the feature list as a web page.'; return; }
-          // Excel / CSV: the Features tab exports the distinct statements (with Kept), By page exports the page/call table
-          const opts = onCaps ? { rows: FF.capRows(v.featModel, v.featChecks || {}), columns: FF.CAP_COLUMNS } : { rows: FF.rows(v.featModel), columns: FF.COLUMNS };
+          // Excel / CSV follow the tab: Summary = the refined summary, Features = the distinct statements (with Kept), By page = the page/call table
+          const opts = v.featTab === 'summary' ? { rows: FF.summaryRows(v.featModel), columns: FF.SUM_COLUMNS }
+            : v.featTab === 'pages' ? { rows: FF.rows(v.featModel), columns: FF.COLUMNS }
+              : { rows: FF.capRows(v.featModel, v.featChecks || {}), columns: FF.CAP_COLUMNS };
           const res = await exportKit.run(op === 'featExcel' ? 'xlsx' : 'csv', Object.assign({ name: base, title: meta.title }, opts));
           v.featNote = (res && res.message) || 'Exported.';
         } catch (e) { v.featErr = 'The export failed: ' + String((e && e.message) || e); }

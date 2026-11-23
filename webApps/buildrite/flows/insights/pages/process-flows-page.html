@@ -305,7 +305,8 @@
       </div>
       <oj-bind-if test="[[ $functions.featHas($variables.featModel) ]]">
         <div class="nx-pf-feattabs" role="tablist">
-          <button type="button" role="tab" :class="[[ 'nx-pf-feattab' + ($variables.featTab !== 'pages' ? ' nx-pf-feattab--on' : '') ]]" :aria-selected="[[ $variables.featTab !== 'pages' ? 'true' : 'false' ]]" data-op="featTab" data-key="caps" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-list" aria-hidden="true"></span>Features</button>
+          <button type="button" role="tab" :class="[[ 'nx-pf-feattab' + ($variables.featTab === 'summary' ? ' nx-pf-feattab--on' : '') ]]" :aria-selected="[[ $variables.featTab === 'summary' ? 'true' : 'false' ]]" data-op="featTab" data-key="summary" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-view-summary" aria-hidden="true"></span>Summary</button>
+          <button type="button" role="tab" :class="[[ 'nx-pf-feattab' + ($variables.featTab === 'caps' ? ' nx-pf-feattab--on' : '') ]]" :aria-selected="[[ $variables.featTab === 'caps' ? 'true' : 'false' ]]" data-op="featTab" data-key="caps" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-list" aria-hidden="true"></span>Features</button>
           <button type="button" role="tab" :class="[[ 'nx-pf-feattab' + ($variables.featTab === 'pages' ? ' nx-pf-feattab--on' : '') ]]" :aria-selected="[[ $variables.featTab === 'pages' ? 'true' : 'false' ]]" data-op="featTab" data-key="pages" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-document" aria-hidden="true"></span>By page</button>
         </div>
       </oj-bind-if>
@@ -318,8 +319,38 @@
         <oj-bind-if test="[[ $functions.featHas($variables.featModel) ]]">
           <div class="nx-pf-featchips"><oj-bind-for-each data="[[ $functions.featChips($variables.featModel) ]]"><template data-oj-as="c"><span class="nx-pf-featchip"><oj-bind-text value="[[ c.data ]]"></oj-bind-text></span></template></oj-bind-for-each></div>
 
+          <!-- Summary tab: a refined overview, functional features (grouped) and technical features (from the APIs) -->
+          <oj-bind-if test="[[ $variables.featTab === 'summary' && !!$variables.featSummary ]]">
+            <div class="nx-pf-sum">
+              <p class="nx-pf-sumover"><oj-bind-text value="[[ $variables.featSummary.overview ]]"></oj-bind-text></p>
+              <div class="nx-pf-sumcols">
+                <section class="nx-pf-sumcol">
+                  <h3 class="nx-pf-sumh"><span class="oj-ux-ico-user" aria-hidden="true"></span>Functional features</h3>
+                  <oj-bind-for-each data="[[ $variables.featSummary.functional ]]"><template data-oj-as="f">
+                    <div class="nx-pf-sumf"><b><oj-bind-text value="[[ f.data.name ]]"></oj-bind-text></b><oj-bind-if test="[[ !!f.data.line ]]"><span class="nx-pf-sumline"> — <oj-bind-text value="[[ f.data.line ]]"></oj-bind-text></span></oj-bind-if></div>
+                  </template></oj-bind-for-each>
+                </section>
+                <section class="nx-pf-sumcol">
+                  <h3 class="nx-pf-sumh"><span class="oj-ux-ico-network-flow-diagram" aria-hidden="true"></span>Technical features</h3>
+                  <oj-bind-if test="[[ $variables.featSummary.technicalFeatures.length === 0 ]]"><div class="nx-pf-featnocalls">No API calls were recorded.</div></oj-bind-if>
+                  <oj-bind-for-each data="[[ $variables.featSummary.technicalFeatures ]]"><template data-oj-as="g">
+                    <div class="nx-pf-sumtg">
+                      <div class="nx-pf-sumtgs"><oj-bind-text value="[[ g.data.system ]]"></oj-bind-text></div>
+                      <oj-bind-for-each data="[[ g.data.items ]]"><template data-oj-as="s"><div class="nx-pf-sumt"><oj-bind-text value="[[ s.data ]]"></oj-bind-text></div></template></oj-bind-for-each>
+                    </div>
+                  </template></oj-bind-for-each>
+                </section>
+              </div>
+              <div class="nx-pf-sumglance">
+                <oj-bind-for-each data="[[ $variables.featSummary.technical ]]"><template data-oj-as="t">
+                  <div class="nx-pf-sumg"><b><oj-bind-text value="[[ t.data.label ]]"></oj-bind-text>:</b> <oj-bind-text value="[[ t.data.detail ]]"></oj-bind-text></div>
+                </template></oj-bind-for-each>
+              </div>
+            </div>
+          </oj-bind-if>
+
           <!-- Features tab: the distinct feature statements, each editable and checkable -->
-          <oj-bind-if test="[[ $variables.featTab !== 'pages' ]]">
+          <oj-bind-if test="[[ $variables.featTab === 'caps' ]]">
             <oj-bind-for-each data="[[ $functions.featCaps($variables.featModel, $variables.featChecks) ]]">
               <template data-oj-as="f">
                 <section class="nx-pf-featcard" :data-idx="[[ f.data.idx ]]">
@@ -362,7 +393,7 @@
             </oj-bind-for-each>
           </oj-bind-if>
 
-          <oj-bind-if test="[[ $functions.featUngrouped($variables.featModel).length > 0 ]]">
+          <oj-bind-if test="[[ $variables.featTab !== 'summary' && $functions.featUngrouped($variables.featModel).length > 0 ]]">
             <section class="nx-pf-featcard nx-pf-featcard--ung">
               <div class="nx-pf-featname nx-pf-featname--ung">Not grouped yet</div>
               <div class="nx-pf-featpages">

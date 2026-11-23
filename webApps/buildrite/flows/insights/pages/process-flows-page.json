@@ -27,8 +27,9 @@
     "featNote": { "type": "string", "defaultValue": "", "description": "A status line in the feature-list dialog." },
     "featModel": { "type": "any", "defaultValue": null, "description": "The built feature list: features → their capabilities, pages + calls, and the ungrouped (flowFeatures.build)." },
     "featDraft": { "type": "any", "defaultValue": null, "description": "The current grouping [{ name, description, pageKeys, capabilities }] — mirrors featModel, what editing changes." },
-    "featTab": { "type": "string", "defaultValue": "caps", "description": "The feature-list dialog tab: 'caps' (the distinct feature statements) or 'pages' (by page + API calls)." },
-    "featChecks": { "type": "any", "defaultValue": {}, "description": "Which feature statements are ticked, by 'featureIndex:capabilityIndex' ('…': false = unticked; default kept)." }
+    "featTab": { "type": "string", "defaultValue": "summary", "description": "The feature-list dialog tab: 'summary' (refined functional + technical), 'caps' (the distinct feature statements) or 'pages' (by page + API calls)." },
+    "featChecks": { "type": "any", "defaultValue": {}, "description": "Which feature statements are ticked, by 'featureIndex:capabilityIndex' ('…': false = unticked; default kept)." },
+    "featSummary": { "type": "any", "defaultValue": null, "description": "The refined summary for the Summary tab: { overview, functional, technicalFeatures, technical } (flowFeatures.summary)." }
   },
   "eventListeners": {
     "vbEnter": { "chains": [ { "chain": "pfChain", "parameters": { "op": "load", "idx": "", "key": "", "value": "", "input": "" } } ] },

@@ -1600,3 +1600,21 @@ button.nx-fsu-kpi:hover { border-color: #9db6d8; }
 .nx-pf-capdel { flex: none; opacity: 0; }
 .nx-pf-cap:hover .nx-pf-capdel { opacity: 1; }
 .nx-pf-capadd { align-self: flex-start; margin-top: 2px; }
+
+/* Features dialog — Summary tab: overview, functional features and API-derived technical features side by side, at-a-glance */
+.nx-pf-sum { display: flex; flex-direction: column; gap: 12px; }
+.nx-pf-sumover { margin: 0; font-weight: 600; font-size: 14px; }
+.nx-pf-sumcols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 680px) { .nx-pf-sumcols { grid-template-columns: 1fr; } }
+.nx-pf-sumcol { border: 1px solid var(--nx-line, #e2e7ed); border-radius: 10px; padding: 10px 12px; }
+.nx-pf-sumh { margin: 0 0 8px; font-size: 13px; color: #1d4f91; display: flex; align-items: center; gap: 6px; }
+.nx-pf-sumh [class^="oj-ux-ico"] { font-size: 15px; }
+.nx-pf-sumf { font-size: 13px; margin: 4px 0; }
+.nx-pf-sumline { color: var(--nx-muted, #5a6876); }
+.nx-pf-sumtg { margin: 6px 0; }
+.nx-pf-sumtgs { font-size: 11px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--nx-muted, #5a6876); }
+.nx-pf-sumt { font-size: 13px; margin: 2px 0 2px 2px; padding-left: 12px; position: relative; }
+.nx-pf-sumt::before { content: '›'; position: absolute; left: 0; color: #1d4f91; }
+.nx-pf-sumglance { border-top: 1px solid var(--nx-line, #e2e7ed); padding-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+.nx-pf-sumg { font-size: 12.5px; color: var(--nx-muted, #5a6876); }
+.nx-pf-sumg b { color: var(--nx-ink, #16212c); }

@@ -63,6 +63,16 @@ const auto = F.build(flow, F.autoDraft(flow));
 T.check('autoDraft makes one feature per page and leaves nothing ungrouped', auto.features.length === 3 && auto.ungrouped.length === 0 && auto.features[0].name === 'Catalogue');
 T.check('with no AI capabilities, the one-line description stands in', auto.features[0].capabilities.length === 1 && /Catalogue screen/.test(auto.features[0].capabilities[0]));
 
+T.section('summary (functional + technical features from the APIs)');
+const sm = F.summary(m);
+T.check('an overview sentence, functional one-liner per feature', /2 features across 3 pages and 3 API calls to \d system/.test(sm.overview) && sm.functional.length === 2 && sm.functional[0].name === 'Browse & Order');
+T.check('technical features are derived from the calls, grouped by system, in plain English',
+  sm.technicalFeatures.some((g) => /ORDS/.test(g.system) && g.items.some((s) => /fetches catalogue from/.test(s)))
+  && sm.technicalFeatures.some((g) => g.items.some((s) => /submits orders to/.test(s))), JSON.stringify(sm.technicalFeatures));
+T.check('a technical "at a glance": systems, reads vs writes, data objects', sm.technical.some((t) => t.label === 'Systems') && sm.technical.some((t) => /read/.test(t.detail) && /write/.test(t.detail)) && sm.technical.some((t) => t.label === 'Data objects'));
+const sr = F.summaryRows(m);
+T.check('summary rows carry the overview, functional and technical features', sr[0].section === 'Overview' && sr.some((r) => r.section === 'Functional feature') && sr.some((r) => r.section === 'Technical feature' && /submits orders to/.test(r.detail)));
+
 T.section('rows + document');
 const r = F.rows(m);
 T.check('rows: one per call under its feature\'s page, a page with no calls gives one row', r.length === 4 && r[0].feature === 'Browse & Order' && r[0].page === 'Catalogue' && r[0].method === 'GET' && r.some((x) => x.page === 'Thanks' && x.method === ''));
