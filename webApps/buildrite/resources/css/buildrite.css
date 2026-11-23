@@ -1618,3 +1618,9 @@ button.nx-fsu-kpi:hover { border-color: #9db6d8; }
 .nx-pf-sumglance { border-top: 1px solid var(--nx-line, #e2e7ed); padding-top: 8px; display: flex; flex-direction: column; gap: 3px; }
 .nx-pf-sumg { font-size: 12.5px; color: var(--nx-muted, #5a6876); }
 .nx-pf-sumg b { color: var(--nx-ink, #16212c); }
+
+/* Features dialog — the build/saved timestamp and the Summary integrations toggle */
+.nx-pf-featstamp { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--nx-muted, #5a6876); margin: -4px 0 8px; }
+.nx-pf-featstamp [class^="oj-ux-ico"] { font-size: 13px; }
+.nx-pf-sumtoggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--nx-muted, #5a6876); margin: 0 0 8px; cursor: pointer; }
+.nx-pf-sumtoggle input { cursor: pointer; }

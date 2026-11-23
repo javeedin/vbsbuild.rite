@@ -294,6 +294,7 @@
       <div class="nx-pf-featbar">
         <button type="button" class="nx-btn nx-btn--sm" id="pfFeatAi" data-op="featAi" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.featBusy || !$variables.aiReady ]]" :title="[[ $variables.aiReady ? 'Ask the AI to group the pages into features' : 'Set up Ask AI on the Jira stories screen to draft with AI' ]]"><span class="oj-ux-ico-brain" aria-hidden="true"></span><oj-bind-text value="[[ $variables.featBusy === 'ai' ? 'Drafting…' : 'Draft with AI' ]]"></oj-bind-text></button>
         <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="pfFeatAuto" data-op="featAuto" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.featBusy ]]" title="One feature per page, without AI"><span class="oj-ux-ico-magic-wand" aria-hidden="true"></span>Group by page</button>
+        <button type="button" class="nx-btn nx-btn--sm" id="pfFeatSave" data-op="featSave" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.featBusy || !!$variables.featSaving || !$functions.featHas($variables.featModel) ]]" title="Save this feature list with the process flow"><span class="oj-ux-ico-save" aria-hidden="true"></span><oj-bind-text value="[[ $variables.featSaving ? 'Saving…' : 'Save' ]]"></oj-bind-text></button>
         <div class="nx-pf-featexp" id="pfFeatExport">
           <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" :disabled="[[ !$functions.featHas($variables.featModel) ]]" aria-haspopup="true"><span class="oj-ux-ico-export" aria-hidden="true"></span>Export<span class="oj-ux-ico-chevron-down" aria-hidden="true"></span></button>
           <div class="nx-pf-featmenu" role="menu">
@@ -318,6 +319,9 @@
         </oj-bind-if>
         <oj-bind-if test="[[ $functions.featHas($variables.featModel) ]]">
           <div class="nx-pf-featchips"><oj-bind-for-each data="[[ $functions.featChips($variables.featModel) ]]"><template data-oj-as="c"><span class="nx-pf-featchip"><oj-bind-text value="[[ c.data ]]"></oj-bind-text></span></template></oj-bind-for-each></div>
+          <oj-bind-if test="[[ !!$functions.featStamp($variables.featSource, $variables.featGeneratedAt, $variables.featSavedAt) ]]">
+            <div class="nx-pf-featstamp"><span class="oj-ux-ico-clock" aria-hidden="true"></span><oj-bind-text value="[[ $functions.featStamp($variables.featSource, $variables.featGeneratedAt, $variables.featSavedAt) ]]"></oj-bind-text></div>
+          </oj-bind-if>
 
           <!-- Summary tab: a refined overview, functional features (grouped) and technical features (from the APIs) -->
           <oj-bind-if test="[[ $variables.featTab === 'summary' && !!$variables.featSummary ]]">
@@ -332,7 +336,8 @@
                 </section>
                 <section class="nx-pf-sumcol">
                   <h3 class="nx-pf-sumh"><span class="oj-ux-ico-network-flow-diagram" aria-hidden="true"></span>Technical features</h3>
-                  <oj-bind-if test="[[ $variables.featSummary.technicalFeatures.length === 0 ]]"><div class="nx-pf-featnocalls">No API calls were recorded.</div></oj-bind-if>
+                  <label class="nx-pf-sumtoggle"><input type="checkbox" :checked="[[ $variables.featExternalOnly !== false ]]" data-op="featExt" on-change="[[ $listeners.onPf ]]"> Integrations only (hide the app's own backend APIs)</label>
+                  <oj-bind-if test="[[ $variables.featSummary.technicalFeatures.length === 0 ]]"><div class="nx-pf-featnocalls"><oj-bind-text value="[[ $variables.featExternalOnly !== false ? 'No inbound / outbound integrations — the flow only calls the app’s own backend. Untick to see them.' : 'No API calls were recorded.' ]]"></oj-bind-text></div></oj-bind-if>
                   <oj-bind-for-each data="[[ $variables.featSummary.technicalFeatures ]]"><template data-oj-as="g">
                     <div class="nx-pf-sumtg">
                       <div class="nx-pf-sumtgs"><oj-bind-text value="[[ g.data.system ]]"></oj-bind-text></div>

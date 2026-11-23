@@ -232,6 +232,15 @@ define([], () => {
       }));
     }
     featUngrouped(model) { return ((model && model.ungrouped) || []).map((p) => ({ name: p.name })); }
+    // "Drafted by AI · 23 Nov 2026, 10:42 · saved 10:50" — the AI/auto build time and the saved time.
+    featStamp(source, generatedAt, savedAt) {
+      const when = (iso) => { try { const d = new Date(iso); return isNaN(d.getTime()) ? '' : d.toLocaleString(); } catch (e) { return ''; } };
+      const g = when(generatedAt);
+      const bits = [];
+      if (g) bits.push((source === 'auto' ? 'Grouped by page' : 'Drafted by AI') + ' · ' + g);
+      if (savedAt) { const s = when(savedAt); bits.push('saved ' + (s || '')); } else if (g) bits.push('not saved yet');
+      return bits.join(' · ');
+    }
   }
   return PageModule;
 });

@@ -65,6 +65,29 @@ function cleanCalls(a) {
   }).filter((c) => c.url || c.path);
 }
 /** A flow with every field within its size and shape (what the page or a person sent is never kept as is). */
+// The saved feature list for a flow (from "Features list from the recording"): the grouping, when the AI drafted it, and
+// when it was saved. The model is rebuilt from this against the flow's current pages when the dialog reopens.
+function cleanFeatureList(ff, by, savedAt) {
+  if (!isObj(ff)) return undefined;
+  const draft = (Array.isArray(ff.draft) ? ff.draft : []).slice(0, 200).map((d) => {
+    const o = isObj(d) ? d : {};
+    return {
+      name: cut(o.name, MAX.name).trim(),
+      description: cut(o.description, 600),
+      pageKeys: (Array.isArray(o.pageKeys) ? o.pageKeys : []).slice(0, 200).map((k) => cut(k, 20)).filter(Boolean),
+      capabilities: (Array.isArray(o.capabilities) ? o.capabilities : []).slice(0, 30).map((c) => cut(c, 600).trim()).filter(Boolean),
+    };
+  }).filter((d) => d.name || d.pageKeys.length);
+  if (!draft.length) return undefined;
+  const checks = {};
+  if (isObj(ff.checks)) Object.keys(ff.checks).slice(0, 4000).forEach((k) => { if (ff.checks[k] === false && /^\d+:\d+$/.test(k)) checks[k] = false; });
+  return {
+    source: cut(ff.source, 20), generatedAt: cut(ff.generatedAt, 40),
+    savedAt: cut(ff.savedAt, 40) || str(savedAt) || new Date().toISOString(), savedBy: str(by) || cut(ff.savedBy, 120),
+    draft: draft, checks: checks,
+  };
+}
+
 function cleanFlow(flow, by, old, opts) {
   const f = isObj(flow) ? flow : {};
   const keepApis = !!(opts && opts.keepApis);
@@ -82,7 +105,8 @@ function cleanFlow(flow, by, old, opts) {
     return out;
   }).filter((p) => p.name || p.page).slice(0, MAX.pages);
   const at = (old && old.createdAt) || null;
-  return {
+  const features = cleanFeatureList(f.features, by, opts && opts.savedAt);
+  const out = {
     id: old ? old.id : str(f.id),
     name: cut(f.name, MAX.name).trim() || 'Untitled process flow',
     description: cut(f.description, MAX.desc),
@@ -90,6 +114,8 @@ function cleanFlow(flow, by, old, opts) {
     pages,
     created: (old && old.created) || str(by), createdAt: at,
     updatedBy: str(by) };
+  if (features) out.features = features;
+  return out;
 }
 
 // ── The document ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -318,7 +344,7 @@ function open(opts) {
       if (!isObj(flow)) return no('No flow.');
       const old = flow.id ? read(file(str(flow.id))) : null;
       const at = now().toISOString();
-      const f = cleanFlow(flow, by, old);
+      const f = cleanFlow(flow, by, old, { savedAt: at });
       if (!f.id) f.id = codeOf(all().reduce((m, x) => Math.max(m, codeNo(x.id)), 0) + 1);
       if (!f.created) f.created = str(by);
       if (!f.createdAt) f.createdAt = at;

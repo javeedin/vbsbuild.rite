@@ -30,6 +30,8 @@ define([], function () {
     var u = S(c.url);
     var p = recPath(c);
     if (!p || p === '/') return true;
+    // Fusion / OIC REST endpoints are business integrations, not assets (keep them even though their path has /resources/)
+    if (/\/(fscm|hcm|crm|scm|prc|fin|expenses|atk)RestApi\//i.test(u) || /\/ic\/api\/integration/i.test(u)) return false;
     if (/\.(css|js|mjs|cjs|map|json|jsonp|xml|html?|txt|md|markdown|wasm|woff2?|ttf|eot|otf|svg|png|jpe?g|gif|ico|webp|avif|bmp|mp4|webm|csv)$/i.test(p)) return true;
     if (/\/version_\d+\/|\/resources\/|\/webapps\/|\/deployments\/|\/dynamicLayouts?\/|requirejs|\/vb\/|\/fnd\/|openapi3?|app-flow|\/_currentuser\b|\/describe\b/i.test(u)) return true;
     if (/(^|\/)(fonts?|images?|img|icons?|assets|static|cdn|css|js)\//i.test(p)) return true;
@@ -172,11 +174,15 @@ define([], function () {
     var p = S(path);
     if (/xmlpserver|ReportWSSService|bipService/i.test(p)) return 'BI Publisher (reports)';
     if (/mapbox|\/styles\//i.test(p)) return 'Map service';
+    if (/\/ic\/api\/integration|\.integration\.|integration\.ocp\.oraclecloud|\/soa-infra\//i.test(p)) return 'Oracle Integration (OIC)';
+    if (/\/(fscm|hcm|crm|scm|prc|fin|expenses|atk)RestApi\//i.test(p)) return 'Oracle Fusion REST';
     if (/\/events?(\/|\b|v\d)/i.test(p)) return 'Analytics / telemetry';
-    if (/\/(fscm|hcm|crm|scm|prc|fin)RestApi\//i.test(p)) return 'Oracle Fusion REST';
     if (/\/ords\//i.test(p)) return 'Oracle APEX (ORDS)';
     return 'Application API';
   }
+  // The application's own backend is "internal"; everything else is an inbound/outbound integration with another system.
+  var INTERNAL_SYS = { 'Application API': 1, 'Oracle APEX (ORDS)': 1 };
+  function isInternalSystem(n) { return !!INTERNAL_SYS[n]; }
   var isWrite = function (m) { return /^(POST|PUT|PATCH|DELETE)$/i.test(S(m)); };
   /** A path's last object as plain words ("customer-refs" → "customer refs"). */
   function humanObj(object) { return S(object).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim(); }
@@ -195,8 +201,13 @@ define([], function () {
     if (m === 'DELETE') return 'The application deletes ' + obj + ' in ' + short + '.';
     return 'The application calls ' + obj + ' on ' + short + ' (' + m + ').';
   }
-  /** Distinct technical feature statements grouped by system (what the app does over the APIs it calls). */
-  function techFeatures(model) {
+  /**
+   * Distinct technical feature statements grouped by system (what the app does over the APIs it calls). With
+   * opts.externalOnly, the application's own backend (the eqp APIs) is left out and only the inbound / outbound
+   * integrations with other systems (Oracle Fusion, OIC, BI Publisher, the map service, analytics…) are listed.
+   */
+  function techFeatures(model, opts) {
+    var externalOnly = !!(opts && opts.externalOnly);
     var feats = (model && model.features) || [];
     var bySys = {};
     var order = [];
@@ -204,6 +215,7 @@ define([], function () {
     feats.forEach(function (f) {
       (f.calls || []).forEach(function (c) {
         var sys = sysOf(c.path);
+        if (externalOnly && isInternalSystem(sys)) return;
         var st = techStatement(c);
         var k = st.toLowerCase();
         if (seen[k]) return;
@@ -220,7 +232,7 @@ define([], function () {
    *   technical  — flow-level facts: systems and their call counts, reads vs writes, reports, distinct data objects, patterns
    * Plus an `overview` sentence. Derived from the model (no extra AI call), so it is always available.
    */
-  function summary(model) {
+  function summary(model, opts) {
     var feats = (model && model.features) || [];
     var calls = [];
     feats.forEach(function (f) { (f.calls || []).forEach(function (c) { calls.push(c); }); });
@@ -253,12 +265,12 @@ define([], function () {
     if (notes.length) technical.push({ label: 'Notable', detail: notes.join(', ') });
     var overview = feats.length + ' feature' + (feats.length === 1 ? '' : 's') + ' across ' + (model && model.total || 0) + ' page' + ((model && model.total) === 1 ? '' : 's')
       + ' and ' + calls.length + ' API call' + (calls.length === 1 ? '' : 's') + ' to ' + systems.length + ' system' + (systems.length === 1 ? '' : 's') + '.';
-    return { overview: overview, functional: functional, technical: technical, technicalFeatures: techFeatures(model), systems: systems };
+    return { overview: overview, functional: functional, technical: technical, technicalFeatures: techFeatures(model, opts), systems: systems };
   }
   var SUM_COLUMNS = [{ key: 'section', label: 'Section' }, { key: 'item', label: 'Item' }, { key: 'detail', label: 'Detail' }];
   /** Flat rows for the Summary CSV / Excel: the functional one-liners, the API-derived technical features, and the technical facts. */
-  function summaryRows(model) {
-    var s = summary(model);
+  function summaryRows(model, opts) {
+    var s = summary(model, opts);
     var out = [{ section: 'Overview', item: '', detail: s.overview }];
     s.functional.forEach(function (f) { out.push({ section: 'Functional feature', item: f.name, detail: f.line }); });
     s.technicalFeatures.forEach(function (g) { g.items.forEach(function (st) { out.push({ section: 'Technical feature', item: g.system, detail: st }); }); });
@@ -303,7 +315,7 @@ define([], function () {
         + (f.description ? '<p class="ff-desc">' + esc(f.description) + '</p>' : '') + caps + pagesHtml + '</section>';
     };
     // a summary first: an overview, the functional features, and the API-derived technical features
-    var sm = summary(m);
+    var sm = summary(m, { externalOnly: !!mt.externalOnly });
     var sumHtml = '<section class="ff-sum"><h2>Summary</h2><p class="ff-over">' + esc(sm.overview) + '</p>'
       + '<h3>Functional features</h3><ul class="ff-fl">' + sm.functional.map(function (f) { return '<li><b>' + esc(f.name) + '</b>' + (f.line ? ' — ' + esc(f.line) : '') + '</li>'; }).join('') + '</ul>'
       + '<h3>Technical features</h3>' + (sm.technicalFeatures.length ? sm.technicalFeatures.map(function (g) { return '<div class="ff-tg"><div class="ff-tgs">' + esc(g.system) + '</div><ul class="ff-tl">' + g.items.map(function (st) { return '<li>' + esc(st) + '</li>'; }).join('') + '</ul></div>'; }).join('') : '<p class="ff-nocalls">no API calls recorded</p>')

@@ -70,6 +70,14 @@ T.check('technical features are derived from the calls, grouped by system, in pl
   sm.technicalFeatures.some((g) => /ORDS/.test(g.system) && g.items.some((s) => /fetches catalogue from/.test(s)))
   && sm.technicalFeatures.some((g) => g.items.some((s) => /submits orders to/.test(s))), JSON.stringify(sm.technicalFeatures));
 T.check('a technical "at a glance": systems, reads vs writes, data objects', sm.technical.some((t) => t.label === 'Systems') && sm.technical.some((t) => /read/.test(t.detail) && /write/.test(t.detail)) && sm.technical.some((t) => t.label === 'Data objects'));
+const intModel = F.build({ pages: [{ name: 'X', calls: [
+  { method: 'GET', url: 'https://host/ords/eqp/v1/items', path: '/ords/eqp/v1/items' }, // internal app backend
+  { method: 'POST', url: 'https://host/ic/api/integration/v1/flows/rest/SEND/1.0', path: '/ic/api/integration/v1/flows/rest/SEND' }, // OIC
+  { method: 'GET', url: 'https://acme.fa.oraclecloud.com/fscmRestApi/resources/11/customers', path: '/fscmRestApi/resources/11/customers' } // Fusion (not dropped as an asset)
+] }] }, [{ name: 'X', pageKeys: ['P1'] }]);
+T.check('integrations-only leaves out the app backend (ORDS) and keeps Fusion / OIC', F.summary(intModel, { externalOnly: true }).technicalFeatures.map((g) => g.system).sort().join() === 'Oracle Fusion REST,Oracle Integration (OIC)', JSON.stringify(F.summary(intModel, { externalOnly: true }).technicalFeatures.map((g) => g.system)));
+T.check('Fusion fetches are phrased as inbound and OIC posts as outbound', F.summary(intModel, { externalOnly: true }).technicalFeatures.some((g) => g.items.some((s) => /fetches customers from Oracle Fusion/.test(s))) && F.summary(intModel, { externalOnly: true }).technicalFeatures.some((g) => g.items.some((s) => /submits .* to Oracle Integration/.test(s))));
+T.check('the all-systems view still includes the internal backend', F.summary(intModel, { externalOnly: false }).technicalFeatures.some((g) => /ORDS/.test(g.system)));
 const sr = F.summaryRows(m);
 T.check('summary rows carry the overview, functional and technical features', sr[0].section === 'Overview' && sr.some((r) => r.section === 'Functional feature') && sr.some((r) => r.section === 'Technical feature' && /submits orders to/.test(r.detail)));
 

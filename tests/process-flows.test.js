@@ -35,6 +35,13 @@ const T = H.makeAsserter();
   T.check('newest code first; the list is slimmed (names, count, no description)', s.list('').flows.map((f) => f.id).join(',') === 'PF-0002,PF-0001' && s.list('').flows[1].names.join(',') === 'Catalog,Cart,Checkout' && s.list('').flows[0].pages === 1 && s.list('').flows[0].description === undefined);
   T.check('search by name / area / page', s.list('rental').flows.length === 1 && s.list('cash').flows.length === 1 && s.list('checkout').flows.map((f) => f.id).join(',') === 'PF-0001' && s.list('nope').flows.length === 0);
   T.check('get one in full; a bad id said', s.get('PF-0001').flow.description.indexOf('rents') !== -1 && s.get('PF-9999').ok === false);
+  // the feature list saved with a flow (from "Features list from the recording")
+  clock = new Date('2026-11-19T11:00:00Z');
+  const wf = s.save(Object.assign({}, s.get('PF-0001').flow, { features: { source: 'ai', generatedAt: '2026-11-19T10:59:00.000Z',
+    draft: [{ name: 'Order capture', description: 'Place an order', pageKeys: ['P1', 'P2'], capabilities: ['The application submits the order to Oracle Fusion.', ''] }, { name: '', pageKeys: [] }], checks: { '0:0': false, 'bad': false } } }), 'sam').flow;
+  T.check('the feature list is kept with the flow (source, when drafted, savedAt stamped, savedBy)', !!wf.features && wf.features.source === 'ai' && wf.features.generatedAt === '2026-11-19T10:59:00.000Z' && wf.features.savedAt === '2026-11-19T11:00:00.000Z' && wf.features.savedBy === 'sam');
+  T.check('its draft is cleaned (empty feature dropped, blank capability dropped) and ticks kept only for valid keys', wf.features.draft.length === 1 && wf.features.draft[0].name === 'Order capture' && wf.features.draft[0].capabilities.length === 1 && wf.features.checks['0:0'] === false && !('bad' in wf.features.checks));
+  T.check('it survives a reopen from disk', P.open({ dir }).get('PF-0001').flow.features.draft[0].pageKeys.join() === 'P1,P2');
   T.check('removed; a second remove says no such flow', s.remove('PF-0002').ok === true && s.list('').flows.length === 1 && s.remove('PF-0002').ok === false);
   T.check('kept on disk as JSON, no temp left', fs.existsSync(path.join(dir, 'PF-0001.json')) && !fs.existsSync(path.join(dir, 'PF-0001.json.tmp')));
   T.check('a restart reads it back', P.open({ dir }).get('PF-0001').flow.name === 'Equipment rental v2');

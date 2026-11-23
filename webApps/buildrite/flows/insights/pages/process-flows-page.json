@@ -29,7 +29,12 @@
     "featDraft": { "type": "any", "defaultValue": null, "description": "The current grouping [{ name, description, pageKeys, capabilities }] — mirrors featModel, what editing changes." },
     "featTab": { "type": "string", "defaultValue": "summary", "description": "The feature-list dialog tab: 'summary' (refined functional + technical), 'caps' (the distinct feature statements) or 'pages' (by page + API calls)." },
     "featChecks": { "type": "any", "defaultValue": {}, "description": "Which feature statements are ticked, by 'featureIndex:capabilityIndex' ('…': false = unticked; default kept)." },
-    "featSummary": { "type": "any", "defaultValue": null, "description": "The refined summary for the Summary tab: { overview, functional, technicalFeatures, technical } (flowFeatures.summary)." }
+    "featSummary": { "type": "any", "defaultValue": null, "description": "The refined summary for the Summary tab: { overview, functional, technicalFeatures, technical } (flowFeatures.summary)." },
+    "featExternalOnly": { "type": "boolean", "defaultValue": true, "description": "Summary › technical features: show only inbound/outbound integrations (true) or include the app's own backend APIs." },
+    "featSource": { "type": "string", "defaultValue": "", "description": "How the current feature list was built: 'ai' or 'auto'." },
+    "featGeneratedAt": { "type": "string", "defaultValue": "", "description": "When the feature list was drafted (ISO)." },
+    "featSavedAt": { "type": "string", "defaultValue": "", "description": "When the feature list was last saved with the flow (ISO)." },
+    "featSaving": { "type": "any", "defaultValue": "", "description": "Truthy while the feature list is being saved." }
   },
   "eventListeners": {
     "vbEnter": { "chains": [ { "chain": "pfChain", "parameters": { "op": "load", "idx": "", "key": "", "value": "", "input": "" } } ] },
