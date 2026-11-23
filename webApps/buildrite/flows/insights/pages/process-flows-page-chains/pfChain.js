@@ -92,10 +92,11 @@ define([
   // a top field: the live input when the form is on screen (edit view), else MODEL's value (preview, where the form is gone)
   const top = (id, fallback) => (byId(id) ? val(id) : String(fallback || ''));
   /** The editor as it is → a flow object: the top fields (from the form, or MODEL in preview), the pages from MODEL. */
-  function readEditor(v) {
-    const f = MODEL || v.flow || {};
-    const pagesByLabel = {};
-    (v.pages || []).forEach((p) => { pagesByLabel[String(p.label).toLowerCase()] = p.id; });
+  const pagesByLabelOf = (v) => { const m = {}; (v.pages || []).forEach((p) => { m[String(p.label).toLowerCase()] = p.id; }); return m; };
+  /** The editor's flow in its one canonical shape (names trimmed, each page matched to a catalog page, the fields in a
+   *  fixed order). `getTop(id, fallback)` supplies the header fields — from the DOM for the live editor, or from the flow
+   *  itself for the saved baseline — so the two are byte-for-byte equal when the DOM and MODEL agree (right after a save). */
+  function normFlow(f, getTop, pagesByLabel) {
     const pages = (f.pages || []).map((p, i) => {
       const name = String(p.name || '').trim();
       const page = pagesByLabel[name.toLowerCase()] || p.page || '';
@@ -106,8 +107,17 @@ define([
       if (p.calls && p.calls.length) out.calls = p.calls;
       return out;
     });
-    return Object.assign({}, f, { name: top('pf-name', f.name), area: top('pf-area', f.area), owner: top('pf-owner', f.owner),
-      status: (byId('pf-status') ? val('pf-status') : '') || f.status || 'draft', description: top('pf-desc', f.description), pages });
+    return Object.assign({}, f, { name: getTop('pf-name', f.name), area: getTop('pf-area', f.area), owner: getTop('pf-owner', f.owner),
+      status: getTop('pf-status', '') || f.status || 'draft', description: getTop('pf-desc', f.description), pages });
+  }
+  function readEditor(v) {
+    const f = MODEL || v.flow || {};
+    return normFlow(f, top, pagesByLabelOf(v));
+  }
+  /** The saved baseline dirty() compares against: MODEL in the same canonical shape readEditor produces (header fields
+   *  from MODEL, not the DOM), so a freshly opened or just-saved flow is never falsely "dirty". */
+  function baseline(v) {
+    return copy(normFlow(MODEL || {}, (id, fb) => String(fb == null ? '' : fb), pagesByLabelOf(v)));
   }
   /** Read the page rows' inputs from the DOM into MODEL (name / note, and the matched catalog page). pedit keeps MODEL
    *  current on every keystroke, but this is called before any structural change or save so MODEL always matches what is
@@ -194,7 +204,7 @@ define([
       if (op === 'search') { v.q = String(input || ''); await loadList(); return; }
       if (op === 'new') {
         MODEL = { id: '', name: '', description: '', area: '', owner: '', status: 'draft', pages: [newPage()] };
-        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.recCallsOpen = {}; v.view = 'edit';
+        v.saved = baseline(v); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.recCallsOpen = {}; v.view = 'edit';
         render(v);
         setTimeout(() => { const el = byId('pf-name'); if (el) el.focus(); }, 80);
         return;
@@ -204,7 +214,7 @@ define([
         if (!r.ok) { say(false, (r.body && r.body.error) || 'It could not be opened.'); return; }
         MODEL = Object.assign({ pages: [] }, copy(r.body.flow));
         if (!MODEL.pages.length) MODEL.pages = [newPage()];
-        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.recCallsOpen = {}; v.view = 'edit';
+        v.saved = baseline(v); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.recCallsOpen = {}; v.view = 'edit';
         render(v);
         return;
       }
@@ -271,7 +281,7 @@ define([
         // open the editor pre-filled with the recorded pages — the user names it and Saves
         MODEL = { id: '', name: '', description: '', area: '', owner: '', status: 'draft',
           pages: pages.map((p, i) => { const pg = { id: p.id || ('p' + (i + 1)), page: p.page || '', name: p.name || '', note: '' }; if (p.url) pg.url = p.url; if (p.kind) pg.kind = p.kind; if (p.shot && p.shot.data) pg.shot = { src: 'page', data: p.shot.data }; if (p.calls && p.calls.length) pg.calls = p.calls; return pg; }) };
-        v.saved = copy(MODEL); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.recCallsOpen = {}; v.view = 'edit'; v.recording = null;
+        v.saved = baseline(v); v.doc = null; v.ai = null; v.apisOpen = {}; v.apiTests = {}; v.apiData = {}; v.recCallsOpen = {}; v.view = 'edit'; v.recording = null;
         render(v);
         setTimeout(() => { const el = byId('pf-name'); if (el) el.focus(); }, 80);
         say(true, pages.length + ' page(s) recorded — name it and Save.');
@@ -439,7 +449,7 @@ define([
           if (!r.ok) { say(false, (r.body && r.body.error) || 'It could not be saved.'); return; }
           MODEL = Object.assign({ pages: [] }, copy(r.body.flow));
           if (!MODEL.pages.length) MODEL.pages = [newPage()];
-          v.saved = copy(MODEL); render(v);
+          v.saved = baseline(v); render(v);
           await loadList();
           say(true, 'Saved ' + r.body.flow.id + '.');
         } finally { v.busy = ''; }
