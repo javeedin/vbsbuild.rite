@@ -3,7 +3,7 @@
   {
    "id": "79410673b2a4",
    "createdAt": "2026-11-24T09:58:41.189Z",
-   "runs": 1,
+   "runs": 2,
    "name": "EQUIPMENT MASTER",
    "sql": "-- Ask AI (Claude (Anthropic)): give me the table for equipment master\n\n-- Ask AI (Claude (Anthropic)): give me the table for equipment master\nSELECT *\nFROM   EQR_EQUIPMENT_MASTER em WHERE IS_INVENTORY_TRACKED = 'Y'\nORDER BY em.EQR_EQUIPMENT_MASTER_ID\nFETCH FIRST 50 ROWS ONLY;",
    "description": "",
@@ -11,7 +11,7 @@
    "conn": "paasdev",
    "by": "rite.user",
    "updatedAt": "2026-11-24T09:58:41.189Z",
-   "lastRun": "2026-11-24T10:29:48.644Z"
+   "lastRun": "2026-11-24T12:42:03.195Z"
   },
   {
    "id": "5ae3fb22fbe7",
@@ -24,6 +24,18 @@
    "conn": "paasdev",
    "by": "rite.user",
    "updatedAt": "2026-11-24T10:18:52.101Z"
+  },
+  {
+   "id": "952fdf78a1f6",
+   "createdAt": "2026-11-24T12:45:03.022Z",
+   "runs": 0,
+   "name": "end-end tracking for request id",
+   "sql": "-- Ask AI (Claude (Anthropic)): i want to track end to end data for a equipment request\nSELECT er.REQUEST_NUMBER,\n       er.STATUS                 AS request_status,\n       er.PROJECT_NAME,\n       er.TASK_NAME,\n       er.CUSTOMER_NAME,\n       er.REQUESTOR_NAME,\n       er.REQUESTED_START_DATE,\n       er.REQUESTED_END_DATE,\n       rl.EQR_REQUEST_LINE_ID,\n       rl.LINE_STATUS,\n       rl.QUANTITY,\n       rl.ALLOCATION_STATUS,\n       rl.DELIVERED_QUANTITY,\n       rl.CONSUMED_QUANTITY,\n       rl.RETURNED_QUANTITY,\n       rl.START_DATE             AS line_start_date,\n       rl.END_DATE               AS line_end_date,\n       em.EQUIPMENT_NUMBER,\n       em.EQUIPMENT_NAME,\n       ld.UNIT_TYPE,\n       ld.UNIT_NUMBER,\n       ld.UNIT_STATUS,\n       ld.ALLOCATION_STATUS      AS unit_allocation_status,\n       ld.ALLOCATED_QTY,\n       ld.SOURCE_INV_ORG_NAME,\n       ld.DEST_INV_ORG_NAME,\n       mt.EXPENDITURE_TYPE       AS misc_exp_type,\n       mt.RAW_COST               AS misc_raw_cost,\n       mt.STATUS                 AS misc_status,\n       sh.FROM_STATUS,\n       sh.TO_STATUS,\n       sh.CHANGED_DATE\nFROM   EQR_EQUIPMENT_REQUEST er\n       LEFT JOIN EQR_REQUEST_LINE rl\n              ON rl.EQR_EQUIPMENT_REQUEST_ID = er.EQR_EQUIPMENT_REQUEST_ID\n       LEFT JOIN EQR_EQUIPMENT_MASTER em\n              ON em.EQR_EQUIPMENT_MASTER_ID = rl.EQR_EQUIPMENT_MASTER_ID\n       LEFT JOIN EQR_V_LINE_DETAIL_UNITS ld\n              ON ld.LINE_ID = rl.EQR_REQUEST_LINE_ID\n       LEFT JOIN EQR_LINE_MISC_TXN mt\n              ON mt.EQR_REQUEST_LINE_ID = rl.EQR_REQUEST_LINE_ID\n       LEFT JOIN EQR_REQUEST_STATUS_HISTORY sh\n              ON sh.EQR_EQUIPMENT_REQUEST_ID = er.EQR_EQUIPMENT_REQUEST_ID\nWHERE  er.REQUEST_NUMBER = :request_number\nORDER BY rl.EQR_REQUEST_LINE_ID,\n         ld.UNIT_NUMBER,\n         sh.CHANGED_DATE\nFETCH FIRST 500 ROWS ONLY;",
+   "description": "",
+   "folder": "",
+   "conn": "paasdev",
+   "by": "rite.user",
+   "updatedAt": "2026-11-24T12:45:03.022Z"
   }
  ],
  "infolets": [
