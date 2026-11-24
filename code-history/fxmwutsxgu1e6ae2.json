@@ -1,0 +1,356 @@
+{
+ "id": "fxmwutsxgu1e6ae2",
+ "images": [
+  {
+   "n": 1,
+   "name": "Pasted image 2"
+  }
+ ],
+ "page": "vbredwoodapp/equipment-foundation/equipment-master",
+ "app": "vbredwoodapp",
+ "label": "Equipment Master",
+ "request": "give option to clear search also",
+ "kind": "enhance",
+ "refine": "",
+ "parent": "",
+ "at": "2026-11-24T15:04:48.752Z",
+ "by": "rite.user",
+ "provider": "Claude (Anthropic)",
+ "model": "claude-opus-4-8",
+ "ms": 19305,
+ "retried": false,
+ "workspace": "Equiprite_Rebuild_v1 ▸ DEV",
+ "refs": {
+  "jira": "AI-EQP-16 FDD 7.2.5D",
+  "issue": ""
+ },
+ "sent": {
+  "files": [
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.json",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ApplySavedSearchChain.js",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/BeforeExitChain.js",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/CancelImportDialogChain.js",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ClearImportWarningChain.js",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ClearStagingChain.js",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/DeleteSavedSearchChain.js",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/EquipmentInitChain.js",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/GoToCreateChain.js",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ImportUnitsFromFusionChain.js"
+  ],
+  "chars": 169773
+ },
+ "newPage": null,
+ "newPageAsked": null,
+ "knowledge": "",
+ "markdown": "## Summary\nThe red circle in the screenshot is around the saved-search picker, but the actual request is to be able to clear the smart search itself. I'll add a small \"Clear search\" button next to the saved-search controls that empties the current smart-search filter (`filterCriterion`) and resets the saved-search picker.\n\n## How it works today\nThe smart search band (`oj-sp-smart-search`) binds two-way to `$variables.filterCriterion`; the list's DPV reads that and re-filters. Applying a saved search sets `filterCriterion` from a stored snapshot (`ApplySavedSearchChain`). There is a saved-search picker, a \"Save Search\" bookmark icon and a \"Manage saved searches\" icon in the row added by change `fxmwutnxqd00cd26`. There is no control to clear the current search.\n\n## What changes\nAdd a \"Clear search\" icon button beside the existing saved-search controls. Clicking it clears `filterCriterion` (which the smart-search and the list both react to automatically) and resets the saved-search picker selection, so the list shows all records again.\n\n## The change\n- `webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html` — add one `oj-c-button` (\"Clear search\") in the saved-search controls row; its inline handler sets `$variables.filterCriterion = null` and `$variables.selectedSavedSearch = null`. No JSON, module or chain change is needed (the row already uses inline handlers for the Save/Manage buttons, so this matches the existing style and declares no new listener).\n\n## After the change\n- On the Equipment Master page, beside the \"Saved searches\" picker and the bookmark/menu icons, the person sees a new eraser (clear) icon with tooltip \"Clear search\".\n- After typing or picking filters in the smart search, clicking this icon empties the search and the list reloads showing all equipment; the saved-search picker also clears.\n\n## Risks\nNone known — it only resets two page variables that the smart search and list already react to; no chain, endpoint or shared module is touched.\n\n## How to test\n1. Open Equipment Master.\n2. Type a term (e.g. \"tools\") or add a facet chip so the list is filtered.\n3. Click the new \"Clear search\" icon beside the Saved searches picker.\n4. Confirm the smart search clears and the list shows all records again.\n5. Pick a saved search, then click \"Clear search\"; confirm the picker also resets to empty.\n\n## Questions\nNone.",
+ "questions": "",
+ "problems": [],
+ "checks": [
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "already": false,
+   "name": "no oj-bind-for-each inside a table or select",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "already": true,
+   "name": "no String()/Number()/Boolean() or inline functions in bindings",
+   "ok": false,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "already": false,
+   "name": "no regex literals in bindings",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "already": false,
+   "name": "every listener the HTML uses is declared in the page JSON",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "already": false,
+   "name": "every oj- component used is imported",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "already": false,
+   "name": "every chain the page runs is in its chains folder",
+   "ok": true,
+   "detail": ""
+  }
+ ],
+ "files": [
+  "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html"
+ ],
+ "diff": [
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "created": false,
+   "added": 19,
+   "removed": 0,
+   "hunks": [
+    {
+     "rows": [
+      {
+       "t": " ",
+       "s": "                   on-oj-action=\"[[ function() { var d = document.getElementById('manageSearchDialog'); if (d) d.open(); } ]]\">",
+       "o": "74",
+       "n": "74"
+      },
+      {
+       "t": " ",
+       "s": "        <span slot=\"startIcon\" class=\"oj-ux-ico-menu\"></span>",
+       "o": "75",
+       "n": "75"
+      },
+      {
+       "t": " ",
+       "s": "      </oj-c-button>",
+       "o": "76",
+       "n": "76"
+      },
+      {
+       "t": "+",
+       "s": "      <!-- Build.Rite change fxmwutsxgu1e6ae2 — Equipment Master",
+       "o": "",
+       "n": "77"
+      },
+      {
+       "t": "+",
+       "s": "           Request:      give option to clear search also (Enhance)",
+       "o": "",
+       "n": "78"
+      },
+      {
+       "t": "+",
+       "s": "           Requested by: rite.user on 24 Nov 2026 at 20:34 (UTC+05:30)",
+       "o": "",
+       "n": "79"
+      },
+      {
+       "t": "+",
+       "s": "           Changed by:   rite.user on 24 Nov 2026 at 20:35 (UTC+05:30) — approved and applied in Code fix, in the workspace's working folder",
+       "o": "",
+       "n": "80"
+      },
+      {
+       "t": "+",
+       "s": "           Proposed by:  Claude (Anthropic) (claude-opus-4-8)",
+       "o": "",
+       "n": "81"
+      },
+      {
+       "t": "+",
+       "s": "           Issue:        —",
+       "o": "",
+       "n": "82"
+      },
+      {
+       "t": "+",
+       "s": "           Jira story:   AI-EQP-16 FDD 7.2.5D -->",
+       "o": "",
+       "n": "83"
+      },
+      {
+       "t": "+",
+       "s": "      <!-- Clear search — empties the current smart-search filter; the",
+       "o": "",
+       "n": "84"
+      },
+      {
+       "t": "+",
+       "s": "           smart-search and the list both read filterCriterion and reset.",
+       "o": "",
+       "n": "85"
+      },
+      {
+       "t": "+",
+       "s": "           Also clears the saved-search picker selection. -->",
+       "o": "",
+       "n": "86"
+      },
+      {
+       "t": "+",
+       "s": "      <oj-c-button id=\"clearSearchBtn\"",
+       "o": "",
+       "n": "87"
+      },
+      {
+       "t": "+",
+       "s": "                   label=\"Clear search\"",
+       "o": "",
+       "n": "88"
+      },
+      {
+       "t": "+",
+       "s": "                   display=\"icons\"",
+       "o": "",
+       "n": "89"
+      },
+      {
+       "t": "+",
+       "s": "                   chroming=\"borderless\"",
+       "o": "",
+       "n": "90"
+      },
+      {
+       "t": "+",
+       "s": "                   tooltip=\"Clear search\"",
+       "o": "",
+       "n": "91"
+      },
+      {
+       "t": "+",
+       "s": "                   on-oj-action=\"[[ function() { $variables.filterCriterion = null; $variables.selectedSavedSearch = null; } ]]\">",
+       "o": "",
+       "n": "92"
+      },
+      {
+       "t": "+",
+       "s": "        <span slot=\"startIcon\" class=\"oj-ux-ico-eraser\"></span>",
+       "o": "",
+       "n": "93"
+      },
+      {
+       "t": "+",
+       "s": "      </oj-c-button>",
+       "o": "",
+       "n": "94"
+      },
+      {
+       "t": "+",
+       "s": "      <!-- end of Build.Rite change fxmwutsxgu1e6ae2 -->",
+       "o": "",
+       "n": "95"
+      },
+      {
+       "t": " ",
+       "s": "    </div>",
+       "o": "77",
+       "n": "96"
+      },
+      {
+       "t": " ",
+       "s": "",
+       "o": "78",
+       "n": "97"
+      },
+      {
+       "t": " ",
+       "s": "    <!-- end of Build.Rite change fxmwutnxqd00cd26 -->",
+       "o": "79",
+       "n": "98"
+      }
+     ],
+     "head": "line 74"
+    }
+   ]
+  }
+ ],
+ "status": "applied",
+ "events": [
+  {
+   "at": "2026-11-24T15:04:48.752Z",
+   "what": "asked",
+   "by": "rite.user",
+   "detail": "give option to clear search also"
+  },
+  {
+   "at": "2026-11-24T15:04:48.752Z",
+   "what": "proposed",
+   "by": "Claude (Anthropic)",
+   "detail": "1 file(s), +11 −0 · 1 screenshot(s) read"
+  },
+  {
+   "at": "2026-11-24T15:05:22.901Z",
+   "what": "approved and applied",
+   "by": "rite.user",
+   "detail": "in C:\\javeed\\equiprite-rebuild-v1-dev\\working (buildrite-working) · In your workspace's working folder (Equiprite_Rebuild_v1 ▸ DEV): nothing pulled — Get latest is in its project's tab. · 1 change note(s) written in the code"
+  },
+  {
+   "at": "2026-11-24T15:05:22.909Z",
+   "what": "tested",
+   "by": "rite.user",
+   "detail": "nothing broke (checks only)"
+  }
+ ],
+ "updatedAt": "2026-11-24T15:05:22.909Z",
+ "applied": {
+  "at": "2026-11-24T15:05:22.901Z",
+  "by": "rite.user",
+  "branch": "buildrite-working",
+  "upstream": "",
+  "pull": {
+   "done": false,
+   "workspace": true,
+   "text": "In your workspace's working folder (Equiprite_Rebuild_v1 ▸ DEV): nothing pulled — Get latest is in its project's tab."
+  },
+  "live": false,
+  "workspace": "Equiprite_Rebuild_v1 ▸ DEV",
+  "folder": "C:\\javeed\\equiprite-rebuild-v1-dev\\working",
+  "notes": 1
+ },
+ "baseline": [],
+ "tests": {
+  "at": "2026-11-24T15:05:22.909Z",
+  "ok": true,
+  "checks": [
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+    "already": false,
+    "name": "no oj-bind-for-each inside a table or select",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+    "already": true,
+    "name": "no String()/Number()/Boolean() or inline functions in bindings",
+    "ok": false,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+    "already": false,
+    "name": "no regex literals in bindings",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+    "already": false,
+    "name": "every listener the HTML uses is declared in the page JSON",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+    "already": false,
+    "name": "every oj- component used is imported",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+    "already": false,
+    "name": "every chain the page runs is in its chains folder",
+    "ok": true,
+    "detail": ""
+   }
+  ],
+  "unit": [],
+  "e2eFiles": [],
+  "none": true
+ }
+}
