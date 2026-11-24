@@ -1,0 +1,4740 @@
+{
+ "id": "vbredwoodapp/setup/configurations",
+ "facts": {
+  "id": "vbredwoodapp/setup/configurations",
+  "app": "vbredwoodapp",
+  "appName": "vbredwoodapp",
+  "flow": "setup",
+  "page": "configurations",
+  "label": "Application Configurations",
+  "description": "Configuration workbench for global application settings — wired to eqp-v1 REST API.",
+  "route": {
+   "url": "/vp/shell/setup/configurations",
+   "menu": "",
+   "needs": ""
+  },
+  "files": [
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page.json",
+    "lines": 1102
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page.html",
+    "lines": 3266
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page.js",
+    "lines": 1242
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/BuTypeaheadChain.js",
+    "lines": 40
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/CaptureBuChain.js",
+    "lines": 47
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/addAgreementTypeChain.js",
+    "lines": 125
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/addAttachmentCategoryChain.js",
+    "lines": 86
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/addBuOrgMappingChain.js",
+    "lines": 182
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/addExpTypeMapChain.js",
+    "lines": 132
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/applyBuFilterChain.js",
+    "lines": 19
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/applyClassFilterChain.js",
+    "lines": 41
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/buOrgMenuActionChain.js",
+    "lines": 26
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/captureBuOrgYardChain.js",
+    "lines": 33
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/captureEsBuChain.js",
+    "lines": 96
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/captureFaBookChain.js",
+    "lines": 28
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/captureFaBuChain.js",
+    "lines": 48
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/clearBuFilterChain.js",
+    "lines": 16
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/clearClassFilterChain.js",
+    "lines": 21
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/clearEsExpOrgChain.js",
+    "lines": 18
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/clearRequestNumberMsgChain.js",
+    "lines": 17
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/closeAddClassDrawerChain.js",
+    "lines": 17
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/closeBuOrgDrawerChain.js",
+    "lines": 18
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/closeEsDrawerChain.js",
+    "lines": 17
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/closeFaDrawerChain.js",
+    "lines": 14
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/createClassMapPairsChain.js",
+    "lines": 76
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/createClassSubclassChain.js",
+    "lines": 165
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/deleteAgreementTypeChain.js",
+    "lines": 41
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/deleteAttachmentCategoryChain.js",
+    "lines": 50
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/deleteBuOrgMappingRowChain.js",
+    "lines": 55
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/deleteClassChain.js",
+    "lines": 62
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/deleteExpTypeMapChain.js",
+    "lines": 53
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/deleteSubclassChain.js",
+    "lines": 65
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/enforcePageAccessChain.js",
+    "lines": 72
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadAgreementTypesChain.js",
+    "lines": 28
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadAllSubclassesChain.js",
+    "lines": 46
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadAttachmentCategoriesChain.js",
+    "lines": 36
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadAuditTrailChain.js",
+    "lines": 25
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadBuOrgMappingsChain.js",
+    "lines": 40
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadBuOrgSubinventoriesChain.js",
+    "lines": 60
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadClassLovChain.js",
+    "lines": 55
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadClassMapTypesChain.js",
+    "lines": 66
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadConfigSettingsChain.js",
+    "lines": 145
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadEquipmentClassesChain.js",
+    "lines": 53
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadEsExpOrgsChain.js",
+    "lines": 72
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadEsSettingsChain.js",
+    "lines": 73
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadExpTypeMapsChain.js",
+    "lines": 87
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadExpTypeOptionsChain.js",
+    "lines": 126
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadFaBookLovChain.js",
+    "lines": 45
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadFaBooksChain.js",
+    "lines": 62
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadFaPreviewChain.js",
+    "lines": 48
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadNlrCatalogueChain.js",
+    "lines": 43
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadNlrMapsChain.js",
+    "lines": 51
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadSubclassLovChain.js",
+    "lines": 48
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/nlrMapActionChain.js",
+    "lines": 94
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/onClassLovSelectedChain.js",
+    "lines": 35
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/onColumnMapGroupChangedChain.js",
+    "lines": 22
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/onColumnMapSourceChangedChain.js",
+    "lines": 31
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/onFaRuleTypeChangedChain.js",
+    "lines": 20
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/onFaSegmentChangedChain.js",
+    "lines": 18
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/onTrackingTypeChangedChain.js",
+    "lines": 37
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openAddClassDrawerChain.js",
+    "lines": 36
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openBuOrgDrawerChain.js",
+    "lines": 38
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openBuOrgEditChain.js",
+    "lines": 43
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openBuOrgRowMenuChain.js",
+    "lines": 29
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openClassMapBulkChain.js",
+    "lines": 32
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openDeleteAgreementTypeChain.js",
+    "lines": 32
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openDeleteAttachmentCategoryChain.js",
+    "lines": 30
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openDeleteBuOrgChain.js",
+    "lines": 34
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openDeleteClassChain.js",
+    "lines": 37
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openDeleteExpTypeMapChain.js",
+    "lines": 38
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openDeleteSubclassChain.js",
+    "lines": 33
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openEditAgreementTypeChain.js",
+    "lines": 32
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openEditAttachmentCategoryChain.js",
+    "lines": 34
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openEditClassSubclassChain.js",
+    "lines": 49
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openEsDrawerChain.js",
+    "lines": 47
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openEsEditChain.js",
+    "lines": 89
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openFaDrawerChain.js",
+    "lines": 22
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openFaEditChain.js",
+    "lines": 35
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openUnmapChain.js",
+    "lines": 40
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/previewClassMapPairsChain.js",
+    "lines": 94
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/removeColumnMappingChain.js",
+    "lines": 42
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/removeFaBookChain.js",
+    "lines": 45
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/resetChangesChain.js",
+    "lines": 42
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/resetWeekEndDayChain.js",
+    "lines": 54
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveBuOrgEditChain.js",
+    "lines": 66
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveChangesChain.js",
+    "lines": 155
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveClassMapPrecedenceChain.js",
+    "lines": 53
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveClassMapTruthChain.js",
+    "lines": 70
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveColumnMappingChain.js",
+    "lines": 74
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveEditClassSubclassChain.js",
+    "lines": 141
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveEsDrawerChain.js",
+    "lines": 164
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveFaDrawerChain.js",
+    "lines": 76
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveGlobalSettingNowChain.js",
+    "lines": 69
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveRequestNumberingChain.js",
+    "lines": 105
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/setExpTypeMapDefaultChain.js",
+    "lines": 61
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/switchExpTypeScopeChain.js",
+    "lines": 37
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/toggleAgreementTypeChain.js",
+    "lines": 40
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/toggleAttachmentCategoryChain.js",
+    "lines": 46
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/toggleBuOrgActiveChain.js",
+    "lines": 61
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/unmapChain.js",
+    "lines": 120
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/updateAgreementTypeChain.js",
+    "lines": 99
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/updateAttachmentCategoryChain.js",
+    "lines": 67
+   },
+   {
+    "path": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/updateSettingChain.js",
+    "lines": 194
+   }
+  ],
+  "codeHash": "418b911cbc3ba5fd",
+  "features": {
+   "sections": [
+    "Application Configurations",
+    "Edit Agreement Type",
+    "Edit Attachment Category",
+    "Delete Attachment Category",
+    "Edit Subclass Behaviour",
+    "Remove Mapping",
+    "Delete Subclass",
+    "Delete Class",
+    "Create Classes from Fusion",
+    "Reset Week End Day",
+    "Delete Mapping",
+    "Edit Mapping",
+    "Delete Agreement Type"
+   ],
+   "actions": [
+    {
+     "label": "Save Numbering",
+     "listener": "onRequestNumberSave",
+     "chains": [
+      "saveRequestNumberingChain"
+     ]
+    },
+    {
+     "label": "Add BU Settings",
+     "listener": "onEsAddClicked",
+     "chains": [
+      "openEsDrawerChain"
+     ]
+    },
+    {
+     "label": "Assign Book",
+     "listener": "onFaAddClicked",
+     "chains": [
+      "openFaDrawerChain"
+     ]
+    },
+    {
+     "label": "Save Mapping",
+     "listener": "onColumnMapSaveClicked",
+     "chains": [
+      "saveColumnMappingChain"
+     ]
+    },
+    {
+     "label": "Delete Class",
+     "listener": "onDeleteClassClicked",
+     "chains": [
+      "openDeleteClassChain"
+     ]
+    },
+    {
+     "label": "Create from Fusion",
+     "listener": "onClassMapBulkOpen",
+     "chains": [
+      "openClassMapBulkChain"
+     ]
+    },
+    {
+     "label": "Add Class",
+     "listener": "onAddClassDrawerOpen",
+     "chains": [
+      "openAddClassDrawerChain"
+     ]
+    },
+    {
+     "label": "Clear",
+     "listener": "onClassFilterClearClicked",
+     "chains": [
+      "clearClassFilterChain"
+     ]
+    },
+    {
+     "label": "Add",
+     "listener": "onBuOrgAddClicked",
+     "chains": [
+      "openBuOrgDrawerChain"
+     ]
+    },
+    {
+     "label": "Clear",
+     "listener": "onBuOrgFilterClearClicked",
+     "chains": [
+      "clearBuFilterChain"
+     ]
+    },
+    {
+     "label": "Actions",
+     "listener": "onBuOrgRowMenuClicked",
+     "chains": [
+      "openBuOrgRowMenuChain"
+     ]
+    },
+    {
+     "label": "Add Mapping",
+     "listener": "onExpTypeMapAddClicked",
+     "chains": [
+      "addExpTypeMapChain"
+     ]
+    },
+    {
+     "label": "Add Mapping",
+     "listener": "onNlrMapAddClicked",
+     "chains": [
+      "nlrMapActionChain"
+     ]
+    },
+    {
+     "label": "Add Type",
+     "listener": "onAgreementTypeAddClicked",
+     "chains": [
+      "addAgreementTypeChain"
+     ]
+    },
+    {
+     "label": "Add Category",
+     "listener": "onAttCatAddClicked",
+     "chains": [
+      "addAttachmentCategoryChain"
+     ]
+    },
+    {
+     "label": "Save",
+     "listener": "onAgreementTypeEditSave",
+     "chains": [
+      "updateAgreementTypeChain"
+     ]
+    },
+    {
+     "label": "Save",
+     "listener": "onAttCatEditSave",
+     "chains": [
+      "updateAttachmentCategoryChain"
+     ]
+    },
+    {
+     "label": "Delete",
+     "listener": "onAttCatDeleteConfirmed",
+     "chains": [
+      "deleteAttachmentCategoryChain"
+     ]
+    },
+    {
+     "label": "Save",
+     "listener": "onEditClassSubclassSave",
+     "chains": [
+      "saveEditClassSubclassChain"
+     ]
+    },
+    {
+     "label": "Remove",
+     "listener": "onDeleteExpTypeMapConfirmed",
+     "chains": [
+      "deleteExpTypeMapChain"
+     ]
+    },
+    {
+     "label": "Delete",
+     "listener": "onDeleteSubclassConfirmed",
+     "chains": [
+      "deleteSubclassChain"
+     ]
+    },
+    {
+     "label": "Delete",
+     "listener": "onDeleteClassConfirmed",
+     "chains": [
+      "deleteClassChain"
+     ]
+    },
+    {
+     "label": "Remove Mapping",
+     "listener": "onUnmapConfirmed",
+     "chains": [
+      "unmapChain"
+     ]
+    },
+    {
+     "label": "Creating...",
+     "listener": "onClassMapCreateClicked",
+     "chains": [
+      "createClassMapPairsChain"
+     ]
+    },
+    {
+     "label": "Reset",
+     "listener": "onWeekEndDayResetConfirmed",
+     "chains": [
+      "resetWeekEndDayChain"
+     ]
+    },
+    {
+     "label": "Delete",
+     "listener": "onDeleteBuOrgConfirmed",
+     "chains": [
+      "deleteBuOrgMappingRowChain"
+     ]
+    },
+    {
+     "label": "Save",
+     "listener": "onBuOrgEditSaveConfirmed",
+     "chains": [
+      "saveBuOrgEditChain"
+     ]
+    },
+    {
+     "label": "Delete",
+     "listener": "onDeleteAgreementTypeConfirmed",
+     "chains": [
+      "deleteAgreementTypeChain"
+     ]
+    },
+    {
+     "label": "Close",
+     "listener": "onBuOrgDrawerClose",
+     "chains": [
+      "closeBuOrgDrawerChain"
+     ]
+    },
+    {
+     "label": "Cancel",
+     "listener": "onBuOrgDrawerClose",
+     "chains": [
+      "closeBuOrgDrawerChain"
+     ]
+    },
+    {
+     "label": "Add Mapping",
+     "listener": "onBuOrgMappingAdd",
+     "chains": [
+      "addBuOrgMappingChain"
+     ]
+    },
+    {
+     "label": "Close",
+     "listener": "onAddClassDrawerClose",
+     "chains": [
+      "closeAddClassDrawerChain"
+     ]
+    },
+    {
+     "label": "Cancel",
+     "listener": "onAddClassDrawerClose",
+     "chains": [
+      "closeAddClassDrawerChain"
+     ]
+    },
+    {
+     "label": "Create",
+     "listener": "onAddClassSubclassSubmit",
+     "chains": [
+      "createClassSubclassChain"
+     ]
+    },
+    {
+     "label": "Close",
+     "listener": "onFaDrawerClose",
+     "chains": [
+      "closeFaDrawerChain"
+     ]
+    },
+    {
+     "label": "Cancel",
+     "listener": "onFaDrawerClose",
+     "chains": [
+      "closeFaDrawerChain"
+     ]
+    },
+    {
+     "label": "Save",
+     "listener": "onFaSave",
+     "chains": [
+      "saveFaDrawerChain"
+     ]
+    },
+    {
+     "label": "Close",
+     "listener": "onEsDrawerClose",
+     "chains": [
+      "closeEsDrawerChain"
+     ]
+    },
+    {
+     "label": "Clear (use automatic)",
+     "listener": "onEsExpOrgClear",
+     "chains": [
+      "clearEsExpOrgChain"
+     ]
+    },
+    {
+     "label": "Cancel",
+     "listener": "onEsDrawerClose",
+     "chains": [
+      "closeEsDrawerChain"
+     ]
+    },
+    {
+     "label": "Save",
+     "listener": "onEsSave",
+     "chains": [
+      "saveEsDrawerChain"
+     ]
+    },
+    {
+     "label": "Application Configurations: sp primary action",
+     "listener": "onSave",
+     "chains": [
+      "saveChangesChain"
+     ]
+    },
+    {
+     "label": "Application Configurations: sp secondary action",
+     "listener": "onCancel",
+     "chains": [
+      "resetChangesChain"
+     ]
+    },
+    {
+     "label": "oj-switch: value changed",
+     "listener": "onToggleChanged",
+     "chains": [
+      "updateSettingChain"
+     ]
+    },
+    {
+     "label": "oj-select-single: value changed",
+     "listener": "onRequestNumberPatternChanged",
+     "chains": [
+      "clearRequestNumberMsgChain"
+     ]
+    },
+    {
+     "label": "oj-select-single: value changed",
+     "listener": "onClassMapTruthChanged",
+     "chains": [
+      "saveClassMapTruthChain"
+     ]
+    },
+    {
+     "label": "oj-select-single: value changed",
+     "listener": "onClassMapPrecedenceChanged",
+     "chains": [
+      "saveClassMapPrecedenceChain"
+     ]
+    },
+    {
+     "label": "oj-select-single: value changed",
+     "listener": "onColumnMapSourceChanged",
+     "chains": [
+      "onColumnMapSourceChangedChain"
+     ]
+    },
+    {
+     "label": "oj-select-single: value changed",
+     "listener": "onColumnMapClassGroupChanged",
+     "chains": [
+      "onColumnMapGroupChangedChain"
+     ]
+    },
+    {
+     "label": "oj-select-single: value changed",
+     "listener": "onColumnMapSubGroupChanged",
+     "chains": [
+      "onColumnMapGroupChangedChain"
+     ]
+    },
+    {
+     "label": "oj-select-single: value changed",
+     "listener": "onEquipClassLovSelected",
+     "chains": [
+      "applyClassFilterChain"
+     ]
+    },
+    {
+     "label": "oj-select-single: value changed",
+     "listener": "onBuOrgFilterChanged",
+     "chains": [
+      "applyBuFilterChain"
+     ]
+    },
+    {
+     "label": "Search mappings: oj value action",
+     "listener": "onExpTypeMapFilterChanged",
+     "chains": [
+      "loadExpTypeMapsChain"
+     ]
+    },
+    {
+     "label": "oj-select-single: focusin",
+     "listener": "onNlrCatalogueNeeded",
+     "chains": [
+      "loadNlrCatalogueChain"
+     ]
+    },
+    {
+     "label": "oj-select-single: value changed",
+     "listener": "onClassMapBulkSourceChanged",
+     "chains": [
+      "previewClassMapPairsChain"
+     ]
+    },
+    {
+     "label": "oj-menu: oj menu action",
+     "listener": "onBuOrgMenuAction",
+     "chains": [
+      "buOrgMenuActionChain"
+     ]
+    },
+    {
+     "label": "Business Unit: value item changed",
+     "listener": "onBuOrgBuSelected",
+     "chains": [
+      "CaptureBuChain"
+     ]
+    },
+    {
+     "label": "oj-select-single: value changed",
+     "listener": "onTrackingTypeChanged",
+     "chains": [
+      "onTrackingTypeChangedChain"
+     ]
+    },
+    {
+     "label": "oj-select-single: value changed",
+     "listener": "onClassLovSelected",
+     "chains": [
+      "onClassLovSelectedChain"
+     ]
+    },
+    {
+     "label": "Business Unit: value changed",
+     "listener": "onFaBuSelected",
+     "chains": [
+      "captureFaBuChain"
+     ]
+    },
+    {
+     "label": "Fixed Asset Book: value changed",
+     "listener": "onFaBookSelected",
+     "chains": [
+      "captureFaBookChain"
+     ]
+    },
+    {
+     "label": "Assignment rule: value changed",
+     "listener": "onFaRuleTypeChanged",
+     "chains": [
+      "onFaRuleTypeChangedChain"
+     ]
+    },
+    {
+     "label": "Segment: value changed",
+     "listener": "onFaSegmentChanged",
+     "chains": [
+      "onFaSegmentChangedChain"
+     ]
+    },
+    {
+     "label": "Business Unit: value changed",
+     "listener": "onEsBuSelected",
+     "chains": [
+      "captureEsBuChain"
+     ]
+    }
+   ],
+   "fields": [
+    "TRANSACTION SOURCE",
+    "DOCUMENT",
+    "DOCUMENT ENTRY",
+    "ENABLE QUOTES FOR",
+    "UNIQUENESS",
+    "PATTERN",
+    "SEQUENCE PADDING",
+    "SEQUENCE RESETS",
+    "WEEK END DAY",
+    "ASSET CLASSIFICATION SOURCE",
+    "SOURCE PRECEDENCE",
+    "CLASSIFICATION SOURCE",
+    "CLASS FIELD GROUP",
+    "CLASS COLUMN",
+    "SUBCLASS FIELD GROUP",
+    "SUBCLASS COLUMN",
+    "EQUIPMENT CLASS",
+    "EQUIPMENT SUBCLASS",
+    "FILTER BY BUSINESS UNIT",
+    "Applies to",
+    "Equipment / subclass / class",
+    "Expenditure type",
+    "Scope",
+    "Non-labor resource (owner)",
+    "Add Type Name",
+    "Prefix",
+    "Name",
+    "Can Be Attached To",
+    "Has an Expiry Date",
+    "Usually Valid For (Months)",
+    "Subclass",
+    "Type",
+    "Consumable",
+    "Auto-Consume",
+    "Timesheet Entry",
+    "Buffer Period (Days)",
+    "YARD TYPE",
+    "SUBINVENTORY",
+    "TRANSACTABLE",
+    "YARD",
+    "TYPE",
+    "CLASS NAME",
+    "SUBCLASS NAME (OPTIONAL)",
+    "CLASS",
+    "SUBCLASS (OPTIONAL)",
+    "CONSUMABLE",
+    "AUTO-CONSUME",
+    "RATE SOURCE",
+    "PROJECT TRANSACTION SOURCE",
+    "EXPENDITURE BATCH PREFIX",
+    "EXPENDITURE ORGANIZATION",
+    "Procurement Markup (%)",
+    "— Select —",
+    "— Select Day —",
+    "Not configured",
+    "Select a field group",
+    "— Select Class —",
+    "— All Subclasses —",
+    "— All Business Units —",
+    "e.g. UT Unit - Operational Day Rate",
+    "equipment or expenditure type",
+    "equipment, resource or owner",
+    "e.g. Demo Agreement",
+    "e.g. DEMO",
+    "e.g. Load Test Certificate",
+    "Optional",
+    "e.g. Rental",
+    "e.g. RNT (2-10 chars, A-Z 0-9)",
+    "— Select Yard Type —",
+    "— Search Business Unit —",
+    "— Select Yard —",
+    "e.g. Compaction Equipment",
+    "e.g. Plate Compactors",
+    "— Select Business Unit —",
+    "— Select Book —",
+    "— e.g. EQUIPRITE —",
+    "e.g. EQRP-HOU"
+   ],
+   "columns": [
+    "BUSINESS UNIT",
+    "RATE SOURCE",
+    "PASS PROC COST",
+    "PROC MARKUP",
+    "PROJECT TXN SOURCE",
+    "BATCH PREFIX",
+    "EXPENDITURE ORG",
+    "TIMESHEET",
+    "EQUIPMENT SOURCES",
+    "ACTIONS",
+    "BOOK",
+    "HOW ASSETS ARE ASSIGNED",
+    "STATUS",
+    "CLASSIFICATION SOURCE",
+    "CLASS COLUMN",
+    "SUBCLASS COLUMN",
+    "CLASS",
+    "SUBCLASS NAME",
+    "TYPE",
+    "FUSION SOURCE",
+    "CONSUMABLE",
+    "AUTO-CONSUME",
+    "YARD",
+    "ORG CODE",
+    "YARD TYPE",
+    "LOCATION",
+    "SUBINVENTORY",
+    "TRANSACTABLE",
+    "ACTIVE",
+    "APPLIES TO",
+    "EQUIPMENT / GROUP",
+    "EXPENDITURE TYPE",
+    "DEFAULT",
+    "NON-LABOR RESOURCE",
+    "OWNER",
+    "NAME",
+    "PREFIX",
+    "ATTACHED TO",
+    "EXPIRY DATE",
+    "TIMESTAMP",
+    "MODIFIED BY",
+    "SECTION",
+    "FIELD / PARAMETER",
+    "OLD VALUE",
+    "NEW VALUE",
+    "SUBCLASS",
+    "ITEMS"
+   ],
+   "components": [
+    "oj-badge",
+    "oj-button",
+    "oj-collapsible",
+    "oj-dialog",
+    "oj-drawer-popup",
+    "oj-form-layout",
+    "oj-input-number",
+    "oj-input-search",
+    "oj-input-text",
+    "oj-input-time",
+    "oj-list-item-layout",
+    "oj-menu",
+    "oj-option",
+    "oj-progress-circle",
+    "oj-select-many",
+    "oj-select-single",
+    "oj-sp-general-overview-page",
+    "oj-switch",
+    "oj-switcher",
+    "oj-tab-bar",
+    "oj-table"
+   ],
+   "inputs": [],
+   "lifecycle": [
+    {
+     "when": "before the page opens",
+     "chains": [
+      "enforcePageAccessChain"
+     ]
+    },
+    {
+     "when": "when the page opens",
+     "chains": [
+      "loadConfigSettingsChain",
+      "loadAgreementTypesChain",
+      "loadAttachmentCategoriesChain",
+      "loadEquipmentClassesChain",
+      "loadClassMapTypesChain",
+      "loadBuOrgMappingsChain",
+      "loadEsSettingsChain",
+      "loadFaBooksChain",
+      "loadFaBookLovChain",
+      "loadExpTypeMapsChain",
+      "loadExpTypeOptionsChain"
+     ]
+    }
+   ]
+  },
+  "logic": {
+   "chains": [
+    {
+     "name": "BuTypeaheadChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/BuTypeaheadChain.js",
+     "about": "Same shape as request-detail-page-chains/AssignProjectTypeaheadChain — only the field/variable names differ. (It was cloned from the create-request page's ProjectTypeaheadChain, since deleted along with that page's server-side project typeahead.) As the user types in the BU oj-input-search, rewrite the Fusion q-filter and re-query finBusinessUnitsLOV.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "buTypeaheadChanged"
+     ],
+     "lines": 40
+    },
+    {
+     "name": "CaptureBuChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/CaptureBuChain.js",
+     "about": "BU selected in the Add drawer. Capture BusinessUnitId/Name, then re-query the dependent Yard dropdown (BuOrgYardSDP.q binds to BuOrgSelectedBUId), exactly like task depends on project. Also clear any in-progress yard/type selection so a BU change starts fresh. Two entry shapes: buId + buName — from the configured-BU oj-select-single's value-item (the selected conf-equipment-settings row); null buId on clear. data — legacy Fusion typeahead suggestion { BusinessUnitId, BusinessUnitName }.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "buSelected",
+      "onBuOrgBuSelected"
+     ],
+     "lines": 47
+    },
+    {
+     "name": "addAgreementTypeChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/addAgreementTypeChain.js",
+     "about": "Create a new agreement type from the inline add form, then reload the table.",
+     "calls": [
+      "eqp-v1/createConfAgreementType"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onAgreementTypeAddClicked"
+     ],
+     "lines": 125
+    },
+    {
+     "name": "addAttachmentCategoryChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/addAttachmentCategoryChain.js",
+     "about": "Create an attachment category from the inline add panel, then reload. The user types only the friendly name; the stored code is derived from it (uppercase, runs of anything else -> '_', max 30), the same way Agreement Types does it. The code is PERMANENT - the backend rejects a change - so only the label can be edited later. Default validity (months) only means something when the category needs dates, so it is dropped otherwise.",
+     "calls": [
+      "eqp-v1/createAttachmentCategory"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/currentUser"
+     ],
+     "on": [
+      "onAttCatAddClicked"
+     ],
+     "lines": 86
+    },
+    {
+     "name": "addBuOrgMappingChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/addBuOrgMappingChain.js",
+     "about": "\"Add Mapping\" from the drawer: validate BU/Yard/Yard Type, then PERSIST IMMEDIATELY via an inline upsert-by-BU PUT (all rows for that BU), and reload. NOTE: the upsert is inlined here (not delegated to a separate save chain) on purpose — a chain that is only reachable via callChain (never named in an event listener) is not registered by the VBCS Designer, so callChain to it 404s. This chain IS on a listener (onBuOrgMappingAdd), so inlining keeps it resolvable.",
+     "calls": [
+      "bipService/runBIPReport",
+      "eqp-v1/upsertBuOrgMappingsByBU"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/invOrgAddress"
+     ],
+     "on": [
+      "onBuOrgMappingAdd"
+     ],
+     "lines": 182
+    },
+    {
+     "name": "addExpTypeMapChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/addExpTypeMapChain.js",
+     "about": "Author one equipment -> expenditure type link from the inline add form.",
+     "calls": [
+      "eqp-v1/listExpTypeMaps",
+      "eqp-v1/createExpTypeMap"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onExpTypeMapAddClicked"
+     ],
+     "lines": 132
+    },
+    {
+     "name": "applyBuFilterChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/applyBuFilterChain.js",
+     "about": "BU filter LOV changed — record the selected BU id; the table ADP re-filters client-side via filterBuOrgMappings (mirrors the Equipment Class filter).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onBuOrgFilterChanged"
+     ],
+     "lines": 19
+    },
+    {
+     "name": "applyClassFilterChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/applyClassFilterChain.js",
+     "about": "Class LOV is now a FILTER over the full subclass list (not a fetch trigger). Selecting a class: records the class id/name, resets the subclass filter, and rebuilds the dependent subclass LOV from the already-loaded AllSubclassesArray.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onEquipClassLovSelected"
+     ],
+     "lines": 41
+    },
+    {
+     "name": "buOrgMenuActionChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/buOrgMenuActionChain.js",
+     "about": "Route the BU & Org row menu selection to the matching flow, passing the row stashed by openBuOrgRowMenuChain. Edit → openBuOrgEditChain (yard-type dialog); Delete → openDeleteBuOrgChain (confirm dialog).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onBuOrgMenuAction"
+     ],
+     "lines": 26
+    },
+    {
+     "name": "captureBuOrgYardChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/captureBuOrgYardChain.js",
+     "about": "Yard selected from the drawer's Yard dropdown (inventory orgs under the BU). Capture the full org row into currentMapping so the read-only table can show Org Code / Org Id / Default Location / Status without re-fetching.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onBuOrgYardSelected"
+     ],
+     "lines": 33
+    },
+    {
+     "name": "captureEsBuChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/captureEsBuChain.js",
+     "about": "BU selected from the all-Fusion-BUs dropdown inside the Equipment Settings drawer (EsBuLovSDP → finBusinessUnitsLOV). Fetch that BU's Fusion row for its display name + the attributes every settings record denormalizes, then pre-fill from the BU's existing settings row (if already configured). The row is fetched rather than read off the selection because on-value-changed carries only the id.",
+     "calls": [
+      "ProjectLOV/getFscmRestApiResources11_13_18_05FinBusinessUnitsLOV"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onEsBuSelected"
+     ],
+     "lines": 96
+    },
+    {
+     "name": "captureFaBookChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/captureFaBookChain.js",
+     "about": "A book was picked in the drawer: load its assets, then reset the rule. What can be offered depends on the book (the EPC book splits on location segment 1 and not on category), so a rule carried over from another book would be meaningless. Acts only on a USER change. value-changed also fires when openFaEditChain seeds the draft programmatically (updatedFrom 'external'); reacting to that would wipe the very values being edited.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onFaBookSelected"
+     ],
+     "lines": 28
+    },
+    {
+     "name": "captureFaBuChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/captureFaBuChain.js",
+     "about": "A business unit was picked in the Fixed Asset Books drawer: find its primary ledger so the book picker can offer only the books on that ledger. A Fusion fixed-asset book carries no business unit, but it belongs to a ledger and a BU posts to its own primary ledger (probe 11e: EPC_US_EAST_BU -> one ledger -> one book). Without this the picker listed every corporate book in the tenant. Picking a different BU clears the book and rule: a book chosen for the previous BU may not be on this one's ledger, and a rule carried over from another book means nothing here. User changes only (updatedFrom…",
+     "calls": [
+      "ProjectLOV/getFscmRestApiResources11_13_18_05FinBusinessUnitsLOV"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onFaBuSelected"
+     ],
+     "lines": 48
+    },
+    {
+     "name": "clearBuFilterChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/clearBuFilterChain.js",
+     "about": "Clear the BU filter — table shows all BUs again.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onBuOrgFilterClearClicked"
+     ],
+     "lines": 16
+    },
+    {
+     "name": "clearClassFilterChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/clearClassFilterChain.js",
+     "about": "Reset the Equipment Classes tab filters (class + subclass) back to \"show all\". Delegates to applyClassFilterChain with a null classId, which clears both the selected class and the dependent subclass filter/LOV in one place.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onClassFilterClearClicked"
+     ],
+     "lines": 21
+    },
+    {
+     "name": "clearEsExpOrgChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/clearEsExpOrgChain.js",
+     "about": "\"Clear (use automatic)\" under the BU Settings drawer's Expenditure Org picker. Blank means no override, so each project's org is worked out from its own BU list again. esExpOrgBody sends the null on save only if a value was stored.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onEsExpOrgClear"
+     ],
+     "lines": 18
+    },
+    {
+     "name": "clearRequestNumberMsgChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/clearRequestNumberMsgChain.js",
+     "about": "Drops the \"Saved.\" confirmation as soon as the pattern is edited again, so the card never shows a success line next to an unsaved change.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onRequestNumberPatternChanged"
+     ],
+     "lines": 17
+    },
+    {
+     "name": "closeAddClassDrawerChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/closeAddClassDrawerChain.js",
+     "about": "Close the add-class/subclass drawer without saving.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onAddClassDrawerClose"
+     ],
+     "lines": 17
+    },
+    {
+     "name": "closeBuOrgDrawerChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/closeBuOrgDrawerChain.js",
+     "about": "Close the BU & Org Mapping \"Add\" drawer. Bound to the Cancel/Close buttons and the drawer's on-opened-changed(false), so it must be idempotent.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onBuOrgDrawerClose"
+     ],
+     "lines": 18
+    },
+    {
+     "name": "closeEsDrawerChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/closeEsDrawerChain.js",
+     "about": "Close the Equipment Settings drawer. Bound to Cancel/Close and the drawer's on-opened-changed(false), so it must be idempotent.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onEsDrawerClose"
+     ],
+     "lines": 17
+    },
+    {
+     "name": "closeFaDrawerChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/closeFaDrawerChain.js",
+     "about": "",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onFaDrawerClose"
+     ],
+     "lines": 14
+    },
+    {
+     "name": "createClassMapPairsChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/createClassMapPairsChain.js",
+     "about": "CREATE / LINK the pairs ticked in the Create from Fusion list, in ONE call (bulkCreateClassesFromFusion). The backend applies the same rules as the dryRun preview, one transaction per class group (the class and its subclasses): a failed group rolls back and is reported, the rest commit. Each row stores where it came from (FUSION_SOURCE_TYPE, the mapped column as FUSION_*_TYPE + its name, the value as FUSION_*_REF), which is exactly what the item import matches items on. Results come back in request order.",
+     "calls": [
+      "eqp-v1/bulkCreateClassesFromFusion"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onClassMapCreateClicked"
+     ],
+     "lines": 76
+    },
+    {
+     "name": "createClassSubclassChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/createClassSubclassChain.js",
+     "about": "Add Class drawer, Create: an equipment CLASS (and optionally a SUBCLASS under it) picked from the values of the Fusion columns MAPPED for the TYPE on the Class Mapping sub-tab (CLASS_MAPPING_COLUMNS_<TYPE>). Each row stores where it came from -- FUSION_SOURCE_TYPE = the TYPE, the mapped column as FUSION_*_TYPE (+ its name), the picked value as FUSION_*_REF -- the same as Preview & Create, and exactly what the item import matches items on. A class that already exists for the same TYPE + column + value is REUSED, so adding a second subclass under it never duplicates the class. CUSTOM: class /…",
+     "calls": [
+      "eqp-v1/createEquipmentClass",
+      "eqp-v1/createSubclass"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onAddClassSubclassSubmit"
+     ],
+     "lines": 165
+    },
+    {
+     "name": "deleteAgreementTypeChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/deleteAgreementTypeChain.js",
+     "about": "Hard-delete an agreement type, then reload the table. NOTE: this removes the type definition only — existing agreements that already store the code keep it (AGREEMENT_TYPE is a free string, no FK). To retire a type without deleting, toggle it inactive instead.",
+     "calls": [
+      "eqp-v1/deleteConfAgreementType"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onDeleteAgreementTypeConfirmed"
+     ],
+     "lines": 41
+    },
+    {
+     "name": "deleteAttachmentCategoryChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/deleteAttachmentCategoryChain.js",
+     "about": "Delete the category chosen with a row's trash icon, after its confirm dialog (target in DeleteAttCatTarget, set by openDeleteAttachmentCategoryChain). The backend refuses (409) when any attachment uses the category - those documents must keep it. In that case the message says to switch it off with the Active toggle instead, which hides it from new uploads only.",
+     "calls": [
+      "eqp-v1/deleteAttachmentCategory"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/currentUser"
+     ],
+     "on": [
+      "onAttCatDeleteConfirmed"
+     ],
+     "lines": 50
+    },
+    {
+     "name": "deleteBuOrgMappingRowChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/deleteBuOrgMappingRowChain.js",
+     "about": "Hard-delete a mapping row by id (per-row DELETE endpoint), then reload. Enable/disable is handled separately by the ACTIVE toggle, so Delete is a true removal, not a deactivate.",
+     "calls": [
+      "eqp-v1/deleteBuOrgMapping"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onDeleteBuOrgConfirmed"
+     ],
+     "lines": 55
+    },
+    {
+     "name": "deleteClassChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/deleteClassChain.js",
+     "about": "Soft-delete an equipment class (backend sets EFFECTIVE_END_DATE). GUARDED: the backend returns HTTP 409 with a readable `detail` if the class still has active subclasses — we surface that message verbatim so the user knows to remove the subclasses first. Reads the confirmed target from DeleteClassTarget; on success resets the selection and reloads.",
+     "calls": [
+      "eqp-v1/deleteEquipmentClass"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onDeleteClassConfirmed"
+     ],
+     "lines": 62
+    },
+    {
+     "name": "deleteExpTypeMapChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/deleteExpTypeMapChain.js",
+     "about": "Hard-delete one mapping, then reload the table.",
+     "calls": [
+      "eqp-v1/deleteExpTypeMap"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onDeleteExpTypeMapConfirmed"
+     ],
+     "lines": 53
+    },
+    {
+     "name": "deleteSubclassChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/deleteSubclassChain.js",
+     "about": "Soft-delete a subclass (backend sets EFFECTIVE_END_DATE; the GET then hides ended rows). Reads the confirmed target from DeleteSubclassTarget, calls DELETE /equipment-classes/{classId}/subclasses/{id}, closes the confirm dialog, and reloads the grid so the row disappears.",
+     "calls": [
+      "eqp-v1/deleteSubclass"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onDeleteSubclassConfirmed"
+     ],
+     "lines": 65
+    },
+    {
+     "name": "enforcePageAccessChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/enforcePageAccessChain.js",
+     "about": "Page-level RBAC deep-link guard. GENERATED - every copy is byte-identical; change the template and regenerate rather than editing one copy. Copies exist because a page's eventListeners resolve a bare chain id against that page's OWN <page>-chains folder, so an app-level chain referenced by name 404s. This file holds NO policy: the decision (canEnterPage), the page code (getPageCodeForPage), the redirect target (getRoleHomeTarget) and the same-flow test (isSameFlow) all live in $application.functions. Deriving the page code at runtime is what lets every copy be identical.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "vbBeforeEnter"
+     ],
+     "lines": 72
+    },
+    {
+     "name": "loadAgreementTypesChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadAgreementTypesChain.js",
+     "about": "Load ALL agreement types (active + inactive) for the management table. The GET endpoint returns a raw array of ConfAgreementTypeDto.",
+     "calls": [
+      "eqp-v1/getConfAgreementTypes"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "vbEnter"
+     ],
+     "lines": 28
+    },
+    {
+     "name": "loadAllSubclassesChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadAllSubclassesChain.js",
+     "about": "Load EVERY subclass across all classes (flat) into the grid. Each row is joined with its class name (from EquipmentClassesArray) so the grid can show a CLASS column. The class/subclass LOVs filter this list client-side.",
+     "calls": [
+      "eqp-v1/getAllSubclasses"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 46
+    },
+    {
+     "name": "loadAttachmentCategoriesChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadAttachmentCategoriesChain.js",
+     "about": "Load ALL attachment categories (active + inactive) for the management table. EQR_CONF_ATTACHMENT_CATEGORY via eqp-v1/listAttachmentCategories; rows arrive in body.data (PagedResponse - NOT a bare array like conf-agreement-types, verified 2026-10-01). These decide what the equipment Attachments dialogs offer: appliesTo HEADER / LINE / BOTH (equipment master, serial unit, or both) and whether Valid from / to are asked for (validityRequired).",
+     "calls": [
+      "eqp-v1/listAttachmentCategories"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "vbEnter"
+     ],
+     "lines": 36
+    },
+    {
+     "name": "loadAuditTrailChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadAuditTrailChain.js",
+     "about": "",
+     "calls": [
+      "eqp-v1/getAuditTrail"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onAuditRefreshClicked"
+     ],
+     "lines": 25
+    },
+    {
+     "name": "loadBuOrgMappingsChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadBuOrgMappingsChain.js",
+     "about": "Load saved BU→Org role mappings (all BUs) into the mixed table on tab enter. The backend GET now returns every display field per row — buName, invOrgName, invOrgCode, locationCode, orgRole — persisted in EQR_BU_ORG_MAPPING at upsert time. So this is a SINGLE GET with NO Fusion calls. (Previously it made 1+N live Fusion round-trips to resolve BU/yard names; the names are now stored, so those calls were removed — see MD/BU_TO_ORG_MAP.md §9.)",
+     "calls": [
+      "eqp-v1/getBuOrgMappings"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "vbEnter"
+     ],
+     "lines": 40
+    },
+    {
+     "name": "loadBuOrgSubinventoriesChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadBuOrgSubinventoriesChain.js",
+     "about": "Fills the Subinventory picker on BU Org Mapping (Add drawer and Edit dialog) with the Fusion subinventories of one inventory org. Disabled subinventories are left out, except the one already saved on the mapping (keepCode), so an existing value still shows instead of a raw code.",
+     "calls": [
+      "ProjectLOV/getFscmRestApiResources11_13_18_05Subinventories"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 60
+    },
+    {
+     "name": "loadClassLovChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadClassLovChain.js",
+     "about": "Add Class drawer, CLASS list: the distinct values of the Fusion column MAPPED as the class column for the drawer's TYPE on the Class Mapping sub-tab (CLASS_MAPPING_COLUMNS_<TYPE>), read from EQP_CATEGORY_LOV_RP. No mapping for the TYPE -> nothing to list; the placeholder says so.",
+     "calls": [
+      "bipService/runBIPReport"
+     ],
+     "reports": [
+      "EQP_CATEGORY_LOV_RP"
+     ],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/bipLov"
+     ],
+     "on": [],
+     "lines": 55
+    },
+    {
+     "name": "loadClassMapTypesChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadClassMapTypesChain.js",
+     "about": "Loads the Class / Subclass Attribute lists for every source from EQP_CATEGORY_LOV_RP (P_CATEGORY_TYPE = TYPES) -- the report is the one place those lists are defined (codes, labels, order). The page keeps no copy. All three sources are loaded up front so the grid can label rows of any source, not just the one picked in the add row. Each column carries its FIELD GROUP (Item Class / Attributes / Categories), also defined by the report. Then fills the column-mapping form from the picked source's saved mapping (onColumnMapSourceChangedChain). A failure for one source leaves that source's list…",
+     "calls": [
+      "bipService/runBIPReport"
+     ],
+     "reports": [
+      "EQP_CATEGORY_LOV_RP"
+     ],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/bipLov"
+     ],
+     "on": [
+      "vbEnter"
+     ],
+     "lines": 66
+    },
+    {
+     "name": "loadConfigSettingsChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadConfigSettingsChain.js",
+     "about": "Fire all calls sequentially (VBCS does not support Promise.all in this context). Global settings (week config, module + notification flags, Class Mapping) live in the dedicated conf-global-settings table, keyed only by settingKey (no businessUnitId). ⚠ THE ENDPOINT IS PAGINATED and defaults to 20 rows (Spring), exactly as loadFeatureFlagsChain documents. At 25 rows (2026-10-09) the newest five -- including CLASS_MAPPING_COLUMNS_* -- silently fell off page 0, so the saved column mappings vanished from the page. Ask for the whole table.",
+     "calls": [
+      "eqp-v1/getConfGlobalSettings",
+      "eqp-v1/getAuditTrail"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "vbEnter"
+     ],
+     "lines": 145
+    },
+    {
+     "name": "loadEquipmentClassesChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadEquipmentClassesChain.js",
+     "about": "Load equipment classes (EQR_EQUIPMENT_CLASS) into the left list of the Equipment Classes tab, then auto-select the first class so its subclasses (EQR_EQUIPMENT_SUBCLASS) load on first render.",
+     "calls": [
+      "eqp-v1/getEquipmentClasses"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "vbEnter"
+     ],
+     "lines": 53
+    },
+    {
+     "name": "loadEsExpOrgsChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadEsExpOrgsChain.js",
+     "about": "The expenditure orgs Fusion accepts for one business unit, for the BU Settings drawer's Expenditure Org picker. Same finder as the per-project automatic pick (resources/js/projectExpenditureOrg.js), so the picker can only offer orgs Fusion will take: an org outside the BU's list is refused at posting with \"_ORGANIZATION_ID_Display ... is not in the list of values\". US1 Business Unit on dev20 returns one org, Electrical Engineering. The stored pick is always kept as an option, so a failed lookup or an org since dropped from the list still shows what is saved instead of a bare id.",
+     "calls": [
+      "ProjectLOV/getFscmRestApiResources11_13_18_05ProjectExpenditureOrganizationsLOV"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 72
+    },
+    {
+     "name": "loadEsSettingsChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadEsSettingsChain.js",
+     "about": "BU Settings tab loader. Fetches ALL conf-equipment-settings (no businessUnitId → every BU's rows in one call), pivots them into one row per BU via buildSettingsByBu, then resolves Fusion BU names onto the rows (the DB stores ids only — same lean-DB pattern as loadBuOrgMappingsChain).",
+     "calls": [
+      "eqp-v1/getConfEquipmentSettings",
+      "ProjectLOV/getFscmRestApiResources11_13_18_05FinBusinessUnitsLOV"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "vbEnter"
+     ],
+     "lines": 73
+    },
+    {
+     "name": "loadExpTypeMapsChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadExpTypeMapsChain.js",
+     "about": "The authored equipment -> expenditure type mappings, for the admin table. Filtering is SERVER-side (the endpoint takes scopeType and search) rather than client-side, because this table is the one place that will grow: one row per equipment-model x billing activity, so a few hundred at this customer and more at a larger one.",
+     "calls": [
+      "eqp-v1/listExpTypeMapAdmin"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onExpTypeMapFilterChanged",
+      "vbEnter"
+     ],
+     "lines": 87
+    },
+    {
+     "name": "loadExpTypeOptionsChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadExpTypeOptionsChain.js",
+     "about": "What the \"add a mapping\" form can offer: the three scope lists (equipment models, subclasses, classes) and Fusion's expenditure types. The scope lists come from this app. The expenditure types come from FUSION, and deliberately from the whole tenant rather than from one project's chargeable set: a mapping is authored once and used on every project, so scoping the authoring screen to whichever project happened to be open would hide types that are perfectly valid elsewhere. The narrowing that DOES care about a project happens on the timesheet, where the mapped names are intersected with that…",
+     "calls": [
+      "eqp-v1/getEquipmentClasses"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/expenditureTypes",
+      "resources/js/fetchAllPages"
+     ],
+     "on": [
+      "vbEnter"
+     ],
+     "lines": 126
+    },
+    {
+     "name": "loadFaBookLovChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadFaBookLovChain.js",
+     "about": "Book picker options from EQP_FA_BOOKS_LOV_RP. CORPORATE books only: a fixed asset sits in several books at once (a corporate book plus tax books), so listing every book would offer the same assets two or three times. NOBODY HAS DEPLOYED THE REPORT YET — the SQL is at ../Files/EquipRite/bip-sql/EQP_FA_BOOKS_LOV_RP.sql. Until it is, the picker is empty and the drawer says why instead of showing a control that silently has nothing in it.",
+     "calls": [
+      "bipService/runBIPReport"
+     ],
+     "reports": [
+      "EQP_FA_BOOKS_LOV_RP"
+     ],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/bipLov"
+     ],
+     "on": [
+      "vbEnter"
+     ],
+     "lines": 45
+    },
+    {
+     "name": "loadFaBooksChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadFaBooksChain.js",
+     "about": "Load every BU-to-fixed-asset-book assignment (EQR_BU_FA_BOOK, eqp-v1/listBuFaBooks) for the Fixed Asset Books tab, plus the BU names the grid and messages need. Rows arrive in body.data (GenericListResponse, like the attachment categories), and a bare array is tolerated. INACTIVE rows come back too: faBooks.rowsFromApi drops them, so history never counts as state. A failed load leaves the PREVIOUS rows in place and says so. Showing an empty grid would read as \"nothing is assigned\", which is exactly the state in which a BU can be told it is a sole owner.",
+     "calls": [
+      "eqp-v1/listBuFaBooks",
+      "ProjectLOV/getFscmRestApiResources11_13_18_05FinBusinessUnitsLOV"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "vbEnter"
+     ],
+     "lines": 62
+    },
+    {
+     "name": "loadFaPreviewChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadFaPreviewChain.js",
+     "about": "Load one book's (location, category) combinations from EQP_FA_SCOPE_PREVIEW_RP. Aggregated on the Fusion side, so a 1,270-asset book is a few dozen rows and faScope.js evaluates every BU's rule against them with no round trip per rule. That is what lets the drawer show \"this BU gets 5 of 6\" the moment a value is ticked. On failure the combos are EMPTY, which offers only \"share with every BU\" and says why. It never offers a split it could not preview.",
+     "calls": [
+      "bipService/runBIPReport"
+     ],
+     "reports": [
+      "EQP_FA_SCOPE_PREVIEW_RP"
+     ],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/bipLov"
+     ],
+     "on": [],
+     "lines": 48
+    },
+    {
+     "name": "loadNlrCatalogueChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadNlrCatalogueChain.js",
+     "about": "Loads the add picker's list (every active NLR x owner, report v5 catalogue mode) the first time someone clicks into the picker -- not on page entry, so a page nobody maps on never runs the report. While it loads, the list holds one placeholder row (nlrMaps.LOADING_KEY) so the open dropdown says \"Loading...\" instead of \"No results\". The add chains ignore that row. A failure empties the list and NlrCatalogueState says why; the next click retries. Same file on the equipment page (equipment-units-page-chains): both pages use the same variable names.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/nlrMaps"
+     ],
+     "on": [
+      "onNlrCatalogueNeeded"
+     ],
+     "lines": 43
+    },
+    {
+     "name": "loadNlrMapsChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadNlrMapsChain.js",
+     "about": "NLR_PICKER_ENABLED: the Non-Labor Resources tab (the Expenditure Types tab's NLR form). Loads the authored equipment -> NLR mappings (EQR_NLR_MAP, V470) with the same scope/search filters. The add picker's list is loaded on first click by loadNlrCatalogueChain. Paged like loadExpTypeMapsChain, for the same reason: the endpoint caps page size without saying so, so stop only on hasMore false / the count / empty.",
+     "calls": [
+      "eqp-v1/listNlrMapAdmin"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 51
+    },
+    {
+     "name": "loadSubclassLovChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/loadSubclassLovChain.js",
+     "about": "Add Class drawer, SUBCLASS list: the values of the MAPPED subclass column found on the same items / assets as the picked class value -- the class column is sent as P_PARENT_TYPE and the picked value as P_PARENT_ID. Empty when the TYPE's mapping has no subclass column, or no class is picked yet.",
+     "calls": [
+      "bipService/runBIPReport"
+     ],
+     "reports": [
+      "EQP_CATEGORY_LOV_RP"
+     ],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/bipLov"
+     ],
+     "on": [],
+     "lines": 48
+    },
+    {
+     "name": "nlrMapActionChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/nlrMapActionChain.js",
+     "about": "Add / make default / delete one equipment -> NLR mapping (EQR_NLR_MAP, V470) from the Non-Labor Resources tab. Scope comes from the shared add form (NewExpTypeMap.scopeType / scopeId, the same pickers the expenditure-type form uses); the NLR from NewNlrMapKey, an option of the catalogue. Delete is immediate (no dialog): a mapping is one row and re-adding it is one click. Saved timesheets and posted weeks keep what they recorded.",
+     "calls": [
+      "eqp-v1/deleteNlrMap",
+      "eqp-v1/patchNlrMap",
+      "eqp-v1/listNlrMaps",
+      "eqp-v1/createNlrMap"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/nlrMaps"
+     ],
+     "on": [
+      "onNlrMapAddClicked",
+      "onNlrMapDefaultClicked",
+      "onNlrMapDeleteClicked"
+     ],
+     "lines": 94
+    },
+    {
+     "name": "onClassLovSelectedChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/onClassLovSelectedChain.js",
+     "about": "A class was picked. Mirror its LABEL into className (that is what actually gets persisted to EQR_EQUIPMENT_CLASS.CLASS_NAME — the Fusion id is the LOV key, not our storage), clear any subclass chosen under the previous class, and reload the subclass list cascaded off the new parent.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onClassLovSelected"
+     ],
+     "lines": 35
+    },
+    {
+     "name": "onColumnMapGroupChangedChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/onColumnMapGroupChangedChain.js",
+     "about": "A FIELD GROUP changed: the column picked under the old group does not belong to the new one, so clear it. params.level: 'CLASS' | 'SUBCLASS'.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onColumnMapClassGroupChanged",
+      "onColumnMapSubGroupChanged"
+     ],
+     "lines": 22
+    },
+    {
+     "name": "onColumnMapSourceChangedChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/onColumnMapSourceChangedChain.js",
+     "about": "CLASSIFICATION SOURCE changed in the column-mapping form (and on page load, once the columns are loaded): fill the form from that source's SAVED mapping so it reads as \"edit\", or start blank. A stale preview belongs to whatever source it was run for, so it is cleared.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onColumnMapSourceChanged"
+     ],
+     "lines": 31
+    },
+    {
+     "name": "onFaRuleTypeChangedChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/onFaRuleTypeChangedChain.js",
+     "about": "The rule type changed: pick the first segment that actually varies and clear the values chosen under the old rule. User changes only (updatedFrom 'internal'); a programmatic seed from openFaEditChain must not reset what it just loaded.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onFaRuleTypeChanged"
+     ],
+     "lines": 20
+    },
+    {
+     "name": "onFaSegmentChangedChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/onFaSegmentChangedChain.js",
+     "about": "The segment changed: the values ticked belonged to the old segment, so clear them. User changes only - see onFaRuleTypeChangedChain.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onFaSegmentChanged"
+     ],
+     "lines": 18
+    },
+    {
+     "name": "onTrackingTypeChangedChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/onTrackingTypeChangedChain.js",
+     "about": "TYPE changed in the Add drawer. Both pickers below it are now meaningless — a FINANCE major category is not a valid INVENTORY catalog — so clear the selections AND the lists before reloading, then fetch the new CLASS list. Clearing the SELECTED IDS matters as much as clearing the lists: leaving a stale classLovId behind would let a subsequent save send a class id that belongs to a different Fusion classification entirely, which nothing downstream would catch.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onTrackingTypeChanged"
+     ],
+     "lines": 37
+    },
+    {
+     "name": "openAddClassDrawerChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openAddClassDrawerChain.js",
+     "about": "Reset the add-class/subclass form and open the right-side drawer.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onAddClassDrawerOpen"
+     ],
+     "lines": 36
+    },
+    {
+     "name": "openBuOrgDrawerChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openBuOrgDrawerChain.js",
+     "about": "Open the BU & Org Mapping \"Add\" drawer. Reset the in-progress mapping so each open starts clean, then reset the BU picker SDP + Yard SDP to their empty state (no BU selected yet). The BU picker (BuOrgConfiguredBuSDP) is deliberately the BUs CONFIGURED in the BU Settings tab — conf-equipment-settings, not all Fusion BUs — because you assign inventory orgs to a BU you've already set up there. Its typed search is server-side via the endpoint's ?q= (transforms/confEquipmentSettings.js).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onBuOrgAddClicked"
+     ],
+     "lines": 38
+    },
+    {
+     "name": "openBuOrgEditChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openBuOrgEditChain.js",
+     "about": "Edit affordance on a BU & Org mapping row: stash the row as the edit target (id + read-only BU/yard labels + current yard type / transactable flag) and open the edit dialog. Yard Type (orgRole) and Transactable are editable — the BU + yard are the mapping's identity. Save runs from saveBuOrgEditChain.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onBuOrgRowEditClicked"
+     ],
+     "lines": 43
+    },
+    {
+     "name": "openBuOrgRowMenuChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openBuOrgRowMenuChain.js",
+     "about": "Kebab (⋮) button on a BU & Org mapping row: stash which row it was and open the shared row menu anchored to that button. The menu's selection is handled by buOrgMenuActionChain (Edit / Delete). Mirrors the cart page's row-menu pattern.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onBuOrgRowMenuClicked"
+     ],
+     "lines": 29
+    },
+    {
+     "name": "openClassMapBulkChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openClassMapBulkChain.js",
+     "about": "Classes & Subclasses \"Create from Fusion\": open classFusionDialog on the last source used (or the first with a saved column mapping) and list its class / subclass pairs. Reopening refreshes the list.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onClassMapBulkOpen"
+     ],
+     "lines": 32
+    },
+    {
+     "name": "openDeleteAgreementTypeChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openDeleteAgreementTypeChain.js",
+     "about": "Trash affordance on an Agreement Type row: stash the row as the delete target (id + label for the confirm message) and open the confirm dialog. The actual delete runs from deleteAgreementTypeChain on confirm.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onAgreementTypeDeleteClicked"
+     ],
+     "lines": 32
+    },
+    {
+     "name": "openDeleteAttachmentCategoryChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openDeleteAttachmentCategoryChain.js",
+     "about": "Trash icon on an attachment-category row: remember which category, then open the confirm dialog. The delete itself runs from deleteAttachmentCategoryChain on confirm (same split as Agreement Types).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onAttCatDeleteClicked"
+     ],
+     "lines": 30
+    },
+    {
+     "name": "openDeleteBuOrgChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openDeleteBuOrgChain.js",
+     "about": "Trash affordance on a BU & Org mapping row: stash the row as the delete target (rowKey + org/BU names for the confirm message) and open the confirm dialog. The actual removal runs from deleteBuOrgMappingRowChain on confirm.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onBuOrgRowDeleteClicked"
+     ],
+     "lines": 34
+    },
+    {
+     "name": "openDeleteClassChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openDeleteClassChain.js",
+     "about": "\"Delete Class\" button by the class selector: stash the currently-selected class as the delete target and open the confirm dialog. The delete (with the active-subclass guard) runs from deleteClassChain on confirm. The Class Mapping grid passes the row's id instead of using the selection.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onDeleteClassClicked"
+     ],
+     "lines": 37
+    },
+    {
+     "name": "openDeleteExpTypeMapChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openDeleteExpTypeMapChain.js",
+     "about": "Trash affordance on a mapping row: stash the row as the delete target and open the confirm dialog. The delete itself runs from deleteExpTypeMapChain. Deletion is a HARD delete -- the table has no soft-delete column, because a soft-deleted row would keep occupying the unique key and block re-adding the same type to the same equipment. So it is worth a confirmation even though re-authoring is cheap.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onExpTypeMapDeleteClicked"
+     ],
+     "lines": 38
+    },
+    {
+     "name": "openDeleteSubclassChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openDeleteSubclassChain.js",
+     "about": "Trash affordance on a subclass grid row: stash the row as the delete target (id + classId + name for the path and the confirm message) and open the confirm dialog. The actual delete runs from deleteSubclassChain on confirm.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onDeleteSubclassClicked"
+     ],
+     "lines": 33
+    },
+    {
+     "name": "openEditAgreementTypeChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openEditAgreementTypeChain.js",
+     "about": "Pencil (edit) affordance: pre-fill the edit dialog with the selected agreement type's current Name + Prefix, then open the dialog.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onAgreementTypeEditClicked"
+     ],
+     "lines": 32
+    },
+    {
+     "name": "openEditAttachmentCategoryChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openEditAttachmentCategoryChain.js",
+     "about": "Edit (pencil): pre-fill the edit dialog from the row, then open it. The dialog sits at the page's top level (see attachmentCategoryEditDialog).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onAttCatEditClicked"
+     ],
+     "lines": 34
+    },
+    {
+     "name": "openEditClassSubclassChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openEditClassSubclassChain.js",
+     "about": "Pencil (edit) affordance on the Equipment Classes grid: pre-fill the edit dialog with the selected subclass row's Consumable / Auto-Consume flags and Buffer Period, then open the dialog.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onEditClassSubclassClicked"
+     ],
+     "lines": 49
+    },
+    {
+     "name": "openEsDrawerChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openEsDrawerChain.js",
+     "about": "Open the Equipment Settings \"Add BU Settings\" drawer in CREATE mode. Resets the draft so each open starts clean. The BU picker (EsBuLovSDP) queries Fusion itself, so there's nothing to preload here; captureEsBuChain fills buAttrs once a BU is picked.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onEsAddClicked"
+     ],
+     "lines": 47
+    },
+    {
+     "name": "openEsEditChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openEsEditChain.js",
+     "about": "Pencil (edit) on a BU row: pre-fill the drawer in EDIT mode from the loaded per-BU settings row, build that BU's Inv Org LOV, then open the drawer.",
+     "calls": [
+      "ProjectLOV/getFscmRestApiResources11_13_18_05FinBusinessUnitsLOV"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onEsEditClicked"
+     ],
+     "lines": 89
+    },
+    {
+     "name": "openFaDrawerChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openFaDrawerChain.js",
+     "about": "Open the Fixed Asset Books drawer in ADD mode, from a clean draft.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onFaAddClicked"
+     ],
+     "lines": 22
+    },
+    {
+     "name": "openFaEditChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openFaEditChain.js",
+     "about": "Pencil on a grid row: seed the drawer from the stored row, then load that book's assets so the rule can be reviewed against them. The BU and the book are fixed in edit mode. Moving a row to another BU or book would be a different assignment, so that is Remove then Add, which keeps each row's confirmation honest. An UNREADABLE stored rule is seeded as no rule at all, never as \"all assets\": saving would otherwise overwrite it with \"share with every business unit\" without anyone having chosen that.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onFaEditClicked"
+     ],
+     "lines": 35
+    },
+    {
+     "name": "openUnmapChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/openUnmapChain.js",
+     "about": "Class Mapping \"Unmap\": stash what is being unmapped and open the confirm dialog. unmapChain does the PATCHes on confirm.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onClassMapUnmapClicked"
+     ],
+     "lines": 40
+    },
+    {
+     "name": "previewClassMapPairsChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/previewClassMapPairsChain.js",
+     "about": "Create from Fusion list for one source's saved column mapping: every distinct (class value, subclass value) pair Fusion carries on the SAME item / asset (EQP_CATEGORY_LOV_RP, PAIRS mode). The pair is what associates a subclass with its class. What happens to each pair is decided by the backend (bulkCreateClassesFromFusion, dryRun -- nothing written), the same logic Create New Classes then runs for real: EXISTS already created from this source + column + value LINK a hand-made class / subclass of the same name or code is adopted CONFLICT that name / code carries a DIFFERENT Fusion reference;…",
+     "calls": [
+      "bipService/runBIPReport",
+      "eqp-v1/bulkCreateClassesFromFusion"
+     ],
+     "reports": [
+      "EQP_CATEGORY_LOV_RP"
+     ],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/bipLov"
+     ],
+     "on": [
+      "onClassMapBulkSourceChanged"
+     ],
+     "lines": 94
+    },
+    {
+     "name": "removeColumnMappingChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/removeColumnMappingChain.js",
+     "about": "Remove a source's column mapping: the setting is emptied (the row is kept, so a later save PATCHes it). Classes already created from it are untouched. params.source: the classification source.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onColumnMapRemoveClicked"
+     ],
+     "lines": 42
+    },
+    {
+     "name": "removeFaBookChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/removeFaBookChain.js",
+     "about": "Remove a BU's book assignment. Hard delete, as for BU & Org mappings. Removing never touches units already imported: a rule only governs what FUTURE imports bring in. The confirmation says so, because a consultant removing a row will otherwise reasonably wonder whether equipment disappears. Removal can also CHANGE ANOTHER ROW'S STATUS: take the second BU off a book and the first becomes a sole owner again. The reload below is what shows that.",
+     "calls": [
+      "eqp-v1/deleteBuFaBook"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onFaRemoveClicked"
+     ],
+     "lines": 45
+    },
+    {
+     "name": "resetChangesChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/resetChangesChain.js",
+     "about": "Reverts all unsaved changes by reloading the configuration data from the server. @param {Object} context",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onCancel"
+     ],
+     "lines": 42
+    },
+    {
+     "name": "resetWeekEndDayChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/resetWeekEndDayChain.js",
+     "about": "Admin escape hatch: WEEK_END_DAY locks once it has a saved value (see the select's disabled expression on the Feature Flags tab) — it's meant to be a one-time pick, not something that flips around every session. This clears the stored value back to empty so the select re-enables when business genuinely needs to change it, without anyone having to edit the DB by hand.",
+     "calls": [
+      "eqp-v1/patchConfGlobalSettingsById"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onWeekEndDayResetConfirmed"
+     ],
+     "lines": 54
+    },
+    {
+     "name": "saveBuOrgEditChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveBuOrgEditChain.js",
+     "about": "Save the BU & Org mapping edit dialog: PATCH the row's orgRole (Yard Type) and isTransactable by id, then reload. BU + yard are fixed.",
+     "calls": [
+      "eqp-v1/patchBuOrgMapping"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onBuOrgEditSaveConfirmed"
+     ],
+     "lines": 66
+    },
+    {
+     "name": "saveChangesChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveChangesChain.js",
+     "about": "NOTE: BU & Org Mapping persists immediately on Add/Delete (its own upsert-by-BU PUT), so it is intentionally NOT handled here.",
+     "calls": [
+      "eqp-v1/patchConfGlobalSettingsById",
+      "eqp-v1/postConfGlobalSettings",
+      "eqp-v1/getConfGlobalSettings"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onSave"
+     ],
+     "lines": 155
+    },
+    {
+     "name": "saveClassMapPrecedenceChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveClassMapPrecedenceChain.js",
+     "about": "SOURCE PRECEDENCE changed on the Class Mapping sub-tab: saved immediately as CLASS_MAPPING_PRECEDENCE (saveGlobalSettingNowChain) -- the key and format the item import's classify step reads (EQR_ITEM_IMPORT_MERGE_PKG): an ordered, comma-separated source list, first = highest, e.g. 'MAINTENANCE,INVENTORY'. Each imported item is classified from the FIRST source in the list it has data in (no fall-through to the next source). saveClassMapTruthChain keeps the list in step when the asset source changes.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onClassMapPrecedenceChanged"
+     ],
+     "lines": 53
+    },
+    {
+     "name": "saveClassMapTruthChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveClassMapTruthChain.js",
+     "about": "ASSET CLASSIFICATION SOURCE changed on the Class Mapping sub-tab: saved immediately as CLASS_MAPPING_SOURCE_OF_TRUTH (saveGlobalSettingNowChain -- this tab has no Save Changes button). Then, if the source picked in the column-mapping form is no longer allowed, fall back to Inventory so the form never holds a source the picker cannot show. A saved precedence names the asset source, so it is rewritten with the new one in the same rank (classMapPrecedenceForTruth) and saved too.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onClassMapTruthChanged"
+     ],
+     "lines": 70
+    },
+    {
+     "name": "saveColumnMappingChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveColumnMappingChain.js",
+     "about": "Save the column mapping for one classification source: which Fusion column holds the equipment CLASS and (optionally) which the SUBCLASS. Stored as a global setting CLASS_MAPPING_COLUMNS_<SOURCE> (JSON) through saveGlobalSettingNowChain -- one mapping per source; saving again replaces it. The column NAMES are stored too, so the table reads well even before the column list has loaded.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onColumnMapSaveClicked"
+     ],
+     "lines": 74
+    },
+    {
+     "name": "saveEditClassSubclassChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveEditClassSubclassChain.js",
+     "about": "Save the Edit Subclass dialog. Persists the Consumable / Auto-Consume flags and the Buffer Period via PATCH to EQR_EQUIPMENT_SUBCLASS (backend V149 added CONSUMABLE_FLAG / AUTO_CONSUME_FLAG / BUFFER_PERIOD_DAYS). The PATCH is partial — it sends only these three keys, so the backend leaves subclassName / subclassCode / FK / effective dates untouched. The grid row in AllSubclassesArray is reconciled from the PATCH response (the full DTO), not from the dialog's optimistic values. Endpoint path is nested under the parent class: PATCH /equiprite/v1/equipment-classes/{classId}/subclasses/{id} so…",
+     "calls": [
+      "eqp-v1/patchSubclass"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onEditClassSubclassSave"
+     ],
+     "lines": 141
+    },
+    {
+     "name": "saveEsDrawerChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveEsDrawerChain.js",
+     "about": "Save the BU Settings drawer (create or edit a BU's settings). EQR_CONF_EQUIPMENT_SETTING is COLUMNAR: one row per BU, each setting a typed column. So a save is ONE write, not the old per-key fan-out (which POSTed a settingKey/settingValue body per key against a table with neither column — producing duplicate rows with every typed column null). - BU already has a row (its id is __rowId on the loaded display row) → PATCH. - otherwise → POST a new row. esDraftToBody maps the draft to the camelCase columns with type coercion (bool → 'Y'/'N', number|null, string|null). The 5 BU denorm columns…",
+     "calls": [
+      "eqp-v1/listBuFaBooks",
+      "eqp-v1/patchConfEquipmentSettingsById",
+      "eqp-v1/postConfEquipmentSettings"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onEsSave"
+     ],
+     "lines": 164
+    },
+    {
+     "name": "saveFaDrawerChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveFaDrawerChain.js",
+     "about": "Save the Fixed Asset Books drawer: POST a new assignment, or PATCH the row's rule. The body comes from faBooks.bodyFromDraft, which decides isScopeConfirmed. That flag is the whole mechanism of the \"block until answered\" rule: a lone BU saved as ALL stays UNCONFIRMED so it can flip to \"needs answer\" when a second BU maps the same book. Do not set it here. PATCH sends only the rule. The BU and book are fixed once a row exists.",
+     "calls": [
+      "eqp-v1/patchBuFaBook",
+      "eqp-v1/createBuFaBook"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onFaSave"
+     ],
+     "lines": 76
+    },
+    {
+     "name": "saveGlobalSettingNowChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveGlobalSettingNowChain.js",
+     "about": "Saves ONE global setting immediately (conf-global-settings), for controls on tabs without a Save Changes button. PATCH when the row exists (id from ConfigSettingsMap), POST to create it otherwise -- same rules as saveChangesChain. Keeps ConfigSettingsMap in step so the next save PATCHes. Params: settingKey, settingValue, description (used only when creating). Returns { saved: true } on a real save, { saved: false } when there was nothing to save (value equals what is stored -- e.g. the value-changed fired while seeding), and THROWS on failure so the caller can restore its picker.",
+     "calls": [
+      "eqp-v1/patchConfGlobalSettingsById",
+      "eqp-v1/postConfGlobalSettings"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [],
+     "lines": 69
+    },
+    {
+     "name": "saveRequestNumberingChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/saveRequestNumberingChain.js",
+     "about": "Saves the four REQUEST_NUMBER_* settings as one unit. DELIBERATELY NOT on the tab's shared Save Changes button. That button stages every data-setting-key control on the tab and saves them together; the pattern needs a validation gate, and gating the shared button would put the Request Numbering card in a position to block unrelated settings from saving. Its own button keeps the blast radius to this card. Writes through saveGlobalSettingNowChain (PATCH when the key exists, POST when it does not), then updates BOTH maps: - $page.variables.ConfigSettingsMap, so this screen re-reads correctly; -…",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/requestNumberFormat"
+     ],
+     "on": [
+      "onRequestNumberSave"
+     ],
+     "lines": 105
+    },
+    {
+     "name": "setExpTypeMapDefaultChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/setExpTypeMapDefaultChain.js",
+     "about": "Make one mapping the default for its scope -- the type the timesheet pre-selects when a row has none yet. Only ever sets 'Y'. The backend clears the flag on the scope's other rows in the same transaction, so there is no \"unset\" action: a scope has one default or none, and none only happens before the first type is authored or after the default is deleted.",
+     "calls": [
+      "eqp-v1/patchExpTypeMap"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onExpTypeMapDefaultClicked"
+     ],
+     "lines": 61
+    },
+    {
+     "name": "switchExpTypeScopeChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/switchExpTypeScopeChain.js",
+     "about": "The add form's second dropdown follows its first: Equipment / Subclass / Class each have their own list. Swapping the scope type also CLEARS the chosen scope, because the ids are from different tables and keeping one would silently point at an unrelated row of the new type -- the backend would accept it if that id happens to exist at the new scope, and the mapping would be attached to the wrong thing with nothing on screen to show it.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onExpTypeScopeTypeChanged"
+     ],
+     "lines": 37
+    },
+    {
+     "name": "toggleAgreementTypeChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/toggleAgreementTypeChain.js",
+     "about": "PATCH an agreement type's isActive flag from the in-row switch. value is a boolean from oj-switch → mapped to 'Y'/'N'. Inactive types are excluded from the agreement-create picker (activeOnly=true) but retained.",
+     "calls": [
+      "eqp-v1/patchConfAgreementType"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onAgreementTypeToggle"
+     ],
+     "lines": 40
+    },
+    {
+     "name": "toggleAttachmentCategoryChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/toggleAttachmentCategoryChain.js",
+     "about": "In-row Active switch. An inactive category is no longer offered when adding attachments; documents already filed under it keep it. The backend REQUIRES objectVersionNumber on PATCH (400 without it, 409 when stale), unlike conf-agreement-types - so it is sent from the row. Either way the table reloads, which also puts the switch back if the PATCH failed.",
+     "calls": [
+      "eqp-v1/patchAttachmentCategory"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/currentUser"
+     ],
+     "on": [
+      "onAttCatToggle"
+     ],
+     "lines": 46
+    },
+    {
+     "name": "toggleBuOrgActiveChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/toggleBuOrgActiveChain.js",
+     "about": "Enable/disable a BU & Org mapping from the ACTIVE toggle. PATCHes just the isActiveFlag on that one row (per-row endpoint), then reloads. Guarded: the switch's value is one-way bound to the row's isActiveFlag, so a reload re-renders it and fires value-changed again — we skip when the desired state already matches, so there's no PATCH/reload loop.",
+     "calls": [
+      "eqp-v1/patchBuOrgMapping"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onBuOrgActiveToggled"
+     ],
+     "lines": 61
+    },
+    {
+     "name": "unmapChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/unmapChain.js",
+     "about": "Every Fusion field, per level. Explicit nulls: PATCH clears a field only when the key is present -- an omitted key is left as stored.",
+     "calls": [
+      "eqp-v1/patchSubclass",
+      "eqp-v1/patchEquipmentClass"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onUnmapConfirmed"
+     ],
+     "lines": 120
+    },
+    {
+     "name": "updateAgreementTypeChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/updateAgreementTypeChain.js",
+     "about": "Save the edit dialog: validate Name + Prefix, PATCH the agreement type, reload the table, close the dialog. Prefix rules: required; uppercase alphanumeric, no spaces, 2-10 chars; unique across existing types. (Auto-uppercase happens in the input's on-raw-value-changed; this is the authoritative re-validation.) DEFERRED (server-side, live/wiring iteration — do NOT enforce here): a Prefix that has already been used on a real agreement transaction cannot be renamed. That check belongs on the backend once numbering is wired.",
+     "calls": [
+      "eqp-v1/patchConfAgreementType"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onAgreementTypeEditSave"
+     ],
+     "lines": 99
+    },
+    {
+     "name": "updateAttachmentCategoryChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/updateAttachmentCategoryChain.js",
+     "about": "Save the edit dialog: label, where it is used, whether it needs dates and the default validity. The code is not sent - it is permanent. Changing \"Used on\" or \"Valid dates\" does NOT change documents already filed under the category; the new rules apply to new uploads and edits.",
+     "calls": [
+      "eqp-v1/patchAttachmentCategory"
+     ],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [
+      "resources/js/currentUser"
+     ],
+     "on": [
+      "onAttCatEditSave"
+     ],
+     "lines": 67
+    },
+    {
+     "name": "updateSettingChain",
+     "file": "webApps/vbredwoodapp/flows/setup/pages/configurations-page-chains/updateSettingChain.js",
+     "about": "@param {object} context @param {object} params @param {string} params.settingKey - The setting key (e.g. \"PROJECTS_MODULE_ENABLED\") @param {*} params.value - The new value (boolean from oj-switch or string from oj-input-text) @param {Event} params.event - The raw DOM event (used to extract settingKey when not passed directly)",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "onToggleChanged",
+      "onInputChanged"
+     ],
+     "lines": 194
+    }
+   ],
+   "modules": [
+    {
+     "name": "faBooksView",
+     "file": "webApps/vbredwoodapp/resources/js/faBooksView.js",
+     "about": "Fixed Asset Books screen - view-model helpers. Everything the Configurations \"Fixed Asset Books\" tab and its drawer need to turn API rows, report rows and drawer state into what is bound, kept out of the page module so it can be tested without VB (and so the page file, already far past the repo's size limit, does not grow). The decisions themselves - what a rule selects, which statuses exist, who may enable Fixed Assets - belong to faScope.js and are only CALLED from here, never re-derived.…",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 319
+    },
+    {
+     "name": "requestNumberFormat",
+     "file": "webApps/vbredwoodapp/resources/js/requestNumberFormat.js",
+     "about": "THE request number format. One engine, used by the cart's Submit and Save as Draft (through requestHeaderBody.nextRequestNumber) and by the Configurations screen's live preview, so what an admin sees while typing a pattern is produced by the same code that stamps the real request. Before this, both chains hard-coded 'REQ-' + Date.now(). That is still the DEFAULT and still the exact output when nothing is configured -- see DEFAULTS below. An environment that never opens the new config card…",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 338
+    },
+    {
+     "name": "currentUser",
+     "file": "webApps/vbredwoodapp/resources/js/currentUser.js",
+     "about": "Who is the signed-in user? Resolved from BOTH identity sources, because the app is reached two ways and only one of them is populated in each: published inside Fusion -> ?jwt=... on the URL, decoded for its `sub` dev / Designer preview -> $application.user, populated by VB Neither alone is sufficient. $application.user comes back with empty `login` and `userName` in this environment even while VB logs \"User john.dunbar is authenticated\"; the JWT is absent on a direct nav, a bookmark or in…",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 239
+    },
+    {
+     "name": "invOrgAddress",
+     "file": "webApps/vbredwoodapp/resources/js/invOrgAddress.js",
+     "about": "Inventory-org address enrichment for the BU & Org Mapping table. When an admin maps an inventory org to a business unit, we want the org's physical address (and its coordinates) stored on the mapping row, so the Transfer Order engine and anything distance-based has a real location for the yard instead of just a LOCATION_CODE. Flow, per mapping: 1. BIP report EQP_INV_ORG_ADDRESS_RP, keyed by the inventory org id → the hr_locations row for that org (address lines, city, region, postal code,…",
+     "local": [],
+     "calls": [],
+     "reports": [
+      "EQP_INV_ORG_ADDRESS_RP"
+     ],
+     "lines": 175
+    },
+    {
+     "name": "bipLov",
+     "file": "webApps/vbredwoodapp/resources/js/bipLov.js",
+     "about": "",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 132
+    },
+    {
+     "name": "expenditureTypes",
+     "file": "webApps/vbredwoodapp/resources/js/expenditureTypes.js",
+     "about": "THE expenditure-type list, resolved once and shared. Two screens ask the same question — \"which expenditure types can this line be charged under?\" — the Post Cost detail page (its per-equipment drawer and its misc-charge drawer) and the timesheet detail grid. This module is the single answer, deliberately: this app has already paid for the same logic living in seven chains in two versions (see the visibleRows comment in post-cost-test-detail-page.js), and a picker that offers different values…",
+     "local": [],
+     "calls": [
+      "eqp-v1/getEquipriteV1ViewsWorkbenchRequests",
+      "ProjectLOV/getFscmRestApiResources11_13_18_05ExpenditureTypesLOVByCategory",
+      "eqp-v1/resolveExpTypeMaps"
+     ],
+     "reports": [],
+     "lines": 490
+    },
+    {
+     "name": "fetchAllPages",
+     "file": "webApps/vbredwoodapp/resources/js/fetchAllPages.js",
+     "about": "Read a whole paged list, not just its first page. ASKING FOR A BIG size IS NOT ENOUGH. These endpoints cap the page and return their own maximum without saying so. Verified on the equipment master: 306 rows exist, `size=10000` came back with recordCount=306, pageSize=200, totalPages=2, hasMore=true — a valid HTTP 200 carrying two thirds of the data. Nothing throws, nothing warns; the caller just silently works from a partial set. That truncation has already caused two separate visible bugs: -…",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 84
+    },
+    {
+     "name": "nlrMaps",
+     "file": "webApps/vbredwoodapp/resources/js/nlrMaps.js",
+     "about": "Equipment -> Non-Labor Resource mappings (EQR_NLR_MAP, V470). Decision 2026-11-06: usage cost posts with an NLR, and the NLR a piece of equipment bills under is AUTHORED, as in EquipRite 1.0 -- on the equipment master, with subclass and class as defaults when the master has none. The resolve endpoint applies that precedence (MASTER, then the master's SUBCLASS, then its CLASS; most specific wins, never a union). A mapping names an NLR and, optionally, its owning org. With an org it picks…",
+     "local": [],
+     "calls": [
+      "eqp-v1/resolveNlrMaps"
+     ],
+     "reports": [],
+     "lines": 187
+    },
+    {
+     "name": "faScope",
+     "file": "webApps/vbredwoodapp/resources/js/faScope.js",
+     "about": "Fixed-asset BU scope — who owns the assets of a shared fixed-asset book. Fusion cannot say. FA_BOOK_CONTROLS carries only SET_OF_BOOKS_ID, BUs share ledgers, and two BUs can map the same book (probe 11e: EPC_US_EAST_BU and EPC_US_WEST_BU share EPC_US FA CORP BOOK and its 6 assets). So a person decides, per BU and book, with a RULE: ALL every asset in the book (explicit \"share with every BU\") LOCATION a chosen location segment (1-3) is one of the given values CATEGORY a chosen category segment…",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 243
+    },
+    {
+     "name": "geocoder",
+     "file": "webApps/vbredwoodapp/resources/js/geocoder.js",
+     "about": "Mapbox public geocoding token — the app's own token, identical to the one in equipment-schedule-page.js, line-detail-page.js and the two create-request pages. It's a \"pk.\" public token; safe in client code. WAS a leftover Bryntum DEMO token ('matsbryntse'), copied in with their sample map code. That token is not ours and Mapbox rejects it with 401 Unauthorized, so every lookup() silently returned null (the function is best-effort and swallows !resp.ok). Symptom: addresses resolved but…",
+     "local": [],
+     "calls": [],
+     "reports": [],
+     "lines": 60
+    },
+    {
+     "name": "projectNlrs",
+     "file": "webApps/vbredwoodapp/resources/js/projectNlrs.js",
+     "about": "Non-labor resources (NLRs) a PROJECT/TASK may be charged for, per day. Source: the OIC integration EQP_PROJECT_NLR (clone of NLR_LOV), which runs the BI report /Custom/EquipRite/EQP_PROJECT_NLR_RPT.xdo. That report applies Fusion's own chargeability rules -- the task must be a chargeable lowest-level task, the NLR / its expenditure type / its owning-org assignment must be active, and the project's AND the task's transaction controls must both pass (inclusive = only what a Chargeable=Y control…",
+     "local": [],
+     "calls": [
+      "ics/getProjectNlrsProject",
+      "ics/getProjectNlrs",
+      "eqp-v1/getEquipriteV1EquipmentRequestById"
+     ],
+     "reports": [],
+     "lines": 241
+    }
+   ],
+   "variables": 183
+  },
+  "integrations": {
+   "rest": [
+    {
+     "endpoint": "eqp-v1/createConfAgreementType",
+     "service": "eqp-v1",
+     "operation": "createConfAgreementType",
+     "method": "POST",
+     "path": "/equiprite/v1/conf-agreement-types",
+     "summary": "Create a new agreement type",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "addAgreementTypeChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/createAttachmentCategory",
+     "service": "eqp-v1",
+     "operation": "createAttachmentCategory",
+     "method": "POST",
+     "path": "/equiprite/v1/conf-attachment-categories",
+     "summary": "Create an attachment category",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "addAttachmentCategoryChain"
+     ]
+    },
+    {
+     "endpoint": "bipService/runBIPReport",
+     "service": "bipService",
+     "operation": "runBIPReport",
+     "method": "POST",
+     "path": "/xmlpserver/services/ExternalReportWSSService",
+     "summary": "Run any BIP report via SOAP and return base64-encoded XML data",
+     "backend": "bipService",
+     "backendLabel": "Oracle BI Publisher (SOAP)",
+     "usedBy": [
+      "addBuOrgMappingChain",
+      "loadClassLovChain",
+      "loadClassMapTypesChain",
+      "loadFaBookLovChain",
+      "loadFaPreviewChain",
+      "loadSubclassLovChain",
+      "previewClassMapPairsChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/upsertBuOrgMappingsByBU",
+     "service": "eqp-v1",
+     "operation": "upsertBuOrgMappingsByBU",
+     "method": "PUT",
+     "path": "/equiprite/v1/bu-org-mappings",
+     "summary": "Upsert the full org-role tag set for one BU (deactivates absent rows)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "addBuOrgMappingChain"
+     ],
+     "params": {
+      "businessUnitId": "{{buId}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/listExpTypeMaps",
+     "service": "eqp-v1",
+     "operation": "listExpTypeMaps",
+     "method": "GET",
+     "path": "/equiprite/v1/exp-type-maps",
+     "summary": "List expenditure-type mappings",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "addExpTypeMapChain"
+     ],
+     "params": {
+      "scopeType": "{{scopeType}}",
+      "scopeId": "{{scopeId}}",
+      "page": "0",
+      "size": "200"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/createExpTypeMap",
+     "service": "eqp-v1",
+     "operation": "createExpTypeMap",
+     "method": "POST",
+     "path": "/equiprite/v1/exp-type-maps",
+     "summary": "Author one mapping",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "addExpTypeMapChain"
+     ]
+    },
+    {
+     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05FinBusinessUnitsLOV",
+     "service": "ProjectLOV",
+     "operation": "getFscmRestApiResources11_13_18_05FinBusinessUnitsLOV",
+     "method": "GET",
+     "path": "/fscmRestApi/resources/11.13.18.05/finBusinessUnitsLOV",
+     "summary": "",
+     "backend": "fusion",
+     "backendLabel": "Oracle Fusion REST",
+     "usedBy": [
+      "captureEsBuChain",
+      "captureFaBuChain",
+      "loadEsSettingsChain",
+      "loadFaBooksChain",
+      "openEsEditChain",
+      "the page's data (ServiceDataProvider)"
+     ],
+     "params": {
+      "q": "BusinessUnitId={{id}}",
+      "limit": "1"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/bulkCreateClassesFromFusion",
+     "service": "eqp-v1",
+     "operation": "bulkCreateClassesFromFusion",
+     "method": "POST",
+     "path": "/equiprite/v1/equipment-classes/bulk-from-fusion",
+     "summary": "Create / link equipment classes and subclasses from Fusion class-subclass pairs (dryRun previews without writing)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "createClassMapPairsChain",
+      "previewClassMapPairsChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/createEquipmentClass",
+     "service": "eqp-v1",
+     "operation": "createEquipmentClass",
+     "method": "POST",
+     "path": "/equiprite/v1/equipment-classes",
+     "summary": "Create equipment class",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "createClassSubclassChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/createSubclass",
+     "service": "eqp-v1",
+     "operation": "createSubclass",
+     "method": "POST",
+     "path": "/equiprite/v1/equipment-classes/{classId}/subclasses",
+     "summary": "Create subclass under a class",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "createClassSubclassChain"
+     ],
+     "params": {
+      "classId": "{{classId}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/deleteConfAgreementType",
+     "service": "eqp-v1",
+     "operation": "deleteConfAgreementType",
+     "method": "DELETE",
+     "path": "/equiprite/v1/conf-agreement-types/{id}",
+     "summary": "Delete an agreement type",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "deleteAgreementTypeChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/deleteAttachmentCategory",
+     "service": "eqp-v1",
+     "operation": "deleteAttachmentCategory",
+     "method": "DELETE",
+     "path": "/equiprite/v1/conf-attachment-categories/{id}",
+     "summary": "Delete an unused category (409 if any attachment uses it - deactivate instead)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "deleteAttachmentCategoryChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/deleteBuOrgMapping",
+     "service": "eqp-v1",
+     "operation": "deleteBuOrgMapping",
+     "method": "DELETE",
+     "path": "/equiprite/v1/bu-org-mappings/{id}",
+     "summary": "Delete BU org mapping",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "deleteBuOrgMappingRowChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/deleteEquipmentClass",
+     "service": "eqp-v1",
+     "operation": "deleteEquipmentClass",
+     "method": "DELETE",
+     "path": "/equiprite/v1/equipment-classes/{id}",
+     "summary": "Soft-delete equipment class (sets effectiveEndDate). Guarded: 409 if active subclasses remain. Returns the ended DTO; 404 if already ended.",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "deleteClassChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/deleteExpTypeMap",
+     "service": "eqp-v1",
+     "operation": "deleteExpTypeMap",
+     "method": "DELETE",
+     "path": "/equiprite/v1/exp-type-maps/{id}",
+     "summary": "Hard-delete one mapping (204). These rows are config; there is no soft delete.",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "deleteExpTypeMapChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/deleteSubclass",
+     "service": "eqp-v1",
+     "operation": "deleteSubclass",
+     "method": "DELETE",
+     "path": "/equiprite/v1/equipment-classes/{classId}/subclasses/{id}",
+     "summary": "Soft-delete subclass (sets effectiveEndDate). Returns the ended DTO; 404 if already ended.",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "deleteSubclassChain"
+     ],
+     "params": {
+      "classId": "{{classId}}",
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/getConfAgreementTypes",
+     "service": "eqp-v1",
+     "operation": "getConfAgreementTypes",
+     "method": "GET",
+     "path": "/equiprite/v1/conf-agreement-types",
+     "summary": "List configurable agreement types; activeOnly=true returns only active",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "loadAgreementTypesChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/getAllSubclasses",
+     "service": "eqp-v1",
+     "operation": "getAllSubclasses",
+     "method": "GET",
+     "path": "/equiprite/v1/subclasses",
+     "summary": "List all subclasses across every class (flat)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "loadAllSubclassesChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/listAttachmentCategories",
+     "service": "eqp-v1",
+     "operation": "listAttachmentCategories",
+     "method": "GET",
+     "path": "/equiprite/v1/conf-attachment-categories",
+     "summary": "List attachment categories (Configurations)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "loadAttachmentCategoriesChain"
+     ],
+     "params": {
+      "activeOnly": "false"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/getAuditTrail",
+     "service": "eqp-v1",
+     "operation": "getAuditTrail",
+     "method": "GET",
+     "path": "/equiprite/v1/audit-trail",
+     "summary": "Get configuration audit trail entries",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "loadAuditTrailChain",
+      "loadConfigSettingsChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/getBuOrgMappings",
+     "service": "eqp-v1",
+     "operation": "getBuOrgMappings",
+     "method": "GET",
+     "path": "/equiprite/v1/bu-org-mappings",
+     "summary": "Get Business Unit to Inventory Org mappings",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "loadBuOrgMappingsChain"
+     ]
+    },
+    {
+     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05Subinventories",
+     "service": "ProjectLOV",
+     "operation": "getFscmRestApiResources11_13_18_05Subinventories",
+     "method": "GET",
+     "path": "/fscmRestApi/resources/11.13.18.05/subinventories",
+     "summary": "",
+     "backend": "fusion",
+     "backendLabel": "Oracle Fusion REST",
+     "usedBy": [
+      "loadBuOrgSubinventoriesChain"
+     ],
+     "params": {
+      "q": "OrganizationId={{orgId}}",
+      "fields": "SecondaryInventoryName,Description,OrganizationId,DisableDate",
+      "limit": "500",
+      "onlyData": "true"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/getConfGlobalSettings",
+     "service": "eqp-v1",
+     "operation": "getConfGlobalSettings",
+     "method": "GET",
+     "path": "/equiprite/v1/conf-global-settings",
+     "summary": "List all global configuration settings",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "loadConfigSettingsChain",
+      "saveChangesChain"
+     ],
+     "params": {
+      "size": "500"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/getEquipmentClasses",
+     "service": "eqp-v1",
+     "operation": "getEquipmentClasses",
+     "method": "GET",
+     "path": "/equiprite/v1/equipment-classes",
+     "summary": "List all equipment classes",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "loadEquipmentClassesChain",
+      "loadExpTypeOptionsChain"
+     ],
+     "params": {
+      "size": "1000"
+     }
+    },
+    {
+     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05ProjectExpenditureOrganizationsLOV",
+     "service": "ProjectLOV",
+     "operation": "getFscmRestApiResources11_13_18_05ProjectExpenditureOrganizationsLOV",
+     "method": "GET",
+     "path": "/fscmRestApi/resources/11.13.18.05/projectOrganizationsLOV",
+     "summary": "",
+     "backend": "fusion",
+     "backendLabel": "Oracle Fusion REST",
+     "usedBy": [
+      "loadEsExpOrgsChain"
+     ],
+     "params": {
+      "finder": "ActiveProjectExpenditureOrganizationsForBusinessUnit;BusinessUnitId={{buId}}",
+      "limit": "500"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/getConfEquipmentSettings",
+     "service": "eqp-v1",
+     "operation": "getConfEquipmentSettings",
+     "method": "GET",
+     "path": "/equiprite/v1/conf-equipment-settings",
+     "summary": "Get all configuration equipment settings",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "loadEsSettingsChain",
+      "the page's data (ServiceDataProvider)"
+     ],
+     "params": {
+      "pageSize": "10000",
+      "limit": "10000"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/listExpTypeMapAdmin",
+     "service": "eqp-v1",
+     "operation": "listExpTypeMapAdmin",
+     "method": "GET",
+     "path": "/equiprite/v1/views/exp-type-map-admin",
+     "summary": "Admin grid: every mapping joined out to a readable scope name",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "loadExpTypeMapsChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/listBuFaBooks",
+     "service": "eqp-v1",
+     "operation": "listBuFaBooks",
+     "method": "GET",
+     "path": "/equiprite/v1/conf-bu-fa-books",
+     "summary": "List BU to fixed-asset-book assignments",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "loadFaBooksChain",
+      "saveEsDrawerChain"
+     ],
+     "params": {
+      "isActiveFlag": "Y"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/listNlrMapAdmin",
+     "service": "eqp-v1",
+     "operation": "listNlrMapAdmin",
+     "method": "GET",
+     "path": "/equiprite/v1/views/nlr-map-admin",
+     "summary": "V470 equipment to non-labor resource mapping (listNlrMapAdmin)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "loadNlrMapsChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/deleteNlrMap",
+     "service": "eqp-v1",
+     "operation": "deleteNlrMap",
+     "method": "DELETE",
+     "path": "/equiprite/v1/nlr-maps/{id}",
+     "summary": "V470 equipment to non-labor resource mapping (deleteNlrMap)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "nlrMapActionChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/patchNlrMap",
+     "service": "eqp-v1",
+     "operation": "patchNlrMap",
+     "method": "PATCH",
+     "path": "/equiprite/v1/nlr-maps/{id}",
+     "summary": "V470 equipment to non-labor resource mapping (patchNlrMap)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "nlrMapActionChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/listNlrMaps",
+     "service": "eqp-v1",
+     "operation": "listNlrMaps",
+     "method": "GET",
+     "path": "/equiprite/v1/nlr-maps",
+     "summary": "V470 equipment to non-labor resource mapping (listNlrMaps)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "nlrMapActionChain"
+     ],
+     "params": {
+      "scopeType": "{{scopeType}}",
+      "scopeId": "{{scopeId}}",
+      "page": "0",
+      "size": "200"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/createNlrMap",
+     "service": "eqp-v1",
+     "operation": "createNlrMap",
+     "method": "POST",
+     "path": "/equiprite/v1/nlr-maps",
+     "summary": "V470 equipment to non-labor resource mapping (createNlrMap)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "nlrMapActionChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/deleteBuFaBook",
+     "service": "eqp-v1",
+     "operation": "deleteBuFaBook",
+     "method": "DELETE",
+     "path": "/equiprite/v1/conf-bu-fa-books/{id}",
+     "summary": "Remove an assignment",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "removeFaBookChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/patchConfGlobalSettingsById",
+     "service": "eqp-v1",
+     "operation": "patchConfGlobalSettingsById",
+     "method": "PATCH",
+     "path": "/equiprite/v1/conf-global-settings/{id}",
+     "summary": "Update a global setting by ID",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "resetWeekEndDayChain",
+      "saveChangesChain",
+      "saveGlobalSettingNowChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/patchBuOrgMapping",
+     "service": "eqp-v1",
+     "operation": "patchBuOrgMapping",
+     "method": "PATCH",
+     "path": "/equiprite/v1/bu-org-mappings/{id}",
+     "summary": "Partial update BU org mapping",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "saveBuOrgEditChain",
+      "toggleBuOrgActiveChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/postConfGlobalSettings",
+     "service": "eqp-v1",
+     "operation": "postConfGlobalSettings",
+     "method": "POST",
+     "path": "/equiprite/v1/conf-global-settings",
+     "summary": "Create a global configuration setting",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "saveChangesChain",
+      "saveGlobalSettingNowChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/patchSubclass",
+     "service": "eqp-v1",
+     "operation": "patchSubclass",
+     "method": "PATCH",
+     "path": "/equiprite/v1/equipment-classes/{classId}/subclasses/{id}",
+     "summary": "Partial update subclass",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "saveEditClassSubclassChain",
+      "unmapChain"
+     ],
+     "params": {
+      "classId": "{{classId}}",
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/patchConfEquipmentSettingsById",
+     "service": "eqp-v1",
+     "operation": "patchConfEquipmentSettingsById",
+     "method": "PATCH",
+     "path": "/equiprite/v1/conf-equipment-settings/{id}",
+     "summary": "Update a configuration equipment setting by ID",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "saveEsDrawerChain"
+     ],
+     "params": {
+      "id": "{{rowId}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/postConfEquipmentSettings",
+     "service": "eqp-v1",
+     "operation": "postConfEquipmentSettings",
+     "method": "POST",
+     "path": "/equiprite/v1/conf-equipment-settings",
+     "summary": "Create a configuration equipment setting",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "saveEsDrawerChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/patchBuFaBook",
+     "service": "eqp-v1",
+     "operation": "patchBuFaBook",
+     "method": "PATCH",
+     "path": "/equiprite/v1/conf-bu-fa-books/{id}",
+     "summary": "Change an assignment's rule or active flag",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "saveFaDrawerChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/createBuFaBook",
+     "service": "eqp-v1",
+     "operation": "createBuFaBook",
+     "method": "POST",
+     "path": "/equiprite/v1/conf-bu-fa-books",
+     "summary": "Assign a book to a business unit",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "saveFaDrawerChain"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/patchExpTypeMap",
+     "service": "eqp-v1",
+     "operation": "patchExpTypeMap",
+     "method": "PATCH",
+     "path": "/equiprite/v1/exp-type-maps/{id}",
+     "summary": "Partial update - expenditureType, expenditureTypeId, isDefault, displayOrder only",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "setExpTypeMapDefaultChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/patchConfAgreementType",
+     "service": "eqp-v1",
+     "operation": "patchConfAgreementType",
+     "method": "PATCH",
+     "path": "/equiprite/v1/conf-agreement-types/{id}",
+     "summary": "Partial update â€” toggle isActive or change label/order",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "toggleAgreementTypeChain",
+      "updateAgreementTypeChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/patchAttachmentCategory",
+     "service": "eqp-v1",
+     "operation": "patchAttachmentCategory",
+     "method": "PATCH",
+     "path": "/equiprite/v1/conf-attachment-categories/{id}",
+     "summary": "Edit a category (objectVersionNumber required; categoryCode immutable)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "toggleAttachmentCategoryChain",
+      "updateAttachmentCategoryChain"
+     ],
+     "params": {
+      "id": "{{id}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/patchEquipmentClass",
+     "service": "eqp-v1",
+     "operation": "patchEquipmentClass",
+     "method": "PATCH",
+     "path": "/equiprite/v1/equipment-classes/{id}",
+     "summary": "Partial update equipment class",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "unmapChain"
+     ],
+     "params": {
+      "id": "{{classId}}"
+     }
+    },
+    {
+     "endpoint": "eqp-v1/getEquipriteV1ViewsWorkbenchRequests",
+     "service": "eqp-v1",
+     "operation": "getEquipriteV1ViewsWorkbenchRequests",
+     "method": "GET",
+     "path": "/equiprite/v1/views/workbench-requests",
+     "summary": "List all workbench requests (manager view)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "expenditureTypes"
+     ]
+    },
+    {
+     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05ExpenditureTypesLOVByCategory",
+     "service": "ProjectLOV",
+     "operation": "getFscmRestApiResources11_13_18_05ExpenditureTypesLOVByCategory",
+     "method": "GET",
+     "path": "/fscmRestApi/resources/11.13.18.05/expenditureTypesLOV",
+     "summary": "",
+     "backend": "fusion",
+     "backendLabel": "Oracle Fusion REST",
+     "usedBy": [
+      "expenditureTypes"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/resolveExpTypeMaps",
+     "service": "eqp-v1",
+     "operation": "resolveExpTypeMaps",
+     "method": "GET",
+     "path": "/equiprite/v1/views/exp-type-map-resolve",
+     "summary": "Which expenditure types apply to each equipment master. One call for a whole grid.",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "expenditureTypes"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/resolveNlrMaps",
+     "service": "eqp-v1",
+     "operation": "resolveNlrMaps",
+     "method": "GET",
+     "path": "/equiprite/v1/views/nlr-map-resolve",
+     "summary": "V470 equipment to non-labor resource mapping (resolveNlrMaps)",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "nlrMaps"
+     ]
+    },
+    {
+     "endpoint": "ics/getProjectNlrsProject",
+     "service": "ics",
+     "operation": "getProjectNlrsProject",
+     "method": "GET",
+     "path": "/ic/api/integration/v2/flows/rest/project/EQUIPRITE_DEV/EQP_PROJECT_NLR/1.0/getProjectNlrs",
+     "summary": "NLRs a project/task may be charged for, per day (OIC EQP_PROJECT_NLR -> BI /Custom/EquipRite/EQP_PROJECT_NLR_RPT.xdo, which applies Fusion's chargeable-task, active-date and project+task transaction-control rules). PROJECT url, served by an integration inside OIC project EQUIPRITE_DEV - live on riteoicdev 2026-10-26. Called through resources/js/projectNlrs.js, which tries this url and falls back to v1 on 404 - never call either operation directly. Design: MD/Post Cost/NLR/.",
+     "backend": "ics",
+     "backendLabel": "Oracle Integration Cloud (OIC)",
+     "usedBy": [
+      "projectNlrs"
+     ]
+    },
+    {
+     "endpoint": "ics/getProjectNlrs",
+     "service": "ics",
+     "operation": "getProjectNlrs",
+     "method": "GET",
+     "path": "/ic/api/integration/v1/flows/rest/EQP_PROJECT_NLR/1.0/getProjectNlrs",
+     "summary": "Same flow as getProjectNlrsProject at the v1 (unprojected) url. Fallback only - see getProjectNlrsProject.",
+     "backend": "ics",
+     "backendLabel": "Oracle Integration Cloud (OIC)",
+     "usedBy": [
+      "projectNlrs"
+     ]
+    },
+    {
+     "endpoint": "eqp-v1/getEquipriteV1EquipmentRequestById",
+     "service": "eqp-v1",
+     "operation": "getEquipriteV1EquipmentRequestById",
+     "method": "GET",
+     "path": "/equiprite/v1/equipment-requests/{id}",
+     "summary": "Get equipment request by ID",
+     "backend": "eqpt",
+     "backendLabel": "eqpt",
+     "usedBy": [
+      "projectNlrs"
+     ]
+    },
+    {
+     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05InventoryOrganizations",
+     "service": "ProjectLOV",
+     "operation": "getFscmRestApiResources11_13_18_05InventoryOrganizations",
+     "method": "GET",
+     "path": "/fscmRestApi/resources/11.13.18.05/inventoryOrganizations",
+     "summary": "",
+     "backend": "fusion",
+     "backendLabel": "Oracle Fusion REST",
+     "usedBy": [
+      "the page's data (ServiceDataProvider)"
+     ]
+    }
+   ],
+   "reports": [
+    "EQP_CATEGORY_LOV_RP",
+    "EQP_FA_BOOKS_LOV_RP",
+    "EQP_FA_SCOPE_PREVIEW_RP",
+    "EQP_INV_ORG_ADDRESS_RP"
+   ],
+   "local": [],
+   "backends": [
+    "eqpt",
+    "Oracle BI Publisher (SOAP)",
+    "Oracle Fusion REST",
+    "Oracle Integration Cloud (OIC)"
+   ],
+   "lovs": [
+    {
+     "field": "ENABLE QUOTES FOR",
+     "component": "oj-select-single",
+     "target": "EnableQuotesSel",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "NONE",
+       "text": "None"
+      },
+      {
+       "key": "PROJECTS",
+       "text": "Internal only"
+      },
+      {
+       "key": "CUSTOMER",
+       "text": "External only"
+      },
+      {
+       "key": "BOTH",
+       "text": "Both"
+      }
+     ],
+     "via": "",
+     "when": "",
+     "start": "CUSTOMER"
+    },
+    {
+     "field": "UNIQUENESS",
+     "component": "oj-select-single",
+     "target": "ReqNumModeSel",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "TIMESTAMP",
+       "text": "Timestamp — unique, non-sequential"
+      },
+      {
+       "key": "SEQUENCE",
+       "text": "Running sequence — readable, follows the pattern"
+      }
+     ],
+     "via": "",
+     "when": "",
+     "start": "TIMESTAMP"
+    },
+    {
+     "field": "SEQUENCE RESETS",
+     "component": "oj-select-single",
+     "target": "ReqNumResetSel",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "NEVER",
+       "text": "Never"
+      },
+      {
+       "key": "YEARLY",
+       "text": "Every year"
+      },
+      {
+       "key": "MONTHLY",
+       "text": "Every month"
+      }
+     ],
+     "via": "",
+     "when": "",
+     "start": "NEVER"
+    },
+    {
+     "field": "WEEK END DAY",
+     "component": "oj-select-single",
+     "target": "WeekEndDaySel",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "SUNDAY",
+       "text": "Sunday"
+      },
+      {
+       "key": "MONDAY",
+       "text": "Monday"
+      },
+      {
+       "key": "TUESDAY",
+       "text": "Tuesday"
+      },
+      {
+       "key": "WEDNESDAY",
+       "text": "Wednesday"
+      },
+      {
+       "key": "THURSDAY",
+       "text": "Thursday"
+      },
+      {
+       "key": "FRIDAY",
+       "text": "Friday"
+      },
+      {
+       "key": "SATURDAY",
+       "text": "Saturday"
+      }
+     ],
+     "via": "",
+     "when": "",
+     "start": ""
+    },
+    {
+     "field": "ASSET CLASSIFICATION SOURCE",
+     "component": "oj-select-single",
+     "target": "ClassMapTruthSel",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "FIXED_ASSET",
+       "text": "Fixed Assets"
+      },
+      {
+       "key": "MAINTENANCE",
+       "text": "Maintenance"
+      }
+     ],
+     "via": "",
+     "when": "",
+     "start": ""
+    },
+    {
+     "field": "SOURCE PRECEDENCE",
+     "component": "oj-select-single",
+     "target": "ClassMapPrecedenceSel",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "chain",
+     "endpoint": "eqp-v1/getConfGlobalSettings",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "data",
+     "params": {},
+     "values": [],
+     "via": "loadConfigSettingsChain",
+     "when": ""
+    },
+    {
+     "field": "CLASSIFICATION SOURCE",
+     "component": "oj-select-single",
+     "target": "sourceType",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "chain",
+     "endpoint": "eqp-v1/getConfGlobalSettings",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "data",
+     "params": {},
+     "values": [],
+     "via": "loadConfigSettingsChain",
+     "when": ""
+    },
+    {
+     "field": "CLASS FIELD GROUP",
+     "component": "oj-select-single",
+     "target": "classGroup",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "CLASS COLUMN",
+     "component": "oj-select-single",
+     "target": "classColumn",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "SUBCLASS FIELD GROUP",
+     "component": "oj-select-single",
+     "target": "subclassGroup",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "SUBCLASS COLUMN",
+     "component": "oj-select-single",
+     "target": "subclassColumn",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "EQUIPMENT CLASS",
+     "component": "oj-select-single",
+     "target": "EquipmentClassSelectedId",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "id",
+     "sub": "",
+     "subFrom": "",
+     "source": "chain",
+     "endpoint": "eqp-v1/getEquipmentClasses",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "data",
+     "params": {},
+     "values": [],
+     "via": "loadEquipmentClassesChain",
+     "when": ""
+    },
+    {
+     "field": "EQUIPMENT SUBCLASS",
+     "component": "oj-select-single",
+     "target": "EquipmentSubclassSelectedId",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "chain",
+     "endpoint": "eqp-v1/getEquipmentClasses",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "loadEquipmentClassesChain",
+     "when": ""
+    },
+    {
+     "field": "FILTER BY BUSINESS UNIT",
+     "component": "oj-select-single",
+     "target": "BuOrgFilterBUId",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "chain",
+     "endpoint": "eqp-v1/getBuOrgMappings",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "loadBuOrgMappingsChain",
+     "when": ""
+    },
+    {
+     "field": "Applies to",
+     "component": "oj-select-single",
+     "target": "scopeType",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "MASTER",
+       "text": "Equipment"
+      },
+      {
+       "key": "SUBCLASS",
+       "text": "Subclass"
+      },
+      {
+       "key": "CLASS",
+       "text": "Class"
+      }
+     ],
+     "via": "",
+     "when": "",
+     "start": "MASTER",
+     "startFrom": "loadExpTypeOptionsChain"
+    },
+    {
+     "field": "Equipment / subclass / class",
+     "component": "oj-select-single",
+     "target": "scopeId",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "id",
+     "sub": "",
+     "subFrom": "",
+     "source": "chain",
+     "endpoint": "eqp-v1/getEquipmentClasses",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "loadExpTypeOptionsChain",
+     "when": ""
+    },
+    {
+     "field": "Expenditure type",
+     "component": "oj-select-single",
+     "target": "expenditureType",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "value",
+     "sub": "",
+     "subFrom": "",
+     "source": "chain",
+     "endpoint": "eqp-v1/getEquipmentClasses",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "loadExpTypeOptionsChain",
+     "when": ""
+    },
+    {
+     "field": "Scope",
+     "component": "oj-select-single",
+     "target": "ExpTypeMapFilterScope",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "",
+       "text": "All scopes"
+      },
+      {
+       "key": "MASTER",
+       "text": "Equipment"
+      },
+      {
+       "key": "SUBCLASS",
+       "text": "Subclass"
+      },
+      {
+       "key": "CLASS",
+       "text": "Class"
+      }
+     ],
+     "via": "",
+     "when": "",
+     "start": "MASTER",
+     "startFrom": "loadExpTypeOptionsChain"
+    },
+    {
+     "field": "Non-labor resource (owner)",
+     "component": "oj-select-single",
+     "target": "NewNlrMapKey",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Can Be Attached To",
+     "component": "oj-select-single",
+     "target": "appliesTo",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "HEADER",
+       "text": "Equipment"
+      },
+      {
+       "key": "LINE",
+       "text": "Serial units"
+      },
+      {
+       "key": "BOTH",
+       "text": "Equipment and serial units"
+      }
+     ],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Has an Expiry Date",
+     "component": "oj-select-single",
+     "target": "validityRequired",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "Y",
+       "text": "Yes"
+      },
+      {
+       "key": "N",
+       "text": "No"
+      }
+     ],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Type",
+     "component": "oj-select-single",
+     "target": "trackingType",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "INVENTORY",
+       "text": "Inventory"
+      },
+      {
+       "key": "MAINTENANCE",
+       "text": "Maintenance"
+      },
+      {
+       "key": "FIXED_ASSET",
+       "text": "Fixed Assets"
+      },
+      {
+       "key": "CUSTOM",
+       "text": "Custom"
+      }
+     ],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Consumable",
+     "component": "oj-select-single",
+     "target": "consumableFlag",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "Y",
+       "text": "Yes"
+      },
+      {
+       "key": "N",
+       "text": "No"
+      }
+     ],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Auto-Consume",
+     "component": "oj-select-single",
+     "target": "autoConsumeFlag",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "Y",
+       "text": "Yes"
+      },
+      {
+       "key": "N",
+       "text": "No"
+      }
+     ],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Timesheet Entry",
+     "component": "oj-select-single",
+     "target": "timesheetEntryEnabled",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "Y",
+       "text": "Yes"
+      },
+      {
+       "key": "N",
+       "text": "No"
+      }
+     ],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "CLASSIFICATION SOURCE",
+     "component": "oj-select-single",
+     "target": "ClassMapPairsSource",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "chain",
+     "endpoint": "eqp-v1/getConfGlobalSettings",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "data",
+     "params": {},
+     "values": [],
+     "via": "loadConfigSettingsChain",
+     "when": "$page.functions.bulkSourceOptions(ConfigSettingsMap, ClassMapTruthSel).length > 0"
+    },
+    {
+     "field": "YARD TYPE",
+     "component": "oj-select-single",
+     "target": "yardType",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "EQUIPMENT_YARD",
+       "text": "Equipment Yard"
+      },
+      {
+       "key": "DESTINATION_YARD",
+       "text": "Destination Yard"
+      },
+      {
+       "key": "VIRTUAL_PROJECT",
+       "text": "Virtual Project Org"
+      },
+      {
+       "key": "VIRTUAL_CUSTOMER",
+       "text": "Virtual Customer Org"
+      }
+     ],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "SUBINVENTORY",
+     "component": "oj-select-single",
+     "target": "subinventoryCode",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "chain",
+     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05Subinventories",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "loadBuOrgSubinventoriesChain",
+     "when": "$page.functions.buOrgNeedsSubinventory(BuOrgEditTarget.yardType)"
+    },
+    {
+     "field": "TRANSACTABLE",
+     "component": "oj-select-single",
+     "target": "isTransactable",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "Y",
+       "text": "Yes"
+      },
+      {
+       "key": "N",
+       "text": "No"
+      }
+     ],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Business Unit",
+     "component": "oj-select-single",
+     "target": "BuOrgSelectedBUId",
+     "text": "businessUnitName",
+     "key": "businessUnitId",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "businessUnitId",
+     "subFrom": "",
+     "source": "service",
+     "endpoint": "eqp-v1/getConfEquipmentSettings",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "data",
+     "params": {
+      "limit": "500"
+     },
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "YARD",
+     "component": "oj-select-single",
+     "target": "orgId",
+     "text": "",
+     "key": "OrganizationId",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "service",
+     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05InventoryOrganizations",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "items",
+     "params": {
+      "q": "[[ $page.variables.BuOrgSelectedBUId ? 'ManagementBusinessUnitId=' + $page.variables.BuOrgSelectedBUId : 'OrganizationId=-1' ]]",
+      "fields": "OrganizationId,OrganizationCode,OrganizationName,ManagementBusinessUnitId,LocationCode,Status",
+      "limit": "200"
+     },
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "TYPE",
+     "component": "oj-select-single",
+     "target": "trackingType",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "chain",
+     "endpoint": "eqp-v1/getConfGlobalSettings",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "data",
+     "params": {},
+     "values": [],
+     "via": "loadConfigSettingsChain",
+     "when": ""
+    },
+    {
+     "field": "CLASS",
+     "component": "oj-select-single",
+     "target": "classLovId",
+     "text": "",
+     "key": "value",
+     "textFrom": "LOV_NAME",
+     "keyFrom": "LOV_ID",
+     "sub": "label",
+     "subFrom": "",
+     "source": "report",
+     "endpoint": "",
+     "report": "EQP_CATEGORY_LOV_RP",
+     "reportPath": "/Custom/EquipRite/EQP_CATEGORY_LOV_RP.xdo",
+     "rowTag": "G_1",
+     "search": "",
+     "itemsPath": "",
+     "params": {
+      "P_TRACKING_TYPE": "{{source}}",
+      "P_CATEGORY_TYPE": "{{classColumn}}",
+      "P_PARENT_TYPE": "NONE",
+      "P_PARENT_ID": ""
+     },
+     "values": [],
+     "via": "loadClassLovChain",
+     "when": "newClassSubclass.trackingType !== 'CUSTOM'"
+    },
+    {
+     "field": "SUBCLASS (OPTIONAL)",
+     "component": "oj-select-single",
+     "target": "subclassLovId",
+     "text": "",
+     "key": "value",
+     "textFrom": "LOV_NAME",
+     "keyFrom": "LOV_ID",
+     "sub": "label",
+     "subFrom": "",
+     "source": "report",
+     "endpoint": "",
+     "report": "EQP_CATEGORY_LOV_RP",
+     "reportPath": "/Custom/EquipRite/EQP_CATEGORY_LOV_RP.xdo",
+     "rowTag": "G_1",
+     "search": "",
+     "itemsPath": "",
+     "params": {
+      "P_TRACKING_TYPE": "{{source}}",
+      "P_CATEGORY_TYPE": "{{subclassColumn}}",
+      "P_PARENT_TYPE": "{{classColumn}}",
+      "P_PARENT_ID": "{{classLovId}}"
+     },
+     "values": [],
+     "via": "loadSubclassLovChain",
+     "when": "newClassSubclass.trackingType !== 'CUSTOM'"
+    },
+    {
+     "field": "CONSUMABLE",
+     "component": "oj-select-single",
+     "target": "consumableFlag",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "Y",
+       "text": "Yes"
+      },
+      {
+       "key": "N",
+       "text": "No"
+      }
+     ],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "AUTO-CONSUME",
+     "component": "oj-select-single",
+     "target": "autoConsumeFlag",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "Y",
+       "text": "Yes"
+      },
+      {
+       "key": "N",
+       "text": "No"
+      }
+     ],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Business Unit",
+     "component": "oj-select-single",
+     "target": "buId",
+     "text": "BusinessUnitName",
+     "key": "BusinessUnitId",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "service",
+     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05FinBusinessUnitsLOV",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "items",
+     "params": {
+      "limit": "500"
+     },
+     "values": [],
+     "via": "",
+     "when": "!faIsEditMode"
+    },
+    {
+     "field": "Fixed Asset Book",
+     "component": "oj-select-single",
+     "target": "book",
+     "text": "",
+     "key": "value",
+     "textFrom": "LOV_NAME",
+     "keyFrom": "LOV_ID",
+     "sub": "",
+     "subFrom": "",
+     "source": "report",
+     "endpoint": "",
+     "report": "EQP_FA_BOOKS_LOV_RP",
+     "reportPath": "/Custom/EquipRite/EQP_FA_BOOKS_LOV_RP.xdo",
+     "rowTag": "G_1",
+     "search": "",
+     "itemsPath": "",
+     "params": {
+      "P_BOOK_CLASS": "CORPORATE"
+     },
+     "values": [],
+     "via": "loadFaBookLovChain",
+     "when": "!faIsEditMode"
+    },
+    {
+     "field": "Assignment rule",
+     "component": "oj-select-single",
+     "target": "ruleType",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "chain",
+     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05FinBusinessUnitsLOV",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "captureFaBuChain",
+     "when": ""
+    },
+    {
+     "field": "Segment",
+     "component": "oj-select-single",
+     "target": "segment",
+     "text": "",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "chain",
+     "endpoint": "ProjectLOV/getFscmRestApiResources11_13_18_05FinBusinessUnitsLOV",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "captureFaBuChain",
+     "when": ""
+    }
+   ]
+  },
+  "links": [],
+  "next": [],
+  "unresolvedLinks": []
+ },
+ "ai": null,
+ "screenshots": [
+  {
+   "id": "s1",
+   "file": "projects/p-1e51dc28f706/screens/vbredwoodapp.setup.configurations.1.jpg",
+   "at": "2026-11-24T07:33:16.434Z",
+   "by": "rite.user",
+   "source": "capture",
+   "caption": "",
+   "bytes": 135796,
+   "from": "workspace"
+  }
+ ],
+ "stories": [],
+ "at": "2026-11-24T07:33:16.383Z",
+ "by": "rite.user",
+ "codeHash": "418b911cbc3ba5fd"
+}
