@@ -198,11 +198,16 @@
               <p class="nx-sql-msg" id="sqlMessage" role="status"><span class="oj-ux-ico-check-circle" aria-hidden="true"></span><oj-bind-text value="[[ $variables.res.message ]]"></oj-bind-text></p>
             </oj-bind-if>
             <oj-bind-if test="[[ $variables.res.columns.length > 0 ]]">
+              <div :class="[[ 'nx-sql-resbox' + ($variables.resMax ? ' nx-sql-resbox--max' : '') ]]" id="sqlResBox">
               <div class="nx-sql-resbar">
                 <span id="sqlFetched"><oj-bind-text value="[[ 'Fetched ' + $variables.res.fetched + ' row' + ($variables.res.fetched === 1 ? '' : 's') + ($variables.res.more ? ' (more to fetch)' : '') + ' in ' + $functions.took($variables.res.ms) ]]"></oj-bind-text></span>
+                <input type="text" id="sqlResFilter" class="nx-sql-in nx-sql-resfilter" autocomplete="off" :value="[[ $variables.resFilter ]]" on-input="[[ $listeners.onResFilter ]]" placeholder="Filter rows…" aria-label="Filter the rows shown"/>
+                <oj-bind-if test="[[ !!$variables.resFilter ]]"><span class="nx-sql-filtn"><oj-bind-text value="[[ $functions.filterCount($variables.res.rows, $variables.resFilter) + ' of ' + $variables.res.rows.length ]]"></oj-bind-text></span></oj-bind-if>
                 <oj-bind-if test="[[ $variables.res.more ]]">
                   <button type="button" class="nx-btn nx-btn--sm" id="sqlMore" on-click="[[ $listeners.onMore ]]" :disabled="[[ !!$variables.busy ]]"><oj-bind-text value="[[ 'Fetch ' + $variables.fetch + ' more' ]]"></oj-bind-text></button>
                 </oj-bind-if>
+                <button type="button" class="nx-btn nx-btn--sm nx-sql-resmaxbtn" id="sqlResMax" on-click="[[ $listeners.onResMax ]]" :title="[[ $variables.resMax ? 'Back to the worksheet' : 'Open the results full screen' ]]">
+                  <span :class="[[ $variables.resMax ? 'oj-ux-ico-collapse' : 'oj-ux-ico-expand' ]]" aria-hidden="true"></span><oj-bind-text value="[[ $variables.resMax ? 'Close' : 'Detach' ]]"></oj-bind-text></button>
                 <div class="nx-export">
                   <button type="button" class="nx-btn nx-btn--sm" id="sqlExport" data-field="exportOpen" data-value="toggle" on-click="[[ $listeners.onPick ]]" aria-haspopup="menu" :aria-expanded="[[ $variables.exportOpen ? 'true' : 'false' ]]">
                     <span class="oj-ux-ico-download" aria-hidden="true"></span>Export<span class="oj-ux-ico-chevron-down" aria-hidden="true"></span></button>
@@ -220,10 +225,10 @@
                   <div class="nx-sql-row nx-sql-row--head" role="row">
                     <span class="nx-sql-c nx-sql-rn" role="columnheader">#</span>
                     <oj-bind-for-each data="[[ $variables.res.columns ]]"><template data-oj-as="col">
-                      <span class="nx-sql-c" role="columnheader" :title="[[ col.data.title ]]"><oj-bind-text value="[[ col.data.name ]]"></oj-bind-text></span>
+                      <span class="nx-sql-c nx-sql-ch" role="columnheader" :title="[[ col.data.title ]]"><oj-bind-text value="[[ col.data.name ]]"></oj-bind-text></span>
                     </template></oj-bind-for-each>
                   </div>
-                  <oj-bind-for-each data="[[ $variables.res.rows ]]"><template data-oj-as="r">
+                  <oj-bind-for-each data="[[ $functions.filterGrid($variables.res.rows, $variables.resFilter) ]]"><template data-oj-as="r">
                     <div class="nx-sql-row" role="row">
                       <span class="nx-sql-c nx-sql-rn" role="rowheader"><oj-bind-text value="[[ r.data.n ]]"></oj-bind-text></span>
                       <oj-bind-for-each data="[[ r.data.cells ]]"><template data-oj-as="x">
@@ -232,6 +237,7 @@
                     </div>
                   </template></oj-bind-for-each>
                 </div>
+              </div>
               </div>
             </oj-bind-if>
           </div>

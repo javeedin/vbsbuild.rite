@@ -8,6 +8,8 @@ define(['resources/js/exportKit', 'resources/js/sqlWorksheet', 'resources/js/inf
     window.__eqrSqlKeys = true;
     document.addEventListener('keydown', function (e) {
       var t = e.target;
+      // Esc closes the detached (full-screen) result view.
+      if (e.key === 'Escape') { var box = document.getElementById('sqlResBox'); var mb = document.getElementById('sqlResMax'); if (box && mb && box.classList.contains('nx-sql-resbox--max')) { e.preventDefault(); mb.click(); return; } }
       // Enter in the Ask AI box asks.
       if (t && t.id === 'sqlAiAsk' && e.key === 'Enter') { e.preventDefault(); var go = document.getElementById('sqlAiGo'); if (go && !go.disabled) go.click(); return; }
       // Enter in a bind-value field runs with the entered binds.
@@ -33,6 +35,18 @@ define(['resources/js/exportKit', 'resources/js/sqlWorksheet', 'resources/js/inf
 
     /** The result grid's column template (sqlWorksheet.grid). */
     gridStyle(style) { return style || {}; }
+
+    /** The result rows filtered by the quick filter box (matches the text of any cell, case-insensitive). */
+    filterGrid(rows, q) {
+      const needle = String(q == null ? '' : q).trim().toLowerCase();
+      if (!needle) return rows || [];
+      const terms = needle.split(/\s+/);
+      return (rows || []).filter((r) => {
+        const hay = (r.cells || []).map((c) => (c.full || c.t || '')).join(' ').toLowerCase();
+        return terms.every((t) => hay.indexOf(t) !== -1);
+      });
+    }
+    filterCount(rows, q) { return this.filterGrid(rows, q).length; }
 
     took(ms) { return W.took(ms); }
 

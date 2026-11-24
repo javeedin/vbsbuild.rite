@@ -23,6 +23,8 @@ define([
       } else if (f === 'tab') v.tab = String(value || 'result');
       else if (f === 'fetch') v.fetch = Number(value) || 200;
       else if (f === 'exportOpen') v.exportOpen = !v.exportOpen;
+      else if (f === 'resMax') v.resMax = !v.resMax;
+      else if (f === 'resFilter') v.resFilter = value == null ? '' : String(value);
       else if (f === 'advanced') v.dlg = Object.assign({}, v.dlg, { advanced: !v.dlg.advanced });
       else if (f === 'connsOpen') {
         // The Connections panel shown or folded to a rail, kept on this PC.

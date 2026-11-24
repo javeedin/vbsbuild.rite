@@ -100,6 +100,14 @@
    "type": "boolean",
    "defaultValue": false
   },
+  "resFilter": {
+   "type": "string",
+   "defaultValue": ""
+  },
+  "resMax": {
+   "type": "boolean",
+   "defaultValue": false
+  },
   "connsOpen": {
    "type": "boolean",
    "defaultValue": true
@@ -464,6 +472,8 @@
     }
    ]
   },
+  "onResFilter": { "chains": [ { "chain": "setChain", "parameters": { "field": "resFilter", "value": "{{ $event.target.value }}" } } ] },
+  "onResMax": { "chains": [ { "chain": "setChain", "parameters": { "field": "resMax", "value": "toggle" } } ] },
   "onAiSettings": {
    "chains": [
     {

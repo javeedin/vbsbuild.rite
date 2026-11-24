@@ -171,6 +171,22 @@ const T = H.makeAsserter();
     await page.waitForFunction(() => !document.getElementById('sqlMore'), null, { timeout: 10000 });
     T.check('Fetch more, twice: all 450 rows, nothing more to fetch', /^Fetched 450 rows in /.test(await text('#sqlFetched')), await text('#sqlFetched'));
 
+    T.section('results: full column names, a quick row filter, and a detachable view');
+    T.check('column headers show the full name (wrapping, not truncated)', await page.$$eval('#sqlGrid .nx-sql-row--head .nx-sql-c', (c) => c.map((x) => x.innerText.trim()).join()) === '#,EMPNO,ENAME,SAL,HIREDATE');
+    await page.fill('#sqlResFilter', 'EMP 450');
+    await page.waitForFunction(() => { const n = document.querySelectorAll('#sqlGrid .nx-sql-row:not(.nx-sql-row--head)').length; return n > 0 && n < 450; }, null, { timeout: 10000 });
+    const shown = await page.$$eval('#sqlGrid .nx-sql-row:not(.nx-sql-row--head)', (r) => r.length);
+    T.check('the quick filter narrows the rows and says "N of 450"', shown > 0 && shown < 450 && / of 450$/.test(await text('.nx-sql-filtn')), shown + ' | ' + await text('.nx-sql-filtn'));
+    await page.fill('#sqlResFilter', '');
+    await page.waitForFunction(() => document.querySelectorAll('#sqlGrid .nx-sql-row:not(.nx-sql-row--head)').length === 450, null, { timeout: 10000 });
+    T.check('clearing the filter shows all rows again', (await page.$$eval('#sqlGrid .nx-sql-row:not(.nx-sql-row--head)', (r) => r.length)) === 450);
+    await page.click('#sqlResMax');
+    await page.waitForSelector('#sqlResBox.nx-sql-resbox--max', { timeout: 10000 });
+    T.check('Detach opens the results full screen', !!(await page.$('#sqlResBox.nx-sql-resbox--max')));
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => { const b = document.getElementById('sqlResBox'); return b && !b.classList.contains('nx-sql-resbox--max'); }, null, { timeout: 10000 });
+    T.check('Esc closes the detached view', !(await page.$('#sqlResBox.nx-sql-resbox--max')));
+
     T.section('a change waits for Commit');
     await page.evaluate(() => { const e = document.getElementById('sqlEditor'); const at = e.value.indexOf('update'); e.focus(); e.setSelectionRange(at + 2, at + 2); });
     await page.keyboard.press('Control+Enter');
