@@ -118,13 +118,20 @@ function fusionCredential(backends) {
   return best || null;
 }
 
-/** The login a backend's calls go out with: one given for its VB credential (identity.logins), else the app's login
- *  (identity.fusion) — for every backend that signs in, whatever its name; none for a backend that does not. */
-function loginFor(backend, identity) {
-  if (!backend || !backend.basic) return null;
+/** The login a backend's calls go out with: one given for this backend (identity.logins, keyed by its name or its VB
+ *  credential id — "Sign in for your app" › Other backend logins), else the app's login (identity.fusion) — for every
+ *  backend that signs in, whatever its name; none for a backend that does not. */
+function ownLogin(identity, backend, name) {
   const id = identity || {};
-  const own = id.logins && backend.credentials ? id.logins[backend.credentials] : null;
-  if (own && own.user && own.password) return own;
+  if (!id.logins) return null;
+  const own = (name && id.logins[name]) || (backend && backend.credentials ? id.logins[backend.credentials] : null);
+  return own && own.user && own.password ? own : null;
+}
+function loginFor(backend, identity, name) {
+  if (!backend || !backend.basic) return null;
+  const own = ownLogin(identity, backend, name);
+  if (own) return own;
+  const id = identity || {};
   return id.fusion && id.fusion.user && id.fusion.password ? id.fusion : null;
 }
 
@@ -388,7 +395,7 @@ function createDevServer(o) {
     ['host', 'origin', 'referer', 'cookie', 'authorization', ...HOP_BY_HOP].forEach((h) => delete headers[h]);
     headers.host = target.host;
     headers['content-length'] = String(body.length);
-    const login = loginFor(backend, identity);
+    const login = loginFor(backend, identity, name);
     if (login) {
       headers.authorization = `Basic ${Buffer.from(`${login.user}:${login.password}`).toString('base64')}`;
     }
@@ -485,14 +492,14 @@ function createDevServer(o) {
     const b = set[name];
     if (!b) return null;
     const identity = alt ? alt.identity : (o.getIdentity() || {});
-    const fusion = !!b.basic; // it signs in: the app's login stands in for its VB credential
     const jira = name === 'jira' && o.jiraStore ? o.jiraStore.auth() : null;
     const url = overrides[name.toLowerCase()] || (jira && jira.site) || b.url;
-    const lg = loginFor(b, identity);
+    const own = ownLogin(identity, b, name); // a login saved for this backend itself (Sign in › Other backend logins)
+    const lg = loginFor(b, identity, name);
     const user = lg ? lg.user : '';
     if (name === 'jira') return { url, login: jira ? 'Your Jira connection' : 'Jira is not connected (Jira stories → Connect Jira)', loginOk: !!jira, user: '' };
-    if (fusion) return { url, login: user ? `Your app's login (${user})` : 'No login for it yet: File → Sign in for your app… (the backend will refuse)', loginOk: !!user, user };
-    if (b.basic) return { url, login: 'Its VBCS credential, which is not on this PC (it may answer 401)', loginOk: false, user: '' };
+    if (own) return { url, login: `Its own saved login (${own.user})`, loginOk: true, user: own.user };
+    if (b.basic) return { url, login: user ? `Your app's login (${user})` : 'No login for it yet: File → Sign in for your app… (add its own login there if it needs one)', loginOk: !!user, user };
     return { url, login: 'None needed', loginOk: true, user: '' };
   }
 

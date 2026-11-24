@@ -25,6 +25,11 @@
     .help { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
     .row { display: flex; gap: 10px; }
     .row > div { flex: 1; }
+    .login-row { display: flex; gap: 8px; align-items: flex-end; margin: 0 0 8px; }
+    .login-row > div { flex: 1; }
+    .login-row .key { flex: 0 0 34%; }
+    .login-row button.rm { flex: 0 0 auto; padding: 8px 10px; }
+    .linkish { background: none; border: none; color: var(--accent); padding: 2px 0; cursor: pointer; font: inherit; }
     .choice { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0; cursor: pointer; }
     .choice input { margin-top: 3px; }
     .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; margin: 6px 0 0 24px; font-size: 13px; }
@@ -60,6 +65,13 @@
           <input type="password" id="fusionPassword"></div>
       </div>
       <p class="help">Used where VB Studio uses its stored credential: the backend calls the app makes through its service connections (Fusion REST, BI Publisher reports). Without it those calls are refused and their lists stay empty. The password is encrypted with your Windows account.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Other backend logins</legend>
+      <p class="help" style="margin-top:0">For a backend that signs in with its <b>own</b> credential, not the Fusion one — e.g. Oracle Integration (OIC). Without this, its calls borrow the Fusion login and the backend answers <code>401</code>. Backend name is the one in <code>services/catalog.json</code> (for OIC it is <code>ics</code>); you can also use its credential id. Passwords are encrypted with your Windows account, saved on this PC only.</p>
+      <div id="logins"></div>
+      <button type="button" class="linkish" id="addLogin">+ Add another backend login</button>
     </fieldset>
 
     <fieldset>

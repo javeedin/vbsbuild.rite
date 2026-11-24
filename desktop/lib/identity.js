@@ -41,10 +41,34 @@ function validate(form, previous) {
   if (rolesFrom === 'fusion' && !password && !keepsPassword) {
     return { error: 'Enter the Fusion password: roles are read from Fusion (the app\'s roles report).' };
   }
+  // Extra backend logins (e.g. OIC/ics): a backend that signs in with its OWN VBCS credential, not the Fusion one.
+  // Each is { key, user, password } where key is the backend's name in services/catalog.json (e.g. "ics") or its
+  // credential id; the proxy's loginFor() uses it for that backend instead of falling back to the Fusion login.
+  const prevLogins = (previous && Array.isArray(previous.backendLogins)) ? previous.backendLogins : [];
+  const logins = []; // { key, user, password|null, keep } — plaintext (or keep the previous encrypted one), for save()
+  const seen = new Set();
+  for (const row of (Array.isArray(f.logins) ? f.logins : [])) {
+    const key = String((row && row.key) || '').trim();
+    const user = String((row && row.user) || '').trim();
+    const pw = String((row && row.password) || '');
+    if (!key && !user && !pw) continue; // an empty row: ignored
+    if (!key) return { error: 'Give each extra backend login a backend name (e.g. ics for OIC).' };
+    if (seen.has(key)) return { error: `There are two logins for backend "${key}" — keep one.` };
+    seen.add(key);
+    if (!user) return { error: `Enter the username for backend "${key}".` };
+    const prev = prevLogins.find((p) => p.key === key);
+    const keep = !pw && !!prev && prev.user === user && !!prev.password;
+    if (!pw && !keep) return { error: `Enter the password for backend "${key}" (or clear the row).` };
+    logins.push({ key, user, password: pw || null, keep });
+  }
   return {
-    saved: { username, rolesFrom, roles: rolesFrom === 'pick' ? roles : [], fusionUser, version: versionOf(f.version) },
+    saved: {
+      username, rolesFrom, roles: rolesFrom === 'pick' ? roles : [], fusionUser, version: versionOf(f.version),
+      backendLogins: logins.map(({ key, user }) => ({ key, user })),
+    },
     password: password || null,
     keepsPassword,
+    logins,
   };
 }
 
@@ -59,12 +83,28 @@ function load(file) {
 }
 
 /** Writes the sign-in; the password only as encrypt(password) in base64, or not at all when encrypt is null. */
-function save(file, saved, password, encrypt, previous) {
+function save(file, saved, password, encrypt, previous, logins) {
   const out = Object.assign({}, saved);
   if (password && encrypt) {
     out.fusionPassword = encrypt(password).toString('base64');
   } else if (!password && previous && previous.fusionUser === saved.fusionUser && previous.fusionPassword) {
     out.fusionPassword = previous.fusionPassword;
+  }
+  // Extra backend logins: each password encrypted like the Fusion one (safeStorage), or kept from the previous save
+  // when left blank. With no encryptor available the password is not written (as for the Fusion one).
+  if (Array.isArray(saved.backendLogins)) {
+    const prevLogins = (previous && Array.isArray(previous.backendLogins)) ? previous.backendLogins : [];
+    out.backendLogins = saved.backendLogins.map((bl) => {
+      const entry = { key: bl.key, user: bl.user };
+      const spec = (logins || []).find((l) => l.key === bl.key);
+      if (spec && spec.password && encrypt) {
+        entry.password = encrypt(spec.password).toString('base64');
+      } else {
+        const prev = prevLogins.find((p) => p.key === bl.key && p.user === bl.user);
+        if (prev && prev.password) entry.password = prev.password;
+      }
+      return entry;
+    });
   }
   fs.writeFileSync(file, JSON.stringify(out, null, 2), 'utf8');
   return out;
@@ -83,10 +123,25 @@ function toServerIdentity(saved, password, decrypt) {
       pw = null;
     }
   }
+  // Per-backend logins, decrypted, keyed by backend name / credential id — what the proxy's loginFor() looks up before
+  // falling back to the Fusion login, so a backend with its own VBCS credential (e.g. OIC/ics) signs in as itself.
+  const logins = {};
+  if (Array.isArray(saved.backendLogins) && decrypt) {
+    saved.backendLogins.forEach((bl) => {
+      if (!bl || !bl.key || !bl.user || !bl.password) return;
+      try {
+        const p = decrypt(Buffer.from(bl.password, 'base64'));
+        if (p) logins[bl.key] = { user: bl.user, password: p };
+      } catch {
+        /* a login we cannot decrypt (another PC / reset keychain): left out */
+      }
+    });
+  }
   return {
     username: saved.username,
     roles: saved.rolesFrom === 'pick' && saved.roles && saved.roles.length ? saved.roles : null,
     fusion: pw ? { user: saved.fusionUser || saved.username, password: pw } : null,
+    logins,
   };
 }
 

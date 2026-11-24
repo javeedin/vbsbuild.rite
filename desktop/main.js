@@ -1473,6 +1473,7 @@ ipcMain.handle('signin:initial', (event) => {
   return {
     username: saved.username || '', fusionUser: saved.fusionUser || '', hasPassword: !!saved.fusionPassword || !!passwordThisRun,
     rolesFrom: saved.rolesFrom || 'fusion', roles: saved.roles || [], knownRoles: knownRoles(),
+    backendLogins: (Array.isArray(saved.backendLogins) ? saved.backendLogins : []).map((b) => ({ key: b.key, user: b.user, hasPassword: !!b.password })),
   };
 });
 ipcMain.handle('signin:submit', (event, form) => {
@@ -1483,7 +1484,7 @@ ipcMain.handle('signin:submit', (event, form) => {
   const encrypt = canEncrypt() ? (s) => safeStorage.encryptString(s) : null;
   if (checked.password && !encrypt) passwordThisRun = checked.password;
   else if (checked.password || !checked.keepsPassword) passwordThisRun = null;
-  const saved = identityStore.save(identityFile(), checked.saved, checked.password, encrypt, previous);
+  const saved = identityStore.save(identityFile(), checked.saved, checked.password, encrypt, previous, checked.logins);
   identity = identityStore.toServerIdentity(saved, passwordThisRun, encrypt ? (b) => safeStorage.decryptString(b) : null);
   warned.clear();
   pushLog(`${new Date().toTimeString().slice(0, 8)} the app runs as ${saved.username}; roles ${identity.roles ? identity.roles.join(', ') : 'from its backend'}`);
