@@ -22,7 +22,14 @@ define(['resources/js/shellBus', 'resources/js/theme', 'resources/js/look', 'res
     }
     jiraChips(events) { return jiraFeed.chips(events); }
     jiraIcon(kind) { return JICON[kind] || 'oj-ux-ico-notification'; }
-    jiraItemClass(e, seen) { return 'nx-jfeed-item nx-jfeed-item--' + e.kind + (Date.parse(e.at) > (Date.parse(seen) || 0) ? ' nx-jfeed-item--unseen' : ''); }
+    jiraItemClass(e, seen, sel) {
+      const picked = !!(sel && sel.ids && sel.ids[e.id]);
+      return 'nx-jfeed-item nx-jfeed-item--' + e.kind
+        + (Date.parse(e.at) > (Date.parse(seen) || 0) ? ' nx-jfeed-item--unseen' : '')
+        + (picked ? ' nx-jfeed-item--picked' : '');
+    }
+    /** How many updates are ticked in the bell's select mode. */
+    jiraSelCount(sel) { return sel && sel.ids ? Object.keys(sel.ids).length : 0; }
     // ── Your working copy (the top bar) ──
     workText(work) { const c = work && work.current; return c ? c.projectName + ' ▸ ' + c.workspace : 'Set up your workspace'; }
     workTitle(work) { const c = work && work.current; return c ? c.repo + '.git at ' + c.branch + ' — working: ' + c.working + ' · main: ' + c.main + ' (open its project)' : 'Set up your workspace: choose a VB Studio workspace and a folder on this PC'; }

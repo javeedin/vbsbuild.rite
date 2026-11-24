@@ -61,6 +61,11 @@
       "defaultValue": 0,
       "description": "How many updates came since it was last opened (the bell's count)."
     },
+    "jiraSel": {
+      "type": "any",
+      "defaultValue": { "on": false, "ids": {} },
+      "description": "The bell's select mode: on, and the ticked update ids (id → true) — ticked updates become a follow-up."
+    },
     "workRunProg": {
       "type": "boolean",
       "defaultValue": false,
@@ -330,7 +335,8 @@
           "chain": "jiraFeedChain",
           "parameters": {
             "act": "{{ $event.currentTarget.dataset.act }}",
-            "key": "{{ $event.currentTarget.dataset.key || '' }}"
+            "key": "{{ $event.currentTarget.dataset.key || '' }}",
+            "id": "{{ $event.currentTarget.dataset.id || '' }}"
           }
         }
       ]

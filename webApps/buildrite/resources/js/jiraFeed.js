@@ -82,6 +82,11 @@ define([], function () {
     return out.sort(function (a, b) { return t(b.at) - t(a.at); });
   }
 
+  /** The updates that match a kind filter ('all'/'' = every one, 'mine' = assigned to me, else that kind). */
+  function filterKind(events, kind) {
+    return (events || []).filter(function (e) { return !kind || kind === 'all' || (kind === 'mine' ? e.mine : e.kind === kind); });
+  }
+
   /** The updates by day (Today, Yesterday, then the date), filtered by kind ('all', 'mine', or a kind). */
   function grouped(events, kind, now) {
     var n = now || Date.now();
@@ -89,7 +94,7 @@ define([], function () {
     var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     var DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     var groups = [];
-    (events || []).filter(function (e) { return !kind || kind === 'all' || (kind === 'mine' ? e.mine : e.kind === kind); }).forEach(function (e) {
+    filterKind(events, kind).forEach(function (e) {
       var d = new Date(t(e.at));
       var back = Math.floor((day0.getTime() - new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / DAY);
       var label = back <= 0 ? 'Today' : back === 1 ? 'Yesterday' : DOW[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()];
@@ -115,6 +120,43 @@ define([], function () {
   }
 
   function jql(days, project) { return inProject(project) + 'updated >= -' + Math.max(1, Math.min(14, Number(days) || 2)) + 'd ORDER BY updated DESC'; }
+
+  var hhmm = function (at) { var d = new Date(t(at)); var p = function (n) { return (n < 10 ? '0' : '') + n; }; return p(d.getHours()) + ':' + p(d.getMinutes()); };
+
+  /**
+   * A saved-follow-up record built from the updates the bell has ticked (ids: a map of event id → true). The updates are
+   * grouped by story (one follow-up line per story, the changes gathered under it) and the message spells each one out, so
+   * the follow-up reads as "these stories moved — please look". Returns { count, stories, title, subtitle, subject, message, lines }.
+   */
+  function followupFrom(events, ids, now) {
+    var picked = (events || []).filter(function (e) { return ids && ids[e.id]; });
+    var byKey = {}; var order = [];
+    picked.forEach(function (e) {
+      if (!byKey[e.key]) { byKey[e.key] = { key: e.key, summary: e.summary, status: e.status, type: e.type, updates: [] }; order.push(e.key); }
+      byKey[e.key].updates.push(e);
+    });
+    var lines = order.map(function (k) {
+      var g = byKey[k];
+      return { storyKey: g.key, summary: g.summary, status: g.status, assignee: '', sprint: '', due: '', overdue: false,
+        customer: g.updates.map(function (u) { return u.text; }).join(' · '), url: '' };
+    });
+    var body = ['Following up on these Jira updates:', ''];
+    order.forEach(function (k) {
+      var g = byKey[k];
+      body.push(g.key + ' — ' + g.summary + (g.status ? ' (' + g.status + ')' : ''));
+      g.updates.forEach(function (u) { body.push('  • ' + u.text + ' — ' + (u.by || 'someone') + ', ' + hhmm(u.at)); });
+      body.push('');
+    });
+    var when = new Date(now || Date.now());
+    return {
+      count: picked.length, stories: order.length,
+      title: 'Follow-up — Jira updates',
+      subtitle: (when.toLocaleDateString ? when.toLocaleDateString() : ''),
+      subject: 'Follow-up on ' + order.length + ' Jira ' + (order.length === 1 ? 'story' : 'stories'),
+      message: body.join('\n').trim(),
+      lines: lines,
+    };
+  }
 
   var meCache = null;
   /** Reads the updates of the last `days` from Jira: { ok, events, message, me }. */
@@ -146,5 +188,5 @@ define([], function () {
     return { ok: true, events: eventsOf(issues, now - days * DAY, meCache), me: meCache, message: '', issues: issues.length };
   }
 
-  return { eventsOf: eventsOf, grouped: grouped, chips: chips, newSince: newSince, jql: jql, plain: plain, load: load, KINDS: KINDS };
+  return { eventsOf: eventsOf, grouped: grouped, filterKind: filterKind, followupFrom: followupFrom, chips: chips, newSince: newSince, jql: jql, plain: plain, load: load, KINDS: KINDS };
 });

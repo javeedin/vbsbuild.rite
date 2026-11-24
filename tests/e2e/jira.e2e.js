@@ -71,6 +71,16 @@ const ACTIVITY = { 'ABC-12': {
 } };
 let activityReads = [];
 const feedReads = [];
+// the bell's feed (recent updates): two stories, three changes, all within the window — minutes ago
+const mins = (m) => new Date(Date.now() - m * 60000).toISOString();
+const FEED = [
+  { key: 'ABC-41', fields: { summary: 'Rental rates by branch', issuetype: { name: 'Story' }, status: { name: 'In Progress' } },
+    changelog: { histories: [
+      { created: mins(30), author: { displayName: 'Ben' }, items: [{ field: 'status', fromString: 'To Do', toString: 'In Progress' }] },
+      { created: mins(20), author: { displayName: 'Ana' }, items: [{ field: 'assignee', from: null, to: '712020:9b82', fromString: '', toString: 'Sam Lee' }] }] } },
+  { key: 'ABC-55', fields: { summary: 'Export to Excel', issuetype: { name: 'Bug' }, status: { name: 'Done' } },
+    changelog: { histories: [{ created: mins(40), author: { displayName: 'Cara' }, items: [{ field: 'Attachment', fromString: '', toString: 'screen.png' }] }] } },
+];
 
 function handle(req, res) {
   // A save that fails, as the technical trace of a recorded test should show it.
@@ -93,7 +103,7 @@ function handle(req, res) {
   }
   if (req.path === '/rest/api/2/search/jql') {
     // the shell's Jira updates (its bell): read on their own, at start and now and then — not the page's searches
-    if (/^(project = \w+ AND )?updated >= -\d+d ORDER BY updated DESC$/.test(req.query.get('jql') || '')) { feedReads.push(!!req.auth); return res.json({ issues: [], isLast: true }); }
+    if (/^(project = \w+ AND )?updated >= -\d+d ORDER BY updated DESC$/.test(req.query.get('jql') || '')) { feedReads.push(!!req.auth); return res.json({ issues: req.auth ? FEED : [], isLast: true }); }
     // as Jira Cloud answers a call that is not signed in: OK, with nothing it may see
     if (!req.auth) { searches.push({ jql: 'anonymous', token: '', fields: '' }); return res.json({ issues: [], isLast: true }); }
     const jql = req.query.get('jql') || '';
@@ -1068,6 +1078,32 @@ const complete = (page, scope, tags) => page.evaluate((a) => a[1].map((t) => {
     T.check('"Analyze alone" opens that story\'s own analysis', (await page.$$eval('[role="tab"]', (t) => t.map((x) => x.textContent))).some((t) => t.includes('AI · ABC-13')));
     await page.locator('[role="tab"]').filter({ hasText: 'Jira stories' }).first().click().catch(() => {});
     await page.waitForSelector('#jiraGrid', { timeout: 20000 });
+
+    T.section('Jira updates bell — select & follow up');
+    await page.click('#nxJiraBell');
+    await page.waitForSelector('#nxJiraPanel', { timeout: 10000 });
+    await page.waitForSelector('#nxJiraList .nx-jfeed-item', { timeout: 10000 });
+    T.check('the bell lists the recent updates (two stories, three changes)', (await page.$$('#nxJiraList .nx-jfeed-item')).length === 3);
+    const beforeFu = (await fuStore.list()).followups.length;
+    await page.click('#nxJiraSelect');
+    await page.waitForSelector('#nxJiraList.nx-jfeed-list--sel', { timeout: 5000 });
+    const bellItems = await page.$$('#nxJiraList .nx-jfeed-item');
+    await bellItems[0].click(); // ABC-41 (newest)
+    await bellItems[2].click(); // ABC-55
+    await settle(page, 200);
+    T.check('ticking two updates: "Follow up on 2", both ticked', /Follow up on 2/.test(await text(page, '#nxJiraFollowup')) && (await page.$$('#nxJiraList .nx-jfeed-item--picked')).length === 2);
+    await page.click('#nxJiraFollowup');
+    await page.waitForFunction((n) => !document.querySelector('#nxJiraList.nx-jfeed-list--sel'), null, { timeout: 8000 }).catch(() => {});
+    await settle(page, 500);
+    const afterFu = await fuStore.list();
+    const bellFu = afterFu.followups.find((f) => /Jira updates/.test(f.title));
+    T.check('Follow up on the ticked updates saves a follow-up on this PC', afterFu.followups.length === beforeFu + 1 && !!bellFu, JSON.stringify(afterFu.followups.map((f) => f.title)));
+    const gotFu = bellFu ? await fuStore.get(bellFu.id) : { ok: false };
+    T.check('…kind stories, source jira-bell, one line per story (grouped)', gotFu.ok && gotFu.followup.kind === 'stories' && gotFu.followup.source === 'jira-bell'
+      && gotFu.followup.lines.length === 2 && gotFu.followup.lines.map((l) => l.storyKey).sort().join(',') === 'ABC-41,ABC-55', JSON.stringify(gotFu.followup && gotFu.followup.lines));
+    T.check('…saving clears select mode (the selection bar is gone)', !(await page.$('#nxJiraList.nx-jfeed-list--sel')) && !(await page.$('#nxJiraSelBar')));
+    await page.click('[data-act="close"][aria-label="Close Jira updates"]').catch(() => {});
+    await settle(page, 200);
 
     T.section('Disconnect');
     await page.click('#jiraDisconnect');

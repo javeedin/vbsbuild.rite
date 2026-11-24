@@ -389,6 +389,9 @@
           <button type="button" :class="[[ 'nx-jfeed-day' + ($variables.jiraDays === 2 ? ' nx-jfeed-day--on' : '') ]]" data-act="days" data-key="2" on-click="[[ $listeners.onJira ]]">2 days</button>
           <button type="button" :class="[[ 'nx-jfeed-day' + ($variables.jiraDays === 7 ? ' nx-jfeed-day--on' : '') ]]" data-act="days" data-key="7" on-click="[[ $listeners.onJira ]]">7 days</button>
         </div>
+        <button type="button" :class="[[ 'nx-jfeed-sel' + ($variables.jiraSel.on ? ' nx-jfeed-sel--on' : '') ]]" id="nxJiraSelect" data-act="selmode" on-click="[[ $listeners.onJira ]]" :aria-pressed="[[ $variables.jiraSel.on ? 'true' : 'false' ]]" title="Tick several updates and turn them into a follow-up">
+          <span class="oj-ux-ico-check-square" aria-hidden="true"></span><oj-bind-text value="[[ $variables.jiraSel.on ? 'Done' : 'Select' ]]"></oj-bind-text>
+        </button>
         <button type="button" class="nx-iconbtn nx-iconbtn--sm" data-act="close" on-click="[[ $listeners.onJira ]]" aria-label="Close Jira updates">
           <span class="oj-ux-ico-close" aria-hidden="true"></span>
         </button>
@@ -401,18 +404,29 @@
           </template>
         </oj-bind-for-each>
       </div>
+      <oj-bind-if test="[[ $variables.jiraSel.on ]]">
+        <div class="nx-jfeed-selbar" id="nxJiraSelBar">
+          <span class="nx-jfeed-selcount"><oj-bind-text value="[[ $functions.jiraSelCount($variables.jiraSel) + ($functions.jiraSelCount($variables.jiraSel) === 1 ? ' ticked' : ' ticked') ]]"></oj-bind-text></span>
+          <button type="button" class="nx-jfeed-sellink" data-act="selall" on-click="[[ $listeners.onJira ]]">Select all</button>
+          <button type="button" class="nx-jfeed-sellink" data-act="clearsel" on-click="[[ $listeners.onJira ]]">Clear</button>
+          <button type="button" class="nx-btn nx-btn--sm nx-btn--primary nx-jfeed-fu" id="nxJiraFollowup" data-act="followup" on-click="[[ $listeners.onJira ]]" :disabled="[[ $functions.jiraSelCount($variables.jiraSel) === 0 ]]">
+            <span class="oj-ux-ico-email" aria-hidden="true"></span><oj-bind-text value="[[ 'Follow up on ' + $functions.jiraSelCount($variables.jiraSel) ]]"></oj-bind-text>
+          </button>
+        </div>
+      </oj-bind-if>
       <oj-bind-if test="[[ !!$variables.jiraError ]]"><p class="nx-panel-note nx-error-text" id="nxJiraError"><oj-bind-text value="[[ $variables.jiraError ]]"></oj-bind-text></p></oj-bind-if>
       <oj-bind-if test="[[ $variables.jiraBusy && !$variables.jiraEvents.length ]]"><p class="nx-panel-empty"><span class="nx-spin" aria-hidden="true"></span> Reading Jira…</p></oj-bind-if>
       <oj-bind-if test="[[ !$variables.jiraBusy && !$variables.jiraError && $functions.jiraGroups($variables.jiraEvents, $variables.jiraKind).length === 0 ]]">
         <p class="nx-panel-empty" id="nxJiraNone"><span class="oj-ux-ico-check-circle" aria-hidden="true"></span> <oj-bind-text value="[[ 'Nothing changed in Jira in the last ' + ($variables.jiraDays === 1 ? 'day' : $variables.jiraDays + ' days') + ($variables.jiraKind === 'all' ? '' : ' of this kind') + '.' ]]"></oj-bind-text></p>
       </oj-bind-if>
-      <div class="nx-jfeed-list" id="nxJiraList">
+      <div :class="[[ 'nx-jfeed-list' + ($variables.jiraSel.on ? ' nx-jfeed-list--sel' : '') ]]" id="nxJiraList">
         <oj-bind-for-each data="[[ $functions.jiraGroups($variables.jiraEvents, $variables.jiraKind) ]]">
           <template data-oj-as="g">
             <div class="nx-jfeed-day-h"><oj-bind-text value="[[ g.data.label ]]"></oj-bind-text></div>
             <oj-bind-for-each data="[[ g.data.items ]]">
               <template data-oj-as="e">
-                <button type="button" :class="[[ $functions.jiraItemClass(e.data, $variables.jiraSeen) ]]" data-act="open" :data-key="[[ e.data.key ]]" on-click="[[ $listeners.onJira ]]" :title="[[ 'Open ' + e.data.key + ' in Jira stories' ]]">
+                <button type="button" :class="[[ $functions.jiraItemClass(e.data, $variables.jiraSeen, $variables.jiraSel) ]]" data-act="open" :data-key="[[ e.data.key ]]" :data-id="[[ e.data.id ]]" on-click="[[ $listeners.onJira ]]" :title="[[ $variables.jiraSel.on ? 'Tick ' + e.data.key : 'Open ' + e.data.key + ' in Jira stories' ]]" :aria-pressed="[[ $variables.jiraSel.on ? ($variables.jiraSel.ids[e.data.id] ? 'true' : 'false') : false ]]">
+                  <span class="nx-jfeed-check" aria-hidden="true"></span>
                   <span :class="[[ 'nx-jfeed-ico ' + $functions.jiraIcon(e.data.kind) ]]" aria-hidden="true"></span>
                   <span class="nx-jfeed-body">
                     <span class="nx-jfeed-top"><code class="nx-jfeed-key"><oj-bind-text value="[[ e.data.key ]]"></oj-bind-text></code><span class="nx-jfeed-sum"><oj-bind-text value="[[ e.data.summary ]]"></oj-bind-text></span></span>

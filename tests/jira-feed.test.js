@@ -47,4 +47,18 @@ T.eq('the search: the project of the connection, updated in the window, newest f
 T.eq('…no project key set: every project the account can see', F.jql(2), 'updated >= -2d ORDER BY updated DESC');
 T.check('…days kept between 1 and 14', F.jql(0, 'ABC') === 'project = ABC AND updated >= -2d ORDER BY updated DESC' && /-14d/.test(F.jql(99)) && /-7d/.test(F.jql(7)));
 T.eq('a comment in the Atlassian document format, plain', F.plain({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello' }, { type: 'text', text: ' there' }] }] }), 'Hello there');
+
+// filterKind: the one filter the chips, the groups and select-all share
+T.check('filterKind: all / a kind / mine / empty = all', F.filterKind(ev, 'all').length === 10 && F.filterKind(ev, 'status').length === 2 && F.filterKind(ev, 'mine').length === 6 && F.filterKind(ev, '').length === 10);
+
+// followupFrom: the updates ticked in the bell become one follow-up, grouped by story
+const idOf = {}; ev.forEach((e) => { idOf[e.kind + ':' + e.key] = e.id; });
+const ids = {}; ids[idOf['status:ABC-41']] = true; ids[idOf['assign:ABC-41']] = true; ids[idOf['attach:ABC-12']] = true;
+const rec = F.followupFrom(ev, ids, NOW);
+T.check('followupFrom: counts the updates and the stories (grouped by key)', rec.count === 3 && rec.stories === 2);
+T.eq('…one line per story, the changes gathered under it', rec.lines.map((l) => l.storyKey + ': ' + l.customer).join(' | '),
+  'ABC-41: To Do → In Progress · Assigned to Ana | ABC-12: Attached screen.png');
+T.check('…the message spells each update out; the subject counts stories', /ABC-41 — Rental rates by branch/.test(rec.message) && /Assigned to Ana — Ben/.test(rec.message) && /Attached screen\.png/.test(rec.message) && rec.subject === 'Follow-up on 2 Jira stories');
+T.check('…one story ticked reads "1 Jira story"', F.followupFrom(ev, (() => { const o = {}; o[idOf['attach:ABC-12']] = true; return o; })(), NOW).subject === 'Follow-up on 1 Jira story');
+T.check('…nothing ticked: empty', F.followupFrom(ev, {}, NOW).count === 0 && F.followupFrom(ev, {}, NOW).lines.length === 0);
 T.report();
