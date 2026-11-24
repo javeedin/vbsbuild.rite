@@ -52,9 +52,14 @@
    "createdAt": "2026-11-24T10:30:14.610Z",
    "name": "epq",
    "description": "",
-   "layout": [],
+   "layout": [
+    {
+     "infoletId": "d76fabd9ce86",
+     "w": 6
+    }
+   ],
    "by": "rite.user",
-   "updatedAt": "2026-11-24T10:30:14.610Z"
+   "updatedAt": "2026-11-24T10:30:27.997Z"
   }
  ]
 }
