@@ -148,7 +148,11 @@
   },
   "infDlg": {
    "type": "any",
-   "defaultValue": { "open": false, "name": "", "description": "", "kind": "bar", "label": "", "value": "", "agg": "sum", "limit": 12, "share": true, "busy": "", "error": "", "sql": "" }
+   "defaultValue": { "open": false, "name": "", "description": "", "kind": "bar", "label": "", "value": "", "agg": "sum", "limit": 12, "share": true, "busy": "", "error": "", "sql": "", "data": null, "toBoard": false, "aiGoal": "", "aiBusy": "", "aiNote": "" }
+  },
+  "boardAiDlg": {
+   "type": "any",
+   "defaultValue": { "open": false, "goal": "", "busy": "", "log": [], "error": "" }
   },
   "dash": {
    "type": "any",
@@ -590,7 +594,14 @@
   "onSlotWider": { "chains": [ { "chain": "dashChain", "parameters": { "op": "slotWider", "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
   "onSlotNarrower": { "chains": [ { "chain": "dashChain", "parameters": { "op": "slotNarrower", "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
   "onBoardRefresh": { "chains": [ { "chain": "dashChain", "parameters": { "op": "boardRefresh" } } ] },
-  "onBoardShare": { "chains": [ { "chain": "dashChain", "parameters": { "op": "boardShare" } } ] }
+  "onBoardShare": { "chains": [ { "chain": "dashChain", "parameters": { "op": "boardShare" } } ] },
+  "onInfNewAi": { "chains": [ { "chain": "dashChain", "parameters": { "op": "infNewAi" } } ] },
+  "onInfGoal": { "chains": [ { "chain": "dashChain", "parameters": { "op": "infField", "key": "aiGoal", "value": "{{ $event.target.value }}" } } ] },
+  "onInfAi": { "chains": [ { "chain": "dashChain", "parameters": { "op": "infAi" } } ] },
+  "onBoardAiOpen": { "chains": [ { "chain": "dashChain", "parameters": { "op": "boardAiOpen" } } ] },
+  "onBoardAiClose": { "chains": [ { "chain": "dashChain", "parameters": { "op": "boardAiClose" } } ] },
+  "onBoardAiGoal": { "chains": [ { "chain": "dashChain", "parameters": { "op": "boardAiGoal", "value": "{{ $event.target.value }}" } } ] },
+  "onBoardAiGo": { "chains": [ { "chain": "dashChain", "parameters": { "op": "boardAiGo" } } ] }
  },
  "imports": {
   "components": {

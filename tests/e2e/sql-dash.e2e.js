@@ -22,7 +22,21 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
   const enc = (t) => Buffer.from('ENC:' + Buffer.from(t).toString('base64'));
   const dec = (b) => Buffer.from(b.toString().slice(4), 'base64').toString();
   const sqlStore = await require('../../desktop/lib/oracleSql').open({ file: path.join(dir, 'conns.json'), driver: fakeOracle({ password: 'secret' }), encrypt: enc, decrypt: dec });
-  const env = await E.start({ port: 19741, sqlStore, savedSqlStore, username: 'rite.user' });
+  // a fake LLM (Anthropic shape): a dashboard plan when the system prompt carries the planner marker, else SQL.
+  const aiFetch = async (url, init) => {
+    const body = (init && init.body) || '';
+    const json = (b) => ({ ok: true, status: 200, text: async () => JSON.stringify(b) });
+    if (/\/v1\/models/.test(url)) return json({ data: [{ id: 'model-a', display_name: 'Model A' }] });
+    if (/\/v1\/messages/.test(url)) {
+      if (/BUILDRITE_DASHBOARD_PLAN/.test(body)) {
+        return json({ content: [{ type: 'text', text: '```json\n[{"title":"Salaries","question":"salary by name"},{"title":"Headcount","question":"count of employees"}]\n```' }] });
+      }
+      return json({ content: [{ type: 'text', text: '```sql\nselect ename, sal from emp\n```\nnames and salaries.' }] });
+    }
+    return { ok: false, status: 404, text: async () => '{}' };
+  };
+  const aiStore = await require('../../desktop/lib/aiSql').open({ file: path.join(dir, 'ai.json'), encrypt: enc, decrypt: dec, fetch: aiFetch });
+  const env = await E.start({ port: 19741, sqlStore, aiStore, savedSqlStore, username: 'rite.user' });
   const page = env.page;
   page.on('dialog', (d) => d.accept());
   const errs = () => env.errors.filter((e) => !/404|401|Failed to load resource/.test(e) && !e.startsWith('warning'));
@@ -42,6 +56,18 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
     await page.waitForFunction(() => /Saved/.test((document.getElementById('sqlDlgStatus') || {}).innerText || ''), null, { timeout: 10000 });
     await page.click('#sqlDlgConnect');
     await page.waitForSelector('#sqlConnected', { timeout: 10000 });
+    // set up Ask AI (so the AI infolet / AI dashboard can draft)
+    await page.click('#sqlAiWho');
+    await page.waitForSelector('#sqlAiProviders', { timeout: 10000 });
+    await page.click('#sqlAiProviders [data-value="anthropic"]');
+    await page.waitForSelector('#sqlAiF-key');
+    await page.fill('#sqlAiF-key', 'sk-ant-TEST');
+    await page.click('#sqlAiLoad');
+    await page.waitForSelector('#sqlAiModels [data-value="model-a"]', { timeout: 10000 });
+    await page.click('#sqlAiModels [data-value="model-a"]');
+    await page.waitForFunction(() => (document.getElementById('sqlAiModel') || {}).value === 'model-a', null, { timeout: 5000 }).catch(() => {});
+    await page.click('#sqlAiSave');
+    await page.waitForSelector('#sqlAiDialog', { state: 'detached', timeout: 10000 });
     await page.fill('#sqlEditor', 'select ename, sal from emp');
     await page.click('#sqlRun');
     await page.waitForFunction(() => { const b = document.getElementById('sqlSaveInfolet'); return b && !b.disabled; }, null, { timeout: 10000 });
@@ -90,6 +116,28 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
     await page.waitForFunction(() => !document.querySelector('.nx-sql-slot'), null, { timeout: 10000 });
     await settle(page, 500); // let the layout save round-trip to disk
     T.check('removing the slot empties the dashboard (in the grid and the store)', !!(await page.$('#sqlBoardEmpty')) && savedSqlStore.dashboardWith(dbs[0].id).slots.length === 0);
+
+    T.section('AI infolet: drafted, previewed, added to the board');
+    await page.click('#sqlInfNewAi');
+    await page.waitForSelector('#sqlInfModal', { timeout: 10000 });
+    await page.fill('#sqlInfGoal', 'staff pay list');
+    await page.click('#sqlInfAiGo');
+    await page.waitForFunction(() => /nx-if-bars/.test((document.getElementById('sqlInfPreview') || {}).innerHTML || ''), null, { timeout: 15000 });
+    T.check('AI wrote the SQL, ran it, and previewed a chart', /nx-if-bars/.test(await page.innerHTML('#sqlInfPreview')));
+    await page.click('#sqlInfShare');
+    await page.click('#sqlInfGo');
+    await page.waitForFunction(() => !document.getElementById('sqlInfModal'), null, { timeout: 10000 });
+    await page.waitForFunction(() => { const s = document.querySelector('.nx-sql-slot'); return s && /nx-if-bars/.test(s.innerHTML); }, null, { timeout: 15000 });
+    T.check('the AI infolet is saved and rendered on the board', savedSqlStore.listInfolets().some((x) => /staff pay list/i.test(x.name)) && (await page.$$('.nx-sql-slot')).length === 1);
+
+    T.section('AI dashboard: several infolets from one description');
+    await page.click('#sqlBoardAi');
+    await page.waitForSelector('#sqlBoardAiModal', { timeout: 10000 });
+    await page.fill('#sqlBoardAiGoal', 'an overview of staff');
+    await page.click('#sqlBoardAiGo');
+    await page.waitForFunction(() => !document.getElementById('sqlBoardAiModal'), null, { timeout: 25000 });
+    await page.waitForFunction(() => document.querySelectorAll('.nx-sql-slot').length >= 3, null, { timeout: 20000 });
+    T.check('the plan became several infolets on the board', (await page.$$('.nx-sql-slot')).length >= 3 && savedSqlStore.listInfolets().some((x) => x.name === 'Salaries') && savedSqlStore.listInfolets().some((x) => x.name === 'Headcount'));
 
     await env.shot('sql-dash.png');
     T.eq('no browser errors', errs().join(' | ').slice(0, 1500), '');

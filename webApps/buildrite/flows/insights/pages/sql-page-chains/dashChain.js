@@ -2,8 +2,9 @@ define([
   'vb/action/actionChain',
   'resources/js/sqlClient',
   'resources/js/infolets',
+  'resources/js/infoletAi',
   'resources/js/shellBus',
-], (ActionChain, sql, I, bus) => {
+], (ActionChain, sql, I, IA, bus) => {
   'use strict';
 
   // Infolets and dashboards for the SQL worksheet. An infolet is a named chart = its own SQL + a spec
@@ -35,7 +36,33 @@ define([
         const sqlText = (byId('sqlEditor') && byId('sqlEditor').value) || v.sql || '';
         if (!sqlText.trim()) { bus.toast('There is no SQL to save as an infolet.', 'error'); return; }
         const sug = I.suggest(v.raw.columns, v.raw.rows || []);
-        v.infDlg = { open: true, name: '', description: '', kind: sug.kind, label: sug.label || '', value: sug.value || '', agg: sug.agg || 'sum', limit: sug.limit || 12, share: true, busy: '', error: '', sql: sqlText };
+        v.infDlg = { open: true, name: '', description: '', kind: sug.kind, label: sug.label || '', value: sug.value || '', agg: sug.agg || 'sum', limit: sug.limit || 12, share: true, busy: '', error: '', sql: sqlText, data: { columns: v.raw.columns, rows: v.raw.rows || [] }, toBoard: false, aiGoal: '', aiBusy: '', aiNote: '' };
+        this.preview(v);
+        return;
+      }
+      // Build an infolet with AI, straight to a dashboard (no worksheet result needed)
+      if (op === 'infNewAi') {
+        v.infDlg = { open: true, name: '', description: '', kind: 'bar', label: '', value: '', agg: 'sum', limit: 12, share: true, busy: '', error: '', sql: '', data: null, toBoard: !!(v.board && v.board.open), aiGoal: '', aiBusy: '', aiNote: '' };
+        setTimeout(() => { const el = byId('sqlInfGoal'); if (el) el.focus(); }, 60);
+        return;
+      }
+      if (op === 'infAi') {
+        const d = v.infDlg || {};
+        const goal = String(d.aiGoal || '').trim();
+        if (!goal) { v.infDlg = Object.assign({}, d, { aiNote: 'Say what you want to see, in plain words.' }); return; }
+        if (!(v.session && v.session.id)) { bus.toast('Connect to a database first (Worksheet tab): Ask AI reads the schema.', 'error'); return; }
+        v.infDlg = Object.assign({}, d, { aiBusy: '1', aiNote: 'Asking the LLM…', error: '' });
+        const r = await sql.aiAsk(v.session.id, goal, '');
+        const b = r.body || {};
+        if (!r.ok || !b.sql) { v.infDlg = Object.assign({}, v.infDlg, { aiBusy: '', aiNote: b.error ? 'Not written: ' + b.error : 'The LLM wrote no SQL (' + (b.explain || 'no answer') + ').' }); return; }
+        v.infDlg = Object.assign({}, v.infDlg, { aiNote: 'Running the SQL…' });
+        const run = await sql.run(v.session.id, b.sql, Math.max(200, Number(v.fetch) || 200));
+        const rb = run.body || {};
+        if (!run.ok || rb.error || rb.kind !== 'query') { v.infDlg = Object.assign({}, v.infDlg, { aiBusy: '', sql: b.sql, aiNote: 'The SQL did not return rows: ' + ((rb.error || rb.message || '').split('\n')[0] || 'no rows') + '. You can edit it in the worksheet.' }); return; }
+        const data = { columns: rb.columns || [], rows: rb.rows || [] };
+        const sug = I.suggest(data.columns, data.rows);
+        v.infDlg = Object.assign({}, v.infDlg, { aiBusy: '', sql: b.sql, data: data, kind: sug.kind, label: sug.label || '', value: sug.value || '', agg: sug.agg || 'sum', limit: sug.limit || 12,
+          name: v.infDlg.name || goal.charAt(0).toUpperCase() + goal.slice(1, 60), aiNote: 'Drafted by ' + (b.provider || 'the LLM') + ' · ' + rb.rows.length + ' rows. Adjust and Save.' });
         this.preview(v);
         return;
       }
@@ -57,9 +84,64 @@ define([
         const spec = specOf(d); spec.title = name;
         const r = await sql.infoletSave({ name: name, description: d.description || '', sql: d.sql, conn: conn, spec: spec }, share);
         if (!(r.ok && r.body && r.body.infolet)) { v.infDlg = Object.assign({}, v.infDlg, { busy: '', error: (r.body && r.body.error) || 'It could not be saved.' }); return; }
+        const infolet = r.body.infolet;
+        const toBoard = d.toBoard && v.board && v.board.open;
         v.infDlg = Object.assign({}, v.infDlg, { open: false, busy: '' });
         const git = r.body.git, shared = share && git && (git.pushed || git.committed);
-        bus.toast('Saved the infolet “' + name + '”' + (shared ? ' and shared with the team.' : (share ? ' on this PC.' : '.')), 'info');
+        if (toBoard) {
+          const slots = ((v.board && v.board.slots) || []).slice();
+          if (!slots.some((s) => s.infoletId === infolet.id)) {
+            slots.push({ infoletId: infolet.id, name: infolet.name, kind: (infolet.spec && infolet.spec.kind) || 'table', w: 6, sql: infolet.sql, spec: infolet.spec || {} });
+            v.board = Object.assign({}, v.board, { slots: slots, dirty: true });
+            await this.saveBoardLayout(v);
+            this.paint(v);
+          }
+        }
+        bus.toast('Saved the infolet “' + name + '”' + (toBoard ? ' and added it to the dashboard.' : (shared ? ' and shared with the team.' : (share ? ' on this PC.' : '.'))), 'info');
+        return;
+      }
+
+      // ── build a whole dashboard with AI ──
+      if (op === 'boardAiOpen') { v.boardAiDlg = { open: true, goal: '', busy: '', log: [], error: '' }; setTimeout(() => { const el = byId('sqlBoardAiGoal'); if (el) el.focus(); }, 60); return; }
+      if (op === 'boardAiClose') { if (v.boardAiDlg && v.boardAiDlg.busy) return; v.boardAiDlg = Object.assign({}, v.boardAiDlg, { open: false }); return; }
+      if (op === 'boardAiGoal') { v.boardAiDlg = Object.assign({}, v.boardAiDlg, { goal: String(value == null ? '' : value) }); return; }
+      if (op === 'boardAiGo') {
+        const g = v.boardAiDlg || {};
+        const goal = String(g.goal || '').trim();
+        if (!goal) { v.boardAiDlg = Object.assign({}, g, { error: 'Describe the dashboard you want.' }); return; }
+        if (!(v.session && v.session.id)) { bus.toast('Connect to a database first (Worksheet tab).', 'error'); return; }
+        const log = (line) => { v.boardAiDlg = Object.assign({}, v.boardAiDlg, { log: (v.boardAiDlg.log || []).concat([line]) }); };
+        v.boardAiDlg = Object.assign({}, g, { busy: '1', error: '', log: ['Asking the LLM for a plan…'] });
+        const msgs = IA.planMessages(goal);
+        const pr = await sql.aiChat(msgs.system, msgs.user);
+        const plan = IA.parsePlan((pr.body && pr.body.text) || '');
+        if (!plan.length) { v.boardAiDlg = Object.assign({}, v.boardAiDlg, { busy: '', error: (pr.body && pr.body.error) || 'The LLM did not return a usable plan. Try describing it differently.' }); return; }
+        log('Plan: ' + plan.length + ' infolets. Building…');
+        const slots = ((v.board && v.board.slots) || []).slice();
+        let made = 0;
+        for (const item of plan) {
+          log('• ' + item.title + ' …');
+          try {
+            const r = await sql.aiAsk(v.session.id, item.question, '');
+            const b = r.body || {};
+            if (!r.ok || !b.sql) { log('   skipped (no SQL).'); continue; }
+            const run = await sql.run(v.session.id, b.sql, Math.max(200, Number(v.fetch) || 200));
+            const rb = run.body || {};
+            if (!run.ok || rb.error || rb.kind !== 'query') { log('   skipped (' + ((rb.error || rb.message || 'no rows').split('\n')[0]) + ').'); continue; }
+            const sug = I.suggest(rb.columns || [], rb.rows || []);
+            const spec = { kind: sug.kind, title: item.title, label: sug.label || '', value: sug.value || '', agg: sug.agg || 'sum', limit: sug.limit || 12 };
+            const sv = await sql.infoletSave({ name: item.title, description: item.question, sql: b.sql, conn: conn, spec: spec }, 'local');
+            if (!(sv.ok && sv.body && sv.body.infolet)) { log('   could not save.'); continue; }
+            const inf = sv.body.infolet;
+            if (!slots.some((s) => s.infoletId === inf.id)) { slots.push({ infoletId: inf.id, name: inf.name, kind: spec.kind, w: 6, sql: inf.sql, spec: spec }); made++; log('   added (' + spec.kind + ').'); }
+          } catch (e) { log('   error: ' + ((e && e.message) || 'failed')); }
+        }
+        if (!made) { v.boardAiDlg = Object.assign({}, v.boardAiDlg, { busy: '', error: 'None of the infolets could be built. See the steps above.' }); return; }
+        v.board = Object.assign({}, v.board, { slots: slots, dirty: true });
+        await this.saveBoardLayout(v);
+        this.paint(v);
+        v.boardAiDlg = { open: false, goal: '', busy: '', log: [], error: '' };
+        bus.toast('Added ' + made + ' infolet' + (made === 1 ? '' : 's') + ' to the dashboard.', 'info');
         return;
       }
 
@@ -182,13 +264,15 @@ define([
       }, 30);
     }
 
-    // the Save-as-infolet live preview
+    // the Save-as-infolet live preview (from the AI-drafted result, else the worksheet's result)
     preview(v) {
       const d = v.infDlg || {};
-      if (!d.open || !(v.raw && v.raw.columns)) return;
+      const data = d.data || v.raw;
+      if (!d.open) return;
       setTimeout(() => {
+        if (!(data && data.columns && data.columns.length)) { put('sqlInfPreview', '<p class="nx-if-empty">Draft with AI, or run a query first, to see a chart.</p>'); return; }
         const spec = { kind: d.kind || 'table', title: d.name || '', label: d.label || '', value: d.value || '', agg: d.agg || 'sum', limit: Number(d.limit) || 12 };
-        const model = I.compute(spec, { columns: v.raw.columns, rows: v.raw.rows || [] });
+        const model = I.compute(spec, { columns: data.columns, rows: data.rows || [] });
         put('sqlInfPreview', I.cardHtml(model));
       }, 20);
     }

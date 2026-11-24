@@ -304,6 +304,8 @@
             <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="sqlDashBack" on-click="[[ $listeners.onDashClose ]]"><span class="oj-ux-ico-chevron-left" aria-hidden="true"></span> All dashboards</button>
             <h2 class="nx-sql-boardtitle"><oj-bind-text value="[[ $variables.board.name ]]"></oj-bind-text></h2>
             <div class="nx-sql-boardacts">
+              <button type="button" class="nx-btn nx-btn--sm" id="sqlBoardAi" on-click="[[ $listeners.onBoardAiOpen ]]" title="Describe a dashboard; the LLM builds its infolets"><span class="oj-ux-ico-lightbulb" aria-hidden="true"></span> Build with AI</button>
+              <button type="button" class="nx-btn nx-btn--sm" id="sqlInfNewAi" on-click="[[ $listeners.onInfNewAi ]]" title="Create one chart with AI and add it here"><span class="oj-ux-ico-magic-wand" aria-hidden="true"></span> AI infolet</button>
               <button type="button" class="nx-btn nx-btn--sm" id="sqlSlotAdd" on-click="[[ $listeners.onSlotAdd ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span> Add infolet</button>
               <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="sqlBoardRefresh" on-click="[[ $listeners.onBoardRefresh ]]" title="Run the charts again"><span class="oj-ux-ico-refresh" aria-hidden="true"></span> Refresh</button>
               <button type="button" class="nx-btn nx-btn--primary nx-btn--sm" id="sqlBoardShare" on-click="[[ $listeners.onBoardShare ]]" title="Commit the dashboard on the data branch for the team"><span class="oj-ux-ico-cloud-upload" aria-hidden="true"></span> Share</button>
@@ -564,6 +566,12 @@
           <button type="button" class="nx-iconbtn" id="sqlInfClose" on-click="[[ $listeners.onInfClose ]]" aria-label="Close"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
         </div>
         <div class="nx-dialog-body nx-sql-infbody">
+          <div class="nx-sql-infai">
+            <span class="nx-sql-infai-tag"><span class="oj-ux-ico-lightbulb" aria-hidden="true"></span> Build with AI</span>
+            <input id="sqlInfGoal" class="nx-sql-in nx-sql-infai-in" type="text" autocomplete="off" :value="[[ $variables.infDlg.aiGoal ]]" on-input="[[ $listeners.onInfGoal ]]" placeholder="In plain words, e.g. orders by status, or sales by month this year"/>
+            <button type="button" class="nx-btn nx-btn--sm" id="sqlInfAiGo" on-click="[[ $listeners.onInfAi ]]" :disabled="[[ !!$variables.infDlg.aiBusy ]]"><oj-bind-text value="[[ $variables.infDlg.aiBusy ? 'Drafting…' : 'Draft' ]]"></oj-bind-text></button>
+          </div>
+          <oj-bind-if test="[[ !!$variables.infDlg.aiNote ]]"><p class="nx-sql-infai-note" id="sqlInfAiNote" role="status"><oj-bind-text value="[[ $variables.infDlg.aiNote ]]"></oj-bind-text></p></oj-bind-if>
           <div class="nx-sql-infform">
             <label class="nx-sql-savefield">Name
               <input id="sqlInfName" class="nx-sql-in" type="text" autocomplete="off" data-field="name" :value="[[ $variables.infDlg.name ]]" on-input="[[ $listeners.onInfField ]]" placeholder="e.g. Orders by region"/></label>
@@ -665,6 +673,33 @@
         </div>
         <footer class="nx-dialog-foot nx-sql-dlgfoot">
           <button type="button" class="nx-btn nx-btn--plain" id="sqlAddInfCancel" on-click="[[ $listeners.onAddClose ]]">Close</button>
+        </footer>
+      </div>
+    </div>
+  </oj-bind-if>
+
+  <!-- Build a whole dashboard with AI -->
+  <oj-bind-if test="[[ $variables.boardAiDlg.open ]]">
+    <div class="nx-modal" id="sqlBoardAiModal">
+      <div class="nx-dialog nx-sql-savedlg" role="dialog" aria-modal="true" aria-label="Build a dashboard with AI">
+        <div class="nx-dialog-head">
+          <h2 class="nx-dialog-title">Build a dashboard with AI</h2>
+          <button type="button" class="nx-iconbtn" id="sqlBoardAiClose" on-click="[[ $listeners.onBoardAiClose ]]" aria-label="Close" :disabled="[[ !!$variables.boardAiDlg.busy ]]"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+        </div>
+        <div class="nx-dialog-body nx-sql-savebody">
+          <label class="nx-sql-savefield">Describe what you want to see
+            <input id="sqlBoardAiGoal" class="nx-sql-in" type="text" autocomplete="off" :value="[[ $variables.boardAiDlg.goal ]]" on-input="[[ $listeners.onBoardAiGoal ]]" placeholder="e.g. an overview of this year's orders — totals, by month, by status, top customers"/></label>
+          <p class="nx-sql-opt">The LLM proposes a few charts; each one's SQL is written against your connected schema and run to draw it.</p>
+          <oj-bind-if test="[[ ($variables.boardAiDlg.log || []).length > 0 ]]">
+            <div class="nx-sql-ailog" id="sqlBoardAiLog">
+              <oj-bind-for-each data="[[ $variables.boardAiDlg.log ]]"><template data-oj-as="l"><div class="nx-sql-ailog-line"><oj-bind-text value="[[ l.data ]]"></oj-bind-text></div></template></oj-bind-for-each>
+            </div>
+          </oj-bind-if>
+          <oj-bind-if test="[[ !!$variables.boardAiDlg.error ]]"><div class="nx-sql-dlgstatus nx-sql-dlgstatus--bad" id="sqlBoardAiErr" role="status"><oj-bind-text value="[[ $variables.boardAiDlg.error ]]"></oj-bind-text></div></oj-bind-if>
+        </div>
+        <footer class="nx-dialog-foot nx-sql-dlgfoot">
+          <button type="button" class="nx-btn nx-btn--plain" id="sqlBoardAiCancel" on-click="[[ $listeners.onBoardAiClose ]]" :disabled="[[ !!$variables.boardAiDlg.busy ]]">Cancel</button>
+          <button type="button" class="nx-btn nx-btn--primary" id="sqlBoardAiGo" on-click="[[ $listeners.onBoardAiGo ]]" :disabled="[[ !!$variables.boardAiDlg.busy ]]"><oj-bind-text value="[[ $variables.boardAiDlg.busy ? 'Building…' : 'Build' ]]"></oj-bind-text></button>
         </footer>
       </div>
     </div>
