@@ -3,14 +3,15 @@
   {
    "id": "79410673b2a4",
    "createdAt": "2026-11-24T09:58:41.189Z",
-   "runs": 0,
+   "runs": 1,
    "name": "EQUIPMENT MASTER",
    "sql": "-- Ask AI (Claude (Anthropic)): give me the table for equipment master\n\n-- Ask AI (Claude (Anthropic)): give me the table for equipment master\nSELECT *\nFROM   EQR_EQUIPMENT_MASTER em WHERE IS_INVENTORY_TRACKED = 'Y'\nORDER BY em.EQR_EQUIPMENT_MASTER_ID\nFETCH FIRST 50 ROWS ONLY;",
    "description": "",
    "folder": "",
    "conn": "paasdev",
    "by": "rite.user",
-   "updatedAt": "2026-11-24T09:58:41.189Z"
+   "updatedAt": "2026-11-24T09:58:41.189Z",
+   "lastRun": "2026-11-24T10:29:48.644Z"
   },
   {
    "id": "5ae3fb22fbe7",
@@ -45,5 +46,15 @@
    "updatedAt": "2026-11-24T10:00:09.879Z"
   }
  ],
- "dashboards": []
+ "dashboards": [
+  {
+   "id": "36db9136dba3",
+   "createdAt": "2026-11-24T10:30:14.610Z",
+   "name": "epq",
+   "description": "",
+   "layout": [],
+   "by": "rite.user",
+   "updatedAt": "2026-11-24T10:30:14.610Z"
+  }
+ ]
 }
