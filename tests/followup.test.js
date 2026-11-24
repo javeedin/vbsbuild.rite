@@ -96,6 +96,10 @@ T.check('…and blockers, UAT sign-off; every key once, Write my own still last'
   && new Set(F.TEMPLATES.map((t) => t.key)).size === F.TEMPLATES.length && F.TEMPLATES[F.TEMPLATES.length - 1].key === 'blank');
 T.check('…its message: the greeting, then the body', /^Dear .*,\n\nBefore we can close the stories below, please attach proof of testing/.test(F.message([{ assignee: 'Priya Raman' }], 'proof')), F.message([{ assignee: 'Priya Raman' }], 'proof').slice(0, 80));
 T.check('message() is greeting + the chosen body', F.message(ROWS, 'close').startsWith('Dear Priya and Omar,') && /kindly close/.test(F.message(ROWS, 'close')));
+T.check('"Ask how to proceed": a manager message with its own subject and body', F.template('proceed').key === 'proceed'
+  && F.template('proceed').label === 'Ask how to proceed' && /how should we proceed/i.test(F.template('proceed').subject)
+  && /advise how you would like us to proceed/i.test(F.template('proceed').body)
+  && /^Dear .*,\n\nPlease advise how you would like us to proceed/.test(F.message([{ assignee: 'Priya Raman' }], 'proceed')));
 
 T.section('columns');
 T.check('sprint columns lead with Sprint and drop the in-sprint column', F.columns('sprint')[0].key === 'sprint' && !F.columns('sprint').some((c) => c.key === 'in'));

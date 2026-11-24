@@ -62,6 +62,8 @@ define(['resources/js/exportKit'], function (exportKit) {
       body: 'We need more information on the stories below before they can move forward. Please add the missing details to each story: what is needed, the acceptance criteria, and any examples or screens that help. Reply if a short call would be quicker.' },
     { key: 'blocked', label: 'Any blockers?', subject: 'Is anything blocking these stories?',
       body: 'The stories below have not moved for a while. Is anything blocking them? Please reply with the blocker, who can clear it and the date you expect to continue, so we can help.' },
+    { key: 'proceed', label: 'Ask how to proceed', subject: 'How should we proceed on these stories?',
+      body: 'Please advise how you would like us to proceed on the stories below. For each one, let us know the priority and the next step — carry on, put it on hold, reassign it, or close it — and anything you need from us to decide.' },
     { key: 'uat', label: 'UAT sign-off', subject: 'UAT sign-off needed for these stories',
       body: 'The stories below are ready for user acceptance testing. Please test them and reply with your sign-off, or list what does not work as expected so we can fix it.' },
     { key: 'blank', label: 'Write my own', subject: 'Follow-up', body: '' },
