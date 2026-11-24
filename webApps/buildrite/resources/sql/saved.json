@@ -1,0 +1,18 @@
+{
+ "queries": [
+  {
+   "id": "79410673b2a4",
+   "createdAt": "2026-11-24T09:58:41.189Z",
+   "runs": 0,
+   "name": "EQUIPMENT MASTER",
+   "sql": "-- Ask AI (Claude (Anthropic)): give me the table for equipment master\n\n-- Ask AI (Claude (Anthropic)): give me the table for equipment master\nSELECT *\nFROM   EQR_EQUIPMENT_MASTER em WHERE IS_INVENTORY_TRACKED = 'Y'\nORDER BY em.EQR_EQUIPMENT_MASTER_ID\nFETCH FIRST 50 ROWS ONLY;",
+   "description": "",
+   "folder": "",
+   "conn": "paasdev",
+   "by": "rite.user",
+   "updatedAt": "2026-11-24T09:58:41.189Z"
+  }
+ ],
+ "infolets": [],
+ "dashboards": []
+}
