@@ -28,26 +28,43 @@
   {
    "id": "952fdf78a1f6",
    "createdAt": "2026-11-24T12:45:03.022Z",
-   "runs": 0,
+   "runs": 1,
    "name": "end-end tracking for request id",
    "sql": "-- Ask AI (Claude (Anthropic)): i want to track end to end data for a equipment request\nSELECT er.REQUEST_NUMBER,\n       er.STATUS                 AS request_status,\n       er.PROJECT_NAME,\n       er.TASK_NAME,\n       er.CUSTOMER_NAME,\n       er.REQUESTOR_NAME,\n       er.REQUESTED_START_DATE,\n       er.REQUESTED_END_DATE,\n       rl.EQR_REQUEST_LINE_ID,\n       rl.LINE_STATUS,\n       rl.QUANTITY,\n       rl.ALLOCATION_STATUS,\n       rl.DELIVERED_QUANTITY,\n       rl.CONSUMED_QUANTITY,\n       rl.RETURNED_QUANTITY,\n       rl.START_DATE             AS line_start_date,\n       rl.END_DATE               AS line_end_date,\n       em.EQUIPMENT_NUMBER,\n       em.EQUIPMENT_NAME,\n       ld.UNIT_TYPE,\n       ld.UNIT_NUMBER,\n       ld.UNIT_STATUS,\n       ld.ALLOCATION_STATUS      AS unit_allocation_status,\n       ld.ALLOCATED_QTY,\n       ld.SOURCE_INV_ORG_NAME,\n       ld.DEST_INV_ORG_NAME,\n       mt.EXPENDITURE_TYPE       AS misc_exp_type,\n       mt.RAW_COST               AS misc_raw_cost,\n       mt.STATUS                 AS misc_status,\n       sh.FROM_STATUS,\n       sh.TO_STATUS,\n       sh.CHANGED_DATE\nFROM   EQR_EQUIPMENT_REQUEST er\n       LEFT JOIN EQR_REQUEST_LINE rl\n              ON rl.EQR_EQUIPMENT_REQUEST_ID = er.EQR_EQUIPMENT_REQUEST_ID\n       LEFT JOIN EQR_EQUIPMENT_MASTER em\n              ON em.EQR_EQUIPMENT_MASTER_ID = rl.EQR_EQUIPMENT_MASTER_ID\n       LEFT JOIN EQR_V_LINE_DETAIL_UNITS ld\n              ON ld.LINE_ID = rl.EQR_REQUEST_LINE_ID\n       LEFT JOIN EQR_LINE_MISC_TXN mt\n              ON mt.EQR_REQUEST_LINE_ID = rl.EQR_REQUEST_LINE_ID\n       LEFT JOIN EQR_REQUEST_STATUS_HISTORY sh\n              ON sh.EQR_EQUIPMENT_REQUEST_ID = er.EQR_EQUIPMENT_REQUEST_ID\nWHERE  er.REQUEST_NUMBER = :request_number\nORDER BY rl.EQR_REQUEST_LINE_ID,\n         ld.UNIT_NUMBER,\n         sh.CHANGED_DATE\nFETCH FIRST 500 ROWS ONLY;",
    "description": "",
    "folder": "",
    "conn": "paasdev",
    "by": "rite.user",
-   "updatedAt": "2026-11-24T12:45:03.022Z"
+   "updatedAt": "2026-11-24T12:45:03.022Z",
+   "lastRun": "2026-11-24T13:32:42.781Z"
   },
   {
    "id": "ccabc8527ebf",
    "createdAt": "2026-11-24T13:32:23.936Z",
-   "runs": 0,
+   "runs": 2,
    "name": "10086 request id",
    "sql": "-- Ask AI (Claude (Anthropic)): i want to track end to end data for a equipment request\nSELECT er.REQUEST_NUMBER,\n       er.STATUS                 AS request_status,\n       er.PROJECT_NAME,\n       er.TASK_NAME,\n       er.CUSTOMER_NAME,\n       er.REQUESTOR_NAME,\n       er.REQUESTED_START_DATE,\n       er.REQUESTED_END_DATE,\n       rl.EQR_REQUEST_LINE_ID,\n       rl.LINE_STATUS,\n       rl.QUANTITY,\n       rl.ALLOCATION_STATUS,\n       rl.DELIVERED_QUANTITY,\n       rl.CONSUMED_QUANTITY,\n       rl.RETURNED_QUANTITY,\n       rl.START_DATE             AS line_start_date,\n       rl.END_DATE               AS line_end_date,\n       em.EQUIPMENT_NUMBER,\n       em.EQUIPMENT_NAME,\n       ld.UNIT_TYPE,\n       ld.UNIT_NUMBER,\n       ld.UNIT_STATUS,\n       ld.ALLOCATION_STATUS      AS unit_allocation_status,\n       ld.ALLOCATED_QTY,\n       ld.SOURCE_INV_ORG_NAME,\n       ld.DEST_INV_ORG_NAME,\n       mt.EXPENDITURE_TYPE       AS misc_exp_type,\n       mt.RAW_COST               AS misc_raw_cost,\n       mt.STATUS                 AS misc_status,\n       sh.FROM_STATUS,\n       sh.TO_STATUS,\n       sh.CHANGED_DATE\nFROM   EQR_EQUIPMENT_REQUEST er\n       LEFT JOIN EQR_REQUEST_LINE rl\n              ON rl.EQR_EQUIPMENT_REQUEST_ID = er.EQR_EQUIPMENT_REQUEST_ID\n       LEFT JOIN EQR_EQUIPMENT_MASTER em\n              ON em.EQR_EQUIPMENT_MASTER_ID = rl.EQR_EQUIPMENT_MASTER_ID\n       LEFT JOIN EQR_V_LINE_DETAIL_UNITS ld\n              ON ld.LINE_ID = rl.EQR_REQUEST_LINE_ID\n       LEFT JOIN EQR_LINE_MISC_TXN mt\n              ON mt.EQR_REQUEST_LINE_ID = rl.EQR_REQUEST_LINE_ID\n       LEFT JOIN EQR_REQUEST_STATUS_HISTORY sh\n              ON sh.EQR_EQUIPMENT_REQUEST_ID = er.EQR_EQUIPMENT_REQUEST_ID\nWHERE  er.REQUEST_NUMBER = :request_number\nORDER BY rl.EQR_REQUEST_LINE_ID,\n         ld.UNIT_NUMBER,\n         sh.CHANGED_DATE\nFETCH FIRST 500 ROWS ONLY;",
    "description": "",
    "folder": "",
    "conn": "paasdev",
    "by": "rite.user",
-   "updatedAt": "2026-11-24T13:32:23.936Z"
+   "updatedAt": "2026-11-24T13:32:23.936Z",
+   "lastRun": "2026-11-24T14:19:22.781Z"
+  },
+  {
+   "id": "dc4655487f89",
+   "createdAt": "2026-11-24T15:53:42.152Z",
+   "runs": 0,
+   "name": "TCO",
+   "sql": "-- Ask AI (Claude (Anthropic)): i want to track end to end data for a equipment request\nSELECT er.REQUEST_NUMBER,\n       er.STATUS                 AS request_status,\n       er.PROJECT_NAME,\n       er.TASK_NAME,\n       er.CUSTOMER_NAME,\n       er.REQUESTOR_NAME,\n       er.REQUESTED_START_DATE,\n       er.REQUESTED_END_DATE,\n       rl.EQR_REQUEST_LINE_ID,\n       rl.LINE_STATUS,\n       rl.QUANTITY,\n       rl.ALLOCATION_STATUS,\n       rl.DELIVERED_QUANTITY,\n       rl.CONSUMED_QUANTITY,\n       rl.RETURNED_QUANTITY,\n       rl.START_DATE             AS line_start_date,\n       rl.END_DATE               AS line_end_date,\n       em.EQUIPMENT_NUMBER,\n       em.EQUIPMENT_NAME,\n       ld.UNIT_TYPE,\n       ld.UNIT_NUMBER,\n       ld.UNIT_STATUS,\n       ld.ALLOCATION_STATUS      AS unit_allocation_status,\n       ld.ALLOCATED_QTY,\n       ld.SOURCE_INV_ORG_NAME,\n       ld.DEST_INV_ORG_NAME,\n       mt.EXPENDITURE_TYPE       AS misc_exp_type,\n       mt.RAW_COST               AS misc_raw_cost,\n       mt.STATUS                 AS misc_status,\n       sh.FROM_STATUS,\n       sh.TO_STATUS,\n       sh.CHANGED_DATE\nFROM   EQR_EQUIPMENT_REQUEST er\n       LEFT JOIN EQR_REQUEST_LINE rl\n              ON rl.EQR_EQUIPMENT_REQUEST_ID = er.EQR_EQUIPMENT_REQUEST_ID\n       LEFT JOIN EQR_EQUIPMENT_MASTER em\n              ON em.EQR_EQUIPMENT_MASTER_ID = rl.EQR_EQUIPMENT_MASTER_ID\n       LEFT JOIN EQR_V_LINE_DETAIL_UNITS ld\n              ON ld.LINE_ID = rl.EQR_REQUEST_LINE_ID\n       LEFT JOIN EQR_LINE_MISC_TXN mt\n              ON mt.EQR_REQUEST_LINE_ID = rl.EQR_REQUEST_LINE_ID\n       LEFT JOIN EQR_REQUEST_STATUS_HISTORY sh\n              ON sh.EQR_EQUIPMENT_REQUEST_ID = er.EQR_EQUIPMENT_REQUEST_ID\nWHERE  er.REQUEST_NUMBER = :request_number\nORDER BY rl.EQR_REQUEST_LINE_ID,\n         ld.UNIT_NUMBER,\n         sh.CHANGED_DATE\nFETCH FIRST 500 ROWS ONLY;\n\n-- Ask AI (Claude (Anthropic)): i need the query for TCO for selected equipment\nWITH line_cost AS (\n    SELECT rl.EQR_EQUIPMENT_MASTER_ID,\n           SUM(NVL(rl.ESTIMATED_COST, 0)) AS est_rental_cost\n    FROM   EQR_REQUEST_LINE rl\n    WHERE  rl.EQR_EQUIPMENT_MASTER_ID IN (:equipment_master_ids)\n    GROUP  BY rl.EQR_EQUIPMENT_MASTER_ID\n),\nmisc_cost AS (\n    SELECT rl.EQR_EQUIPMENT_MASTER_ID,\n           SUM(NVL(mt.RAW_COST, 0)) AS misc_cost\n    FROM   EQR_LINE_MISC_TXN mt\n           JOIN EQR_REQUEST_LINE rl\n             ON rl.EQR_REQUEST_LINE_ID = mt.REQUEST_LINE_ID\n    WHERE  rl.EQR_EQUIPMENT_MASTER_ID IN (:equipment_master_ids)\n    GROUP  BY rl.EQR_EQUIPMENT_MASTER_ID\n),\nposted_cost AS (\n    SELECT pcd.EQUIPMENT_MASTER_ID,\n           SUM(NVL(pcd.TOTAL_COST, 0)) AS posted_cost\n    FROM   EQR_PROJECT_COST_DETAIL_V pcd\n    WHERE  pcd.EQUIPMENT_MASTER_ID IN (:equipment_master_ids)\n    GROUP  BY pcd.EQUIPMENT_MASTER_ID\n)\nSELECT em.EQR_EQUIPMENT_MASTER_ID,\n       em.EQUIPMENT_NUMBER,\n       em.EQUIPMENT_NAME,\n       NVL(lc.est_rental_cost, 0)                              AS estimated_rental_cost,\n       NVL(mc.misc_cost, 0)                                    AS misc_transaction_cost,\n       NVL(pc.posted_cost, 0)                                  AS posted_project_cost,\n       NVL(lc.est_rental_cost, 0)\n         + NVL(mc.misc_cost, 0)\n         + NVL(pc.posted_cost, 0)                              AS total_cost_of_ownership\nFROM   EQR_EQUIPMENT_MASTER em\n       LEFT JOIN line_cost   lc ON lc.EQR_EQUIPMENT_MASTER_ID = em.EQR_EQUIPMENT_MASTER_ID\n       LEFT JOIN misc_cost   mc ON mc.EQR_EQUIPMENT_MASTER_ID = em.EQR_EQUIPMENT_MASTER_ID\n       LEFT JOIN posted_cost pc ON pc.EQUIPMENT_MASTER_ID     = em.EQR_EQUIPMENT_MASTER_ID\nWHERE  em.EQR_EQUIPMENT_MASTER_ID IN (:equipment_master_ids)\nORDER  BY total_cost_of_ownership DESC\nFETCH FIRST 200 ROWS ONLY;",
+   "description": "",
+   "folder": "",
+   "conn": "paasdev",
+   "binds": {
+    "request_number": "10086"
+   },
+   "by": "rite.user",
+   "updatedAt": "2026-11-24T15:53:42.152Z"
   }
  ],
  "infolets": [
