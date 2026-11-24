@@ -67,7 +67,7 @@ const OUTLINE = [
   '## 3. Wireframes',
   '## 4. Technical design (TDD)', '### 4.1 Pages and components', '### 4.2 Data model', '### 4.3 Integration touch points', '### 4.4 Action chains and modules', '### 4.5 Security and roles',
   '### 4.6 Error handling and messages', '### 4.7 Performance and limits',
-  '## 5. Developer reference', '### 5.1 Files to change', '### 5.2 Existing patterns to reuse', '### 5.3 Build steps', '### 5.4 Test plan',
+  '## 5. Developer reference', '### 5.1 Files to change', '### 5.2 Existing patterns to reuse', '### 5.3 Build steps', '### 5.4 Test plan', '### 5.5 Prompts for Claude',
   '## 6. Assumptions and open questions'];
 
 /** What the AI is given and asked for. */
@@ -88,8 +88,12 @@ function prompt(c) {
   U.push('Field types: text, number, date, select, multiselect, textarea, toggle, checkbox, search, readonly. After each block, one line saying what the user does there.');
   U.push('Under "### 4.3 Integration touch points", a Markdown table: | # | System | Endpoint or report | Method | Purpose | Sends | Uses from the answer | (existing ones by their endpoint id, new ones marked NEW).');
   U.push('Under "### 4.2 Data model", a table per object: | Field | Type | Key | Notes |.');
-  U.push('Under "### 5.1 Files to change", the real paths from the context (page files, chains, modules), each with what changes; NEW files with the path they go to.');
-  U.push('Under "### 5.4 Test plan", the API scenario (the calls in order) and the UI checks.');
+  U.push('Make "## 5. Developer reference" detailed enough that a developer can build the feature from it alone:');
+  U.push('Under "### 5.1 Files to change", list every real file from the context that changes, grouped by area (backend/store, routes, page variables & chains, markup, styles, tests). Each as a bullet: the path in `code`, then exactly what to add or change in it — the variables, action chains, event listeners, the markup elements, the CSS classes, the module functions — and why. Put NEW before a file that does not exist yet and give the folder it goes in.');
+  U.push('Under "### 5.2 Existing patterns to reuse", name a real existing page, chain or module in THIS app (with its file path) that already does the same shape of thing, so the developer copies it rather than inventing.');
+  U.push('Under "### 5.3 Build steps", the exact commands to build and run, where to run them, and how to see the change working in the app.');
+  U.push('Under "### 5.4 Test plan", the API scenario (the calls in order) and the UI checks, plus the test files to add or update.');
+  U.push('Under "### 5.5 Prompts for Claude", write a short numbered series of copy-paste prompts a developer can give to Claude Code (an AI coding assistant working in this repository) to build the feature step by step. Put EACH prompt in its own fenced ```prompt block. Each prompt must be self-contained: start with the Jira key and a one-line goal, name the exact files to create or change (the paths from 5.1), name the existing pattern to copy (from 5.2), describe the behaviour and the acceptance criteria it must satisfy, and end by asking Claude to build and run the tests. Order them so each builds on the last — 1) data model / store + routes, 2) page variables + action chains, 3) markup + styles, 4) wiring, validation and messages, 5) tests. Keep each prompt to one or two tight paragraphs and use only the real names from this design (never invented files, systems or values).');
   U.push('');
   U.push('# Story');
   U.push(str(ctx.storyText) || ([ctx.story && ctx.story.key, ctx.story && ctx.story.summary].filter(Boolean).join(' — ')));
@@ -162,6 +166,9 @@ function mdToHtml(md) {
         let spec = null;
         try { spec = JSON.parse(body.join('\n')); } catch (e) { spec = null; }
         out.push(spec ? wireframe(spec) : '<pre><code>' + esc(body.join('\n')) + '</code></pre>');
+      } else if (lang === 'prompt') {
+        // a ready-to-paste prompt for Claude Code — shown as a labelled box you can select and copy
+        out.push('<div class="dd-prompt"><div class="dd-prompt-h"><span class="dd-prompt-tag">▸ Prompt for Claude — select and copy</span></div><pre class="dd-prompt-body"><code>' + esc(body.join('\n')) + '</code></pre></div>');
       } else out.push('<pre><code>' + esc(body.join('\n')) + '</code></pre>');
       continue;
     }
@@ -237,6 +244,10 @@ ul, ol { margin: 4px 0 8px; padding-left: 20px; }
 li { margin: 2px 0; }
 code { font: 9pt Consolas, "Courier New", monospace; background: #f1f5f9; border-radius: 3px; padding: 0 3px; }
 pre { background: #f6f8fa; border: 1px solid #e0e6ec; border-radius: 6px; padding: 8px; overflow-wrap: anywhere; white-space: pre-wrap; font-size: 8.5pt; }
+.dd-prompt { border: 1px solid #c7dbf5; border-radius: 8px; margin: 8px 0; overflow: hidden; break-inside: avoid; }
+.dd-prompt-h { background: #eef4fc; padding: 4px 10px; }
+.dd-prompt-tag { font-size: 8.5pt; font-weight: 700; color: #1d4f91; letter-spacing: .02em; }
+.dd-prompt-body { margin: 0; border: 0; border-radius: 0; background: #fbfdff; }
 table.tbl { border-collapse: collapse; width: 100%; margin: 6px 0 12px; font-size: 9pt; page-break-inside: auto; }
 table.tbl th { background: #eef3f8; text-align: left; }
 table.tbl th, table.tbl td { border: 1px solid #d3dce6; padding: 4px 6px; vertical-align: top; overflow-wrap: anywhere; }

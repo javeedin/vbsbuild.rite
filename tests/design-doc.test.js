@@ -69,7 +69,8 @@ function request(port, method, p, body, headers) {
     T.check('the system: only what the context has, NEW for the rest, the FDD cited', /only the pages, files, chains, modules, REST endpoints/.test(p.system) && /"NEW"/.test(p.system) && /\[FDD n\]/.test(p.system));
     T.check('…every heading, in order: FDD, wireframes, TDD (touch points), developer reference, questions', D.OUTLINE.every((h) => p.user.indexOf(h) !== -1)
       && p.user.indexOf('## 2. Functional design (FDD)') < p.user.indexOf('## 3. Wireframes') && p.user.indexOf('### 4.3 Integration touch points') < p.user.indexOf('## 5. Developer reference'));
-    T.check('…the wireframe format, the touch-points table, real paths for the files to change', /```wireframe/.test(p.user) && /\| # \| System \| Endpoint or report \| Method \| Purpose \| Sends \| Uses from the answer \|/.test(p.user) && /the real paths from the context/.test(p.user));
+    T.check('…the wireframe format, the touch-points table, real paths for the files to change', /```wireframe/.test(p.user) && /\| # \| System \| Endpoint or report \| Method \| Purpose \| Sends \| Uses from the answer \|/.test(p.user) && /every real file from the context that changes/.test(p.user));
+    T.check('…a Developer reference with ready-to-paste Claude prompts (5.5, ```prompt blocks, build+test)', D.OUTLINE.indexOf('### 5.5 Prompts for Claude') !== -1 && /copy-paste prompts/.test(p.user) && /```prompt block/.test(p.user) && /build and run the tests/.test(p.user));
     T.check('…the story, its analysis, the FDD sections, the page\'s code facts, every page of the app', /STORY ABC-12/.test(p.user) && /Add a Watch toggle/.test(p.user) && /Shop FDD · v1\.7/.test(p.user)
       && /REST: GET \/shop\/v1\/orders/.test(p.user) && /shop\/customers\/customer-billing — Customer billing/.test(p.user) && /\(Shop\)/.test(p.user));
 
@@ -85,6 +86,7 @@ function request(port, method, p, body, headers) {
       && /wf-btn wf-btn--p">Save/.test(flat) && /<figcaption>A Watch toggle on each row<\/figcaption>/.test(flat));
     T.check('nothing the AI writes runs: its HTML is text', !/<img/.test(r.html) && /&lt;img src=x onerror=alert\(1\)&gt;/.test(r.html));
     T.check('a wireframe that is not JSON: shown as code', /<pre><code>\{ not json/.test(D.mdToHtml('```wireframe\n{ not json\n```').html));
+    T.check('a ```prompt block renders as a labelled, copyable prompt box', (() => { const h = D.mdToHtml('```prompt\nECP-16: add the saved-search selector.\n```').html.replace(/\n/g, ''); return /<div class="dd-prompt">/.test(h) && /Prompt for Claude/.test(h) && /ECP-16: add the saved-search selector\./.test(h); })());
     const wf = D.wireframe({ screen: '<b>x</b>', sections: [{ fields: [{ label: 'a"b', type: 'checkbox', value: 'yes' }] }], actions: ['<i>'] });
     T.check('…its words escaped too', /&lt;b&gt;x&lt;\/b&gt;/.test(wf) && /a&quot;b/.test(wf) && /wf-check">✓/.test(wf) && /&lt;i&gt;/.test(wf));
 
