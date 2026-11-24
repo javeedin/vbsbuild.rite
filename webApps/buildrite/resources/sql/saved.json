@@ -13,6 +13,25 @@
    "updatedAt": "2026-11-24T09:58:41.189Z"
   }
  ],
- "infolets": [],
+ "infolets": [
+  {
+   "id": "d76fabd9ce86",
+   "createdAt": "2026-11-24T10:00:09.879Z",
+   "name": "INVENTORY ITEMS",
+   "sql": "-- Ask AI (Claude (Anthropic)): give me the table for equipment master\n\n-- Ask AI (Claude (Anthropic)): give me the table for equipment master\nSELECT *\nFROM   EQR_EQUIPMENT_MASTER em WHERE IS_INVENTORY_TRACKED = 'Y'\nORDER BY em.EQR_EQUIPMENT_MASTER_ID\nFETCH FIRST 50 ROWS ONLY;",
+   "spec": {
+    "kind": "bar",
+    "title": "INVENTORY ITEMS",
+    "label": "EQUIPMENT_NAME",
+    "value": "IS_INVENTORY_TRACKED",
+    "agg": "count",
+    "limit": 12
+   },
+   "description": "",
+   "conn": "paasdev",
+   "by": "rite.user",
+   "updatedAt": "2026-11-24T10:00:09.879Z"
+  }
+ ],
  "dashboards": []
 }
