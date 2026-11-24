@@ -13,8 +13,13 @@ define([
   const NONE = { id: '', name: '', user: '', target: '', banner: '', readOnly: false, pending: false, connId: '' };
 
   class connChain extends ActionChain {
-    async run(context, { op, id }) {
+    async run(context, { op, id, value }) {
       const v = context.$page.variables;
+      if (op === 'autoToggle') {
+        v.autoConnect = !!value;
+        try { window.localStorage.setItem('buildrite:sql-autoconnect', value ? '1' : '0'); } catch (e) { /* no storage */ }
+        return undefined;
+      }
       const out = await this.step(v, op, id);
       // After Save, Delete or a connection opened for its password, the inputs show the form (the password box empty).
       if (v.dlg.open && (op === 'save' || op === 'delete' || op === 'connectSaved')) setTimeout(() => W.fillInputs(v.dlg.form), 0);
@@ -119,6 +124,8 @@ define([
     connected(v, b, connId) {
       v.session = { id: b.session, name: b.name, user: b.user, target: b.target, banner: b.banner || '', readOnly: !!b.readOnly, pending: false, connId };
       try { window.sessionStorage.setItem(KEY, JSON.stringify(v.session)); } catch (e) { /* no storage */ }
+      // remember this as the connection to reconnect to automatically next time the SQL tool opens
+      try { window.localStorage.setItem('buildrite:sql-lastconn', connId); } catch (e) { /* no storage */ }
       bus.toast('Connected to ' + b.name + ' as ' + b.user + '.' + (b.banner ? ' ' + b.banner : ''), 'info');
       setTimeout(() => { const ed = document.getElementById('sqlEditor'); if (ed) ed.focus(); }, 50);
     }

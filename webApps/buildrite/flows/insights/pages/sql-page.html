@@ -94,6 +94,9 @@
             </template>
           </oj-bind-for-each>
         </ul>
+        <label class="nx-sql-auto" id="sqlAutoLabel" title="When you open the SQL tool, reconnect to the last connection (only if its password is saved on this PC)">
+          <input type="checkbox" id="sqlAutoConnect" :checked="[[ $variables.autoConnect ]]" on-change="[[ $listeners.onAutoConnect ]]"> Connect automatically next time
+        </label>
         <oj-bind-if test="[[ !!$variables.info.file ]]">
           <p class="nx-note nx-sql-engine nx-sql-where" id="sqlWhere"><oj-bind-text value="[[ 'Saved on this PC in ' + $variables.info.file + ' (by Save, and by Connect).' ]]"></oj-bind-text></p>
         </oj-bind-if>
@@ -627,7 +630,7 @@
           <p class="nx-sql-opt" id="sqlBindNote">This statement uses bind placeholders. Give each a value, then Run. Leave one empty to bind NULL.</p>
           <oj-bind-for-each data="[[ $variables.bindDlg.names ]]"><template data-oj-as="p">
             <label class="nx-sql-savefield">:<oj-bind-text value="[[ p.data.name ]]"></oj-bind-text>
-              <input :id="[[ p.data.id ]]" class="nx-sql-in nx-sql-bindin" type="text" autocomplete="off" :data-name="[[ p.data.name ]]" :value="[[ p.data.value ]]" on-input="[[ $listeners.onBindField ]]" :placeholder="[[ 'value for :' + p.data.name ]]"/></label>
+              <input :id="[[ p.data.id ]]" class="nx-sql-in nx-sql-bindin" type="text" autocomplete="off" :data-name="[[ p.data.name ]]" :value="[[ p.data.value ]]" :placeholder="[[ 'value for :' + p.data.name ]]"/></label>
           </template></oj-bind-for-each>
           <oj-bind-if test="[[ !!$variables.bindDlg.error ]]"><div class="nx-sql-dlgstatus nx-sql-dlgstatus--bad" id="sqlBindErr" role="status"><oj-bind-text value="[[ $variables.bindDlg.error ]]"></oj-bind-text></div></oj-bind-if>
         </div>

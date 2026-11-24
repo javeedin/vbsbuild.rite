@@ -104,6 +104,10 @@
    "type": "boolean",
    "defaultValue": true
   },
+  "autoConnect": {
+   "type": "boolean",
+   "defaultValue": true
+  },
   "connsError": {
    "type": "string",
    "defaultValue": ""
@@ -365,6 +369,7 @@
     }
    ]
   },
+  "onAutoConnect": { "chains": [ { "chain": "connChain", "parameters": { "op": "autoToggle", "value": "{{ $event.target.checked }}" } } ] },
   "onRun": {
    "chains": [
     {

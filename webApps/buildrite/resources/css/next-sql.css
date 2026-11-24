@@ -290,3 +290,7 @@
 /* Saved reports: a "chart" badge on infolet reports, and the chart shown above an infolet report's grid */
 .nx-sql-repkind { flex: none; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #227e9e; background: #e6f4f8; border-radius: 999px; padding: 1px 7px; }
 .nx-rep-chart { border: 1px solid var(--nx-line, #e2e7ed); border-radius: 10px; padding: 12px; margin: 0 0 12px; background: #fff; max-width: 620px; }
+
+/* auto-connect toggle in the connections panel */
+.nx-sql-auto { display: flex; align-items: center; gap: 8px; margin: 8px 2px 2px; font-size: 12.5px; color: var(--nx-ink, #16212c); cursor: pointer; }
+.nx-sql-auto input { cursor: pointer; }

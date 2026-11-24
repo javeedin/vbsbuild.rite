@@ -16,6 +16,7 @@ define([
       v.info = Object.assign({ checked: true }, info);
       if (!info.available) return;
       try { v.connsOpen = window.localStorage.getItem('buildrite:sql-conns-open') !== '0'; } catch (e) { /* no storage */ }
+      try { v.autoConnect = window.localStorage.getItem('buildrite:sql-autoconnect') !== '0'; } catch (e) { /* no storage */ }
       // Ask AI: which LLM it uses (the bar says it).
       await Actions.callChain(context, { chain: 'aiChain', params: { op: 'load' } });
       const c = await sql.connections();
@@ -29,6 +30,16 @@ define([
         const live = (s.ok && Array.isArray(s.body) ? s.body : []).filter((x) => x.session === last.id)[0];
         if (live) v.session = Object.assign({}, last, { pending: !!live.pending });
         else window.sessionStorage.removeItem('buildrite:sql-session');
+      }
+      // Auto-connect: no live session restored, the toggle is on, and the last connection still exists with a saved
+      // password (so no prompt is needed) → reconnect to it, as SQL Developer can on open.
+      if (!v.session.id && v.autoConnect) {
+        let lastId = null;
+        try { lastId = window.localStorage.getItem('buildrite:sql-lastconn') || null; } catch (e) { lastId = null; }
+        const conn = lastId && v.conns.filter((x) => x.id === lastId)[0];
+        if (conn && conn.hasPassword) {
+          await Actions.callChain(context, { chain: 'connChain', params: { op: 'connectSaved', id: lastId } });
+        }
       }
     }
   }
