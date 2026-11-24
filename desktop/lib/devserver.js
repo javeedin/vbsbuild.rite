@@ -1894,6 +1894,39 @@ function createDevServer(o) {
             }
             if (pathname === '/__sql/saved/ran' && post) return json(200, sv ? sv.ranQuery(b.id) : { ok: false });
             if (pathname === '/__sql/saved/git/save' && post) return json(200, sv ? await sv.gitSave({ message: b.message || 'SQL library: update', push: b.push !== false }) : { ok: false, error: 'The SQL library needs the desktop app.' });
+
+            // infolets (a named chart = its own SQL + a spec)
+            if (pathname === '/__sql/infolets' && req.method === 'GET') return json(200, sv ? { ok: true, infolets: sv.listInfolets(u.searchParams.get('conn')) } : { ok: false, error: 'The SQL library needs the desktop app.' });
+            if (pathname === '/__sql/infolets/get' && post) return json(200, sv ? { ok: true, infolet: sv.getInfolet(b.id) } : { ok: false, error: 'The SQL library needs the desktop app.' });
+            if (pathname === '/__sql/infolets/save' && post) {
+              if (!sv) return json(200, { ok: false, error: 'The SQL library needs the desktop app.' });
+              const r = sv.saveInfolet(b, who());
+              if (r.ok && b.commit) { r.git = await sv.gitSave({ message: 'SQL infolet: ' + (r.infolet.name || ''), push: b.push !== false }); }
+              log(`SQL infolet "${b.name || ''}" -> ${r.ok ? 'saved' + (r.git ? (r.git.pushed ? ', pushed' : (r.git.committed ? ', committed' : '')) : '') : r.error}`);
+              return json(200, r);
+            }
+            if (pathname === '/__sql/infolets/remove' && post) {
+              if (!sv) return json(200, { ok: false, error: 'The SQL library needs the desktop app.' });
+              const r = sv.removeInfolet(b.id);
+              if (r.ok && b.commit) { r.git = await sv.gitSave({ message: 'SQL infolet removed', push: b.push !== false }); }
+              return json(200, r);
+            }
+            // dashboards (an ordered set of infolets)
+            if (pathname === '/__sql/dashboards' && req.method === 'GET') return json(200, sv ? { ok: true, dashboards: sv.listDashboards() } : { ok: false, error: 'The SQL library needs the desktop app.' });
+            if (pathname === '/__sql/dashboards/get' && post) return json(200, sv ? { ok: true, dashboard: sv.getDashboard(b.id), resolved: sv.dashboardWith(b.id) } : { ok: false, error: 'The SQL library needs the desktop app.' });
+            if (pathname === '/__sql/dashboards/save' && post) {
+              if (!sv) return json(200, { ok: false, error: 'The SQL library needs the desktop app.' });
+              const r = sv.saveDashboard(b, who());
+              if (r.ok && b.commit) { r.git = await sv.gitSave({ message: 'SQL dashboard: ' + (r.dashboard.name || ''), push: b.push !== false }); }
+              log(`SQL dashboard "${b.name || ''}" -> ${r.ok ? 'saved' + (r.git ? (r.git.pushed ? ', pushed' : (r.git.committed ? ', committed' : '')) : '') : r.error}`);
+              return json(200, r);
+            }
+            if (pathname === '/__sql/dashboards/remove' && post) {
+              if (!sv) return json(200, { ok: false, error: 'The SQL library needs the desktop app.' });
+              const r = sv.removeDashboard(b.id);
+              if (r.ok && b.commit) { r.git = await sv.gitSave({ message: 'SQL dashboard removed', push: b.push !== false }); }
+              return json(200, r);
+            }
           }
           return json(404, { error: 'Not found' });
         })().catch((e) => json(200, { error: e.message }));

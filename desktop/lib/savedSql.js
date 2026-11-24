@@ -108,9 +108,94 @@ function open(opts) {
     return { ok: true };
   }
 
+  // ── infolets: a named chart = its own SQL + a spec { kind, title, label, value, agg, limit } ──
+  function specObj(v) { if (v && typeof v === 'object') return v; try { return JSON.parse(str(v)) || {}; } catch (e) { return {}; } }
+  function slimInfolet(x) {
+    return { id: x.id, name: x.name, description: x.description || '', conn: x.conn || '', kind: (x.spec && x.spec.kind) || 'table',
+      by: x.by || '', createdAt: x.createdAt || '', updatedAt: x.updatedAt || '', hasSql: !!x.sql };
+  }
+  function listInfolets(conn) {
+    const c = conn == null ? null : str(conn);
+    return read().infolets
+      .filter((x) => c == null || str(x.conn) === c)
+      .sort((a, b) => str(b.updatedAt).localeCompare(str(a.updatedAt)))
+      .map(slimInfolet);
+  }
+  function getInfolet(id) { return read().infolets.filter((x) => x.id === str(id))[0] || null; }
+  function saveInfolet(input, by) {
+    const i = input || {};
+    const name = cut(i.name, 120).trim();
+    const sql = cut(i.sql, 40000).trim();
+    const spec = specObj(i.spec);
+    if (!name) return { ok: false, error: 'Give the infolet a name.' };
+    if (!sql) return { ok: false, error: 'There is no SQL for this infolet.' };
+    const d = read();
+    const at = now().toISOString();
+    let rec = d.infolets.filter((x) => (i.id && x.id === i.id) || str(x.name).toLowerCase() === name.toLowerCase())[0];
+    if (!rec) { rec = { id: newId(), createdAt: at }; d.infolets.push(rec); }
+    Object.assign(rec, { name: name, sql: sql, spec: spec, description: cut(i.description, 2000), conn: cut(i.conn, 120), by: str(by) || cut(i.by, 120), updatedAt: at });
+    write(d);
+    return { ok: true, infolet: rec };
+  }
+  function removeInfolet(id) {
+    const d = read();
+    const n = d.infolets.length;
+    d.infolets = d.infolets.filter((x) => x.id !== str(id));
+    // drop it from any dashboard that showed it
+    d.dashboards.forEach((db) => { db.layout = (db.layout || []).filter((s) => s.infoletId !== str(id)); });
+    if (d.infolets.length === n) return { ok: false, error: 'No such infolet.' };
+    write(d);
+    return { ok: true };
+  }
+
+  // ── dashboards: an ordered set of infolets, each with a width (1..12 of a 12-column grid) ──
+  function slimDashboard(db) {
+    return { id: db.id, name: db.name, description: db.description || '', count: (db.layout || []).length,
+      by: db.by || '', createdAt: db.createdAt || '', updatedAt: db.updatedAt || '' };
+  }
+  function cleanLayout(v) {
+    return (Array.isArray(v) ? v : []).map((s) => ({ infoletId: cut(s && s.infoletId, 40), w: Math.max(1, Math.min(12, Math.round(Number(s && s.w) || 6))) }))
+      .filter((s) => s.infoletId);
+  }
+  function listDashboards() {
+    return read().dashboards.sort((a, b) => str(b.updatedAt).localeCompare(str(a.updatedAt))).map(slimDashboard);
+  }
+  function getDashboard(id) { return read().dashboards.filter((db) => db.id === str(id))[0] || null; }
+  function saveDashboard(input, by) {
+    const i = input || {};
+    const name = cut(i.name, 120).trim();
+    if (!name) return { ok: false, error: 'Give the dashboard a name.' };
+    const d = read();
+    const at = now().toISOString();
+    let rec = d.dashboards.filter((db) => (i.id && db.id === i.id) || str(db.name).toLowerCase() === name.toLowerCase())[0];
+    if (!rec) { rec = { id: newId(), createdAt: at }; d.dashboards.push(rec); }
+    Object.assign(rec, { name: name, description: cut(i.description, 2000), layout: cleanLayout(i.layout), by: str(by) || cut(i.by, 120), updatedAt: at });
+    write(d);
+    return { ok: true, dashboard: rec };
+  }
+  function removeDashboard(id) {
+    const d = read();
+    const n = d.dashboards.length;
+    d.dashboards = d.dashboards.filter((db) => db.id !== str(id));
+    if (d.dashboards.length === n) return { ok: false, error: 'No such dashboard.' };
+    write(d);
+    return { ok: true };
+  }
+  /** A dashboard with each slot's full infolet resolved in order (missing infolets are dropped) — for rendering. */
+  function dashboardWith(id) {
+    const db = getDashboard(id);
+    if (!db) return null;
+    const byId = {};
+    read().infolets.forEach((x) => { byId[x.id] = x; });
+    const slots = (db.layout || []).map((s) => ({ w: s.w, infolet: byId[s.infoletId] || null })).filter((s) => s.infolet);
+    return { dashboard: db, slots: slots };
+  }
+
   return {
     info: () => ({ shared: !!data, dir: resDir, branch: data ? data.branch : '', reason: data ? data.reason : '' }),
     listQueries: listQueries, getQuery: getQuery, saveQuery: saveQuery, removeQuery: removeQuery, ranQuery: ranQuery,
+    listInfolets: listInfolets, getInfolet: getInfolet, saveInfolet: saveInfolet, removeInfolet: removeInfolet,
+    listDashboards: listDashboards, getDashboard: getDashboard, saveDashboard: saveDashboard, removeDashboard: removeDashboard, dashboardWith: dashboardWith,
     gitStatus: () => repo.status(),
     gitSave: (b) => repo.save(b || {}),
     root: root,

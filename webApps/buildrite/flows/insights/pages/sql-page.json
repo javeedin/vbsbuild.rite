@@ -141,6 +141,30 @@
   "saveDlg": {
    "type": "any",
    "defaultValue": { "open": false, "name": "", "description": "", "share": true, "busy": "", "error": "" }
+  },
+  "mode": {
+   "type": "string",
+   "defaultValue": "work"
+  },
+  "infDlg": {
+   "type": "any",
+   "defaultValue": { "open": false, "name": "", "description": "", "kind": "bar", "label": "", "value": "", "agg": "sum", "limit": 12, "share": true, "busy": "", "error": "", "sql": "" }
+  },
+  "dash": {
+   "type": "any",
+   "defaultValue": { "list": [], "open": false, "error": "" }
+  },
+  "board": {
+   "type": "any",
+   "defaultValue": { "open": false, "id": "", "name": "", "description": "", "slots": [], "dirty": false }
+  },
+  "boardDlg": {
+   "type": "any",
+   "defaultValue": { "open": false, "id": "", "name": "", "description": "", "share": true, "busy": "", "error": "" }
+  },
+  "addInf": {
+   "type": "any",
+   "defaultValue": { "open": false, "list": [], "busy": "" }
   }
  },
  "eventListeners": {
@@ -543,7 +567,30 @@
   "onSaveDlgClose": { "chains": [ { "chain": "savedChain", "parameters": { "op": "dlgClose" } } ] },
   "onSaveField": { "chains": [ { "chain": "savedChain", "parameters": { "op": "field", "key": "{{ $event.target.dataset.field }}", "value": "{{ $event.target.value }}" } } ] },
   "onSaveCheck": { "chains": [ { "chain": "savedChain", "parameters": { "op": "field", "key": "share", "value": "{{ $event.target.checked }}" } } ] },
-  "onSaveGo": { "chains": [ { "chain": "savedChain", "parameters": { "op": "save" } } ] }
+  "onSaveGo": { "chains": [ { "chain": "savedChain", "parameters": { "op": "save" } } ] },
+  "onMode": { "chains": [ { "chain": "dashChain", "parameters": { "op": "mode", "value": "{{ $event.currentTarget.dataset.value }}" } } ] },
+  "onInfOpen": { "chains": [ { "chain": "dashChain", "parameters": { "op": "infOpen" } } ] },
+  "onInfClose": { "chains": [ { "chain": "dashChain", "parameters": { "op": "infClose" } } ] },
+  "onInfField": { "chains": [ { "chain": "dashChain", "parameters": { "op": "infField", "key": "{{ $event.target.dataset.field }}", "value": "{{ $event.target.value }}" } } ] },
+  "onInfKind": { "chains": [ { "chain": "dashChain", "parameters": { "op": "infField", "key": "kind", "value": "{{ $event.currentTarget.dataset.value }}" } } ] },
+  "onInfCheck": { "chains": [ { "chain": "dashChain", "parameters": { "op": "infField", "key": "share", "value": "{{ $event.target.checked }}" } } ] },
+  "onInfSave": { "chains": [ { "chain": "dashChain", "parameters": { "op": "infSave" } } ] },
+  "onDashNew": { "chains": [ { "chain": "dashChain", "parameters": { "op": "dashNew" } } ] },
+  "onDashField": { "chains": [ { "chain": "dashChain", "parameters": { "op": "dashField", "key": "{{ $event.target.dataset.field }}", "value": "{{ $event.target.value }}" } } ] },
+  "onDashCheck": { "chains": [ { "chain": "dashChain", "parameters": { "op": "dashField", "key": "share", "value": "{{ $event.target.checked }}" } } ] },
+  "onDashBoardSave": { "chains": [ { "chain": "dashChain", "parameters": { "op": "dashBoardSave" } } ] },
+  "onDashBoardClose": { "chains": [ { "chain": "dashChain", "parameters": { "op": "dashBoardClose" } } ] },
+  "onDashOpen": { "chains": [ { "chain": "dashChain", "parameters": { "op": "dashOpen", "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
+  "onDashDelete": { "chains": [ { "chain": "dashChain", "parameters": { "op": "dashDelete", "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
+  "onDashClose": { "chains": [ { "chain": "dashChain", "parameters": { "op": "dashClose" } } ] },
+  "onSlotAdd": { "chains": [ { "chain": "dashChain", "parameters": { "op": "slotAdd" } } ] },
+  "onAddClose": { "chains": [ { "chain": "dashChain", "parameters": { "op": "addClose" } } ] },
+  "onSlotPick": { "chains": [ { "chain": "dashChain", "parameters": { "op": "slotPick", "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
+  "onSlotRemove": { "chains": [ { "chain": "dashChain", "parameters": { "op": "slotRemove", "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
+  "onSlotWider": { "chains": [ { "chain": "dashChain", "parameters": { "op": "slotWider", "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
+  "onSlotNarrower": { "chains": [ { "chain": "dashChain", "parameters": { "op": "slotNarrower", "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
+  "onBoardRefresh": { "chains": [ { "chain": "dashChain", "parameters": { "op": "boardRefresh" } } ] },
+  "onBoardShare": { "chains": [ { "chain": "dashChain", "parameters": { "op": "boardShare" } } ] }
  },
  "imports": {
   "components": {

@@ -48,6 +48,27 @@ try {
   const store2 = S.open({ root: dir, now: () => clock });
   T.check('reopened store reads the kept query', store2.listQueries().length === 1 && store2.getQuery(r3.query.id).sql === 'select 2 from dual');
 
+  T.section('infolets (a named chart = its own SQL + a spec)');
+  clock = new Date('2026-11-24T12:00:00Z');
+  const inf = store.saveInfolet({ name: 'Orders by region', sql: 'select region, orders from v', conn: 'PRODDB', spec: { kind: 'bar', label: 'REGION', value: 'ORDERS' }, description: 'bar chart' }, 'rite.user');
+  T.check('saved with an id, spec and sql', inf.ok && inf.infolet.id && inf.infolet.spec.kind === 'bar' && inf.infolet.by === 'rite.user', JSON.stringify(inf));
+  T.check('a name and SQL are required', !store.saveInfolet({ sql: 'x' }).ok && !store.saveInfolet({ name: 'x' }).ok);
+  T.check('list is slim (kind, no SQL body) and get has the SQL + spec', (() => { const l = store.listInfolets(); return l.length === 1 && l[0].kind === 'bar' && l[0].hasSql === true && l[0].sql === undefined && store.getInfolet(inf.infolet.id).sql === 'select region, orders from v'; })());
+  clock = new Date('2026-11-24T12:05:00Z');
+  const inf2 = store.saveInfolet({ name: 'Orders by region', sql: 'select region, count(*) from v group by region', spec: { kind: 'pie' } }, 'rite.user');
+  T.check('same name updates in place (spec + sql replaced)', inf2.ok && inf2.infolet.id === inf.infolet.id && inf2.infolet.spec.kind === 'pie' && store.listInfolets().length === 1);
+  const inf3 = store.saveInfolet({ name: 'Monthly total', sql: 'select to_char(d,\'YYYY-MM\') m, sum(a) from t group by 1', spec: { kind: 'line' } }, 'rite.user');
+
+  T.section('dashboards (an ordered set of infolets, each with a width)');
+  clock = new Date('2026-11-24T12:10:00Z');
+  const db = store.saveDashboard({ name: 'Ops overview', description: 'the daily picture', layout: [{ infoletId: inf.infolet.id, w: 6 }, { infoletId: inf3.infolet.id, w: 20 }] }, 'rite.user');
+  T.check('saved with an id; widths clamped to 1..12', db.ok && db.dashboard.id && db.dashboard.layout.length === 2 && db.dashboard.layout[0].w === 6 && db.dashboard.layout[1].w === 12, JSON.stringify(db.dashboard.layout));
+  T.check('a name is required', !store.saveDashboard({}).ok);
+  T.check('list is slim with a slot count', (() => { const l = store.listDashboards(); return l.length === 1 && l[0].count === 2 && l[0].name === 'Ops overview'; })());
+  T.check('dashboardWith resolves each slot to its full infolet in order', (() => { const w = store.dashboardWith(db.dashboard.id); return w && w.slots.length === 2 && w.slots[0].infolet.id === inf.infolet.id && w.slots[0].w === 6 && w.slots[1].infolet.sql.indexOf('group by 1') !== -1; })());
+  T.check('removing an infolet drops it from dashboards', (() => { store.removeInfolet(inf3.infolet.id); const w = store.dashboardWith(db.dashboard.id); return w.slots.length === 1 && w.slots[0].infolet.id === inf.infolet.id; })());
+  T.check('remove a dashboard; a second remove says no such dashboard', store.removeDashboard(db.dashboard.id).ok && store.listDashboards().length === 0 && !store.removeDashboard(db.dashboard.id).ok);
+
   T.section('mergeSaved: two people editing at once (by id, newest updatedAt wins)');
   const ours = JSON.stringify({ queries: [
     { id: 'a', name: 'A', sql: 'ours a', updatedAt: '2026-11-24T10:00:00Z' },

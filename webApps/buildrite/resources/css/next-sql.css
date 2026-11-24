@@ -150,3 +150,93 @@
 .nx-sql-savesh { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--nx-ink, #16212c); cursor: pointer; }
 .nx-sql-savesh input { cursor: pointer; }
 .nx-sql-opt { color: var(--nx-muted, #5a6876); font-weight: 400; }
+
+/* ── Worksheet / Dashboards mode switch ── */
+.nx-sql-modebar { margin: 0 0 12px; }
+.nx-sql-modeseg { display: inline-flex; }
+.nx-sql-modeseg .nx-seg-btn { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ── the Dashboards list ── */
+.nx-sql-dash { padding: 16px 18px; }
+.nx-sql-dashhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.nx-sql-dashh { margin: 0; font-size: 16px; color: var(--nx-ink, #16212c); }
+.nx-sql-dashlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.nx-sql-dashrow { display: flex; align-items: stretch; gap: 4px; border: 1px solid var(--nx-line, #e2e7ed); border-radius: 10px; overflow: hidden; }
+.nx-sql-dashrow:hover { border-color: #c7d2e0; box-shadow: 0 2px 10px rgba(16, 33, 52, .06); }
+.nx-sql-dashopen { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; text-align: left; border: 0; background: transparent; padding: 11px 14px; font: inherit; cursor: pointer; }
+.nx-sql-dashopen:hover { background: var(--nx-hover, #eef2f6); }
+.nx-sql-dashname { grid-column: 1; font-size: 14px; font-weight: 600; color: var(--nx-ink, #16212c); }
+.nx-sql-dashmeta { grid-column: 2; grid-row: 1; align-self: center; font-size: 12px; color: var(--nx-muted, #5a6876); white-space: nowrap; }
+.nx-sql-dashdesc { grid-column: 1 / -1; font-size: 12.5px; color: var(--nx-muted, #5a6876); }
+.nx-sql-dashdel { flex: none; align-self: center; margin-right: 6px; opacity: .55; }
+.nx-sql-dashrow:hover .nx-sql-dashdel { opacity: 1; }
+
+/* ── an open dashboard ── */
+.nx-sql-board { padding: 16px 18px; }
+.nx-sql-boardhead { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.nx-sql-boardtitle { margin: 0; font-size: 17px; color: var(--nx-ink, #16212c); flex: 1 1 auto; min-width: 120px; }
+.nx-sql-boardacts { display: flex; align-items: center; gap: 6px; flex: none; }
+.nx-sql-note { margin: 0 0 12px; padding: 8px 12px; border-radius: 8px; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-size: 13px; }
+.nx-sql-grid-dash { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; }
+.nx-sql-slot { grid-column: span 6; display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--nx-line, #e2e7ed); border-radius: 12px; background: #fff; box-shadow: 0 1px 6px rgba(16, 33, 52, .05); overflow: hidden; }
+.nx-sql-slothead { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--nx-line, #e2e7ed); background: #f8fafc; }
+.nx-sql-slotname { font-size: 13px; font-weight: 600; color: var(--nx-ink, #16212c); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; min-width: 0; }
+.nx-sql-slotkind { flex: none; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #1d4f91; background: #eef4fc; border-radius: 999px; padding: 1px 8px; }
+.nx-sql-slotacts { flex: none; display: inline-flex; gap: 2px; }
+.nx-sql-slotbtn { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--nx-line, #e2e7ed); background: #fff; border-radius: 6px; color: var(--nx-muted, #5a6876); font-size: 14px; line-height: 1; cursor: pointer; }
+.nx-sql-slotbtn:hover { background: var(--nx-hover, #eef2f6); color: var(--nx-ink, #16212c); }
+.nx-sql-slotbtn--x:hover { background: #fee2e2; color: #b42318; border-color: #fecaca; }
+.nx-sql-slotbody { padding: 12px; min-height: 150px; }
+@media (max-width: 860px) { .nx-sql-slot { grid-column: span 12 !important; } }
+
+/* ── the chart bodies (shared by the dashboard slot and the Save-as-infolet preview) ── */
+.nx-if-body { font-size: 13px; color: var(--nx-ink, #16212c); }
+.nx-if-empty { color: var(--nx-muted, #5a6876); font-size: 12.5px; margin: 6px 0; }
+.nx-if-err { color: #b42318; font-size: 12.5px; margin: 6px 0; white-space: pre-wrap; }
+.nx-if-kpi { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 120px; }
+.nx-if-kpiv { font-size: 40px; font-weight: 700; color: #1d4f91; line-height: 1; }
+.nx-if-kpis { font-size: 12px; color: var(--nx-muted, #5a6876); text-transform: capitalize; }
+.nx-if-bars { display: flex; flex-direction: column; gap: 7px; }
+.nx-if-bar { display: grid; grid-template-columns: minmax(70px, 34%) 1fr auto; align-items: center; gap: 8px; }
+.nx-if-lbl { font-size: 12px; color: var(--nx-ink, #16212c); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-if-track { height: 14px; background: #eef2f6; border-radius: 4px; overflow: hidden; }
+.nx-if-fill { display: block; height: 100%; border-radius: 4px; min-width: 2px; }
+.nx-if-val { font-size: 12px; font-weight: 600; color: var(--nx-ink, #16212c); font-variant-numeric: tabular-nums; }
+.nx-if-cols { display: flex; align-items: flex-end; gap: 8px; height: 170px; padding-top: 16px; }
+.nx-if-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; position: relative; }
+.nx-if-colbar { width: 70%; max-width: 46px; border-radius: 4px 4px 0 0; min-height: 2px; }
+.nx-if-colv { font-size: 10.5px; font-weight: 600; color: var(--nx-ink, #16212c); }
+.nx-if-collbl { font-size: 10.5px; color: var(--nx-muted, #5a6876); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.nx-if-line { display: flex; flex-direction: column; gap: 4px; }
+.nx-if-linebox { height: 150px; }
+.nx-if-svg { width: 100%; height: 100%; display: block; }
+.nx-if-xaxis { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--nx-muted, #5a6876); }
+.nx-if-pierow { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.nx-if-pie { width: 130px; height: 130px; flex: none; }
+.nx-if-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; min-width: 0; }
+.nx-if-legend li { display: flex; align-items: center; gap: 6px; }
+.nx-if-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.nx-if-pct { color: var(--nx-muted, #5a6876); }
+.nx-if-tablewrap { overflow: auto; max-height: 260px; }
+.nx-if-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.nx-if-table th, .nx-if-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--nx-line, #eef2f6); white-space: nowrap; }
+.nx-if-table th { position: sticky; top: 0; background: #f8fafc; font-weight: 600; color: var(--nx-muted, #5a6876); }
+.nx-if-more { margin: 6px 0 0; font-size: 11px; color: var(--nx-muted, #5a6876); }
+
+/* ── the Save-as-infolet dialog ── */
+.nx-sql-infdlg { width: min(900px, 96vw); }
+.nx-sql-infbody { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.nx-sql-infform { display: flex; flex-direction: column; gap: 11px; }
+.nx-sql-inf2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.nx-sql-infkinds { display: inline-flex; flex-wrap: wrap; }
+.nx-sql-infpreviewwrap { display: flex; flex-direction: column; gap: 6px; }
+.nx-sql-infprevlbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--nx-muted, #5a6876); }
+.nx-sql-infpreview { border: 1px solid var(--nx-line, #e2e7ed); border-radius: 10px; padding: 14px; background: #fff; min-height: 180px; }
+@media (max-width: 720px) { .nx-sql-infbody { grid-template-columns: 1fr; } }
+
+/* ── the Add-infolet picker ── */
+.nx-sql-inflist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow: auto; }
+.nx-sql-infpick { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; border: 1px solid var(--nx-line, #e2e7ed); border-radius: 9px; background: #fff; padding: 10px 12px; font: inherit; cursor: pointer; }
+.nx-sql-infpick:hover { background: var(--nx-hover, #eef2f6); border-color: #c7d2e0; }
+.nx-sql-infpickname { font-size: 13.5px; font-weight: 600; color: var(--nx-ink, #16212c); }
+.nx-sql-infpickkind { flex: none; font-size: 11px; color: var(--nx-muted, #5a6876); }

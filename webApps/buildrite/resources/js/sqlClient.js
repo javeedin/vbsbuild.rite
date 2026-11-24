@@ -67,6 +67,16 @@ define([], function () {
     saveQuery: function (rec, commit) { return call('saved/save', 'POST', Object.assign({ commit: !!commit, push: commit !== 'local' }, rec)); },
     removeQuery: function (id, commit) { return call('saved/remove', 'POST', { id: id, commit: !!commit }); },
     ranQuery: function (id) { return call('saved/ran', 'POST', { id: id }); },
-    savedGitSave: function (message) { return call('saved/git/save', 'POST', { message: message, push: true }); }
+    savedGitSave: function (message) { return call('saved/git/save', 'POST', { message: message, push: true }); },
+    // Infolets (a named chart = its own SQL + a spec).
+    infoletList: function (conn) { return call('infolets' + (conn ? '?conn=' + encodeURIComponent(conn) : ''), 'GET'); },
+    infoletGet: function (id) { return call('infolets/get', 'POST', { id: id }); },
+    infoletSave: function (rec, commit) { return call('infolets/save', 'POST', Object.assign({ commit: !!commit, push: commit !== 'local' }, rec)); },
+    infoletRemove: function (id, commit) { return call('infolets/remove', 'POST', { id: id, commit: !!commit }); },
+    // Dashboards (an ordered set of infolets).
+    dashboardList: function () { return call('dashboards', 'GET'); },
+    dashboardGet: function (id) { return call('dashboards/get', 'POST', { id: id }); },
+    dashboardSave: function (rec, commit) { return call('dashboards/save', 'POST', Object.assign({ commit: !!commit, push: commit !== 'local' }, rec)); },
+    dashboardRemove: function (id, commit) { return call('dashboards/remove', 'POST', { id: id, commit: !!commit }); }
   };
 });
