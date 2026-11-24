@@ -612,7 +612,8 @@
   "onRepClose": { "chains": [ { "chain": "dashChain", "parameters": { "op": "repClose", "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
   "onRepRefresh": { "chains": [ { "chain": "dashChain", "parameters": { "op": "repRefresh" } } ] },
   "onRepToWorksheet": { "chains": [ { "chain": "dashChain", "parameters": { "op": "repToWorksheet" } } ] },
-  "onRepExport": { "chains": [ { "chain": "dashChain", "parameters": { "op": "repExport", "value": "{{ $event.currentTarget.dataset.format }}" } } ] }
+  "onRepExport": { "chains": [ { "chain": "dashChain", "parameters": { "op": "repExport", "value": "{{ $event.currentTarget.dataset.format }}" } } ] },
+  "onRepReload": { "chains": [ { "chain": "dashChain", "parameters": { "op": "repLoad" } } ] }
  },
  "imports": {
   "components": {

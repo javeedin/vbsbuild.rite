@@ -69,6 +69,14 @@ define(['resources/js/exportKit', 'resources/js/sqlWorksheet', 'resources/js/inf
     }
     infoletRows(list) { return (list || []).map((x) => ({ id: x.id, name: x.name, kind: this.kindLabel(x.kind), conn: x.conn || '', description: x.description || '' })); }
 
+    // ── page header, per mode (Worksheet / Dashboards / Saved reports) ──
+    headTitle(mode) { return mode === 'dash' ? 'Dashboards' : mode === 'reports' ? 'Saved reports' : 'SQL worksheet'; }
+    headSub(mode) {
+      if (mode === 'dash') return 'Dashboards built from your saved charts (infolets), run against the connected database. Shared with the team.';
+      if (mode === 'reports') return 'Your saved queries and charts. Open one to run it; each opens as its own result tab.';
+      return 'Run SQL against an Oracle database from this PC, as in SQL Developer. Connections stay on this PC; saved passwords are encrypted by the operating system.';
+    }
+
     // ── Saved reports ──
     /** The left list of reports (saved queries + infolets), filtered by the search box; the one being viewed is marked. */
     reportList(list, q, active) {

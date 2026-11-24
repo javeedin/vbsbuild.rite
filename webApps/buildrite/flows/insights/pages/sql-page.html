@@ -5,9 +5,9 @@
        worksheet below. Put on the page the first time Redwood is shown, then kept, hidden under Current. -->
   <oj-bind-if test="[[ $application.variables.lookSeen ]]">
     <div class="nx-rw nx-rw--head" id="sqlRedwood" :hidden="[[ $application.variables.look !== 'redwood' ]]">
-      <oj-sp-general-overview-page page-title="SQL worksheet" display-mode="mixed"
-        page-subtitle="Run SQL against an Oracle database from this PC, as in SQL Developer. Connections stay on this PC; saved passwords are encrypted by the operating system."
-        primary-action="[[ $functions.rwPrimary($variables.info.available) ]]" on-sp-primary-action="[[ $listeners.onNewConn ]]">
+      <oj-sp-general-overview-page page-title="[[ $functions.headTitle($variables.mode) ]]" display-mode="mixed"
+        page-subtitle="[[ $functions.headSub($variables.mode) ]]"
+        primary-action="[[ $functions.rwPrimary($variables.info.available && $variables.mode === 'work') ]]" on-sp-primary-action="[[ $listeners.onNewConn ]]">
       </oj-sp-general-overview-page>
     </div>
   </oj-bind-if>
@@ -15,12 +15,18 @@
   <div class="nx-pagehead">
     <div>
       <div class="nx-kicker">Admin</div>
-      <h1>SQL worksheet</h1>
-      <div class="nx-sub" id="sqlSub">Run SQL against an Oracle database from this PC, as in SQL Developer. Connections stay on this PC; saved passwords are encrypted by the operating system.</div>
+      <h1 id="sqlTitle"><oj-bind-text value="[[ $functions.headTitle($variables.mode) ]]"></oj-bind-text></h1>
+      <div class="nx-sub" id="sqlSub"><oj-bind-text value="[[ $functions.headSub($variables.mode) ]]"></oj-bind-text></div>
     </div>
     <div class="nx-actions">
-      <oj-bind-if test="[[ $variables.info.available ]]">
+      <oj-bind-if test="[[ $variables.info.available && $variables.mode === 'work' ]]">
         <button type="button" class="nx-btn nx-btn--primary" id="sqlNewConn" on-click="[[ $listeners.onNewConn ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span>New connection</button>
+      </oj-bind-if>
+      <oj-bind-if test="[[ $variables.info.available && $variables.mode === 'dash' && !$variables.board.open ]]">
+        <button type="button" class="nx-btn nx-btn--primary" id="sqlNewDashTop" on-click="[[ $listeners.onDashNew ]]"><span class="oj-ux-ico-plus" aria-hidden="true"></span>New dashboard</button>
+      </oj-bind-if>
+      <oj-bind-if test="[[ $variables.info.available && $variables.mode === 'reports' ]]">
+        <button type="button" class="nx-btn" id="sqlRepReload" on-click="[[ $listeners.onRepReload ]]" title="Refresh the list of saved reports"><span class="oj-ux-ico-refresh" aria-hidden="true"></span>Refresh</button>
       </oj-bind-if>
     </div>
   </div>
