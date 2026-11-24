@@ -1,5 +1,5 @@
 {
- "scannedAt": "2026-11-24T07:33:16.441Z",
+ "scannedAt": "2026-11-24T14:55:17.435Z",
  "pages": [
   {
    "id": "vbredwoodapp//shell",
@@ -383,7 +383,7 @@
     "at": "2026-11-17T16:33:50.349Z",
     "by": "rite.user",
     "codeHash": "645a9232eedf493a",
-    "screenshots": 0,
+    "screenshots": 1,
     "ai": false,
     "rest": 16,
     "chains": 22

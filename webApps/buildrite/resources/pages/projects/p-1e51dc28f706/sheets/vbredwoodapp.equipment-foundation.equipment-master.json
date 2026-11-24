@@ -1128,7 +1128,18 @@
   "unresolvedLinks": []
  },
  "ai": null,
- "screenshots": [],
+ "screenshots": [
+  {
+   "id": "s1",
+   "file": "projects/p-1e51dc28f706/screens/vbredwoodapp.equipment-foundation.equipment-master.1.jpg",
+   "at": "2026-11-24T14:55:17.411Z",
+   "by": "rite.user",
+   "source": "capture",
+   "caption": "",
+   "bytes": 138278,
+   "from": "workspace"
+  }
+ ],
  "stories": [],
  "at": "2026-11-17T16:33:50.349Z",
  "by": "rite.user",
