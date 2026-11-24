@@ -70,13 +70,14 @@ define(['resources/js/exportKit', 'resources/js/sqlWorksheet', 'resources/js/inf
     infoletRows(list) { return (list || []).map((x) => ({ id: x.id, name: x.name, kind: this.kindLabel(x.kind), conn: x.conn || '', description: x.description || '' })); }
 
     // ── Saved reports ──
-    /** The left list of reports, filtered by the search box; the one being viewed is marked. */
+    /** The left list of reports (saved queries + infolets), filtered by the search box; the one being viewed is marked. */
     reportList(list, q, active) {
       const needle = String(q || '').trim().toLowerCase();
       return (list || [])
         .filter((r) => !needle || (r.name + ' ' + (r.conn || '') + ' ' + (r.description || '')).toLowerCase().indexOf(needle) !== -1)
-        .map((r) => ({ id: r.id, name: r.name, conn: r.conn || '', description: r.description || '',
-          cls: 'nx-sql-reprow' + (r.id === active ? ' nx-sql-reprow--on' : '') }));
+        .map((r) => ({ id: r.rid, name: r.name, conn: r.conn || '', description: r.description || '',
+          kind: r.kind, isInfolet: r.kind === 'infolet', icon: r.kind === 'infolet' ? 'oj-ux-ico-bar-charts' : 'oj-ux-ico-table',
+          cls: 'nx-sql-reprow' + (r.rid === active ? ' nx-sql-reprow--on' : '') }));
     }
     /** The open report tabs in the central panel. */
     reportTabs(tabs, active) {

@@ -140,16 +140,21 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
     await page.waitForFunction(() => document.querySelectorAll('.nx-sql-slot').length >= 3, null, { timeout: 20000 });
     T.check('the plan became several infolets on the board', (await page.$$('.nx-sql-slot')).length >= 3 && savedSqlStore.listInfolets().some((x) => x.name === 'Salaries') && savedSqlStore.listInfolets().some((x) => x.name === 'Headcount'));
 
-    T.section('Saved reports: open a report as a tab and run it');
+    T.section('Saved reports: queries AND infolets are listed; open each as a tab');
     await page.click('#sqlModeReports');
     await page.waitForSelector('.nx-sql-replist', { timeout: 10000 });
-    T.check('the saved query is listed as a report', /Employees/.test(await env.text('.nx-sql-replistul')));
-    await page.click('.nx-sql-replistul .nx-sql-reprow');
+    T.check('the worksheet is hidden in reports mode (no overlap)', !(await page.$('#sqlEditor')));
+    const repText = await env.text('.nx-sql-replistul');
+    T.check('both a saved query and an infolet are listed as reports', /Employees/.test(repText) && /Staff pay list/.test(repText));
+    await page.click('.nx-sql-reprow:has-text("Employees")');
     await page.waitForFunction(() => /nx-rep-grid/.test((document.getElementById('sqlRepBody') || {}).innerHTML || ''), null, { timeout: 15000 });
-    T.check('clicking a report opens a tab and runs its SQL into a grid', /nx-rep-grid/.test(await page.innerHTML('#sqlRepBody')) && (await page.$$('.nx-sql-reptab')).length === 1);
-    await page.click('.nx-sql-reptabx');
-    await page.waitForFunction(() => !document.querySelector('.nx-sql-reptab'), null, { timeout: 10000 });
-    T.check('closing the report tab leaves none open', (await page.$$('.nx-sql-reptab')).length === 0);
+    T.check('a query report opens a tab and runs its SQL into a grid', /nx-rep-grid/.test(await page.innerHTML('#sqlRepBody')) && (await page.$$('.nx-sql-reptab')).length === 1);
+    await page.click('.nx-sql-reprow:has-text("Staff pay list")');
+    await page.waitForFunction(() => { const b = (document.getElementById('sqlRepBody') || {}).innerHTML || ''; return /nx-rep-chart/.test(b) && /nx-rep-grid/.test(b); }, null, { timeout: 15000 });
+    T.check('an infolet report shows its chart above the grid, in a second tab', /nx-rep-chart/.test(await page.innerHTML('#sqlRepBody')) && (await page.$$('.nx-sql-reptab')).length === 2);
+    await page.click('.nx-sql-reptabwrap:has-text("Employees") .nx-sql-reptabx');
+    await page.waitForFunction(() => document.querySelectorAll('.nx-sql-reptab').length === 1, null, { timeout: 10000 });
+    T.check('closing one report tab leaves the other open', (await page.$$('.nx-sql-reptab')).length === 1);
 
     await env.shot('sql-dash.png');
     T.eq('no browser errors', errs().join(' | ').slice(0, 1500), '');

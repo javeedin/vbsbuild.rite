@@ -34,12 +34,12 @@
   <oj-bind-if test="[[ $variables.info.available ]]">
     <div class="nx-sql-modebar">
       <div class="nx-seg nx-sql-modeseg" role="tablist" aria-label="SQL mode">
-        <button type="button" role="tab" id="sqlModeWork" :class="[[ 'nx-seg-btn' + ($variables.mode !== 'dash' ? ' nx-seg-btn--on' : '') ]]" :aria-selected="[[ $variables.mode !== 'dash' ? 'true' : 'false' ]]" data-value="work" on-click="[[ $listeners.onMode ]]"><span class="oj-ux-ico-code" aria-hidden="true"></span> Worksheet</button>
+        <button type="button" role="tab" id="sqlModeWork" :class="[[ 'nx-seg-btn' + ($variables.mode === 'work' ? ' nx-seg-btn--on' : '') ]]" :aria-selected="[[ $variables.mode === 'work' ? 'true' : 'false' ]]" data-value="work" on-click="[[ $listeners.onMode ]]"><span class="oj-ux-ico-code" aria-hidden="true"></span> Worksheet</button>
         <button type="button" role="tab" id="sqlModeDash" :class="[[ 'nx-seg-btn' + ($variables.mode === 'dash' ? ' nx-seg-btn--on' : '') ]]" :aria-selected="[[ $variables.mode === 'dash' ? 'true' : 'false' ]]" data-value="dash" on-click="[[ $listeners.onMode ]]"><span class="oj-ux-ico-bar-charts" aria-hidden="true"></span> Dashboards</button>
         <button type="button" role="tab" id="sqlModeReports" :class="[[ 'nx-seg-btn' + ($variables.mode === 'reports' ? ' nx-seg-btn--on' : '') ]]" :aria-selected="[[ $variables.mode === 'reports' ? 'true' : 'false' ]]" data-value="reports" on-click="[[ $listeners.onMode ]]"><span class="oj-ux-ico-table" aria-hidden="true"></span> Saved reports</button>
       </div>
     </div>
-    <oj-bind-if test="[[ $variables.mode !== 'dash' ]]">
+    <oj-bind-if test="[[ $variables.mode === 'work' ]]">
     <div :class="[[ 'nx-sql-layout' + ($variables.connsOpen ? '' : ' nx-sql-layout--folded') ]]">
       <!-- Folded: a rail that opens the Connections again (kept on this PC) -->
       <oj-bind-if test="[[ !$variables.connsOpen ]]">
@@ -344,13 +344,14 @@
           </div>
           <oj-bind-if test="[[ !!$variables.reports.error ]]"><p class="nx-error" id="sqlRepError" role="alert"><oj-bind-text value="[[ $variables.reports.error ]]"></oj-bind-text></p></oj-bind-if>
           <oj-bind-if test="[[ !$variables.reports.list.length && !$variables.reports.error ]]">
-            <p class="nx-sql-none" id="sqlRepNone">No saved queries yet. In the <strong>Worksheet</strong>, run a query and choose <strong>Save query</strong> — it appears here as a report.</p>
+            <p class="nx-sql-none" id="sqlRepNone">No reports yet. In the <strong>Worksheet</strong>, run a query and choose <strong>Save query</strong> or <strong>Save as infolet</strong> — both appear here as reports.</p>
           </oj-bind-if>
           <ul class="nx-sql-replistul">
             <oj-bind-for-each data="[[ $functions.reportList($variables.reports.list, $variables.reports.q, $variables.reports.active) ]]"><template data-oj-as="r">
               <li><button type="button" :class="[[ r.data.cls ]]" :data-id="[[ r.data.id ]]" on-click="[[ $listeners.onRepOpen ]]" :title="[[ r.data.description || r.data.name ]]">
-                <span class="oj-ux-ico-table" aria-hidden="true"></span>
+                <span :class="[[ r.data.icon ]]" aria-hidden="true"></span>
                 <span class="nx-sql-repname-t"><oj-bind-text value="[[ r.data.name ]]"></oj-bind-text></span>
+                <oj-bind-if test="[[ r.data.isInfolet ]]"><span class="nx-sql-repkind">chart</span></oj-bind-if>
                 <oj-bind-if test="[[ !!r.data.conn ]]"><span class="nx-sql-savedconn"><oj-bind-text value="[[ r.data.conn ]]"></oj-bind-text></span></oj-bind-if>
               </button></li>
             </template></oj-bind-for-each>

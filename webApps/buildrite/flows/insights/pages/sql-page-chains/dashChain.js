@@ -37,19 +37,22 @@ define([
         return;
       }
 
-      // ── Saved reports: a left list of saved queries; open each as a result tab ──
+      // ── Saved reports: a left list of saved queries AND infolets; open each as a result tab ──
       if (op === 'repLoad') { await this.repLoad(v); return; }
       if (op === 'repFilter') { v.reports = Object.assign({}, v.reports, { q: String(value == null ? '' : value) }); return; }
       if (op === 'repOpen') {
         const tabs = (v.reports.tabs || []).slice();
         let tab = tabs.filter((t) => t.id === id)[0];
         if (!tab) {
-          const r = await sql.savedGet(id);
-          const q = r.ok && r.body.query;
-          if (!q) { bus.toast((r.body && r.body.error) || 'That report could not be opened.', 'error'); return; }
-          tab = { id: q.id, name: q.name, conn: q.conn || '', sql: q.sql || '' };
+          const entry = (v.reports.list || []).filter((e) => e.rid === id)[0];
+          if (!entry) { bus.toast('That report could not be opened.', 'error'); return; }
+          let full, spec = null;
+          if (entry.kind === 'infolet') { const r = await sql.infoletGet(entry.realId); full = r.ok && r.body.infolet; spec = full && (full.spec || {}); }
+          else { const r = await sql.savedGet(entry.realId); full = r.ok && r.body.query; }
+          if (!full) { bus.toast('That report could not be opened.', 'error'); return; }
+          tab = { id: id, name: full.name, conn: full.conn || '', sql: full.sql || '', kind: entry.kind, spec: spec };
           tabs.push(tab);
-          sql.ranQuery(q.id); // best-effort usage bump
+          if (entry.kind === 'query') sql.ranQuery(entry.realId); // best-effort usage bump
         }
         v.reports = Object.assign({}, v.reports, { tabs: tabs, active: id });
         this.paintReport(v);
@@ -281,8 +284,12 @@ define([
     }
 
     async repLoad(v) {
-      const r = await sql.savedList();
-      v.reports = Object.assign({ tabs: [], active: '', q: '' }, v.reports, { list: (r.ok && r.body.queries) || [], error: r.ok ? '' : ((r.body && r.body.error) || 'Could not read the reports.') });
+      const [qr, ir] = await Promise.all([sql.savedList(), sql.infoletList()]);
+      const queries = (qr.ok && qr.body.queries) || [];
+      const infs = (ir.ok && ir.body.infolets) || [];
+      const list = queries.map((x) => ({ rid: 'q_' + x.id, kind: 'query', realId: x.id, name: x.name, conn: x.conn || '', description: x.description || '' }))
+        .concat(infs.map((x) => ({ rid: 'i_' + x.id, kind: 'infolet', realId: x.id, name: x.name, conn: x.conn || '', description: x.description || '', chart: x.kind || 'table' })));
+      v.reports = Object.assign({ tabs: [], active: '', q: '' }, v.reports, { list: list, error: (qr.ok || ir.ok) ? '' : 'Could not read the reports.' });
     }
 
     // draw the active report tab: run its SQL on the connection (cached after the first run), inject the grid
@@ -299,7 +306,12 @@ define([
           if (res.error) { box.innerHTML = '<p class="nx-rep-err">' + I.esc(String(res.error).split('\n')[0]) + '</p>'; return; }
           if (res.kind && res.kind !== 'query') { box.innerHTML = '<p class="nx-rep-empty">' + I.esc(res.message || 'This statement returned no rows.') + '</p>'; return; }
           const meta = '<p class="nx-rep-meta">' + (res.rows || []).length + ' row' + ((res.rows || []).length === 1 ? '' : 's') + (res.ms != null ? ' · ' + (res.ms / 1000).toFixed(2) + ' s' : '') + '</p>';
-          box.innerHTML = meta + I.gridHtml(res.columns || [], res.rows || [], { more: res.more });
+          // an infolet report shows its chart above the full grid
+          let chart = '';
+          if (tab.kind === 'infolet' && tab.spec && (res.columns || []).length) {
+            chart = '<div class="nx-rep-chart">' + I.cardHtml(I.compute(tab.spec, { columns: res.columns, rows: res.rows || [] })) + '</div>';
+          }
+          box.innerHTML = meta + chart + I.gridHtml(res.columns || [], res.rows || [], { more: res.more });
         };
         if (REP[id]) { draw(REP[id]); return; }
         if (!(v.session && v.session.id)) { box.innerHTML = '<p class="nx-rep-empty">Connect to a database (Worksheet tab) to run this report.</p>'; return; }
