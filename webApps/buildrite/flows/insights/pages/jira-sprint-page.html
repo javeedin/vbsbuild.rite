@@ -147,8 +147,8 @@
       <div class="nx-table">
         <div class="nx-jira-grid" role="table" aria-labelledby="jspItemsTitle" id="jspGrid">
           <div class="nx-jsp-row nx-jira-row--head" role="row">
-            <span role="columnheader" class="nx-pickcol"><button type="button" :class="[[ $functions.selAllClass($variables.report.rows, $variables.selected) ]]"
-              on-click="[[ $listeners.onPickAll ]]" role="checkbox" :aria-checked="[[ $functions.allChecked($variables.report.rows, $variables.selected) ]]"
+            <span role="columnheader" class="nx-pickcol"><button type="button" :class="[[ $functions.selAllClass($functions.itemsView($variables.report.rows, $variables.itemF, $variables.itemSort), $variables.selected) ]]"
+              on-click="[[ $listeners.onPickAll ]]" role="checkbox" :aria-checked="[[ $functions.allChecked($functions.itemsView($variables.report.rows, $variables.itemF, $variables.itemSort), $variables.selected) ]]"
               aria-label="Select all items for follow-up" title="Select all"></button></span>
             <span role="columnheader"><button type="button" :class="[[ $functions.sortClass('sprint', $variables.itemSort) ]]" data-col="sprint" on-click="[[ $listeners.onItemSort ]]">Sprint<oj-bind-text value="[[ $functions.sortSym('sprint', $variables.itemSort) ]]"></oj-bind-text></button></span>
             <span role="columnheader"><button type="button" :class="[[ $functions.sortClass('key', $variables.itemSort) ]]" data-col="key" on-click="[[ $listeners.onItemSort ]]">Key<oj-bind-text value="[[ $functions.sortSym('key', $variables.itemSort) ]]"></oj-bind-text></button></span>

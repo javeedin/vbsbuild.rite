@@ -1,4 +1,4 @@
-define(['resources/js/exportKit', 'resources/js/jiraStoryPanel', 'resources/js/testRecorder', 'resources/js/followup', 'resources/js/shellBus'], (exportKit, Panel, Recorder, F, bus) => {
+define(['resources/js/exportKit', 'resources/js/jiraStoryPanel', 'resources/js/testRecorder', 'resources/js/followup', 'resources/js/shellBus', 'resources/js/jiraItems'], (exportKit, Panel, Recorder, F, bus, JI) => {
   'use strict';
 
   // One Jira sprint, in its own tab: binding helpers. The report is resources/js/jiraBacklog.js sprintReport.
@@ -11,18 +11,8 @@ define(['resources/js/exportKit', 'resources/js/jiraStoryPanel', 'resources/js/t
   const STATE = { active: 'info', future: 'warning', closed: 'neutral' };
   const WHERE = { done: 'Done here', here: 'Still in this sprint', moved: 'Carried on' };
 
-  // Items table: filter on every column (type to narrow) and sort (Key by story number). Pure helpers, no `this`.
-  function ci(s) { return String(s == null ? '' : s).toLowerCase(); }
-  function has(hay, needle) { return !needle || ci(hay).indexOf(ci(needle)) >= 0; }
-  function keyNum(k) { const m = /(\d+)\s*$/.exec(String(k || '')); return m ? parseInt(m[1], 10) : 0; }
-  function whereOf(r) { return (WHERE[r && r.in] || '') + (r && r.sprintNow ? ' to ' + r.sprintNow : ''); }
-  function labelsText(r) { const l = (r && r.labels) || []; return l.length ? l.join(', ') : 'No label'; }
-  function fieldOf(r, col) {
-    if (col === 'in') return whereOf(r);
-    if (col === 'assignee') return (r && r.assignee) || 'Nobody';
-    if (col === 'customer') return labelsText(r);
-    return (r && r[col]) || '';
-  }
+  // Items table: filter on every column and sort — the pure engine (resources/js/jiraItems.js), shared with the
+  // selection and follow-up chains so "select all" / "copy all" mean the rows on screen, not what a filter hides.
 
   let tabs = 0;
 
@@ -90,21 +80,7 @@ define(['resources/js/exportKit', 'resources/js/jiraStoryPanel', 'resources/js/t
     statusClass(cat) { return 'nx-jira-status nx-jira-status--' + (cat || 'new'); }
 
     /** The items after the column filters and the chosen sort (Key sorts by story number). */
-    itemsView(rows, f, sort) {
-      f = f || {}; sort = sort || {};
-      let list = (rows || []).filter((r) => has(r.key, f.key) && has(r.summary, f.summary) && has(r.status, f.status)
-        && has(whereOf(r), f.in) && has(r.sprint, f.sprint) && has((r.assignee || 'Nobody'), f.assignee)
-        && has(labelsText(r), f.customer) && has(r.due, f.due) && has(r.resolved, f.resolved));
-      if (sort.col) {
-        const dir = sort.dir === 'desc' ? -1 : 1;
-        list = list.slice().sort((a, b) => {
-          let av; let bv;
-          if (sort.col === 'key') { av = keyNum(a.key); bv = keyNum(b.key); } else { av = ci(fieldOf(a, sort.col)); bv = ci(fieldOf(b, sort.col)); }
-          return (av < bv ? -1 : (av > bv ? 1 : 0)) * dir;
-        });
-      }
-      return list;
-    }
+    itemsView(rows, f, sort) { return same('itemsView', JI.view(rows, f, sort)); }
     /** "12 of 77 items" when filtered, else the plain count. */
     itemsCount(shown, total) { const s = (shown || []).length; const t = (total || []).length; return (s === t ? s : s + ' of ' + t) + (t === 1 ? ' item' : ' items'); }
     /** The sort arrow on a header, and its class when active. */

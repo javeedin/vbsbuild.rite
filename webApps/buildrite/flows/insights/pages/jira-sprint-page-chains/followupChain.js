@@ -5,7 +5,8 @@ define([
   'resources/js/followupsClient',
   'resources/js/minutesClient',
   'resources/js/shellBus',
-], (ActionChain, exportKit, F, FC, M, bus) => {
+  'resources/js/jiraItems',
+], (ActionChain, exportKit, F, FC, M, bus, JI) => {
   'use strict';
 
   // Copy to follow-up on a sprint's items: opens a small dialog that drafts the email in simple English (a greeting that
@@ -28,9 +29,10 @@ define([
       const clearRecipInput = (f) => { try { const el = (typeof document !== 'undefined') && document.querySelector('.nx-fu-recipinput[data-field="' + f + '"]'); if (el) { el.value = ''; el.focus(); } } catch (e) { /* no DOM (tests) */ } };
 
       if (act === 'open') {
-        const rows = (v.report && v.report.rows) || [];
+        // the rows on screen (after the column filters), so "copy all" never reaches rows a filter hides
+        const visible = JI.view((v.report && v.report.rows) || [], v.itemF, v.itemSort);
         const sel = v.selected || [];
-        const picked = sel.length ? rows.filter((r) => sel.indexOf(r.key) >= 0) : rows;
+        const picked = sel.length ? visible.filter((r) => sel.indexOf(r.key) >= 0) : visible;
         if (!picked.length) { bus.toast('There are no items to copy.', 'error'); return; }
         const s = (v.report && v.report.sprint) || {};
         v.fuTitle = 'Follow-up — Sprint ' + (s.name || v.name || v.id);
