@@ -1693,6 +1693,12 @@ button.nx-fsu-kpi:hover { border-color: #9db6d8; }
 .nx-pf-edgeres--warn { border-color: #f2d6a8; background: #fef8ee; }
 .nx-pf-edgeres--run { border-color: var(--nx-line, #e2e7ed); background: #f7f9fc; }
 .nx-pf-edgeresline { display: flex; align-items: center; gap: 8px; }
+/* a bold PASS / FAIL / NEEDS OK / BY HAND badge, so the verdict is unmistakable (not just a tick or a colour) */
+.nx-pf-edgepill { flex: none; font-size: 11px; font-weight: 800; letter-spacing: .05em; border-radius: 5px; padding: 2px 9px; color: #fff; background: #6b7886; }
+.nx-pf-edgepill--ok { background: #15803d; }
+.nx-pf-edgepill--bad { background: #b42318; }
+.nx-pf-edgepill--warn { background: #9a5b00; }
+.nx-pf-edgepill--run { background: #6b7886; }
 .nx-pf-edgeverdict { flex: none; font-weight: 800; font-size: 14px; }
 .nx-pf-edgeres--ok .nx-pf-edgeverdict { color: #15803d; }
 .nx-pf-edgeres--bad .nx-pf-edgeverdict { color: #b42318; }

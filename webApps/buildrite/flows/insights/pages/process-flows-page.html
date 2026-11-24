@@ -506,7 +506,7 @@
                         <oj-bind-if test="[[ e.data.test.running ]]"><div class="nx-pf-edgeresline"><span class="nx-spin" aria-hidden="true"></span> Running the edge request…</div></oj-bind-if>
                         <oj-bind-if test="[[ !e.data.test.running ]]">
                           <div class="nx-pf-edgeresline">
-                            <span class="nx-pf-edgeverdict"><oj-bind-text value="[[ e.data.test.icon ]]"></oj-bind-text></span>
+                            <span :class="[[ 'nx-pf-edgepill nx-pf-edgepill--' + e.data.test.cls ]]"><oj-bind-text value="[[ e.data.test.label ]]"></oj-bind-text></span>
                             <span class="nx-pf-edgeverdicttext"><oj-bind-text value="[[ e.data.test.text ]]"></oj-bind-text></span>
                             <oj-bind-if test="[[ e.data.test.needsConfirm ]]"><button type="button" class="nx-btn nx-btn--sm nx-btn--cta nx-pf-edgeanyway" :data-key="[[ st.data.s + ':' + e.data.e ]]" data-op="edgeRunGo" on-click="[[ $listeners.onPf ]]">Run anyway</button></oj-bind-if>
                           </div>

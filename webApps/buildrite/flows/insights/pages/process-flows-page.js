@@ -120,8 +120,10 @@ define([], () => {
   function edgeTestView(t) {
     if (!t) return null;
     const cls = t.running ? 'run' : (t.needsConfirm ? 'warn' : (t.verdict === 'pass' ? 'ok' : (t.verdict === 'fail' ? 'bad' : 'warn')));
+    // a plain verdict word so pass / fail is unmistakable (not just a tick or a colour)
+    const label = t.running ? '' : (t.needsConfirm ? 'NEEDS OK' : (t.verdict === 'pass' ? 'PASS' : (t.verdict === 'fail' ? 'FAIL' : (t.verdict === 'warn' ? 'CHECK' : (t.verdict === 'na' ? 'BY HAND' : 'UNKNOWN')))));
     return {
-      running: !!t.running, needsConfirm: !!t.needsConfirm, message: t.message || '', cls: cls,
+      running: !!t.running, needsConfirm: !!t.needsConfirm, message: t.message || '', cls: cls, label: label,
       icon: t.running ? '' : (t.needsConfirm ? '!' : (t.verdict === 'pass' ? '✓' : (t.verdict === 'fail' ? '✗' : '–'))),
       text: t.text || '', reqText: t.reqText || '', planNote: t.planNote || '', expectLabel: t.expectLabel || '',
       status: (t.status !== undefined && t.status !== null && t.status !== '') ? String(t.status) : '',

@@ -45,7 +45,8 @@ T.section('grade the response');
 T.check('a 5xx always fails (crash, not handled)', E.grade({ cls: '4xx' }, { status: 500 }).pass === false && E.grade({ cls: '2xx' }, { status: 503 }).verdict === 'fail');
 T.check('4xx expected: a 4xx passes, a 2xx fails (bad data accepted)', E.grade({ cls: '4xx' }, { status: 422 }).pass === true && E.grade({ cls: '4xx' }, { status: 200 }).pass === false && /not rejected/.test(E.grade({ cls: '4xx' }, { status: 201 }).text));
 T.check('404 expected: only a 404 passes', E.grade({ cls: '404' }, { status: 404 }).pass === true && E.grade({ cls: '404' }, { status: 200 }).pass === false);
-T.check('2xx expected: a 2xx passes and reports rows', E.grade({ cls: '2xx' }, { status: 200, rows: 0 }).pass === true && /0 row/.test(E.grade({ cls: '2xx' }, { status: 200, rows: 0 }).text));
+T.check('2xx expected with no rows passes; a 2xx that returns rows is a CHECK (not a clean pass)', E.grade({ cls: '2xx' }, { status: 200, rows: 0 }).pass === true && /no rows/.test(E.grade({ cls: '2xx' }, { status: 200, rows: 0 }).text)
+  && E.grade({ cls: '2xx' }, { status: 201, rows: 1 }).verdict === 'warn' && E.grade({ cls: '2xx' }, { status: 201, rows: 1 }).pass === false);
 T.check('handled: anything under 500 passes', E.grade({ cls: 'handled' }, { status: 409 }).pass === true && E.grade({ cls: 'handled' }, { status: 500 }).pass === false);
 T.check('no status / env → not pass (unknown / na)', E.grade({ cls: '4xx' }, { status: null, error: 'x' }).verdict === 'unknown' && E.grade(null, { status: 400 }).verdict === 'na');
 

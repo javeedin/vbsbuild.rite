@@ -65,7 +65,11 @@ define([], function () {
       if (s >= 200 && s < 300) return { verdict: 'fail', pass: false, text: 'accepted (' + s + ') — the bad input was not rejected' };
       return { verdict: 'fail', pass: false, text: 'expected a 4xx, got ' + s };
     }
-    if (expect.cls === '2xx') return (s >= 200 && s < 300) ? { verdict: 'pass', pass: true, text: 'returned ' + (res.rows != null ? res.rows + ' row(s)' : '2xx') } : { verdict: 'fail', pass: false, text: 'expected a 2xx, got ' + s };
+    if (expect.cls === '2xx') {
+      if (!(s >= 200 && s < 300)) return { verdict: 'fail', pass: false, text: 'expected a 2xx, got ' + s };
+      if (res.rows != null && res.rows > 0) return { verdict: 'warn', pass: false, text: '2xx, but returned ' + res.rows + ' row(s) — this edge expects none; narrow the query / body to match nothing, then Run' };
+      return { verdict: 'pass', pass: true, text: 'returned no rows (2xx) as expected' };
+    }
     return (s < 500) ? { verdict: 'pass', pass: true, text: 'handled (' + s + ')' } : { verdict: 'fail', pass: false, text: 'not handled (' + s + ')' };
   }
 

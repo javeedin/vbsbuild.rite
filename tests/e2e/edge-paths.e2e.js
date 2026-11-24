@@ -87,7 +87,7 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
     const urlBefore = page.url();
     await page.click(edge('0:0') + ' [data-op="edgeRun"]');
     await page.waitForSelector(edge('0:0') + ' .nx-pf-edgeres--ok', { timeout: 15000 });
-    T.check('the read edge passes (✓, a 2xx)', /✓/.test(await text(edge('0:0') + ' .nx-pf-edgeverdict')) && /2xx|row/.test(await text(edge('0:0') + ' .nx-pf-edgeverdicttext')), await text(edge('0:0') + ' .nx-pf-edgeres'));
+    T.check('the read edge passes (a bold PASS badge, a 2xx)', /PASS/.test(await text(edge('0:0') + ' .nx-pf-edgepill')) && /2xx|row/.test(await text(edge('0:0') + ' .nx-pf-edgeverdicttext')), await text(edge('0:0') + ' .nx-pf-edgeres'));
     T.check('a pass auto-ticks the edge as covered', await page.isChecked(edge('0:0') + ' [data-op="edgeCheck"]'));
 
     T.section('the dialog does NOT jump when the result expands it');
@@ -116,7 +116,7 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
     await page.waitForSelector(edge('1:0') + ' .nx-pf-edgeres--bad', { timeout: 15000 });
     const wrote = env.writes[env.writes.length - 1];
     T.check('Run anyway sends the mutated POST (empty body) to the backend', env.writes.length === beforeWrites + 1 && wrote && wrote.method === 'POST' && /\/shop\/v1\/orders$/.test(wrote.path) && JSON.stringify(wrote.body) === '{}', JSON.stringify(wrote && { m: wrote.method, p: wrote.path, b: wrote.body }));
-    T.check('the edge catches that the bad input was accepted (✗ fail), and does NOT tick it covered', /✗/.test(await text(edge('1:0') + ' .nx-pf-edgeverdict')) && /accepted|not rejected/i.test(await text(edge('1:0') + ' .nx-pf-edgeverdicttext')) && !(await page.isChecked(edge('1:0') + ' [data-op="edgeCheck"]')), await text(edge('1:0') + ' .nx-pf-edgeverdicttext'));
+    T.check('the edge catches that the bad input was accepted (a bold FAIL badge), and does NOT tick it covered', /FAIL/.test(await text(edge('1:0') + ' .nx-pf-edgepill')) && /accepted|not rejected/i.test(await text(edge('1:0') + ' .nx-pf-edgeverdicttext')) && !(await page.isChecked(edge('1:0') + ' [data-op="edgeCheck"]')), await text(edge('1:0') + ' .nx-pf-edgeverdicttext'));
 
     T.section('the Checklist tab reflects what is covered');
     await page.click('[data-op="edgeTab"][data-key="checklist"]');
