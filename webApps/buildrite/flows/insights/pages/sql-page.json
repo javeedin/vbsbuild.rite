@@ -158,6 +158,10 @@
    "type": "any",
    "defaultValue": { "list": [], "tabs": [], "active": "", "q": "", "error": "" }
   },
+  "bindDlg": {
+   "type": "any",
+   "defaultValue": { "open": false, "op": "", "list": [], "names": [], "busy": "", "error": "" }
+  },
   "dash": {
    "type": "any",
    "defaultValue": { "list": [], "open": false, "error": "" }
@@ -442,6 +446,9 @@
     }
    ]
   },
+  "onBindField": { "chains": [ { "chain": "runChain", "parameters": { "op": "bindField", "name": "{{ $event.target.dataset.name }}", "value": "{{ $event.target.value }}" } } ] },
+  "onBindRun": { "chains": [ { "chain": "runChain", "parameters": { "op": "bindRun" } } ] },
+  "onBindCancel": { "chains": [ { "chain": "runChain", "parameters": { "op": "bindCancel" } } ] },
   "onExport": {
    "chains": [
     {

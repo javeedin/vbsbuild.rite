@@ -46,7 +46,7 @@ define([], function () {
     test: function (conn) { return call('test', 'POST', conn); },
     connect: function (conn) { return call('connect', 'POST', conn); },
     sessions: function () { return call('sessions'); },
-    run: function (session, sql, fetch) { return call('run', 'POST', { session: session, sql: sql, fetch: fetch }); },
+    run: function (session, sql, fetch, binds) { return call('run', 'POST', { session: session, sql: sql, fetch: fetch, binds: binds || undefined }); },
     more: function (session, count) { return call('more', 'POST', { session: session, count: count }); },
     commit: function (session) { return call('commit', 'POST', { session: session }); },
     rollback: function (session) { return call('rollback', 'POST', { session: session }); },

@@ -10,6 +10,8 @@ define(['resources/js/exportKit', 'resources/js/sqlWorksheet', 'resources/js/inf
       var t = e.target;
       // Enter in the Ask AI box asks.
       if (t && t.id === 'sqlAiAsk' && e.key === 'Enter') { e.preventDefault(); var go = document.getElementById('sqlAiGo'); if (go && !go.disabled) go.click(); return; }
+      // Enter in a bind-value field runs with the entered binds.
+      if (t && t.classList && t.classList.contains('nx-sql-bindin') && e.key === 'Enter') { e.preventDefault(); var br = document.getElementById('sqlBindRun'); if (br && !br.disabled) br.click(); return; }
       if (!t || t.id !== 'sqlEditor') return;
       var id = (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) ? 'sqlRun' : (e.key === 'F5' ? 'sqlRunScript' : '');
       if (!id) return;

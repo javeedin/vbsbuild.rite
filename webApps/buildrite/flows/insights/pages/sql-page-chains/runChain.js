@@ -14,7 +14,7 @@ define([
   const EMPTY = { has: false, kind: '', columns: [], rows: [], style: {}, more: false, fetched: 0, ms: 0, message: '', error: '', statement: '' };
 
   class runChain extends ActionChain {
-    async run(context, { op, index }) {
+    async run(context, { op, index, name, value }) {
       const v = context.$page.variables;
       if (op === 'history') {
         const h = (v.history || [])[Number(index)];
@@ -29,6 +29,14 @@ define([
         if (!window.confirm('Clear the history of statements on this PC?')) return;
         v.history = [];
         try { window.localStorage.removeItem(HIST); } catch (e) { /* no storage */ }
+        return;
+      }
+      // the bind-values dialog (:name) — close / edit a field without needing a connection
+      if (op === 'bindCancel') { v.bindDlg = Object.assign({}, v.bindDlg, { open: false }); return; }
+      if (op === 'bindField') {
+        const nm = String(name == null ? '' : name);
+        const names = ((v.bindDlg && v.bindDlg.names) || []).map((x) => (x.name === nm ? Object.assign({}, x, { value: String(value == null ? '' : value) }) : x));
+        v.bindDlg = Object.assign({}, v.bindDlg, { names: names });
         return;
       }
       if (!v.session.id) { bus.toast('Connect first: choose Connect beside a connection.', 'error'); return; }
@@ -60,6 +68,19 @@ define([
         return;
       }
 
+      // Re-run after the binds dialog: build the bind object from the entered values and run the stored statements.
+      if (op === 'bindRun') {
+        const d = v.bindDlg || {};
+        const bindsObj = {};
+        // read the fields from the DOM (the entered values), not the variable, which can lag a keystroke behind
+        const entered = (d.names || []).map((x) => { const el = document.getElementById(x.id); const val = el ? el.value : x.value; return Object.assign({}, x, { value: val }); });
+        entered.forEach((x) => { bindsObj[x.name] = (x.value == null || x.value === '') ? null : x.value; });
+        this.rememberBinds(entered);
+        v.bindDlg = Object.assign({}, d, { open: false });
+        await this.exec(context, v, d.op || 'statement', d.list || [], bindsObj);
+        return;
+      }
+
       // Run statement / Run script: what to run.
       const ed = document.getElementById('sqlEditor');
       const text = ed ? ed.value : v.sql;
@@ -76,6 +97,37 @@ define([
       if (risky.length && !window.confirm(risky.length + ' statement' + (risky.length === 1 ? '' : 's') + ' (' + risky.map((s) => s.text.split(/\s+/).slice(0, 3).join(' ')).join('; ')
         + ') cannot be rolled back: DDL commits at once. Run on ' + v.session.name + '?')) return;
 
+      // Bind placeholders (:name): ask for their values first, like SQL Developer.
+      const names = this.bindNames(list);
+      if (names.length) {
+        const saved = this.savedBinds();
+        v.bindDlg = { open: true, op: op, list: list.map((s) => ({ text: s.text, start: s.start, line: s.line })),
+          names: names.map((nm, i) => ({ name: nm, value: saved[nm.toLowerCase()] || '', id: 'sqlBind-' + i })), busy: '', error: '' };
+        setTimeout(() => { const el = document.getElementById('sqlBind-0'); if (el) { el.focus(); el.select(); } }, 60);
+        return;
+      }
+
+      await this.exec(context, v, op, list, {});
+    }
+
+    /** The union of :name bind placeholders across the statements to run (first-seen, case-insensitive unique). */
+    bindNames(list) {
+      const seen = {}, out = [];
+      (list || []).forEach((s) => W.binds(s.text).forEach((nm) => { const k = nm.toLowerCase(); if (!seen[k]) { seen[k] = 1; out.push(nm); } }));
+      return out;
+    }
+    savedBinds() { try { return JSON.parse(window.localStorage.getItem('buildrite:sql-binds') || '{}') || {}; } catch (e) { return {}; } }
+    rememberBinds(names) {
+      try {
+        const m = this.savedBinds();
+        (names || []).forEach((x) => { m[x.name.toLowerCase()] = x.value == null ? '' : String(x.value); });
+        window.localStorage.setItem('buildrite:sql-binds', JSON.stringify(m));
+      } catch (e) { /* no storage */ }
+    }
+
+    /** Run the given statements (with an optional named-bind object), and show the result — the shared run loop. */
+    async exec(context, v, op, list, bindsObj) {
+      const sid = v.session.id;
       v.busy = 'run';
       v.exportOpen = false;
       if (op === 'script') v.script = [];
@@ -84,7 +136,7 @@ define([
       let failed = 0;
       for (const st of list) {
         const kind = W.kindOf(st.text);
-        const r = await sql.run(sid, st.text, v.fetch);
+        const r = await sql.run(sid, st.text, v.fetch, bindsObj);
         if (!this.alive(v, r)) { v.busy = ''; return; }
         const b = r.body || {};
         const short = st.text.replace(/\s+/g, ' ').slice(0, 160);

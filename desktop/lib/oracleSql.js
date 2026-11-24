@@ -351,6 +351,8 @@ async function open(opts) {
       }
       const d = getDriver();
       const n = Math.min(Math.max(Number((opts && opts.fetch) || FETCH), 1), MAX_FETCH);
+      // named bind values (:name) the page collected; an empty value binds NULL. Unused names are ignored by node-oracledb.
+      const binds = (opts && opts.binds && typeof opts.binds === 'object' && !Array.isArray(opts.binds)) ? opts.binds : [];
       await closeRs(s);
       const t0 = now();
       if (kind === 'tx') {
@@ -360,7 +362,7 @@ async function open(opts) {
       }
       try {
         if (kind === 'query') {
-          const r = await s.conn.execute(text, [], { resultSet: true, outFormat: d.OUT_FORMAT_ARRAY || 4001,
+          const r = await s.conn.execute(text, binds, { resultSet: true, outFormat: d.OUT_FORMAT_ARRAY || 4001,
             fetchTypeHandler: (meta) => (meta.dbType === d.DB_TYPE_CLOB || meta.dbType === d.DB_TYPE_NCLOB || meta.dbType === d.DB_TYPE_JSON ? { type: d.STRING } : undefined) });
           s.rs = r.resultSet;
           const columns = (r.metaData || []).map((m) => ({ name: m.name, type: (m.dbTypeName || '').toUpperCase(), nullable: m.nullable !== false }));
@@ -368,7 +370,7 @@ async function open(opts) {
           const page = await rowsFrom(s, n);
           return { kind, columns, rows: page.rows, more: page.more, fetched: page.rows.length, ms: now() - t0, pending: s.pending };
         }
-        const r = await s.conn.execute(text, [], { autoCommit: false });
+        const r = await s.conn.execute(text, binds, { autoCommit: false });
         if (kind === 'dml') s.pending = true;
         if (kind === 'ddl') s.pending = false; // Oracle commits before and after DDL
         const output = kind === 'plsql' ? await dbmsOutput(s.conn) : [];

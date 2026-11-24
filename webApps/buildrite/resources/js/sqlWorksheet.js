@@ -81,6 +81,27 @@ define([], function () {
     return out;
   }
 
+  /** The named bind placeholders (:name) in a statement, first-seen order, case-insensitive unique — skipping comments,
+   *  'strings', "quoted ids", q'[…]' and := assignment / ::casts. Used to prompt for values before running (SQL Developer). */
+  function binds(sql) {
+    var src = String(sql || ''), n = src.length, i = 0, code = '';
+    while (i < n) {
+      var ch = src[i], nx = src[i + 1];
+      if (ch === '-' && nx === '-') { var eol = src.indexOf('\n', i); i = eol === -1 ? n : eol; continue; }
+      if (ch === '/' && nx === '*') { var ec = src.indexOf('*/', i + 2); i = ec === -1 ? n : ec + 2; code += ' '; continue; }
+      if ((ch === 'q' || ch === 'Q') && nx === "'" && !/[A-Za-z0-9_$#]/.test(src[i - 1] || '')) {
+        var open = src[i + 2], close = { '[': ']', '{': '}', '(': ')', '<': '>' }[open] || open;
+        var eq = src.indexOf(close + "'", i + 3); i = eq === -1 ? n : eq + 2; code += ' '; continue;
+      }
+      if (ch === "'") { var j = i + 1; while (j < n) { if (src[j] === "'") { if (src[j + 1] === "'") { j += 2; continue; } break; } j++; } i = j + 1; code += ' '; continue; }
+      if (ch === '"') { var dq = src.indexOf('"', i + 1); i = dq === -1 ? n : dq + 1; code += ' '; continue; }
+      code += ch; i++;
+    }
+    var seen = {}, list = [], re = /(^|[^:\w$#]):([A-Za-z_][A-Za-z0-9_$#]*)/g, m;
+    while ((m = re.exec(code))) { var name = m[2], up = name.toLowerCase(); if (!seen[up]) { seen[up] = 1; list.push(name); } }
+    return list;
+  }
+
   /** The statement under the cursor (SQL Developer's Run Statement): the one around it, else the one just before. */
   function atCursor(script, pos) {
     var list = split(script);
@@ -250,6 +271,6 @@ define([], function () {
     return Math.floor(s / 60) + ' min ' + String(s % 60).padStart(2, '0') + ' s';
   }
 
-  return { KINDS: KINDS, COLORS: COLORS, kindOf: kindOf, isBlock: isBlock, split: split, atCursor: atCursor, cellOf: cellOf, grid: grid, exportSpec: exportSpec,
+  return { KINDS: KINDS, COLORS: COLORS, kindOf: kindOf, isBlock: isBlock, split: split, binds: binds, atCursor: atCursor, cellOf: cellOf, grid: grid, exportSpec: exportSpec,
     blankForm: blankForm, formOf: formOf, details: details, missing: missing, setField: setField, fillInputs: fillInputs, autoName: autoName, aiInsert: aiInsert, aiWho: aiWho, remember: remember, historyRows: historyRows, took: took };
 });

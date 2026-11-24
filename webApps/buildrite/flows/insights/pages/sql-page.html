@@ -615,6 +615,30 @@
     </div>
   </oj-bind-if>
 
+  <!-- Bind values: a statement with :name placeholders asks for their values before it runs (as in SQL Developer) -->
+  <oj-bind-if test="[[ $variables.bindDlg.open ]]">
+    <div class="nx-modal" id="sqlBindModal">
+      <div class="nx-dialog nx-sql-savedlg" role="dialog" aria-modal="true" aria-label="Enter bind values">
+        <div class="nx-dialog-head">
+          <h2 class="nx-dialog-title">Enter bind values</h2>
+          <button type="button" class="nx-iconbtn" id="sqlBindClose" on-click="[[ $listeners.onBindCancel ]]" aria-label="Close"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+        </div>
+        <div class="nx-dialog-body nx-sql-savebody">
+          <p class="nx-sql-opt" id="sqlBindNote">This statement uses bind placeholders. Give each a value, then Run. Leave one empty to bind NULL.</p>
+          <oj-bind-for-each data="[[ $variables.bindDlg.names ]]"><template data-oj-as="p">
+            <label class="nx-sql-savefield">:<oj-bind-text value="[[ p.data.name ]]"></oj-bind-text>
+              <input :id="[[ p.data.id ]]" class="nx-sql-in nx-sql-bindin" type="text" autocomplete="off" :data-name="[[ p.data.name ]]" :value="[[ p.data.value ]]" on-input="[[ $listeners.onBindField ]]" :placeholder="[[ 'value for :' + p.data.name ]]"/></label>
+          </template></oj-bind-for-each>
+          <oj-bind-if test="[[ !!$variables.bindDlg.error ]]"><div class="nx-sql-dlgstatus nx-sql-dlgstatus--bad" id="sqlBindErr" role="status"><oj-bind-text value="[[ $variables.bindDlg.error ]]"></oj-bind-text></div></oj-bind-if>
+        </div>
+        <footer class="nx-dialog-foot nx-sql-dlgfoot">
+          <button type="button" class="nx-btn nx-btn--plain" id="sqlBindCancel" on-click="[[ $listeners.onBindCancel ]]">Cancel</button>
+          <button type="button" class="nx-btn nx-btn--primary" id="sqlBindRun" on-click="[[ $listeners.onBindRun ]]"><span class="oj-ux-ico-play" aria-hidden="true"></span>Run</button>
+        </footer>
+      </div>
+    </div>
+  </oj-bind-if>
+
   <!-- Save as infolet: turn the current result into a chart, with a live preview -->
   <oj-bind-if test="[[ $variables.infDlg.open ]]">
     <div class="nx-modal" id="sqlInfModal">

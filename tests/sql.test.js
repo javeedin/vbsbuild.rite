@@ -43,6 +43,11 @@ const json = (x) => JSON.stringify(x);
   T.eq('kinds', ['with x as (select 1 from dual) select * from x', 'merge into t using s on (1=1) when matched then update set a=1', 'truncate table t', 'commit', 'exec p(1)', 'create table t (a number)']
     .map(W.kindOf).join(), 'query,dml,ddl,tx,plsql,ddl');
 
+  T.section('bind placeholders (:name), so the app can prompt for their values');
+  T.eq('named binds, first-seen, unique (case-insensitive)', W.binds('select * from er where num = :request_number and dt > :from_date and n2 = :Request_Number').join(','), 'request_number,from_date');
+  T.eq('ignores :name inside strings, comments and q-quotes, and := assignment', W.binds("-- :skip_comment\nselect ':skip_str' c, q'[:skip_q]' d from t where x = :real /* :skip_c2 */ ; begin a := 1; end;").join(','), 'real');
+  T.eq('no binds → empty', W.binds('select * from dual').length, 0);
+
   T.section('the grid');
   const g = W.grid([{ name: 'EMPNO', type: 'NUMBER' }, { name: 'ENAME', type: 'VARCHAR2' }, { name: 'HIRED', type: 'DATE' }], [[7369, 'SMITH', '2026-01-01 09:30:00'], [7499, null, 'x'.repeat(250)]]);
   T.eq('row numbers, (null), numbers to the right, long text cut', [g.rows.map((r) => r.n).join(), g.rows[1].cells[1].t, g.rows[0].cells[0].cls, g.rows[1].cells[2].t.length, g.rows[1].cells[2].full.length].join(' | '),

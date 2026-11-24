@@ -1818,7 +1818,7 @@ function createDevServer(o) {
           }
           if (pathname === '/__sql/run' && post) {
             try {
-              const r = await sq.run(b.session, b.sql, { fetch: b.fetch });
+              const r = await sq.run(b.session, b.sql, { fetch: b.fetch, binds: b.binds });
               log(`SQL ${r.kind} -> ok (${r.ms} ms)`);
               return json(200, r);
             } catch (e) {
