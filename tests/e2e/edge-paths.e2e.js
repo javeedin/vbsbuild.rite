@@ -41,7 +41,9 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
     edges: {
       source: 'ai', generatedAt: '2026-11-20T10:00:00.000Z', savedAt: '2026-11-20T10:01:00.000Z',
       draft: [
-        { pageKey: 'P1', edges: [{ name: 'No matching records', trigger: 'The order query returns nothing', expected: 'Show an empty state, not an error', stresses: 'GET /shop/v1/orders', severity: 'low' }] },
+        // several read edges on the first step, so the By-step list is long enough to scroll (to prove Run keeps the scroll)
+        { pageKey: 'P1', edges: ['No matching records', 'Empty result set', 'Nothing for this filter', 'No data in the range', 'No records for today', 'No match on the code', 'Empty when archived', 'Empty order list']
+          .map((name) => ({ name, trigger: 'The order query returns nothing', expected: 'Show an empty state, not an error', stresses: 'GET /shop/v1/orders', severity: 'low' })) },
         { pageKey: 'P2', edges: [{ name: 'Invalid or missing input', trigger: 'Required fields are blank when submitting the order', expected: 'Block the submit with field errors (a 4xx)', stresses: 'POST /shop/v1/orders', severity: 'high' }] },
         { pageKey: '*', edges: [{ name: 'Session expires mid-flow', trigger: 'The sign-in times out partway through', expected: 'Prompt to sign in again and resume', stresses: 'auth / session', severity: 'high' }] },
       ],
@@ -78,7 +80,7 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
 
     T.section('only API-level edges get a Run button');
     const runButtons = await page.$$('[data-op="edgeRun"]');
-    T.check('two Run buttons (the GET and the POST edge), none on the flow-wide session edge', runButtons.length === 2 && !(await page.$('.nx-pf-edgestep--flow [data-op="edgeRun"]')));
+    T.check('every API edge gets a Run button (8 read + 1 write), none on the flow-wide session edge', runButtons.length === 9 && !(await page.$('.nx-pf-edgestep--flow [data-op="edgeRun"]')), 'run buttons: ' + runButtons.length);
 
     T.section('run the read edge → graded a pass, auto-ticked covered');
     const boxBefore = await page.locator('.nx-pf-edgedlg').boundingBox();
@@ -91,6 +93,19 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
     T.section('the dialog does NOT jump when the result expands it');
     const boxAfter = await page.locator('.nx-pf-edgedlg').boundingBox();
     T.check('the dialog top stays put (top-anchored, not re-centred) and the URL is unchanged', Math.abs(boxAfter.y - boxBefore.y) < 3 && page.url() === urlBefore, 'top ' + (boxBefore && boxBefore.y) + ' → ' + (boxAfter && boxAfter.y));
+
+    T.section('the dialog body keeps its scroll when an edge is Run (the real jump)');
+    await page.setViewportSize({ width: 1200, height: 560 }); // short, so the long edge list scrolls inside the dialog body
+    await settle(page, 200);
+    const body = page.locator('.nx-pf-edgedlg .nx-pf-featbody');
+    await page.locator(edge('0:5')).scrollIntoViewIfNeeded();      // a lower read edge, now scrolled into view
+    await settle(page, 150);
+    const scrollBefore = await body.evaluate((el) => el.scrollTop);
+    await page.click(edge('0:5') + ' [data-op="edgeRun"]');
+    await page.waitForSelector(edge('0:5') + ' .nx-pf-edgeres', { timeout: 15000 });
+    await settle(page, 350);                                       // after all the restore frames
+    const scrollAfter = await body.evaluate((el) => el.scrollTop);
+    T.check('the body was actually scrolled and stays put after Run (does not snap to the top)', scrollBefore > 30 && Math.abs(scrollAfter - scrollBefore) < 40, 'scrollTop ' + scrollBefore + ' → ' + scrollAfter);
 
     T.section('run the write edge → asks first, then catches the accepted bad input (a FAIL)');
     await page.click(edge('1:0') + ' [data-op="edgeRun"]');

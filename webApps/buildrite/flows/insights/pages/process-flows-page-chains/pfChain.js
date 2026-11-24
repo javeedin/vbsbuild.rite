@@ -202,6 +202,10 @@ define([
   }
   // An edit key is "<step>:<edge>" where <step> is a step index (0…) or 'g' for the flow-wide group; map it to its draft entry.
   const edgeEntry = (v, s) => { const d = v.edgeDraft || []; return s === 'g' ? d[d.length - 1] : d[Number(s)]; };
+  // The By-step list is one oj for-each; any edge change rebuilds it, so the dialog body (a scroll container) would jump to
+  // the top. Capture its scroll and restore it across the next few frames so the view stays where the user is.
+  const edgeBody = () => (typeof document !== 'undefined' ? document.querySelector('.nx-pf-edgedlg .nx-pf-featbody') : null);
+  function keepEdgeScroll() { const b = edgeBody(); if (!b) return; const top = b.scrollTop; [0, 30, 80, 160].forEach((ms) => setTimeout(() => { const el = edgeBody(); if (el) el.scrollTop = top; }, ms)); }
 
   /** Read the page rows' inputs from the DOM into MODEL (name / note, and the matched catalog page). pedit keeps MODEL
    *  current on every keystroke, but this is called before any structural change or save so MODEL always matches what is
@@ -789,6 +793,7 @@ define([
       if (op === 'edgeEdit') {
         const m = /^(\d+|g):(\d+):(name|trigger|expected|stresses)$/.exec(String(key || ''));
         if (!m) return;
+        keepEdgeScroll();
         const entry = edgeEntry(v, m[1]);
         if (!entry || !entry.edges || !entry.edges[Number(m[2])]) return;
         entry.edges[Number(m[2])][m[3]] = String(input || '').slice(0, m[3] === 'name' ? 200 : (m[3] === 'stresses' ? 300 : 600));
@@ -798,6 +803,7 @@ define([
       if (op === 'edgeSev') {
         const m = /^(\d+|g):(\d+)$/.exec(String(key || ''));
         if (!m) return;
+        keepEdgeScroll();
         const entry = edgeEntry(v, m[1]);
         if (!entry || !entry.edges || !entry.edges[Number(m[2])]) return;
         const sev = String(value || input || '').toLowerCase();
@@ -808,6 +814,7 @@ define([
       if (op === 'edgeCheck') {
         const k = String(key || '');
         if (!/^(\d+|g):\d+$/.test(k)) return;
+        keepEdgeScroll();
         const cur = (v.edgeChecks || {})[k] === true;
         v.edgeChecks = Object.assign({}, v.edgeChecks || {}, { [k]: !cur });
         return;
@@ -815,6 +822,7 @@ define([
       if (op === 'edgeAdd') {
         const entry = edgeEntry(v, String(key));
         if (!entry) return;
+        keepEdgeScroll();
         entry.edges = (entry.edges || []).concat({ name: 'New edge path', trigger: '', expected: '', stresses: '', severity: 'medium' });
         edgeSet(v, v.edgeDraft); // indices change → mirror and reset ticks
         return;
@@ -822,6 +830,7 @@ define([
       if (op === 'edgeDel') {
         const m = /^(\d+|g):(\d+)$/.exec(String(key || ''));
         if (!m) return;
+        keepEdgeScroll();
         const entry = edgeEntry(v, m[1]);
         if (!entry || !entry.edges) return;
         entry.edges.splice(Number(m[2]), 1);
@@ -854,7 +863,10 @@ define([
         const steps = (v.edgeModel && v.edgeModel.steps) || [];
         const edge = steps[si] && steps[si].edges[ei];
         if (!edge) return;
-        const setT = (st) => { v.edgeTests = Object.assign({}, v.edgeTests || {}, { [key]: st }); };
+        const b0 = edgeBody();
+        const keepTop = b0 ? b0.scrollTop : null;
+        const restoreScroll = () => { if (keepTop == null) return; [0, 30, 80, 160].forEach((ms) => setTimeout(() => { const el = edgeBody(); if (el) el.scrollTop = keepTop; }, ms)); };
+        const setT = (st) => { v.edgeTests = Object.assign({}, v.edgeTests || {}, { [key]: st }); restoreScroll(); };
         if (!ET.runnable(edge)) { setT({ ran: true, verdict: 'na', text: 'This edge is about the screen or an outside system — verify it by hand, then tick it covered.' }); return; }
         foldRows(v);
         const pg = (MODEL && MODEL.pages) || [];
@@ -881,7 +893,7 @@ define([
             reqText: plan.method + ' ' + ep, planNote: plan.note, expectLabel: (expect && expect.label) || '',
             status: result.status, ms: (r.ms != null ? r.ms : null), rows: result.rows, body: trimResp(r.pretty),
             verdict: g ? g.verdict : '', pass: g ? g.pass : false, text: g ? g.text : '' });
-          if (g && g.pass) v.edgeChecks = Object.assign({}, v.edgeChecks || {}, { [key]: true }); // a pass marks it covered
+          if (g && g.pass) { v.edgeChecks = Object.assign({}, v.edgeChecks || {}, { [key]: true }); restoreScroll(); } // a pass marks it covered
         } catch (e) { setT({ ran: true, running: false, verdict: 'fail', pass: false, text: String((e && e.message) || e) }); }
         return;
       }
