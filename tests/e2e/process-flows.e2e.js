@@ -306,8 +306,10 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await page.waitForFunction(() => document.querySelectorAll('#pfRecSteps .nx-pf-recstep').length === 2, null, { timeout: 10000 });
     await page.click('#pfRecStop');
     await page.waitForSelector('#pf-name', { timeout: 10000 });
-    T.check('a recorded flow offers "Create scenario from the recording"', !!(await page.$('#pfMakeScenario')));
+    T.check('a recorded flow offers the "Build from this" generators', !!(await page.$('#pfGenMenu')) && !!(await page.$('#pfMakeScenario')));
     const scenDir = path.join(dir, 'scenarios', 'scenarios'); // S.open(dir)/scenarios
+    await page.click('#pfGenMenu > button'); // open the "Build from this" menu
+    await page.waitForSelector('#pfMakeScenario', { state: 'visible', timeout: 10000 });
     await page.click('#pfMakeScenario');
     // the route builds and saves the scenario; wait for its file to appear and read it back
     let built = null;

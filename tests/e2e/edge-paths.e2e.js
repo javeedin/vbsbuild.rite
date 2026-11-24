@@ -70,7 +70,9 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
     await page.click('.nx-nav-item[data-nav-id="process-flows"]');
     await page.waitForSelector('#pfList .nx-pf-card', { timeout: 30000 });
     await page.click('#pfList .nx-pf-open');
-    await page.waitForSelector('#pfMakeEdges', { timeout: 10000 });
+    await page.waitForSelector('#pfGenMenu', { timeout: 10000 });
+    await page.click('#pfGenMenu > button'); // open the "Build from this" menu
+    await page.waitForSelector('#pfMakeEdges', { state: 'visible', timeout: 10000 });
     await page.click('#pfMakeEdges');
     await page.waitForSelector('.nx-pf-edgestep--flow', { timeout: 10000 });
     await page.waitForFunction(() => document.querySelectorAll('.nx-pf-edgestep').length === 3, null, { timeout: 10000 });

@@ -90,18 +90,24 @@
       <div class="nx-pf-edit" id="pfEditor">
         <div class="nx-pf-editbar">
           <button type="button" class="nx-btn nx-btn--plain" id="pfBack" data-op="back" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-chevron-left" aria-hidden="true"></span>All process flows</button>
-          <span class="nx-min-flex"></span>
           <oj-bind-if test="[[ !!$variables.flow.id ]]"><span class="nx-badge"><oj-bind-text value="[[ $variables.flow.id ]]"></oj-bind-text></span></oj-bind-if>
+          <span class="nx-min-flex"></span>
+          <!-- the recording generators collapsed into one menu, so the toolbar stays short -->
+          <oj-bind-if test="[[ $functions.hasRecordedCalls($variables.flow) ]]">
+            <div class="nx-pf-gen" id="pfGenMenu">
+              <button type="button" class="nx-btn" :disabled="[[ !!$variables.busy ]]" aria-haspopup="true" title="Turn this recording into an API scenario, a saved flow, a feature list, or edge-path tests"><span class="oj-ux-ico-add" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy && $variables.busy !== 'save' ? 'Working…' : 'Build from this' ]]"></oj-bind-text><span class="oj-ux-ico-chevron-down" aria-hidden="true"></span></button>
+              <div class="nx-pf-genitems" role="menu">
+                <button type="button" class="nx-pf-genitem" role="menuitem" id="pfMakeScenario" data-op="makeScenario" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]" title="Turn the captured API calls, in order, into an API Scenario you can run"><span class="oj-ux-ico-flow" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'scenario' ? 'Creating…' : 'API scenario' ]]"></oj-bind-text></button>
+                <button type="button" class="nx-pf-genitem" role="menuitem" id="pfMakeFlow" data-op="makeFlow" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]" title="Turn this recording into a Saved Flow (lanes, steps and a diagram)"><span class="oj-ux-ico-network-flow-diagram" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'flow' ? 'Creating…' : 'Saved flow (lanes + diagram)' ]]"></oj-bind-text></button>
+                <button type="button" class="nx-pf-genitem" role="menuitem" id="pfMakeFeatures" data-op="makeFeatures" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]" title="Ask the AI to group the pages and their API calls into a product feature list"><span class="oj-ux-ico-category" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'features' ? 'Drafting…' : 'Features list' ]]"></oj-bind-text></button>
+                <button type="button" class="nx-pf-genitem" role="menuitem" id="pfMakeEdges" data-op="makeEdges" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]" title="The recording is the happy path — ask the AI what could go differently on each step (edge cases), then run them"><span class="oj-ux-ico-branch" aria-hidden="true"></span>Edge paths (AI)</button>
+              </div>
+            </div>
+          </oj-bind-if>
           <div class="nx-pf-viewtog" role="tablist" aria-label="View">
             <button type="button" role="tab" id="pfViewEdit" :class="[[ 'nx-pf-vtab' + ($variables.view !== 'preview' ? ' nx-pf-vtab--on' : '') ]]" :aria-selected="[[ $variables.view !== 'preview' ? 'true' : 'false' ]]" data-op="view" data-key="edit" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-edit" aria-hidden="true"></span>Edit</button>
             <button type="button" role="tab" id="pfViewPreview" :class="[[ 'nx-pf-vtab' + ($variables.view === 'preview' ? ' nx-pf-vtab--on' : '') ]]" :aria-selected="[[ $variables.view === 'preview' ? 'true' : 'false' ]]" data-op="view" data-key="preview" on-click="[[ $listeners.onPf ]]"><span class="oj-ux-ico-document" aria-hidden="true"></span>Preview</button>
           </div>
-          <oj-bind-if test="[[ $functions.hasRecordedCalls($variables.flow) ]]">
-            <button type="button" class="nx-btn" id="pfMakeScenario" data-op="makeScenario" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]" title="Turn this recording's captured API calls, in the order they fired, into an API Scenario you can run"><span class="oj-ux-ico-flow" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'scenario' ? 'Creating…' : 'Create scenario from the recording' ]]"></oj-bind-text></button>
-            <button type="button" class="nx-btn" id="pfMakeFlow" data-op="makeFlow" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]" title="Turn this recording into a Saved Flow (lanes, steps and a diagram) you can edit, run and export"><span class="oj-ux-ico-network-flow-diagram" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'flow' ? 'Creating…' : 'Create flow from the recording' ]]"></oj-bind-text></button>
-            <button type="button" class="nx-btn" id="pfMakeFeatures" data-op="makeFeatures" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]" title="Ask the AI to group the pages and their API calls into a product feature list you can edit and export"><span class="oj-ux-ico-category" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'features' ? 'Drafting…' : 'Features list from the recording' ]]"></oj-bind-text></button>
-            <button type="button" class="nx-btn" id="pfMakeEdges" data-op="makeEdges" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]" title="This recording is the happy path — ask the AI what could go differently on each step (edge cases) with the expected behaviour, editable and exportable"><span class="oj-ux-ico-branch" aria-hidden="true"></span>Edge paths (AI)</button>
-          </oj-bind-if>
           <button type="button" class="nx-btn nx-btn--cta" id="pfSave" data-op="save" on-click="[[ $listeners.onPf ]]" :disabled="[[ !!$variables.busy ]]"><span class="oj-ux-ico-save" aria-hidden="true"></span><oj-bind-text value="[[ $variables.busy === 'save' ? 'Saving…' : 'Save' ]]"></oj-bind-text></button>
         </div>
 

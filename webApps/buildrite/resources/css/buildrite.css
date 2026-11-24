@@ -1435,7 +1435,15 @@ button.nx-fsu-kpi:hover { border-color: #9db6d8; }
 .nx-pf-del { align-self: flex-start; margin: 10px 8px 0 0; }
 .nx-pf-pill { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #eef1f4; color: #4a5865; }
 .nx-pf-pill--approved { background: #e3f4e8; color: #1f6b37; } .nx-pf-pill--review { background: #e5eefc; color: #1d4f9c; } .nx-pf-pill--retired { background: #f1f1f4; color: #7a7a86; }
-.nx-pf-editbar { display: flex; gap: 8px; align-items: center; margin: 0 0 12px; }
+.nx-pf-editbar { display: flex; gap: 8px; align-items: center; margin: 0 0 12px; flex-wrap: wrap; row-gap: 6px; }
+/* "Build from this" dropdown: the recording generators (scenario / flow / features / edge paths) in one compact menu, so the
+ * toolbar stays short and Edit / Preview / Save are never pushed off the edge. */
+.nx-pf-gen { position: relative; }
+.nx-pf-genitems { position: absolute; right: 0; top: calc(100% + 4px); min-width: 240px; background: var(--nx-surface, #fff); border: 1px solid var(--nx-line, #e2e7ed); border-radius: 10px; box-shadow: 0 10px 30px rgba(16, 33, 52, .18); padding: 4px; z-index: 6; display: none; }
+.nx-pf-gen:hover .nx-pf-genitems, .nx-pf-gen:focus-within .nx-pf-genitems { display: block; }
+.nx-pf-genitem { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; border-radius: 7px; padding: 8px 10px; font: inherit; font-size: 13px; color: var(--nx-ink, #16212c); text-align: left; cursor: pointer; white-space: nowrap; }
+.nx-pf-genitem:hover { background: var(--nx-hover, #eef2f6); }
+.nx-pf-genitem [class^="oj-ux-ico"] { font-size: 16px; color: var(--nx-muted, #5a6876); }
 /* Edit | Preview segmented toggle */
 .nx-pf-viewtog { display: inline-flex; border: 1px solid var(--nx-line, #d3dce6); border-radius: 8px; overflow: hidden; background: var(--nx-surface, #fff); }
 .nx-pf-vtab { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 600; color: var(--nx-muted, #4a5865); padding: 6px 14px; cursor: pointer; }
