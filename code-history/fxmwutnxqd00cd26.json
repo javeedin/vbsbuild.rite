@@ -1,0 +1,2314 @@
+{
+ "id": "fxmwutnxqd00cd26",
+ "images": [
+  {
+   "n": 1,
+   "name": "Pasted image 1"
+  }
+ ],
+ "page": "vbredwoodapp/equipment-foundation/equipment-master",
+ "app": "vbredwoodapp",
+ "label": "Equipment Master",
+ "request": "add saved-search\nselector, Save Search icon, and the two \nNEW dialogs to the search panel header.  MAY be you put save search option as per attached image",
+ "kind": "enhance",
+ "refine": "ignore for timebeing the rest api to save , we will temporaly save in session to check",
+ "parent": "fxmwutkhnd62b7df",
+ "at": "2026-11-24T15:00:55.815Z",
+ "by": "rite.user",
+ "provider": "Claude (Anthropic)",
+ "model": "claude-opus-4-8",
+ "ms": 120675,
+ "retried": true,
+ "workspace": "Equiprite_Rebuild_v1 ▸ DEV",
+ "refs": {
+  "jira": "AI-EQP-16 FDD 7.2.5D",
+  "issue": ""
+ },
+ "sent": {
+  "files": [
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.json",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/BeforeExitChain.js",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/CancelImportDialogChain.js",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ClearImportWarningChain.js",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ClearStagingChain.js",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/EquipmentInitChain.js",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/GoToCreateChain.js",
+   "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ImportFromFusionChain.js"
+  ],
+  "chars": 169819
+ },
+ "newPage": null,
+ "newPageAsked": null,
+ "knowledge": "",
+ "markdown": "## Summary\nI'll add a saved-search picker plus a \"Save Search\" icon and a \"Manage\" icon to the top of the collection container, backed only by **session storage** (no REST), and two new dialogs — one to name/save the current filter, one to list/delete saved searches. Saving snapshots the current `filterCriterion`; applying one writes it back so the list re-filters.\n\n## How it works today\nThe page uses `oj-sp-smart-search` (slot `search`) bound to `$variables.filterCriterion`; the equipment list DPV reads that variable through its constructor binding, so any change re-filters the server-side list. The search band is drawn by the `oj-sp-smart-search-page` template. There is no saved-search concept today.\n\n## What changes\n- A saved-search picker, a \"Save Search\" button and a \"Manage\" button are added **inside the collection container** (the only place in the template where free markup renders — the template's header band is not ours to add markup to), above the view-toggle bar.\n- Two new `oj-dialog`s: **Save Search** (name field + Save) and **Saved Searches** (list with Delete).\n- Saved searches live in `$variables.savedSearches`, seeded from `sessionStorage` on page enter, so they survive in-app navigation within the session but are not persisted to any REST service (per your instruction).\n- Each saved search stores an `id`, `name` and a snapshot of the current `filterCriterion`. Applying one sets `filterCriterion`.\n\n## The change\n- `equipment-master-page.json` — add variables (`savedSearches`, `savedSearchesADP`, `newSearchName`, `selectedSavedSearch`); add a `vbEnter` chain `LoadSavedSearchesChain`; add eventListeners (`onSaveSearch`, `onApplySavedSearch`, `onDeleteSavedSearch`). (`oj-select-single`, `oj-dialog`, `oj-button`, `oj-c-button`, `oj-c-input-text`, `oj-bind-for-each`, `oj-bind-if` already imported.)\n- `equipment-master-page.html` — add a saved-search bar at the top of the collection container, and the two dialogs at the end of the file.\n- New chains: `LoadSavedSearchesChain.js`, `SaveSearchChain.js`, `ApplySavedSearchChain.js`, `DeleteSavedSearchChain.js`.\n\n## After the change\n1. The user applies filters in the smart search (chips) as today.\n2. They click the **Save Search** (bookmark) icon → a dialog asks for a name → Save. It appears in the picker.\n3. They pick a saved search from the dropdown → the list re-filters to that saved filter.\n4. A **Manage** icon opens a dialog listing saved searches with Delete.\n5. Saved searches persist across in-app navigation for the session only, lost on browser close — no REST yet.\n\n## Risks\nSession-only: saved searches are per-browser-session and not durable or shared. No other page uses these new variables/chains. `filterCriterion` is already the live filter, so applying one is the same mechanism the chips use. None known beyond the temporary-storage caveat.\n\n## How to test\n1. Open Equipment Master. Apply one or more facet chips (e.g. Class = Tools).\n2. Click the Save Search icon, enter \"My Tools\", click Save.\n3. Clear the chips. Pick \"My Tools\" from the saved-search dropdown → list re-filters to Tools.\n4. Open Manage, click Delete on \"My Tools\" → it disappears from the dropdown.\n5. Navigate away and back within the session → remaining saved searches are still listed.\n\n## Questions\nNone.",
+ "questions": "",
+ "problems": [],
+ "checks": [
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.json",
+   "name": "valid JSON",
+   "ok": true,
+   "detail": "",
+   "already": false
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/LoadSavedSearchesChain.js",
+   "name": "JavaScript syntax",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/SaveSearchChain.js",
+   "name": "JavaScript syntax",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ApplySavedSearchChain.js",
+   "name": "JavaScript syntax",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/DeleteSavedSearchChain.js",
+   "name": "JavaScript syntax",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "already": false,
+   "name": "no oj-bind-for-each inside a table or select",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "already": true,
+   "name": "no String()/Number()/Boolean() or inline functions in bindings",
+   "ok": false,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "already": false,
+   "name": "no regex literals in bindings",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "already": false,
+   "name": "every listener the HTML uses is declared in the page JSON",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "already": false,
+   "name": "every oj- component used is imported",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "already": false,
+   "name": "every chain the page runs is in its chains folder",
+   "ok": true,
+   "detail": ""
+  }
+ ],
+ "files": [
+  "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.json",
+  "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+  "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/LoadSavedSearchesChain.js",
+  "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/SaveSearchChain.js",
+  "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ApplySavedSearchChain.js",
+  "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/DeleteSavedSearchChain.js"
+ ],
+ "diff": [
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.json",
+   "created": false,
+   "added": 52,
+   "removed": 0,
+   "hunks": [
+    {
+     "rows": [
+      {
+       "t": " ",
+       "s": "    \"filterCriterion\": {",
+       "o": "63",
+       "n": "63"
+      },
+      {
+       "t": " ",
+       "s": "      \"type\": \"any\"",
+       "o": "64",
+       "n": "64"
+      },
+      {
+       "t": " ",
+       "s": "    },",
+       "o": "65",
+       "n": "65"
+      },
+      {
+       "t": "+",
+       "s": "    \"savedSearches\": {",
+       "o": "",
+       "n": "66"
+      },
+      {
+       "t": "+",
+       "s": "      \"type\": \"any[]\",",
+       "o": "",
+       "n": "67"
+      },
+      {
+       "t": "+",
+       "s": "      \"description\": \"Saved searches for the smart search. TEMPORARY: seeded from sessionStorage on page enter and written back on change; no REST persistence yet. Each entry is { id, name, filterCriterion }.\",",
+       "o": "",
+       "n": "68"
+      },
+      {
+       "t": "+",
+       "s": "      \"defaultValue\": []",
+       "o": "",
+       "n": "69"
+      },
+      {
+       "t": "+",
+       "s": "    },",
+       "o": "",
+       "n": "70"
+      },
+      {
+       "t": "+",
+       "s": "    \"savedSearchesADP\": {",
+       "o": "",
+       "n": "71"
+      },
+      {
+       "t": "+",
+       "s": "      \"type\": \"vb/ArrayDataProvider2\",",
+       "o": "",
+       "n": "72"
+      },
+      {
+       "t": "+",
+       "s": "      \"defaultValue\": {",
+       "o": "",
+       "n": "73"
+      },
+      {
+       "t": "+",
+       "s": "        \"itemType\": \"any\",",
+       "o": "",
+       "n": "74"
+      },
+      {
+       "t": "+",
+       "s": "        \"keyAttributes\": \"id\",",
+       "o": "",
+       "n": "75"
+      },
+      {
+       "t": "+",
+       "s": "        \"data\": \"{{ $page.variables.savedSearches }}\"",
+       "o": "",
+       "n": "76"
+      },
+      {
+       "t": "+",
+       "s": "      }",
+       "o": "",
+       "n": "77"
+      },
+      {
+       "t": "+",
+       "s": "    },",
+       "o": "",
+       "n": "78"
+      },
+      {
+       "t": "+",
+       "s": "    \"newSearchName\": {",
+       "o": "",
+       "n": "79"
+      },
+      {
+       "t": "+",
+       "s": "      \"type\": \"string\",",
+       "o": "",
+       "n": "80"
+      },
+      {
+       "t": "+",
+       "s": "      \"defaultValue\": \"\"",
+       "o": "",
+       "n": "81"
+      },
+      {
+       "t": "+",
+       "s": "    },",
+       "o": "",
+       "n": "82"
+      },
+      {
+       "t": "+",
+       "s": "    \"selectedSavedSearch\": {",
+       "o": "",
+       "n": "83"
+      },
+      {
+       "t": "+",
+       "s": "      \"type\": \"string\",",
+       "o": "",
+       "n": "84"
+      },
+      {
+       "t": "+",
+       "s": "      \"defaultValue\": null",
+       "o": "",
+       "n": "85"
+      },
+      {
+       "t": "+",
+       "s": "    },",
+       "o": "",
+       "n": "86"
+      },
+      {
+       "t": " ",
+       "s": "    \"searchConfiguration\": {",
+       "o": "66",
+       "n": "87"
+      },
+      {
+       "t": " ",
+       "s": "      \"type\": \"oj-sp/smart-search/strategies/JsonSearchConfigProviderFactory\",",
+       "o": "67",
+       "n": "88"
+      },
+      {
+       "t": " ",
+       "s": "      \"defaultValue\": {",
+       "o": "68",
+       "n": "89"
+      }
+     ],
+     "head": "line 63"
+    },
+    {
+     "rows": [
+      {
+       "t": " ",
+       "s": "        {",
+       "o": "1905",
+       "n": "1926"
+      },
+      {
+       "t": " ",
+       "s": "          \"chain\": \"EquipmentInitChain\",",
+       "o": "1906",
+       "n": "1927"
+      },
+      {
+       "t": " ",
+       "s": "          \"parameters\": {}",
+       "o": "1907",
+       "n": "1928"
+      },
+      {
+       "t": "+",
+       "s": "        },",
+       "o": "",
+       "n": "1929"
+      },
+      {
+       "t": "+",
+       "s": "        {",
+       "o": "",
+       "n": "1930"
+      },
+      {
+       "t": "+",
+       "s": "          \"chain\": \"LoadSavedSearchesChain\",",
+       "o": "",
+       "n": "1931"
+      },
+      {
+       "t": "+",
+       "s": "          \"parameters\": {}",
+       "o": "",
+       "n": "1932"
+      },
+      {
+       "t": "+",
+       "s": "        }",
+       "o": "",
+       "n": "1933"
+      },
+      {
+       "t": "+",
+       "s": "      ]",
+       "o": "",
+       "n": "1934"
+      },
+      {
+       "t": "+",
+       "s": "    },",
+       "o": "",
+       "n": "1935"
+      },
+      {
+       "t": "+",
+       "s": "    \"onSaveSearch\": {",
+       "o": "",
+       "n": "1936"
+      },
+      {
+       "t": "+",
+       "s": "      \"chains\": [",
+       "o": "",
+       "n": "1937"
+      },
+      {
+       "t": "+",
+       "s": "        {",
+       "o": "",
+       "n": "1938"
+      },
+      {
+       "t": "+",
+       "s": "          \"chain\": \"SaveSearchChain\"",
+       "o": "",
+       "n": "1939"
+      },
+      {
+       "t": "+",
+       "s": "        }",
+       "o": "",
+       "n": "1940"
+      },
+      {
+       "t": "+",
+       "s": "      ]",
+       "o": "",
+       "n": "1941"
+      },
+      {
+       "t": "+",
+       "s": "    },",
+       "o": "",
+       "n": "1942"
+      },
+      {
+       "t": "+",
+       "s": "    \"onApplySavedSearch\": {",
+       "o": "",
+       "n": "1943"
+      },
+      {
+       "t": "+",
+       "s": "      \"chains\": [",
+       "o": "",
+       "n": "1944"
+      },
+      {
+       "t": "+",
+       "s": "        {",
+       "o": "",
+       "n": "1945"
+      },
+      {
+       "t": "+",
+       "s": "          \"chain\": \"ApplySavedSearchChain\",",
+       "o": "",
+       "n": "1946"
+      },
+      {
+       "t": "+",
+       "s": "          \"parameters\": {",
+       "o": "",
+       "n": "1947"
+      },
+      {
+       "t": "+",
+       "s": "            \"id\": \"[[ $event.detail.value ]]\"",
+       "o": "",
+       "n": "1948"
+      },
+      {
+       "t": "+",
+       "s": "          }",
+       "o": "",
+       "n": "1949"
+      },
+      {
+       "t": "+",
+       "s": "        }",
+       "o": "",
+       "n": "1950"
+      },
+      {
+       "t": "+",
+       "s": "      ]",
+       "o": "",
+       "n": "1951"
+      },
+      {
+       "t": "+",
+       "s": "    },",
+       "o": "",
+       "n": "1952"
+      },
+      {
+       "t": "+",
+       "s": "    \"onDeleteSavedSearch\": {",
+       "o": "",
+       "n": "1953"
+      },
+      {
+       "t": "+",
+       "s": "      \"chains\": [",
+       "o": "",
+       "n": "1954"
+      },
+      {
+       "t": "+",
+       "s": "        {",
+       "o": "",
+       "n": "1955"
+      },
+      {
+       "t": "+",
+       "s": "          \"chain\": \"DeleteSavedSearchChain\",",
+       "o": "",
+       "n": "1956"
+      },
+      {
+       "t": "+",
+       "s": "          \"parameters\": {",
+       "o": "",
+       "n": "1957"
+      },
+      {
+       "t": "+",
+       "s": "            \"id\": \"{{ $current.data.id }}\"",
+       "o": "",
+       "n": "1958"
+      },
+      {
+       "t": "+",
+       "s": "          }",
+       "o": "",
+       "n": "1959"
+      },
+      {
+       "t": " ",
+       "s": "        }",
+       "o": "1908",
+       "n": "1960"
+      },
+      {
+       "t": " ",
+       "s": "      ]",
+       "o": "1909",
+       "n": "1961"
+      },
+      {
+       "t": " ",
+       "s": "    },",
+       "o": "1910",
+       "n": "1962"
+      }
+     ],
+     "head": "line 1905"
+    }
+   ]
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+   "created": false,
+   "added": 95,
+   "removed": 0,
+   "hunks": [
+    {
+     "rows": [
+      {
+       "t": " ",
+       "s": "  <!-- COLLECTION CONTAINER -->",
+       "o": "34",
+       "n": "34"
+      },
+      {
+       "t": " ",
+       "s": "  <oj-sp-collection-container>",
+       "o": "35",
+       "n": "35"
+      },
+      {
+       "t": " ",
+       "s": "",
+       "o": "36",
+       "n": "36"
+      },
+      {
+       "t": "+",
+       "s": "    <!-- Build.Rite change fxmwutnxqd00cd26 — Equipment Master",
+       "o": "",
+       "n": "37"
+      },
+      {
+       "t": "+",
+       "s": "         Request:      add saved-search selector, Save Search icon, and the two NEW dialogs to the search panel header. MAY be you put save search option as per attached image — then… (Enhance)",
+       "o": "",
+       "n": "38"
+      },
+      {
+       "t": "+",
+       "s": "         Requested by: rite.user on 24 Nov 2026 at 20:30 (UTC+05:30)",
+       "o": "",
+       "n": "39"
+      },
+      {
+       "t": "+",
+       "s": "         Changed by:   rite.user on 24 Nov 2026 at 20:31 (UTC+05:30) — approved and applied in Code fix, in the workspace's working folder",
+       "o": "",
+       "n": "40"
+      },
+      {
+       "t": "+",
+       "s": "         Proposed by:  Claude (Anthropic) (claude-opus-4-8)",
+       "o": "",
+       "n": "41"
+      },
+      {
+       "t": "+",
+       "s": "         Issue:        —",
+       "o": "",
+       "n": "42"
+      },
+      {
+       "t": "+",
+       "s": "         Jira story:   AI-EQP-16 FDD 7.2.5D",
+       "o": "",
+       "n": "43"
+      },
+      {
+       "t": "+",
+       "s": "         Also changed: equipment-master-page.json (JSON files cannot hold comments) -->",
+       "o": "",
+       "n": "44"
+      },
+      {
+       "t": "+",
+       "s": "    <!-- SAVED SEARCHES — session-only (no REST yet). The picker applies a",
+       "o": "",
+       "n": "45"
+      },
+      {
+       "t": "+",
+       "s": "         saved filterCriterion; the bookmark icon opens the Save dialog; the",
+       "o": "",
+       "n": "46"
+      },
+      {
+       "t": "+",
+       "s": "         list icon opens the Manage dialog. Placed here because the template's",
+       "o": "",
+       "n": "47"
+      },
+      {
+       "t": "+",
+       "s": "         own search band is not ours to add markup to. -->",
+       "o": "",
+       "n": "48"
+      },
+      {
+       "t": "+",
+       "s": "    <div class=\"oj-flex oj-sm-align-items-center oj-sm-margin-2x-bottom\" style=\"gap:8px;\">",
+       "o": "",
+       "n": "49"
+      },
+      {
+       "t": "+",
+       "s": "      <oj-select-single id=\"savedSearchPicker\"",
+       "o": "",
+       "n": "50"
+      },
+      {
+       "t": "+",
+       "s": "                        label-hint=\"Saved searches\"",
+       "o": "",
+       "n": "51"
+      },
+      {
+       "t": "+",
+       "s": "                        label-edge=\"none\"",
+       "o": "",
+       "n": "52"
+      },
+      {
+       "t": "+",
+       "s": "                        placeholder=\"Saved searches\"",
+       "o": "",
+       "n": "53"
+      },
+      {
+       "t": "+",
+       "s": "                        style=\"width:260px;\"",
+       "o": "",
+       "n": "54"
+      },
+      {
+       "t": "+",
+       "s": "                        data=\"[[ $variables.savedSearchesADP ]]\"",
+       "o": "",
+       "n": "55"
+      },
+      {
+       "t": "+",
+       "s": "                        item-text=\"name\"",
+       "o": "",
+       "n": "56"
+      },
+      {
+       "t": "+",
+       "s": "                        clear-icon=\"conditional\"",
+       "o": "",
+       "n": "57"
+      },
+      {
+       "t": "+",
+       "s": "                        value=\"{{ $variables.selectedSavedSearch }}\"",
+       "o": "",
+       "n": "58"
+      },
+      {
+       "t": "+",
+       "s": "                        on-value-changed=\"[[ $listeners.onApplySavedSearch ]]\">",
+       "o": "",
+       "n": "59"
+      },
+      {
+       "t": "+",
+       "s": "      </oj-select-single>",
+       "o": "",
+       "n": "60"
+      },
+      {
+       "t": "+",
+       "s": "      <oj-c-button id=\"saveSearchBtn\"",
+       "o": "",
+       "n": "61"
+      },
+      {
+       "t": "+",
+       "s": "                   label=\"Save Search\"",
+       "o": "",
+       "n": "62"
+      },
+      {
+       "t": "+",
+       "s": "                   display=\"icons\"",
+       "o": "",
+       "n": "63"
+      },
+      {
+       "t": "+",
+       "s": "                   chroming=\"borderless\"",
+       "o": "",
+       "n": "64"
+      },
+      {
+       "t": "+",
+       "s": "                   tooltip=\"Save Search\"",
+       "o": "",
+       "n": "65"
+      },
+      {
+       "t": "+",
+       "s": "                   on-oj-action=\"[[ function() { $variables.newSearchName = ''; var d = document.getElementById('saveSearchDialog'); if (d) d.open(); } ]]\">",
+       "o": "",
+       "n": "66"
+      },
+      {
+       "t": "+",
+       "s": "        <span slot=\"startIcon\" class=\"oj-ux-ico-bookmark\"></span>",
+       "o": "",
+       "n": "67"
+      },
+      {
+       "t": "+",
+       "s": "      </oj-c-button>",
+       "o": "",
+       "n": "68"
+      },
+      {
+       "t": "+",
+       "s": "      <oj-c-button id=\"manageSearchBtn\"",
+       "o": "",
+       "n": "69"
+      },
+      {
+       "t": "+",
+       "s": "                   label=\"Manage saved searches\"",
+       "o": "",
+       "n": "70"
+      },
+      {
+       "t": "+",
+       "s": "                   display=\"icons\"",
+       "o": "",
+       "n": "71"
+      },
+      {
+       "t": "+",
+       "s": "                   chroming=\"borderless\"",
+       "o": "",
+       "n": "72"
+      },
+      {
+       "t": "+",
+       "s": "                   tooltip=\"Manage saved searches\"",
+       "o": "",
+       "n": "73"
+      },
+      {
+       "t": "+",
+       "s": "                   on-oj-action=\"[[ function() { var d = document.getElementById('manageSearchDialog'); if (d) d.open(); } ]]\">",
+       "o": "",
+       "n": "74"
+      },
+      {
+       "t": "+",
+       "s": "        <span slot=\"startIcon\" class=\"oj-ux-ico-menu\"></span>",
+       "o": "",
+       "n": "75"
+      },
+      {
+       "t": "+",
+       "s": "      </oj-c-button>",
+       "o": "",
+       "n": "76"
+      },
+      {
+       "t": "+",
+       "s": "    </div>",
+       "o": "",
+       "n": "77"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "78"
+      },
+      {
+       "t": "+",
+       "s": "    <!-- end of Build.Rite change fxmwutnxqd00cd26 -->",
+       "o": "",
+       "n": "79"
+      },
+      {
+       "t": " ",
+       "s": "    <!-- VIEW TOGGLE — Table / Map, top right above the table.",
+       "o": "37",
+       "n": "80"
+      },
+      {
+       "t": " ",
+       "s": "         PLAIN <button> elements, not a JET component, and that is the whole",
+       "o": "38",
+       "n": "81"
+      },
+      {
+       "t": " ",
+       "s": "         point. oj-tab-bar, oj-radioset and oj-buttonset-one were each tried",
+       "o": "39",
+       "n": "82"
+      }
+     ],
+     "head": "line 34"
+    },
+    {
+     "rows": [
+      {
+       "t": " ",
+       "s": "               on-oj-action=\"[[ $listeners.onCancelImport ]]\">Close</oj-button>",
+       "o": "999",
+       "n": "1042"
+      },
+      {
+       "t": " ",
+       "s": "  </div>",
+       "o": "1000",
+       "n": "1043"
+      },
+      {
+       "t": " ",
+       "s": "",
+       "o": "1001",
+       "n": "1044"
+      },
+      {
+       "t": "+",
+       "s": "<!-- Build.Rite change fxmwutnxqd00cd26 (continued — see its note above): add saved-search selector, Save Search icon, and the two NEW dialogs to the search panel … -->",
+       "o": "",
+       "n": "1045"
+      },
+      {
+       "t": "+",
+       "s": "</oj-dialog>",
+       "o": "",
+       "n": "1046"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "1047"
+      },
+      {
+       "t": "+",
+       "s": "<!-- SAVE SEARCH dialog — names and stores the current filter (session only). -->",
+       "o": "",
+       "n": "1048"
+      },
+      {
+       "t": "+",
+       "s": "<oj-dialog id=\"saveSearchDialog\" dialog-title=\"Save Search\" modality=\"modal\" style=\"width:420px; max-width:95vw;\">",
+       "o": "",
+       "n": "1049"
+      },
+      {
+       "t": "+",
+       "s": "  <div slot=\"body\">",
+       "o": "",
+       "n": "1050"
+      },
+      {
+       "t": "+",
+       "s": "    <oj-c-input-text id=\"saveSearchName\"",
+       "o": "",
+       "n": "1051"
+      },
+      {
+       "t": "+",
+       "s": "                     value=\"{{ $variables.newSearchName }}\"",
+       "o": "",
+       "n": "1052"
+      },
+      {
+       "t": "+",
+       "s": "                     label-hint=\"Name\"",
+       "o": "",
+       "n": "1053"
+      },
+      {
+       "t": "+",
+       "s": "                     label-edge=\"top\"",
+       "o": "",
+       "n": "1054"
+      },
+      {
+       "t": "+",
+       "s": "                     placeholder=\"e.g. Active excavators\"></oj-c-input-text>",
+       "o": "",
+       "n": "1055"
+      },
+      {
+       "t": "+",
+       "s": "  </div>",
+       "o": "",
+       "n": "1056"
+      },
+      {
+       "t": "+",
+       "s": "  <div slot=\"footer\" class=\"oj-flex oj-sm-align-items-center\" style=\"gap:8px;\">",
+       "o": "",
+       "n": "1057"
+      },
+      {
+       "t": "+",
+       "s": "    <span style=\"flex:1 1 auto;\"></span>",
+       "o": "",
+       "n": "1058"
+      },
+      {
+       "t": "+",
+       "s": "    <oj-button id=\"saveSearchCancelBtn\"",
+       "o": "",
+       "n": "1059"
+      },
+      {
+       "t": "+",
+       "s": "               on-oj-action=\"[[ function() { var d = document.getElementById('saveSearchDialog'); if (d) d.close(); } ]]\">Cancel</oj-button>",
+       "o": "",
+       "n": "1060"
+      },
+      {
+       "t": "+",
+       "s": "    <oj-button id=\"saveSearchSaveBtn\"",
+       "o": "",
+       "n": "1061"
+      },
+      {
+       "t": "+",
+       "s": "               chroming=\"callToAction\"",
+       "o": "",
+       "n": "1062"
+      },
+      {
+       "t": "+",
+       "s": "               disabled=\"[[ !($variables.newSearchName && $variables.newSearchName.trim()) ]]\"",
+       "o": "",
+       "n": "1063"
+      },
+      {
+       "t": "+",
+       "s": "               on-oj-action=\"[[ $listeners.onSaveSearch ]]\">Save</oj-button>",
+       "o": "",
+       "n": "1064"
+      },
+      {
+       "t": "+",
+       "s": "  </div>",
+       "o": "",
+       "n": "1065"
+      },
+      {
+       "t": "+",
+       "s": "</oj-dialog>",
+       "o": "",
+       "n": "1066"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "1067"
+      },
+      {
+       "t": "+",
+       "s": "<!-- MANAGE SAVED SEARCHES dialog — list with Delete (session only). -->",
+       "o": "",
+       "n": "1068"
+      },
+      {
+       "t": "+",
+       "s": "<oj-dialog id=\"manageSearchDialog\" dialog-title=\"Saved Searches\" modality=\"modal\" style=\"width:480px; max-width:95vw;\">",
+       "o": "",
+       "n": "1069"
+      },
+      {
+       "t": "+",
+       "s": "  <div slot=\"body\">",
+       "o": "",
+       "n": "1070"
+      },
+      {
+       "t": "+",
+       "s": "    <oj-bind-if test=\"[[ $variables.savedSearches.length === 0 ]]\">",
+       "o": "",
+       "n": "1071"
+      },
+      {
+       "t": "+",
+       "s": "      <p class=\"oj-typography-body-sm oj-text-color-secondary\">No saved searches yet.</p>",
+       "o": "",
+       "n": "1072"
+      },
+      {
+       "t": "+",
+       "s": "    </oj-bind-if>",
+       "o": "",
+       "n": "1073"
+      },
+      {
+       "t": "+",
+       "s": "    <oj-bind-for-each data=\"[[ $variables.savedSearches ]]\">",
+       "o": "",
+       "n": "1074"
+      },
+      {
+       "t": "+",
+       "s": "      <template data-oj-as=\"s\">",
+       "o": "",
+       "n": "1075"
+      },
+      {
+       "t": "+",
+       "s": "        <div class=\"oj-flex oj-sm-align-items-center oj-sm-margin-2x-bottom\" style=\"gap:8px;\">",
+       "o": "",
+       "n": "1076"
+      },
+      {
+       "t": "+",
+       "s": "          <span class=\"oj-flex-item oj-typography-body-md\">",
+       "o": "",
+       "n": "1077"
+      },
+      {
+       "t": "+",
+       "s": "            <oj-bind-text value=\"[[ s.data.name ]]\"></oj-bind-text>",
+       "o": "",
+       "n": "1078"
+      },
+      {
+       "t": "+",
+       "s": "          </span>",
+       "o": "",
+       "n": "1079"
+      },
+      {
+       "t": "+",
+       "s": "          <oj-c-button label=\"Delete\"",
+       "o": "",
+       "n": "1080"
+      },
+      {
+       "t": "+",
+       "s": "                       display=\"icons\"",
+       "o": "",
+       "n": "1081"
+      },
+      {
+       "t": "+",
+       "s": "                       chroming=\"borderless\"",
+       "o": "",
+       "n": "1082"
+      },
+      {
+       "t": "+",
+       "s": "                       tooltip=\"Delete\"",
+       "o": "",
+       "n": "1083"
+      },
+      {
+       "t": "+",
+       "s": "                       on-oj-action=\"[[ $listeners.onDeleteSavedSearch ]]\">",
+       "o": "",
+       "n": "1084"
+      },
+      {
+       "t": "+",
+       "s": "            <span slot=\"startIcon\" class=\"oj-ux-ico-trash\"></span>",
+       "o": "",
+       "n": "1085"
+      },
+      {
+       "t": "+",
+       "s": "          </oj-c-button>",
+       "o": "",
+       "n": "1086"
+      },
+      {
+       "t": "+",
+       "s": "        </div>",
+       "o": "",
+       "n": "1087"
+      },
+      {
+       "t": "+",
+       "s": "      </template>",
+       "o": "",
+       "n": "1088"
+      },
+      {
+       "t": "+",
+       "s": "    </oj-bind-for-each>",
+       "o": "",
+       "n": "1089"
+      },
+      {
+       "t": "+",
+       "s": "  </div>",
+       "o": "",
+       "n": "1090"
+      },
+      {
+       "t": "+",
+       "s": "  <div slot=\"footer\" class=\"oj-flex oj-sm-align-items-center\" style=\"gap:8px;\">",
+       "o": "",
+       "n": "1091"
+      },
+      {
+       "t": "+",
+       "s": "    <span style=\"flex:1 1 auto;\"></span>",
+       "o": "",
+       "n": "1092"
+      },
+      {
+       "t": "+",
+       "s": "    <oj-button id=\"manageSearchCloseBtn\"",
+       "o": "",
+       "n": "1093"
+      },
+      {
+       "t": "+",
+       "s": "               on-oj-action=\"[[ function() { var d = document.getElementById('manageSearchDialog'); if (d) d.close(); } ]]\">Close</oj-button>",
+       "o": "",
+       "n": "1094"
+      },
+      {
+       "t": "+",
+       "s": "  </div>",
+       "o": "",
+       "n": "1095"
+      },
+      {
+       "t": "+",
+       "s": "<!-- end of Build.Rite change fxmwutnxqd00cd26 -->",
+       "o": "",
+       "n": "1096"
+      },
+      {
+       "t": " ",
+       "s": "</oj-dialog>",
+       "o": "1002",
+       "n": "1097"
+      }
+     ],
+     "head": "line 999"
+    }
+   ]
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/LoadSavedSearchesChain.js",
+   "created": true,
+   "added": 40,
+   "removed": 0,
+   "hunks": [
+    {
+     "rows": [
+      {
+       "t": "+",
+       "s": "// Build.Rite change fxmwutnxqd00cd26 — Equipment Master",
+       "o": "",
+       "n": "1"
+      },
+      {
+       "t": "+",
+       "s": "// Request:      add saved-search selector, Save Search icon, and the two NEW dialogs to the search panel header. MAY be you put save search option as per attached image — then… (Enhance)",
+       "o": "",
+       "n": "2"
+      },
+      {
+       "t": "+",
+       "s": "// Requested by: rite.user on 24 Nov 2026 at 20:30 (UTC+05:30)",
+       "o": "",
+       "n": "3"
+      },
+      {
+       "t": "+",
+       "s": "// Changed by:   rite.user on 24 Nov 2026 at 20:31 (UTC+05:30) — approved and applied in Code fix, in the workspace's working folder",
+       "o": "",
+       "n": "4"
+      },
+      {
+       "t": "+",
+       "s": "// Proposed by:  Claude (Anthropic) (claude-opus-4-8)",
+       "o": "",
+       "n": "5"
+      },
+      {
+       "t": "+",
+       "s": "// Issue:        —",
+       "o": "",
+       "n": "6"
+      },
+      {
+       "t": "+",
+       "s": "// Jira story:   AI-EQP-16 FDD 7.2.5D",
+       "o": "",
+       "n": "7"
+      },
+      {
+       "t": "+",
+       "s": "// Also changed: equipment-master-page.json (JSON files cannot hold comments)",
+       "o": "",
+       "n": "8"
+      },
+      {
+       "t": "+",
+       "s": "define([",
+       "o": "",
+       "n": "9"
+      },
+      {
+       "t": "+",
+       "s": "  'vb/action/actionChain',",
+       "o": "",
+       "n": "10"
+      },
+      {
+       "t": "+",
+       "s": "], (ActionChain) => {",
+       "o": "",
+       "n": "11"
+      },
+      {
+       "t": "+",
+       "s": "  'use strict';",
+       "o": "",
+       "n": "12"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "13"
+      },
+      {
+       "t": "+",
+       "s": "  /**",
+       "o": "",
+       "n": "14"
+      },
+      {
+       "t": "+",
+       "s": "   * Seed $variables.savedSearches from sessionStorage on page enter.",
+       "o": "",
+       "n": "15"
+      },
+      {
+       "t": "+",
+       "s": "   * TEMPORARY store (no REST yet): survives in-app navigation for the session,",
+       "o": "",
+       "n": "16"
+      },
+      {
+       "t": "+",
+       "s": "   * lost on browser close.",
+       "o": "",
+       "n": "17"
+      },
+      {
+       "t": "+",
+       "s": "   */",
+       "o": "",
+       "n": "18"
+      },
+      {
+       "t": "+",
+       "s": "  const KEY = 'eqm.savedSearches';",
+       "o": "",
+       "n": "19"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "20"
+      },
+      {
+       "t": "+",
+       "s": "  class LoadSavedSearchesChain extends ActionChain {",
+       "o": "",
+       "n": "21"
+      },
+      {
+       "t": "+",
+       "s": "    async run(context) {",
+       "o": "",
+       "n": "22"
+      },
+      {
+       "t": "+",
+       "s": "      const { $page } = context;",
+       "o": "",
+       "n": "23"
+      },
+      {
+       "t": "+",
+       "s": "      let list = [];",
+       "o": "",
+       "n": "24"
+      },
+      {
+       "t": "+",
+       "s": "      try {",
+       "o": "",
+       "n": "25"
+      },
+      {
+       "t": "+",
+       "s": "        const raw = window.sessionStorage.getItem(KEY);",
+       "o": "",
+       "n": "26"
+      },
+      {
+       "t": "+",
+       "s": "        if (raw) {",
+       "o": "",
+       "n": "27"
+      },
+      {
+       "t": "+",
+       "s": "          const parsed = JSON.parse(raw);",
+       "o": "",
+       "n": "28"
+      },
+      {
+       "t": "+",
+       "s": "          if (Array.isArray(parsed)) list = parsed;",
+       "o": "",
+       "n": "29"
+      },
+      {
+       "t": "+",
+       "s": "        }",
+       "o": "",
+       "n": "30"
+      },
+      {
+       "t": "+",
+       "s": "      } catch (e) {",
+       "o": "",
+       "n": "31"
+      },
+      {
+       "t": "+",
+       "s": "        list = [];",
+       "o": "",
+       "n": "32"
+      },
+      {
+       "t": "+",
+       "s": "      }",
+       "o": "",
+       "n": "33"
+      },
+      {
+       "t": "+",
+       "s": "      $page.variables.savedSearches = list;",
+       "o": "",
+       "n": "34"
+      },
+      {
+       "t": "+",
+       "s": "    }",
+       "o": "",
+       "n": "35"
+      },
+      {
+       "t": "+",
+       "s": "  }",
+       "o": "",
+       "n": "36"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "37"
+      },
+      {
+       "t": "+",
+       "s": "  return LoadSavedSearchesChain;",
+       "o": "",
+       "n": "38"
+      },
+      {
+       "t": "+",
+       "s": "});",
+       "o": "",
+       "n": "39"
+      },
+      {
+       "t": "+",
+       "s": "// end of Build.Rite change fxmwutnxqd00cd26",
+       "o": "",
+       "n": "40"
+      }
+     ],
+     "head": "line 1"
+    }
+   ]
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/SaveSearchChain.js",
+   "created": true,
+   "added": 48,
+   "removed": 0,
+   "hunks": [
+    {
+     "rows": [
+      {
+       "t": "+",
+       "s": "// Build.Rite change fxmwutnxqd00cd26 — Equipment Master",
+       "o": "",
+       "n": "1"
+      },
+      {
+       "t": "+",
+       "s": "// Request:      add saved-search selector, Save Search icon, and the two NEW dialogs to the search panel header. MAY be you put save search option as per attached image — then… (Enhance)",
+       "o": "",
+       "n": "2"
+      },
+      {
+       "t": "+",
+       "s": "// Requested by: rite.user on 24 Nov 2026 at 20:30 (UTC+05:30)",
+       "o": "",
+       "n": "3"
+      },
+      {
+       "t": "+",
+       "s": "// Changed by:   rite.user on 24 Nov 2026 at 20:31 (UTC+05:30) — approved and applied in Code fix, in the workspace's working folder",
+       "o": "",
+       "n": "4"
+      },
+      {
+       "t": "+",
+       "s": "// Proposed by:  Claude (Anthropic) (claude-opus-4-8)",
+       "o": "",
+       "n": "5"
+      },
+      {
+       "t": "+",
+       "s": "// Issue:        —",
+       "o": "",
+       "n": "6"
+      },
+      {
+       "t": "+",
+       "s": "// Jira story:   AI-EQP-16 FDD 7.2.5D",
+       "o": "",
+       "n": "7"
+      },
+      {
+       "t": "+",
+       "s": "// Also changed: equipment-master-page.json (JSON files cannot hold comments)",
+       "o": "",
+       "n": "8"
+      },
+      {
+       "t": "+",
+       "s": "define([",
+       "o": "",
+       "n": "9"
+      },
+      {
+       "t": "+",
+       "s": "  'vb/action/actionChain',",
+       "o": "",
+       "n": "10"
+      },
+      {
+       "t": "+",
+       "s": "], (ActionChain) => {",
+       "o": "",
+       "n": "11"
+      },
+      {
+       "t": "+",
+       "s": "  'use strict';",
+       "o": "",
+       "n": "12"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "13"
+      },
+      {
+       "t": "+",
+       "s": "  /**",
+       "o": "",
+       "n": "14"
+      },
+      {
+       "t": "+",
+       "s": "   * Save the current smart-search filter under a name. TEMPORARY: writes to",
+       "o": "",
+       "n": "15"
+      },
+      {
+       "t": "+",
+       "s": "   * $variables.savedSearches and sessionStorage only; no REST yet.",
+       "o": "",
+       "n": "16"
+      },
+      {
+       "t": "+",
+       "s": "   */",
+       "o": "",
+       "n": "17"
+      },
+      {
+       "t": "+",
+       "s": "  const KEY = 'eqm.savedSearches';",
+       "o": "",
+       "n": "18"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "19"
+      },
+      {
+       "t": "+",
+       "s": "  class SaveSearchChain extends ActionChain {",
+       "o": "",
+       "n": "20"
+      },
+      {
+       "t": "+",
+       "s": "    async run(context) {",
+       "o": "",
+       "n": "21"
+      },
+      {
+       "t": "+",
+       "s": "      const { $page } = context;",
+       "o": "",
+       "n": "22"
+      },
+      {
+       "t": "+",
+       "s": "      const v = $page.variables;",
+       "o": "",
+       "n": "23"
+      },
+      {
+       "t": "+",
+       "s": "      const name = String(v.newSearchName || '').trim();",
+       "o": "",
+       "n": "24"
+      },
+      {
+       "t": "+",
+       "s": "      if (!name) return;",
+       "o": "",
+       "n": "25"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "26"
+      },
+      {
+       "t": "+",
+       "s": "      const entry = {",
+       "o": "",
+       "n": "27"
+      },
+      {
+       "t": "+",
+       "s": "        id: 'ss-' + Date.now(),",
+       "o": "",
+       "n": "28"
+      },
+      {
+       "t": "+",
+       "s": "        name: name,",
+       "o": "",
+       "n": "29"
+      },
+      {
+       "t": "+",
+       "s": "        // snapshot the live filter so a later chip change does not mutate it",
+       "o": "",
+       "n": "30"
+      },
+      {
+       "t": "+",
+       "s": "        filterCriterion: v.filterCriterion ? JSON.parse(JSON.stringify(v.filterCriterion)) : null",
+       "o": "",
+       "n": "31"
+      },
+      {
+       "t": "+",
+       "s": "      };",
+       "o": "",
+       "n": "32"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "33"
+      },
+      {
+       "t": "+",
+       "s": "      const list = (v.savedSearches || []).concat([entry]);",
+       "o": "",
+       "n": "34"
+      },
+      {
+       "t": "+",
+       "s": "      v.savedSearches = list;",
+       "o": "",
+       "n": "35"
+      },
+      {
+       "t": "+",
+       "s": "      try {",
+       "o": "",
+       "n": "36"
+      },
+      {
+       "t": "+",
+       "s": "        window.sessionStorage.setItem(KEY, JSON.stringify(list));",
+       "o": "",
+       "n": "37"
+      },
+      {
+       "t": "+",
+       "s": "      } catch (e) { /* session storage unavailable; keep in memory */ }",
+       "o": "",
+       "n": "38"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "39"
+      },
+      {
+       "t": "+",
+       "s": "      v.newSearchName = '';",
+       "o": "",
+       "n": "40"
+      },
+      {
+       "t": "+",
+       "s": "      const dlg = document.getElementById('saveSearchDialog');",
+       "o": "",
+       "n": "41"
+      },
+      {
+       "t": "+",
+       "s": "      if (dlg && typeof dlg.close === 'function') dlg.close();",
+       "o": "",
+       "n": "42"
+      },
+      {
+       "t": "+",
+       "s": "    }",
+       "o": "",
+       "n": "43"
+      },
+      {
+       "t": "+",
+       "s": "  }",
+       "o": "",
+       "n": "44"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "45"
+      },
+      {
+       "t": "+",
+       "s": "  return SaveSearchChain;",
+       "o": "",
+       "n": "46"
+      },
+      {
+       "t": "+",
+       "s": "});",
+       "o": "",
+       "n": "47"
+      },
+      {
+       "t": "+",
+       "s": "// end of Build.Rite change fxmwutnxqd00cd26",
+       "o": "",
+       "n": "48"
+      }
+     ],
+     "head": "line 1"
+    }
+   ]
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ApplySavedSearchChain.js",
+   "created": true,
+   "added": 34,
+   "removed": 0,
+   "hunks": [
+    {
+     "rows": [
+      {
+       "t": "+",
+       "s": "// Build.Rite change fxmwutnxqd00cd26 — Equipment Master",
+       "o": "",
+       "n": "1"
+      },
+      {
+       "t": "+",
+       "s": "// Request:      add saved-search selector, Save Search icon, and the two NEW dialogs to the search panel header. MAY be you put save search option as per attached image — then… (Enhance)",
+       "o": "",
+       "n": "2"
+      },
+      {
+       "t": "+",
+       "s": "// Requested by: rite.user on 24 Nov 2026 at 20:30 (UTC+05:30)",
+       "o": "",
+       "n": "3"
+      },
+      {
+       "t": "+",
+       "s": "// Changed by:   rite.user on 24 Nov 2026 at 20:31 (UTC+05:30) — approved and applied in Code fix, in the workspace's working folder",
+       "o": "",
+       "n": "4"
+      },
+      {
+       "t": "+",
+       "s": "// Proposed by:  Claude (Anthropic) (claude-opus-4-8)",
+       "o": "",
+       "n": "5"
+      },
+      {
+       "t": "+",
+       "s": "// Issue:        —",
+       "o": "",
+       "n": "6"
+      },
+      {
+       "t": "+",
+       "s": "// Jira story:   AI-EQP-16 FDD 7.2.5D",
+       "o": "",
+       "n": "7"
+      },
+      {
+       "t": "+",
+       "s": "// Also changed: equipment-master-page.json (JSON files cannot hold comments)",
+       "o": "",
+       "n": "8"
+      },
+      {
+       "t": "+",
+       "s": "define([",
+       "o": "",
+       "n": "9"
+      },
+      {
+       "t": "+",
+       "s": "  'vb/action/actionChain',",
+       "o": "",
+       "n": "10"
+      },
+      {
+       "t": "+",
+       "s": "], (ActionChain) => {",
+       "o": "",
+       "n": "11"
+      },
+      {
+       "t": "+",
+       "s": "  'use strict';",
+       "o": "",
+       "n": "12"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "13"
+      },
+      {
+       "t": "+",
+       "s": "  /**",
+       "o": "",
+       "n": "14"
+      },
+      {
+       "t": "+",
+       "s": "   * Apply a saved search: set filterCriterion from the stored snapshot, which",
+       "o": "",
+       "n": "15"
+      },
+      {
+       "t": "+",
+       "s": "   * the list DPV reads automatically and re-filters. Clearing the picker",
+       "o": "",
+       "n": "16"
+      },
+      {
+       "t": "+",
+       "s": "   * (id null) leaves the current filter untouched.",
+       "o": "",
+       "n": "17"
+      },
+      {
+       "t": "+",
+       "s": "   */",
+       "o": "",
+       "n": "18"
+      },
+      {
+       "t": "+",
+       "s": "  class ApplySavedSearchChain extends ActionChain {",
+       "o": "",
+       "n": "19"
+      },
+      {
+       "t": "+",
+       "s": "    async run(context, params) {",
+       "o": "",
+       "n": "20"
+      },
+      {
+       "t": "+",
+       "s": "      const { $page } = context;",
+       "o": "",
+       "n": "21"
+      },
+      {
+       "t": "+",
+       "s": "      const id = params && params.id;",
+       "o": "",
+       "n": "22"
+      },
+      {
+       "t": "+",
+       "s": "      if (!id) return;",
+       "o": "",
+       "n": "23"
+      },
+      {
+       "t": "+",
+       "s": "      const found = ($page.variables.savedSearches || []).find(s => s && s.id === id);",
+       "o": "",
+       "n": "24"
+      },
+      {
+       "t": "+",
+       "s": "      if (!found) return;",
+       "o": "",
+       "n": "25"
+      },
+      {
+       "t": "+",
+       "s": "      $page.variables.filterCriterion = found.filterCriterion",
+       "o": "",
+       "n": "26"
+      },
+      {
+       "t": "+",
+       "s": "        ? JSON.parse(JSON.stringify(found.filterCriterion))",
+       "o": "",
+       "n": "27"
+      },
+      {
+       "t": "+",
+       "s": "        : null;",
+       "o": "",
+       "n": "28"
+      },
+      {
+       "t": "+",
+       "s": "    }",
+       "o": "",
+       "n": "29"
+      },
+      {
+       "t": "+",
+       "s": "  }",
+       "o": "",
+       "n": "30"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "31"
+      },
+      {
+       "t": "+",
+       "s": "  return ApplySavedSearchChain;",
+       "o": "",
+       "n": "32"
+      },
+      {
+       "t": "+",
+       "s": "});",
+       "o": "",
+       "n": "33"
+      },
+      {
+       "t": "+",
+       "s": "// end of Build.Rite change fxmwutnxqd00cd26",
+       "o": "",
+       "n": "34"
+      }
+     ],
+     "head": "line 1"
+    }
+   ]
+  },
+  {
+   "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/DeleteSavedSearchChain.js",
+   "created": true,
+   "added": 37,
+   "removed": 0,
+   "hunks": [
+    {
+     "rows": [
+      {
+       "t": "+",
+       "s": "// Build.Rite change fxmwutnxqd00cd26 — Equipment Master",
+       "o": "",
+       "n": "1"
+      },
+      {
+       "t": "+",
+       "s": "// Request:      add saved-search selector, Save Search icon, and the two NEW dialogs to the search panel header. MAY be you put save search option as per attached image — then… (Enhance)",
+       "o": "",
+       "n": "2"
+      },
+      {
+       "t": "+",
+       "s": "// Requested by: rite.user on 24 Nov 2026 at 20:30 (UTC+05:30)",
+       "o": "",
+       "n": "3"
+      },
+      {
+       "t": "+",
+       "s": "// Changed by:   rite.user on 24 Nov 2026 at 20:31 (UTC+05:30) — approved and applied in Code fix, in the workspace's working folder",
+       "o": "",
+       "n": "4"
+      },
+      {
+       "t": "+",
+       "s": "// Proposed by:  Claude (Anthropic) (claude-opus-4-8)",
+       "o": "",
+       "n": "5"
+      },
+      {
+       "t": "+",
+       "s": "// Issue:        —",
+       "o": "",
+       "n": "6"
+      },
+      {
+       "t": "+",
+       "s": "// Jira story:   AI-EQP-16 FDD 7.2.5D",
+       "o": "",
+       "n": "7"
+      },
+      {
+       "t": "+",
+       "s": "// Also changed: equipment-master-page.json (JSON files cannot hold comments)",
+       "o": "",
+       "n": "8"
+      },
+      {
+       "t": "+",
+       "s": "define([",
+       "o": "",
+       "n": "9"
+      },
+      {
+       "t": "+",
+       "s": "  'vb/action/actionChain',",
+       "o": "",
+       "n": "10"
+      },
+      {
+       "t": "+",
+       "s": "], (ActionChain) => {",
+       "o": "",
+       "n": "11"
+      },
+      {
+       "t": "+",
+       "s": "  'use strict';",
+       "o": "",
+       "n": "12"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "13"
+      },
+      {
+       "t": "+",
+       "s": "  /**",
+       "o": "",
+       "n": "14"
+      },
+      {
+       "t": "+",
+       "s": "   * Delete a saved search by id. TEMPORARY: updates $variables.savedSearches",
+       "o": "",
+       "n": "15"
+      },
+      {
+       "t": "+",
+       "s": "   * and sessionStorage only; no REST yet.",
+       "o": "",
+       "n": "16"
+      },
+      {
+       "t": "+",
+       "s": "   */",
+       "o": "",
+       "n": "17"
+      },
+      {
+       "t": "+",
+       "s": "  const KEY = 'eqm.savedSearches';",
+       "o": "",
+       "n": "18"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "19"
+      },
+      {
+       "t": "+",
+       "s": "  class DeleteSavedSearchChain extends ActionChain {",
+       "o": "",
+       "n": "20"
+      },
+      {
+       "t": "+",
+       "s": "    async run(context, params) {",
+       "o": "",
+       "n": "21"
+      },
+      {
+       "t": "+",
+       "s": "      const { $page } = context;",
+       "o": "",
+       "n": "22"
+      },
+      {
+       "t": "+",
+       "s": "      const v = $page.variables;",
+       "o": "",
+       "n": "23"
+      },
+      {
+       "t": "+",
+       "s": "      const id = params && params.id;",
+       "o": "",
+       "n": "24"
+      },
+      {
+       "t": "+",
+       "s": "      if (!id) return;",
+       "o": "",
+       "n": "25"
+      },
+      {
+       "t": "+",
+       "s": "      const list = (v.savedSearches || []).filter(s => s && s.id !== id);",
+       "o": "",
+       "n": "26"
+      },
+      {
+       "t": "+",
+       "s": "      v.savedSearches = list;",
+       "o": "",
+       "n": "27"
+      },
+      {
+       "t": "+",
+       "s": "      try {",
+       "o": "",
+       "n": "28"
+      },
+      {
+       "t": "+",
+       "s": "        window.sessionStorage.setItem(KEY, JSON.stringify(list));",
+       "o": "",
+       "n": "29"
+      },
+      {
+       "t": "+",
+       "s": "      } catch (e) { /* ignore */ }",
+       "o": "",
+       "n": "30"
+      },
+      {
+       "t": "+",
+       "s": "      if (v.selectedSavedSearch === id) v.selectedSavedSearch = null;",
+       "o": "",
+       "n": "31"
+      },
+      {
+       "t": "+",
+       "s": "    }",
+       "o": "",
+       "n": "32"
+      },
+      {
+       "t": "+",
+       "s": "  }",
+       "o": "",
+       "n": "33"
+      },
+      {
+       "t": "+",
+       "s": "",
+       "o": "",
+       "n": "34"
+      },
+      {
+       "t": "+",
+       "s": "  return DeleteSavedSearchChain;",
+       "o": "",
+       "n": "35"
+      },
+      {
+       "t": "+",
+       "s": "});",
+       "o": "",
+       "n": "36"
+      },
+      {
+       "t": "+",
+       "s": "// end of Build.Rite change fxmwutnxqd00cd26",
+       "o": "",
+       "n": "37"
+      }
+     ],
+     "head": "line 1"
+    }
+   ]
+  }
+ ],
+ "status": "applied",
+ "events": [
+  {
+   "at": "2026-11-24T15:00:55.815Z",
+   "what": "asked again",
+   "by": "rite.user",
+   "detail": "ignore for timebeing the rest api to save , we will temporaly save in session to check"
+  },
+  {
+   "at": "2026-11-24T15:00:55.851Z",
+   "what": "proposed",
+   "by": "Claude (Anthropic)",
+   "detail": "6 file(s), +259 −0 · 1 screenshot(s) read"
+  },
+  {
+   "at": "2026-11-24T15:01:12.276Z",
+   "what": "approved and applied",
+   "by": "rite.user",
+   "detail": "in C:\\javeed\\equiprite-rebuild-v1-dev\\working (buildrite-working) · In your workspace's working folder (Equiprite_Rebuild_v1 ▸ DEV): nothing pulled — Get latest is in its project's tab. · 6 change note(s) written in the code"
+  },
+  {
+   "at": "2026-11-24T15:01:12.292Z",
+   "what": "tested",
+   "by": "rite.user",
+   "detail": "nothing broke (checks only)"
+  }
+ ],
+ "updatedAt": "2026-11-24T15:01:12.292Z",
+ "applied": {
+  "at": "2026-11-24T15:01:12.258Z",
+  "by": "rite.user",
+  "branch": "buildrite-working",
+  "upstream": "",
+  "pull": {
+   "done": false,
+   "workspace": true,
+   "text": "In your workspace's working folder (Equiprite_Rebuild_v1 ▸ DEV): nothing pulled — Get latest is in its project's tab."
+  },
+  "live": false,
+  "workspace": "Equiprite_Rebuild_v1 ▸ DEV",
+  "folder": "C:\\javeed\\equiprite-rebuild-v1-dev\\working",
+  "notes": 6
+ },
+ "baseline": [],
+ "tests": {
+  "at": "2026-11-24T15:01:12.292Z",
+  "ok": true,
+  "checks": [
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.json",
+    "name": "valid JSON",
+    "ok": true,
+    "detail": "",
+    "already": false
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/LoadSavedSearchesChain.js",
+    "name": "JavaScript syntax",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/SaveSearchChain.js",
+    "name": "JavaScript syntax",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/ApplySavedSearchChain.js",
+    "name": "JavaScript syntax",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page-chains/DeleteSavedSearchChain.js",
+    "name": "JavaScript syntax",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+    "already": false,
+    "name": "no oj-bind-for-each inside a table or select",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+    "already": true,
+    "name": "no String()/Number()/Boolean() or inline functions in bindings",
+    "ok": false,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+    "already": false,
+    "name": "no regex literals in bindings",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+    "already": false,
+    "name": "every listener the HTML uses is declared in the page JSON",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+    "already": false,
+    "name": "every oj- component used is imported",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "file": "webApps/vbredwoodapp/flows/equipment-foundation/pages/equipment-master-page.html",
+    "already": false,
+    "name": "every chain the page runs is in its chains folder",
+    "ok": true,
+    "detail": ""
+   }
+  ],
+  "unit": [],
+  "e2eFiles": [],
+  "none": true
+ }
+}
