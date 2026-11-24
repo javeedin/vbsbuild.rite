@@ -1,10 +1,11 @@
 define([
   'vb/action/actionChain',
+  'vb/action/actions',
   'resources/js/followupsClient',
   'resources/js/followup',
   'resources/js/exportKit',
   'resources/js/shellBus',
-], (ActionChain, FC, F, exportKit, bus) => {
+], (ActionChain, Actions, FC, F, exportKit, bus) => {
   'use strict';
 
   // Follow-ups › Messages: the messages the Copy to follow-up dialog offers (Jira stories, a sprint). Yours are added;
@@ -47,6 +48,8 @@ define([
       if (act === 'focus') {
         const f = typeof bus.takeFocus === 'function' ? bus.takeFocus('followups') : null;
         if (f && f.tab === 'messages') { v.tab = 'messages'; await load(); }
+        // the Jira updates bell handed over a new draft to compose: open the editor on the Saved tab
+        else if (f && f.compose) { v.tab = 'saved'; await Actions.callChain(context, { chain: 'editChain', params: { act: 'draft', draft: f.compose } }); }
         return;
       }
       if (act === 'load') { await load(); if (v.msgKey && !v.msgDirty) reopen(v.msgKey); return; }

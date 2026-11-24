@@ -1,9 +1,10 @@
 define([
   'vb/action/actionChain',
+  'vb/action/actions',
   'resources/js/followupsClient',
   'resources/js/followup',
   'resources/js/shellBus',
-], (ActionChain, FC, F, bus) => {
+], (ActionChain, Actions, FC, F, bus) => {
   'use strict';
 
   // Opening the Follow-ups page: is this the desktop app (DuckDB on this PC)? Then read the saved follow-ups, and the
@@ -26,6 +27,8 @@ define([
       } finally {
         v.busy = false;
       }
+      // the Jira updates bell handed over a new draft to compose (shellBus.focus('followups', { compose })): open the editor
+      if (f && f.compose) await Actions.callChain(context, { chain: 'editChain', params: { act: 'draft', draft: f.compose } });
     }
   }
 

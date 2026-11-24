@@ -1,4 +1,4 @@
-define(['vb/action/actionChain', 'vb/action/actions', 'resources/js/jiraFeed', 'resources/js/followupsClient', 'resources/js/shellBus', 'resources/js/nav'], (ActionChain, Actions, F, FC, bus, nav) => {
+define(['vb/action/actionChain', 'vb/action/actions', 'resources/js/jiraFeed', 'resources/js/shellBus', 'resources/js/nav'], (ActionChain, Actions, F, bus, nav) => {
   'use strict';
 
   // Build.Rite's Jira updates bell (resources/js/jiraFeed.js): read when the shell opens and every five minutes (the
@@ -60,12 +60,11 @@ define(['vb/action/actionChain', 'vb/action/actions', 'resources/js/jiraFeed', '
       if (act === 'followup') {
         const rec = F.followupFrom(v.jiraEvents, v.jiraSel.ids);
         if (!rec.count) { bus.toast('Tick the updates you want to follow up on first.', 'error'); return; }
-        const r = await FC.save({ kind: 'stories', title: rec.title, subtitle: rec.subtitle, subject: rec.subject,
-          to: '', message: rec.message, signoff: 'Thanks,', sprintName: '', source: 'jira-bell', lines: rec.lines });
-        if (r.ok && r.body && r.body.ok) {
-          bus.toast('Follow-up saved on ' + rec.stories + (rec.stories === 1 ? ' story.' : ' stories.'), 'info', { label: 'Open Follow-ups', navId: 'followups' });
-          v.jiraSel = noSel();
-        } else bus.toast((r.body && r.body.error) || 'Could not save (saved follow-ups need the Build.Rite desktop app).', 'error');
+        // open the Follow-ups compose dialog with this draft (review, edit the message / recipients, then Save there)
+        bus.focus('followups', { compose: { kind: 'stories', title: rec.title, subtitle: rec.subtitle, subject: rec.subject,
+          to: '', message: rec.message, signoff: 'Thanks,', source: 'jira-bell', lines: rec.lines } });
+        v.jiraSel = noSel();
+        v.jiraOpen = false;
         return;
       }
       // day by day: Daily progress in a tab of its own (the panel closes)

@@ -39,6 +39,18 @@ define(['resources/js/followup', 'resources/js/shellBus'], (F, bus) => {
         message: detail.message, signoff: detail.signoff, rows: rowsOf(detail), kind: detail.kind });
     }
 
+    // ── Compose / edit a follow-up (the dialog opened by "Edit", or by the Jira updates bell) ──
+    /** The editor's live preview as the email. */
+    editHtml(e) {
+      if (!e) return '';
+      return F.composeHtml({ title: e.title, subtitle: e.subtitle, when: '', message: e.message, signoff: e.signoff, rows: rowsOf(e), kind: e.kind });
+    }
+    /** "3 stories" — how many the follow-up covers. */
+    editCount(e) { const n = e && e.lines ? e.lines.length : 0; return n + (n === 1 ? ' story' : ' stories'); }
+    /** The editor's title: a new draft (no id) vs editing a saved one. */
+    editHeading(e) { return e && e.id ? 'Edit follow-up' : 'New follow-up'; }
+    editTplClass() { return 'nx-fu-tpl'; }
+
     // ── Messages: the messages the Copy to follow-up dialog offers ──
     tabClass(tab, cur) { return 'nx-sc-tab' + (tab === cur ? ' nx-sc-tab--on' : ''); }
     msgsCount(list) { const l = list || []; return l.filter((m) => !m.hidden).length + ' in the dialog' + (l.some((m) => m.hidden) ? ' · ' + l.filter((m) => m.hidden).length + ' hidden' : ''); }

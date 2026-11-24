@@ -12,7 +12,11 @@
     "msgs": { "type": "any[]", "defaultValue": [], "description": "Every message the follow-up dialog can offer, hidden ones too (resources/js/followup.js merge)." },
     "msgKey": { "type": "string", "defaultValue": "", "description": "The message open in the editor ('' for a new one)." },
     "msgEdit": { "type": "any", "defaultValue": null, "description": "The message being edited: { key, label, subject, body, show, builtin, edited, mine, isNew, original }." },
-    "msgDirty": { "type": "boolean", "defaultValue": false, "description": "The editor has changes not saved yet." }
+    "msgDirty": { "type": "boolean", "defaultValue": false, "description": "The editor has changes not saved yet." },
+    "fuEdit": { "type": "any", "defaultValue": null, "description": "The follow-up being composed or edited: { id, kind, title, subtitle, subject, to, message, signoff, lines }. A new draft from the Jira bell has no id." },
+    "fuEditOpen": { "type": "boolean", "defaultValue": false, "description": "The compose / edit dialog is open." },
+    "fuTpls": { "type": "any[]", "defaultValue": [], "description": "The message templates offered in the editor (resources/js/followup.js)." },
+    "fuSaving": { "type": "boolean", "defaultValue": false, "description": "The editor is saving." }
   },
   "events": {
     "focusRequest": { "description": "Another screen opened Follow-ups on a tab (shellBus.focus('followups', { tab: 'messages' })).", "payloadType": "object" }
@@ -25,6 +29,11 @@
     "onMsg": { "chains": [ { "chain": "msgChain", "parameters": { "act": "{{ $event.currentTarget.dataset.act }}", "key": "{{ $event.currentTarget.dataset.key || '' }}" } } ] },
     "onMsgField": { "chains": [ { "chain": "msgChain", "parameters": { "act": "field", "field": "{{ $event.currentTarget.dataset.field }}", "value": "{{ $event.currentTarget.type === 'checkbox' ? $event.currentTarget.checked : $event.currentTarget.value }}" } } ] },
     "onMsgImport": { "chains": [ { "chain": "msgChain", "parameters": { "act": "importFile" } } ] },
+    "onFuEdit": { "chains": [ { "chain": "editChain", "parameters": { "act": "open", "id": "{{ $event.currentTarget.dataset.id || '' }}" } } ] },
+    "onFuEditField": { "chains": [ { "chain": "editChain", "parameters": { "act": "field", "field": "{{ $event.currentTarget.dataset.field }}", "value": "{{ $event.currentTarget.value }}" } } ] },
+    "onFuEditTpl": { "chains": [ { "chain": "editChain", "parameters": { "act": "template", "key": "{{ $event.currentTarget.dataset.key }}" } } ] },
+    "onFuEditSave": { "chains": [ { "chain": "editChain", "parameters": { "act": "save" } } ] },
+    "onFuEditClose": { "chains": [ { "chain": "editChain", "parameters": { "act": "close" } } ] },
     "focusRequest": { "chains": [ { "chain": "msgChain", "parameters": { "act": "focus" } } ] }
   },
   "imports": {

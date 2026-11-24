@@ -1093,17 +1093,35 @@ const complete = (page, scope, tags) => page.evaluate((a) => a[1].map((t) => {
     await settle(page, 200);
     T.check('ticking two updates: "Follow up on 2", both ticked', /Follow up on 2/.test(await text(page, '#nxJiraFollowup')) && (await page.$$('#nxJiraList .nx-jfeed-item--picked')).length === 2);
     await page.click('#nxJiraFollowup');
-    await page.waitForFunction((n) => !document.querySelector('#nxJiraList.nx-jfeed-list--sel'), null, { timeout: 8000 }).catch(() => {});
-    await settle(page, 500);
+    // the bell hands the draft to the Follow-ups compose dialog (nothing is saved until Save there)
+    await page.waitForSelector('#fuEditDialog', { timeout: 15000 });
+    T.check('Follow up opens the compose dialog with the draft (not saved yet)',
+      (await page.inputValue('#fuEditTitle')) === 'Follow-up — Jira updates' && /2 stories/.test(await text(page, '#fuEditDialog .nx-dialog-head'))
+      && (await fuStore.list()).followups.length === beforeFu && !(await page.$('#nxJiraPanel')), (await page.inputValue('#fuEditTitle')));
+    await page.click('#fuEditSave');
+    await page.waitForFunction(() => !document.querySelector('#fuEditDialog'), null, { timeout: 10000 }).catch(() => {});
+    await settle(page, 400);
     const afterFu = await fuStore.list();
     const bellFu = afterFu.followups.find((f) => /Jira updates/.test(f.title));
-    T.check('Follow up on the ticked updates saves a follow-up on this PC', afterFu.followups.length === beforeFu + 1 && !!bellFu, JSON.stringify(afterFu.followups.map((f) => f.title)));
+    T.check('Save in the dialog writes the follow-up on this PC', afterFu.followups.length === beforeFu + 1 && !!bellFu, JSON.stringify(afterFu.followups.map((f) => f.title)));
     const gotFu = bellFu ? await fuStore.get(bellFu.id) : { ok: false };
     T.check('…kind stories, source jira-bell, one line per story (grouped)', gotFu.ok && gotFu.followup.kind === 'stories' && gotFu.followup.source === 'jira-bell'
       && gotFu.followup.lines.length === 2 && gotFu.followup.lines.map((l) => l.storyKey).sort().join(',') === 'ABC-41,ABC-55', JSON.stringify(gotFu.followup && gotFu.followup.lines));
-    T.check('…saving clears select mode (the selection bar is gone)', !(await page.$('#nxJiraList.nx-jfeed-list--sel')) && !(await page.$('#nxJiraSelBar')));
-    await page.click('[data-act="close"][aria-label="Close Jira updates"]').catch(() => {});
-    await settle(page, 200);
+    // Edit a saved follow-up: open it, change the title, Save → updated in place
+    await page.click('.nx-fl-list .nx-fl-row[data-id="' + bellFu.id + '"]').catch(() => {});
+    await page.waitForSelector('#flEdit', { timeout: 8000 });
+    await page.click('#flEdit');
+    await page.waitForSelector('#fuEditDialog', { timeout: 8000 });
+    await page.fill('#fuEditTitle', 'Follow-up — reviewed');
+    await page.click('#fuEditSave');
+    await page.waitForFunction(() => !document.querySelector('#fuEditDialog'), null, { timeout: 10000 }).catch(() => {});
+    await settle(page, 400);
+    const edited = await fuStore.get(bellFu.id);
+    T.check('Edit on a saved follow-up updates it in place (no new row)', edited.ok && edited.followup.title === 'Follow-up — reviewed'
+      && (await fuStore.list()).followups.length === beforeFu + 1, edited.followup && edited.followup.title);
+    // the bell handed off to the Follow-ups tab; go back to Jira stories for the Disconnect step
+    await page.locator('[role="tab"]').filter({ hasText: 'Jira stories' }).first().click().catch(() => {});
+    await page.waitForSelector('#jiraGrid', { timeout: 15000 }).catch(() => {});
 
     T.section('Disconnect');
     await page.click('#jiraDisconnect');
