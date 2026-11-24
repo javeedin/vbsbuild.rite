@@ -154,6 +154,10 @@
    "type": "any",
    "defaultValue": { "open": false, "goal": "", "busy": "", "log": [], "error": "" }
   },
+  "reports": {
+   "type": "any",
+   "defaultValue": { "list": [], "tabs": [], "active": "", "q": "", "error": "" }
+  },
   "dash": {
    "type": "any",
    "defaultValue": { "list": [], "open": false, "error": "" }
@@ -601,7 +605,14 @@
   "onBoardAiOpen": { "chains": [ { "chain": "dashChain", "parameters": { "op": "boardAiOpen" } } ] },
   "onBoardAiClose": { "chains": [ { "chain": "dashChain", "parameters": { "op": "boardAiClose" } } ] },
   "onBoardAiGoal": { "chains": [ { "chain": "dashChain", "parameters": { "op": "boardAiGoal", "value": "{{ $event.target.value }}" } } ] },
-  "onBoardAiGo": { "chains": [ { "chain": "dashChain", "parameters": { "op": "boardAiGo" } } ] }
+  "onBoardAiGo": { "chains": [ { "chain": "dashChain", "parameters": { "op": "boardAiGo" } } ] },
+  "onRepFilter": { "chains": [ { "chain": "dashChain", "parameters": { "op": "repFilter", "value": "{{ $event.target.value }}" } } ] },
+  "onRepOpen": { "chains": [ { "chain": "dashChain", "parameters": { "op": "repOpen", "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
+  "onRepTab": { "chains": [ { "chain": "dashChain", "parameters": { "op": "repTab", "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
+  "onRepClose": { "chains": [ { "chain": "dashChain", "parameters": { "op": "repClose", "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
+  "onRepRefresh": { "chains": [ { "chain": "dashChain", "parameters": { "op": "repRefresh" } } ] },
+  "onRepToWorksheet": { "chains": [ { "chain": "dashChain", "parameters": { "op": "repToWorksheet" } } ] },
+  "onRepExport": { "chains": [ { "chain": "dashChain", "parameters": { "op": "repExport", "value": "{{ $event.currentTarget.dataset.format }}" } } ] }
  },
  "imports": {
   "components": {

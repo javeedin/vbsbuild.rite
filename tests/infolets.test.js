@@ -60,6 +60,13 @@ try {
   const evil = I.cardHtml(I.compute({ kind: 'table' }, { columns: [{ name: 'X' }], rows: [['<script>bad</script>']] }));
   T.check('table escapes cell values', evil.indexOf('<script>bad') === -1 && evil.indexOf('&lt;script&gt;') !== -1);
 
+  T.section('gridHtml: a full result grid (Saved reports)');
+  const grid = I.gridHtml(byRegion.columns, byRegion.rows, {});
+  T.check('renders every row with a # column and the headers', /nx-rep-grid/.test(grid) && /<th>REGION<\/th>/.test(grid) && (grid.match(/<tr>/g) || []).length === byRegion.rows.length + 1, (grid.match(/<tr>/g) || []).length);
+  T.check('numeric columns are right-aligned, and cells are escaped', /nx-rep-num/.test(grid) && I.gridHtml([{ name: 'X' }], [['<b>hi</b>']], {}).indexOf('<b>hi') === -1);
+  T.check('caps at the limit with a note', (() => { const h = I.gridHtml([{ name: 'V' }], Array.from({ length: 10 }, (_, i) => [i]), { limit: 4 }); return (h.match(/<tr>/g) || []).length === 5 && /first 4 of 10/.test(h); })());
+  T.check('no columns → a message, no throw', /No columns/.test(I.gridHtml([], [], {})));
+
   T.section('errors never throw');
   T.check('no columns → an error model, no throw', I.compute({ kind: 'bar' }, { columns: [], rows: [] }).error !== '');
   T.check('render() returns a model and html together', (() => { const r = I.render({ kind: 'kpi', value: 'TOTAL', agg: 'none' }, oneNumber); return r.model.kpi.raw === 1234 && /nx-if-kpiv/.test(r.html); })());

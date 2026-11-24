@@ -36,6 +36,7 @@
       <div class="nx-seg nx-sql-modeseg" role="tablist" aria-label="SQL mode">
         <button type="button" role="tab" id="sqlModeWork" :class="[[ 'nx-seg-btn' + ($variables.mode !== 'dash' ? ' nx-seg-btn--on' : '') ]]" :aria-selected="[[ $variables.mode !== 'dash' ? 'true' : 'false' ]]" data-value="work" on-click="[[ $listeners.onMode ]]"><span class="oj-ux-ico-code" aria-hidden="true"></span> Worksheet</button>
         <button type="button" role="tab" id="sqlModeDash" :class="[[ 'nx-seg-btn' + ($variables.mode === 'dash' ? ' nx-seg-btn--on' : '') ]]" :aria-selected="[[ $variables.mode === 'dash' ? 'true' : 'false' ]]" data-value="dash" on-click="[[ $listeners.onMode ]]"><span class="oj-ux-ico-bar-charts" aria-hidden="true"></span> Dashboards</button>
+        <button type="button" role="tab" id="sqlModeReports" :class="[[ 'nx-seg-btn' + ($variables.mode === 'reports' ? ' nx-seg-btn--on' : '') ]]" :aria-selected="[[ $variables.mode === 'reports' ? 'true' : 'false' ]]" data-value="reports" on-click="[[ $listeners.onMode ]]"><span class="oj-ux-ico-table" aria-hidden="true"></span> Saved reports</button>
       </div>
     </div>
     <oj-bind-if test="[[ $variables.mode !== 'dash' ]]">
@@ -331,6 +332,56 @@
           </div>
         </section>
       </oj-bind-if>
+    </oj-bind-if>
+
+    <!-- Saved reports: a left list of saved queries; each opens as a result tab that runs its SQL -->
+    <oj-bind-if test="[[ $variables.mode === 'reports' ]]">
+      <div class="nx-sql-reports">
+        <aside class="nx-card nx-sql-replist" aria-label="Saved reports">
+          <div class="nx-sql-replisthead">
+            <h2 class="nx-sql-dashh">Reports</h2>
+            <input id="sqlRepFilter" class="nx-sql-in nx-sql-repfilter" type="text" autocomplete="off" :value="[[ $variables.reports.q ]]" on-input="[[ $listeners.onRepFilter ]]" placeholder="Filter reports…" aria-label="Filter reports"/>
+          </div>
+          <oj-bind-if test="[[ !!$variables.reports.error ]]"><p class="nx-error" id="sqlRepError" role="alert"><oj-bind-text value="[[ $variables.reports.error ]]"></oj-bind-text></p></oj-bind-if>
+          <oj-bind-if test="[[ !$variables.reports.list.length && !$variables.reports.error ]]">
+            <p class="nx-sql-none" id="sqlRepNone">No saved queries yet. In the <strong>Worksheet</strong>, run a query and choose <strong>Save query</strong> — it appears here as a report.</p>
+          </oj-bind-if>
+          <ul class="nx-sql-replistul">
+            <oj-bind-for-each data="[[ $functions.reportList($variables.reports.list, $variables.reports.q, $variables.reports.active) ]]"><template data-oj-as="r">
+              <li><button type="button" :class="[[ r.data.cls ]]" :data-id="[[ r.data.id ]]" on-click="[[ $listeners.onRepOpen ]]" :title="[[ r.data.description || r.data.name ]]">
+                <span class="oj-ux-ico-table" aria-hidden="true"></span>
+                <span class="nx-sql-repname-t"><oj-bind-text value="[[ r.data.name ]]"></oj-bind-text></span>
+                <oj-bind-if test="[[ !!r.data.conn ]]"><span class="nx-sql-savedconn"><oj-bind-text value="[[ r.data.conn ]]"></oj-bind-text></span></oj-bind-if>
+              </button></li>
+            </template></oj-bind-for-each>
+          </ul>
+        </aside>
+        <section class="nx-card nx-sql-reppane" aria-label="Report">
+          <oj-bind-if test="[[ !$variables.reports.tabs.length ]]">
+            <p class="nx-sql-none nx-sql-rephint" id="sqlRepHint">Pick a report on the left to run it. Each report opens as its own tab here; you can keep several open.</p>
+          </oj-bind-if>
+          <oj-bind-if test="[[ $variables.reports.tabs.length > 0 ]]">
+            <div class="nx-sql-reptabs" role="tablist" aria-label="Open reports">
+              <oj-bind-for-each data="[[ $functions.reportTabs($variables.reports.tabs, $variables.reports.active) ]]"><template data-oj-as="t">
+                <span class="nx-sql-reptabwrap">
+                  <button type="button" role="tab" :class="[[ t.data.cls ]]" :aria-selected="[[ t.data.active ? 'true' : 'false' ]]" :data-id="[[ t.data.id ]]" on-click="[[ $listeners.onRepTab ]]"><oj-bind-text value="[[ t.data.name ]]"></oj-bind-text></button>
+                  <button type="button" class="nx-sql-reptabx" :data-id="[[ t.data.id ]]" on-click="[[ $listeners.onRepClose ]]" :aria-label="[[ 'Close ' + t.data.name ]]" title="Close">✕</button>
+                </span>
+              </template></oj-bind-for-each>
+            </div>
+            <div class="nx-sql-repbar">
+              <span class="nx-sql-repbarname"><oj-bind-text value="[[ $functions.reportActiveName($variables.reports.tabs, $variables.reports.active) ]]"></oj-bind-text></span>
+              <span class="nx-sql-repacts">
+                <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="sqlRepRefresh" on-click="[[ $listeners.onRepRefresh ]]" title="Run the report again"><span class="oj-ux-ico-refresh" aria-hidden="true"></span> Refresh</button>
+                <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="sqlRepToWs" on-click="[[ $listeners.onRepToWorksheet ]]" title="Open this report's SQL in the worksheet"><span class="oj-ux-ico-code" aria-hidden="true"></span> Open in worksheet</button>
+                <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-format="csv" on-click="[[ $listeners.onRepExport ]]" title="Download as CSV"><span class="oj-ux-ico-download" aria-hidden="true"></span> CSV</button>
+                <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" data-format="excel" on-click="[[ $listeners.onRepExport ]]" title="Download as Excel"><span class="oj-ux-ico-download" aria-hidden="true"></span> Excel</button>
+              </span>
+            </div>
+            <div class="nx-sql-repbody" id="sqlRepBody"><p class="nx-rep-empty">Loading…</p></div>
+          </oj-bind-if>
+        </section>
+      </div>
     </oj-bind-if>
   </oj-bind-if>
 

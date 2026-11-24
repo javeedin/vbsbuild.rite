@@ -19,6 +19,7 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
 (async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'br-sqldash-e2e-'));
   const savedSqlStore = SV.open({ root: dir });
+  savedSqlStore.saveQuery({ name: 'Employees', sql: 'select ename, sal from emp', conn: 'devdb' }, 'rite.user'); // a saved query, for the Saved reports tab
   const enc = (t) => Buffer.from('ENC:' + Buffer.from(t).toString('base64'));
   const dec = (b) => Buffer.from(b.toString().slice(4), 'base64').toString();
   const sqlStore = await require('../../desktop/lib/oracleSql').open({ file: path.join(dir, 'conns.json'), driver: fakeOracle({ password: 'secret' }), encrypt: enc, decrypt: dec });
@@ -138,6 +139,17 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
     await page.waitForFunction(() => !document.getElementById('sqlBoardAiModal'), null, { timeout: 25000 });
     await page.waitForFunction(() => document.querySelectorAll('.nx-sql-slot').length >= 3, null, { timeout: 20000 });
     T.check('the plan became several infolets on the board', (await page.$$('.nx-sql-slot')).length >= 3 && savedSqlStore.listInfolets().some((x) => x.name === 'Salaries') && savedSqlStore.listInfolets().some((x) => x.name === 'Headcount'));
+
+    T.section('Saved reports: open a report as a tab and run it');
+    await page.click('#sqlModeReports');
+    await page.waitForSelector('.nx-sql-replist', { timeout: 10000 });
+    T.check('the saved query is listed as a report', /Employees/.test(await env.text('.nx-sql-replistul')));
+    await page.click('.nx-sql-replistul .nx-sql-reprow');
+    await page.waitForFunction(() => /nx-rep-grid/.test((document.getElementById('sqlRepBody') || {}).innerHTML || ''), null, { timeout: 15000 });
+    T.check('clicking a report opens a tab and runs its SQL into a grid', /nx-rep-grid/.test(await page.innerHTML('#sqlRepBody')) && (await page.$$('.nx-sql-reptab')).length === 1);
+    await page.click('.nx-sql-reptabx');
+    await page.waitForFunction(() => !document.querySelector('.nx-sql-reptab'), null, { timeout: 10000 });
+    T.check('closing the report tab leaves none open', (await page.$$('.nx-sql-reptab')).length === 0);
 
     await env.shot('sql-dash.png');
     T.eq('no browser errors', errs().join(' | ').slice(0, 1500), '');

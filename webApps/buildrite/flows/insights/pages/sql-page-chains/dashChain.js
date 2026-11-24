@@ -3,9 +3,15 @@ define([
   'resources/js/sqlClient',
   'resources/js/infolets',
   'resources/js/infoletAi',
+  'resources/js/sqlWorksheet',
+  'resources/js/exportKit',
   'resources/js/shellBus',
-], (ActionChain, sql, I, IA, bus) => {
+], (ActionChain, sql, I, IA, W, exportKit, bus) => {
   'use strict';
+
+  // Saved reports: the result of each opened report is kept here (out of knockout), keyed by report id, so switching tabs
+  // is instant and re-render never re-queries. Module scope persists across chain invocations.
+  var REP = {};
 
   // Infolets and dashboards for the SQL worksheet. An infolet is a named chart = its own SQL + a spec
   // { kind, title, label, value, agg, limit }; a dashboard is an ordered set of infolets, each with a width.
@@ -25,8 +31,56 @@ define([
 
       // ── mode ──
       if (op === 'mode') {
-        v.mode = value === 'dash' ? 'dash' : 'work';
+        v.mode = (value === 'dash' || value === 'reports') ? value : 'work';
         if (v.mode === 'dash') await this.dashLoad(v);
+        if (v.mode === 'reports') { await this.repLoad(v); this.paintReport(v); }
+        return;
+      }
+
+      // ── Saved reports: a left list of saved queries; open each as a result tab ──
+      if (op === 'repLoad') { await this.repLoad(v); return; }
+      if (op === 'repFilter') { v.reports = Object.assign({}, v.reports, { q: String(value == null ? '' : value) }); return; }
+      if (op === 'repOpen') {
+        const tabs = (v.reports.tabs || []).slice();
+        let tab = tabs.filter((t) => t.id === id)[0];
+        if (!tab) {
+          const r = await sql.savedGet(id);
+          const q = r.ok && r.body.query;
+          if (!q) { bus.toast((r.body && r.body.error) || 'That report could not be opened.', 'error'); return; }
+          tab = { id: q.id, name: q.name, conn: q.conn || '', sql: q.sql || '' };
+          tabs.push(tab);
+          sql.ranQuery(q.id); // best-effort usage bump
+        }
+        v.reports = Object.assign({}, v.reports, { tabs: tabs, active: id });
+        this.paintReport(v);
+        return;
+      }
+      if (op === 'repTab') { v.reports = Object.assign({}, v.reports, { active: id }); this.paintReport(v); return; }
+      if (op === 'repClose') {
+        const tabs = (v.reports.tabs || []).filter((t) => t.id !== id);
+        delete REP[id];
+        let active = v.reports.active;
+        if (active === id) active = tabs.length ? tabs[tabs.length - 1].id : '';
+        v.reports = Object.assign({}, v.reports, { tabs: tabs, active: active });
+        this.paintReport(v);
+        return;
+      }
+      if (op === 'repRefresh') { delete REP[v.reports.active]; this.paintReport(v); return; }
+      if (op === 'repToWorksheet') {
+        const tab = (v.reports.tabs || []).filter((t) => t.id === v.reports.active)[0];
+        if (!tab) return;
+        v.mode = 'work';
+        v.sql = tab.sql;
+        setTimeout(() => { const el = byId('sqlEditor'); if (el) { el.value = tab.sql; el.focus(); } }, 40);
+        bus.toast('Opened “' + tab.name + '” in the worksheet.', 'info');
+        return;
+      }
+      if (op === 'repExport') {
+        const id2 = v.reports.active, cached = REP[id2], tab = (v.reports.tabs || []).filter((t) => t.id === id2)[0];
+        if (!cached || !cached.columns || cached.error) { bus.toast('Run the report first.', 'error'); return; }
+        const spec = W.exportSpec(cached.columns, cached.rows || []);
+        const res = await exportKit.run(value || 'csv', { name: (tab && tab.name ? tab.name.replace(/[^\w-]+/g, '_') : 'report'), title: (tab && tab.name) || 'Report', subtitle: (tab && tab.conn) || '', rows: spec.rows, columns: spec.columns });
+        bus.toast(res.message + (cached.more ? ' (only the rows fetched so far)' : ''), res.ok ? 'info' : 'error');
         return;
       }
 
@@ -224,6 +278,39 @@ define([
     async dashLoad(v) {
       const r = await sql.dashboardList();
       v.dash = { list: (r.ok && r.body.dashboards) || [], open: false, error: r.ok ? '' : ((r.body && r.body.error) || 'Could not read the dashboards.') };
+    }
+
+    async repLoad(v) {
+      const r = await sql.savedList();
+      v.reports = Object.assign({ tabs: [], active: '', q: '' }, v.reports, { list: (r.ok && r.body.queries) || [], error: r.ok ? '' : ((r.body && r.body.error) || 'Could not read the reports.') });
+    }
+
+    // draw the active report tab: run its SQL on the connection (cached after the first run), inject the grid
+    paintReport(v) {
+      const r = v.reports || {};
+      const id = r.active;
+      setTimeout(async () => {
+        const box = byId('sqlRepBody');
+        if (!box) return;
+        if (!id) { box.innerHTML = ''; return; }
+        const tab = (r.tabs || []).filter((t) => t.id === id)[0];
+        if (!tab) { box.innerHTML = ''; return; }
+        const draw = (res) => {
+          if (res.error) { box.innerHTML = '<p class="nx-rep-err">' + I.esc(String(res.error).split('\n')[0]) + '</p>'; return; }
+          if (res.kind && res.kind !== 'query') { box.innerHTML = '<p class="nx-rep-empty">' + I.esc(res.message || 'This statement returned no rows.') + '</p>'; return; }
+          const meta = '<p class="nx-rep-meta">' + (res.rows || []).length + ' row' + ((res.rows || []).length === 1 ? '' : 's') + (res.ms != null ? ' · ' + (res.ms / 1000).toFixed(2) + ' s' : '') + '</p>';
+          box.innerHTML = meta + I.gridHtml(res.columns || [], res.rows || [], { more: res.more });
+        };
+        if (REP[id]) { draw(REP[id]); return; }
+        if (!(v.session && v.session.id)) { box.innerHTML = '<p class="nx-rep-empty">Connect to a database (Worksheet tab) to run this report.</p>'; return; }
+        box.innerHTML = '<p class="nx-rep-empty">Running…</p>';
+        try {
+          const run = await sql.run(v.session.id, tab.sql, Math.max(200, Number(v.fetch) || 200));
+          const b = run.body || {};
+          REP[id] = { columns: b.columns || [], rows: b.rows || [], more: !!b.more, ms: b.ms, kind: b.kind, error: run.ok ? (b.error || '') : ((b.error) || 'The report could not run.'), message: b.message || '' };
+          if (v.reports.active === id) draw(REP[id]);
+        } catch (e) { REP[id] = { error: (e && e.message) || 'Error' }; if (v.reports.active === id) draw(REP[id]); }
+      }, 30);
     }
 
     async openBoard(v, id) {

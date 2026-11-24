@@ -68,6 +68,21 @@ define(['resources/js/exportKit', 'resources/js/sqlWorksheet', 'resources/js/inf
         w: s.w, style: { gridColumn: 'span ' + Math.max(1, Math.min(12, s.w || 6)) } }));
     }
     infoletRows(list) { return (list || []).map((x) => ({ id: x.id, name: x.name, kind: this.kindLabel(x.kind), conn: x.conn || '', description: x.description || '' })); }
+
+    // ── Saved reports ──
+    /** The left list of reports, filtered by the search box; the one being viewed is marked. */
+    reportList(list, q, active) {
+      const needle = String(q || '').trim().toLowerCase();
+      return (list || [])
+        .filter((r) => !needle || (r.name + ' ' + (r.conn || '') + ' ' + (r.description || '')).toLowerCase().indexOf(needle) !== -1)
+        .map((r) => ({ id: r.id, name: r.name, conn: r.conn || '', description: r.description || '',
+          cls: 'nx-sql-reprow' + (r.id === active ? ' nx-sql-reprow--on' : '') }));
+    }
+    /** The open report tabs in the central panel. */
+    reportTabs(tabs, active) {
+      return (tabs || []).map((t) => ({ id: t.id, name: t.name, cls: 'nx-sql-reptab' + (t.id === active ? ' nx-sql-reptab--on' : ''), active: t.id === active }));
+    }
+    reportActiveName(tabs, active) { const t = (tabs || []).filter((x) => x.id === active)[0]; return t ? t.name : ''; }
   }
 
   return PageModule;

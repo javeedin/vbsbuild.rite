@@ -225,9 +225,31 @@
   // render(spec, data, opts) → { model, html } in one call
   function render(spec, data, opts) { var model = compute(spec, data); return { model: model, html: cardHtml(model, opts) }; }
 
+  // gridHtml(columns, rows, opts) → a full result grid (for Saved reports): a leading #, every column, numbers right-aligned,
+  // up to opts.limit rows (default 1000), a note when more were fetched. Self-contained HTML, all values escaped.
+  function gridHtml(columns, rows, opts) {
+    opts = opts || {};
+    var nm = names(columns), data = rows || [];
+    if (!nm.length) return '<p class="nx-rep-empty">' + esc(opts.message || 'No columns.') + '</p>';
+    var k = kinds(columns, data), isNum = {};
+    k.measures.forEach(function (i) { isNum[i] = true; });
+    var limit = opts.limit || 1000;
+    var shown = data.slice(0, limit);
+    var head = '<tr><th class="nx-rep-rownum">#</th>' + nm.map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr>';
+    var body = shown.map(function (r, ri) {
+      return '<tr><td class="nx-rep-rownum">' + (ri + 1) + '</td>' + nm.map(function (c, ci) {
+        var v = r[ci];
+        return '<td' + (isNum[ci] ? ' class="nx-rep-num"' : '') + '>' + esc(v == null ? '' : v) + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+    var note = data.length > shown.length ? '<p class="nx-rep-more">Showing the first ' + shown.length + ' of ' + data.length + ' rows fetched.' + (opts.more ? ' Fetch more in the worksheet for the rest.' : '') + '</p>'
+      : (opts.more ? '<p class="nx-rep-more">' + shown.length + ' rows — more are available; fetch them in the worksheet.</p>' : '');
+    return '<div class="nx-rep-gridwrap"><table class="nx-rep-grid"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>' + note;
+  }
+
   return {
     KINDS: KINDS, PALETTE: PALETTE,
-    kinds: kinds, suggest: suggest, compute: compute, cardHtml: cardHtml, render: render,
+    kinds: kinds, suggest: suggest, compute: compute, cardHtml: cardHtml, render: render, gridHtml: gridHtml,
     fmtNum: fmtNum, esc: esc
   };
 }));
