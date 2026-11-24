@@ -20,6 +20,7 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'br-sqldash-e2e-'));
   const savedSqlStore = SV.open({ root: dir });
   savedSqlStore.saveQuery({ name: 'Employees', sql: 'select ename, sal from emp', conn: 'devdb' }, 'rite.user'); // a saved query, for the Saved reports tab
+  savedSqlStore.saveQuery({ name: 'By request', sql: 'select ename, sal from emp where empno = :empno', conn: 'devdb', binds: { empno: '7369' } }, 'rite.user'); // a saved report with a bind value
   const enc = (t) => Buffer.from('ENC:' + Buffer.from(t).toString('base64'));
   const dec = (b) => Buffer.from(b.toString().slice(4), 'base64').toString();
   const sqlStore = await require('../../desktop/lib/oracleSql').open({ file: path.join(dir, 'conns.json'), driver: fakeOracle({ password: 'secret' }), encrypt: enc, decrypt: dec });
@@ -157,6 +158,17 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
     await page.click('.nx-sql-reptabwrap:has-text("Employees") .nx-sql-reptabx');
     await page.waitForFunction(() => document.querySelectorAll('.nx-sql-reptab').length === 1, null, { timeout: 10000 });
     T.check('closing one report tab leaves the other open', (await page.$$('.nx-sql-reptab')).length === 1);
+
+    T.section('a report with a bind shows the saved value, editable, then runs');
+    await page.click('.nx-sql-reprow:has-text("By request")');
+    await page.waitForSelector('#sqlRepBind-0', { timeout: 10000 });
+    T.check('the bind bar shows the saved value, editable', (await page.inputValue('#sqlRepBind-0')) === '7369');
+    await page.waitForFunction(() => /nx-rep-grid/.test((document.getElementById('sqlRepData') || {}).innerHTML || ''), null, { timeout: 15000 });
+    T.check('with the saved value it runs straight away (no NJS-098)', /nx-rep-grid/.test(await page.innerHTML('#sqlRepData')) && !/NJS-098|bind/.test(await page.innerHTML('#sqlRepData')));
+    await page.fill('#sqlRepBind-0', '7499');
+    await page.click('#sqlRepBindRun');
+    await page.waitForFunction(() => /nx-rep-grid/.test((document.getElementById('sqlRepData') || {}).innerHTML || ''), null, { timeout: 15000 });
+    T.check('changing the value and Run re-runs the report', /nx-rep-grid/.test(await page.innerHTML('#sqlRepData')));
 
     await env.shot('sql-dash.png');
     T.eq('no browser errors', errs().join(' | ').slice(0, 1500), '');

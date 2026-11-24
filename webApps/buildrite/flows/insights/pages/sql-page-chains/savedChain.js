@@ -1,9 +1,19 @@
 define([
   'vb/action/actionChain',
   'resources/js/sqlClient',
+  'resources/js/sqlWorksheet',
   'resources/js/shellBus',
-], (ActionChain, sql, bus) => {
+], (ActionChain, sql, W, bus) => {
   'use strict';
+
+  // The bind values entered recently (by the Run dialog), for the :placeholders in some SQL — saved with the query.
+  function bindsFor(sqlText) {
+    let saved = {};
+    try { saved = JSON.parse(window.localStorage.getItem('buildrite:sql-binds') || '{}') || {}; } catch (e) { saved = {}; }
+    const out = {};
+    W.binds(sqlText || '').forEach((nm) => { const v = saved[nm.toLowerCase()]; if (v != null && v !== '') out[nm] = v; });
+    return out;
+  }
 
   // The SQL library (saved queries), shared with the team on the data branch. Ops (op):
   //   load            fetch this connection's saved queries into $variables.saved.list
@@ -81,7 +91,7 @@ define([
         if (!text) { v.saveDlg = Object.assign({}, d, { error: 'There is no SQL to save.' }); return; }
         v.saveDlg = Object.assign({}, d, { busy: 'save', error: '' });
         const share = d.share !== false;
-        const r = await sql.saveQuery({ name: name, description: d.description || '', sql: text, conn: conn }, share);
+        const r = await sql.saveQuery({ name: name, description: d.description || '', sql: text, conn: conn, binds: bindsFor(text) }, share);
         if (!(r.ok && r.body && r.body.query)) { v.saveDlg = Object.assign({}, v.saveDlg, { busy: '', error: (r.body && r.body.error) || 'It could not be saved.' }); return; }
         v.saveDlg = Object.assign({}, v.saveDlg, { open: false, busy: '' });
         await load();

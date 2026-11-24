@@ -87,7 +87,8 @@ function open(opts) {
     const conn = cut(i.conn, 120);
     let rec = d.queries.filter((q) => (i.id && q.id === i.id) || (str(q.name).toLowerCase() === name.toLowerCase() && str(q.conn) === conn))[0];
     if (!rec) { rec = { id: newId(), createdAt: at, runs: 0 }; d.queries.push(rec); }
-    Object.assign(rec, { name: name, sql: sql, description: cut(i.description, 2000), folder: cut(i.folder, 60).trim(), conn: conn, by: str(by) || cut(i.by, 120), updatedAt: at });
+    const binds = (i.binds && typeof i.binds === 'object' && !Array.isArray(i.binds)) ? i.binds : {};
+    Object.assign(rec, { name: name, sql: sql, description: cut(i.description, 2000), folder: cut(i.folder, 60).trim(), conn: conn, binds: binds, by: str(by) || cut(i.by, 120), updatedAt: at });
     write(d);
     return { ok: true, query: rec };
   }

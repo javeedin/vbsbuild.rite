@@ -9,6 +9,11 @@ define([
 ], (ActionChain, sql, I, IA, W, exportKit, bus) => {
   'use strict';
 
+  function esc(s) { return I.esc(s); }
+  function lowerKeys(o) { const m = {}; Object.keys(o || {}).forEach((k) => { m[k.toLowerCase()] = o[k]; }); return m; }
+  function savedBinds() { try { return JSON.parse(window.localStorage.getItem('buildrite:sql-binds') || '{}') || {}; } catch (e) { return {}; } }
+  function rememberBinds(obj) { try { const m = savedBinds(); Object.keys(obj || {}).forEach((k) => { m[k.toLowerCase()] = obj[k] == null ? '' : String(obj[k]); }); window.localStorage.setItem('buildrite:sql-binds', JSON.stringify(m)); } catch (e) { /* no storage */ } }
+
   // Saved reports: the result of each opened report is kept here (out of knockout), keyed by report id, so switching tabs
   // is instant and re-render never re-queries. Module scope persists across chain invocations.
   var REP = {};
@@ -50,7 +55,7 @@ define([
           if (entry.kind === 'infolet') { const r = await sql.infoletGet(entry.realId); full = r.ok && r.body.infolet; spec = full && (full.spec || {}); }
           else { const r = await sql.savedGet(entry.realId); full = r.ok && r.body.query; }
           if (!full) { bus.toast('That report could not be opened.', 'error'); return; }
-          tab = { id: id, name: full.name, conn: full.conn || '', sql: full.sql || '', kind: entry.kind, spec: spec };
+          tab = { id: id, name: full.name, conn: full.conn || '', sql: full.sql || '', kind: entry.kind, spec: spec, binds: full.binds || {} };
           tabs.push(tab);
           if (entry.kind === 'query') sql.ranQuery(entry.realId); // best-effort usage bump
         }
@@ -292,36 +297,64 @@ define([
       v.reports = Object.assign({ tabs: [], active: '', q: '' }, v.reports, { list: list, error: (qr.ok || ir.ok) ? '' : 'Could not read the reports.' });
     }
 
-    // draw the active report tab: run its SQL on the connection (cached after the first run), inject the grid
+    // draw the active report tab: a bind bar when the SQL has :placeholders, then the result (cached after the first run)
     paintReport(v) {
       const r = v.reports || {};
       const id = r.active;
+      const self = this;
       setTimeout(async () => {
         const box = byId('sqlRepBody');
         if (!box) return;
         if (!id) { box.innerHTML = ''; return; }
         const tab = (r.tabs || []).filter((t) => t.id === id)[0];
         if (!tab) { box.innerHTML = ''; return; }
+        const names = W.binds(tab.sql || '');
+        const vals = Object.assign({}, savedBinds(), lowerKeys(tab.binds || {}));  // saved-with-the-report wins
+        // shell: an optional bind bar + the data area
+        const barHtml = names.length ? ('<div class="nx-rep-binds" id="sqlRepBinds"><span class="nx-rep-bindlbl">Bind values</span>'
+          + names.map((nm, i) => '<label class="nx-rep-bindf">:' + esc(nm) + '<input class="nx-rep-bindin" id="sqlRepBind-' + i + '" type="text" autocomplete="off" data-name="' + esc(nm) + '" value="' + esc(vals[nm.toLowerCase()] == null ? '' : vals[nm.toLowerCase()]) + '" placeholder="value for :' + esc(nm) + '"/></label>').join('')
+          + '<button type="button" class="nx-btn nx-btn--primary nx-btn--sm" id="sqlRepBindRun"><span class="oj-ux-ico-play" aria-hidden="true"></span> Run</button></div>') : '';
+        box.innerHTML = barHtml + '<div class="nx-rep-data" id="sqlRepData"></div>';
+        const dataBox = byId('sqlRepData');
         const draw = (res) => {
-          if (res.error) { box.innerHTML = '<p class="nx-rep-err">' + I.esc(String(res.error).split('\n')[0]) + '</p>'; return; }
-          if (res.kind && res.kind !== 'query') { box.innerHTML = '<p class="nx-rep-empty">' + I.esc(res.message || 'This statement returned no rows.') + '</p>'; return; }
+          if (!dataBox) return;
+          if (res.error) { dataBox.innerHTML = '<p class="nx-rep-err">' + esc(String(res.error).split('\n')[0]) + '</p>'; return; }
+          if (res.kind && res.kind !== 'query') { dataBox.innerHTML = '<p class="nx-rep-empty">' + esc(res.message || 'This statement returned no rows.') + '</p>'; return; }
           const meta = '<p class="nx-rep-meta">' + (res.rows || []).length + ' row' + ((res.rows || []).length === 1 ? '' : 's') + (res.ms != null ? ' · ' + (res.ms / 1000).toFixed(2) + ' s' : '') + '</p>';
-          // an infolet report shows its chart above the full grid
           let chart = '';
           if (tab.kind === 'infolet' && tab.spec && (res.columns || []).length) {
             chart = '<div class="nx-rep-chart">' + I.cardHtml(I.compute(tab.spec, { columns: res.columns, rows: res.rows || [] })) + '</div>';
           }
-          box.innerHTML = meta + chart + I.gridHtml(res.columns || [], res.rows || [], { more: res.more });
+          dataBox.innerHTML = meta + chart + I.gridHtml(res.columns || [], res.rows || [], { more: res.more });
         };
+        const run = async (binds) => {
+          if (!(v.session && v.session.id)) { if (dataBox) dataBox.innerHTML = '<p class="nx-rep-empty">Connect to a database (Worksheet tab) to run this report.</p>'; return; }
+          if (dataBox) dataBox.innerHTML = '<p class="nx-rep-empty">Running…</p>';
+          try {
+            const rr = await sql.run(v.session.id, tab.sql, Math.max(200, Number(v.fetch) || 200), binds);
+            const b = rr.body || {};
+            REP[id] = { columns: b.columns || [], rows: b.rows || [], more: !!b.more, ms: b.ms, kind: b.kind, error: rr.ok ? (b.error || '') : ((b.error) || 'The report could not run.'), message: b.message || '' };
+            if (v.reports.active === id) draw(REP[id]);
+          } catch (e) { REP[id] = { error: (e && e.message) || 'Error' }; if (v.reports.active === id) draw(REP[id]); }
+        };
+        // wire the bind bar's Run (read the fields, remember them, run with a named-bind object)
+        if (names.length) {
+          const doRun = () => {
+            const binds = {};
+            names.forEach((nm, i) => { const el = byId('sqlRepBind-' + i); const val = el ? el.value : ''; binds[nm] = (val == null || val === '') ? null : val; });
+            rememberBinds(binds);
+            run(binds);
+          };
+          const btn = byId('sqlRepBindRun');
+          if (btn) btn.addEventListener('click', doRun);
+          box.querySelectorAll('.nx-rep-bindin').forEach((el) => el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doRun(); } }));
+        }
+        // show the cached result if we have one; else run now when there are no binds (or every bind already has a value)
         if (REP[id]) { draw(REP[id]); return; }
-        if (!(v.session && v.session.id)) { box.innerHTML = '<p class="nx-rep-empty">Connect to a database (Worksheet tab) to run this report.</p>'; return; }
-        box.innerHTML = '<p class="nx-rep-empty">Running…</p>';
-        try {
-          const run = await sql.run(v.session.id, tab.sql, Math.max(200, Number(v.fetch) || 200));
-          const b = run.body || {};
-          REP[id] = { columns: b.columns || [], rows: b.rows || [], more: !!b.more, ms: b.ms, kind: b.kind, error: run.ok ? (b.error || '') : ((b.error) || 'The report could not run.'), message: b.message || '' };
-          if (v.reports.active === id) draw(REP[id]);
-        } catch (e) { REP[id] = { error: (e && e.message) || 'Error' }; if (v.reports.active === id) draw(REP[id]); }
+        if (!names.length) { run(null); return; }
+        const allSet = names.every((nm) => (vals[nm.toLowerCase()] != null && vals[nm.toLowerCase()] !== ''));
+        if (allSet && v.session && v.session.id) { const binds = {}; names.forEach((nm) => { binds[nm] = vals[nm.toLowerCase()]; }); run(binds); }
+        else if (dataBox) dataBox.innerHTML = '<p class="nx-rep-empty">This report needs bind values. Enter them above, then Run.</p>';
       }, 30);
     }
 

@@ -22,6 +22,9 @@ try {
   const r = store.saveQuery({ name: 'Equipment master', sql: 'select * from eqr_equipment_master', conn: 'PRODDB', description: 'the base table' }, 'rite.user');
   T.check('saved with an id, name, sql, conn, by, timestamps', r.ok && r.query.id && r.query.name === 'Equipment master' && r.query.conn === 'PRODDB' && r.query.by === 'rite.user' && r.query.createdAt === clock.toISOString() && r.query.runs === 0, JSON.stringify(r));
   T.check('a name is required, and SQL is required', !store.saveQuery({ sql: 'x' }, 'u').ok && !store.saveQuery({ name: 'x' }, 'u').ok);
+  const rb = store.saveQuery({ name: 'By request', sql: 'select * from er where num = :request_number', conn: 'PRODDB', binds: { request_number: '10086' } }, 'rite.user');
+  T.check('bind values are saved with the query and come back on get', rb.ok && store.getQuery(rb.query.id).binds.request_number === '10086');
+  store.removeQuery(rb.query.id); // keep the later counts clean
 
   T.section('update (dedupe by name + connection) vs a new one on a different connection');
   clock = new Date('2026-11-24T10:05:00Z');

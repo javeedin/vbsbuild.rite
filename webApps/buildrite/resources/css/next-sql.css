@@ -294,3 +294,10 @@
 /* auto-connect toggle in the connections panel */
 .nx-sql-auto { display: flex; align-items: center; gap: 8px; margin: 8px 2px 2px; font-size: 12.5px; color: var(--nx-ink, #16212c); cursor: pointer; }
 .nx-sql-auto input { cursor: pointer; }
+
+/* a report's bind bar (:placeholders) — shown with the saved value, editable, then Run */
+.nx-rep-binds { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; padding: 10px 12px; margin: 0 0 10px; border: 1px solid #dbe4f3; border-radius: 9px; background: #f4f8ff; }
+.nx-rep-bindlbl { align-self: center; font-size: 12px; font-weight: 700; color: #1d4f91; }
+.nx-rep-bindf { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font-weight: 600; color: var(--nx-ink, #16212c); }
+.nx-rep-bindin { font-weight: 400; min-width: 150px; }
+.nx-rep-data { min-height: 40px; }
