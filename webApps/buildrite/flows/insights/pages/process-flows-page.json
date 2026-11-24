@@ -52,7 +52,8 @@
     "edgeSavedAt": { "type": "string", "defaultValue": "", "description": "When the edge paths were last saved with the flow (ISO)." },
     "edgeSaving": { "type": "any", "defaultValue": "", "description": "Truthy while the edge paths are being saved." },
     "edgePreview": { "type": "string", "defaultValue": "", "description": "The edge-paths document HTML shown in the PDF preview overlay ('' = closed)." },
-    "edgePdfBusy": { "type": "any", "defaultValue": "", "description": "Truthy while the PDF is being made from the edge-paths preview." }
+    "edgePdfBusy": { "type": "any", "defaultValue": "", "description": "Truthy while the PDF is being made from the edge-paths preview." },
+    "edgeRunAll": { "type": "any", "defaultValue": "", "description": "Progress ('k/n') while Run all is running every API-level edge; '' when idle." }
   },
   "eventListeners": {
     "vbEnter": { "chains": [ { "chain": "pfChain", "parameters": { "op": "load", "idx": "", "key": "", "value": "", "input": "" } } ] },

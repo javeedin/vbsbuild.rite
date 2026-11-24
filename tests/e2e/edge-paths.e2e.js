@@ -118,6 +118,12 @@ const settle = (page, ms) => page.waitForTimeout(ms || 250);
     T.check('Run anyway sends the mutated POST (empty body) to the backend', env.writes.length === beforeWrites + 1 && wrote && wrote.method === 'POST' && /\/shop\/v1\/orders$/.test(wrote.path) && JSON.stringify(wrote.body) === '{}', JSON.stringify(wrote && { m: wrote.method, p: wrote.path, b: wrote.body }));
     T.check('the edge catches that the bad input was accepted (a bold FAIL badge), and does NOT tick it covered', /FAIL/.test(await text(edge('1:0') + ' .nx-pf-edgepill')) && /accepted|not rejected/i.test(await text(edge('1:0') + ' .nx-pf-edgeverdicttext')) && !(await page.isChecked(edge('1:0') + ' [data-op="edgeCheck"]')), await text(edge('1:0') + ' .nx-pf-edgeverdicttext'));
 
+    T.section('Run all runs every runnable edge and tallies the result');
+    await page.click('#pfEdgeRunAll'); // the confirm dialog is auto-accepted by page.on('dialog')
+    await page.waitForFunction(() => /Ran \d+ edge/.test((document.getElementById('pfEdgeNote') || {}).textContent || ''), null, { timeout: 30000 });
+    const note = await text('#pfEdgeNote');
+    T.check('Run all reports a pass / fail tally', /Ran \d+ edge path/.test(note) && /passed/.test(note) && /failed/.test(note), note);
+
     T.section('the Checklist tab reflects what is covered');
     await page.click('[data-op="edgeTab"][data-key="checklist"]');
     await page.waitForSelector('.nx-pf-chk', { timeout: 10000 });

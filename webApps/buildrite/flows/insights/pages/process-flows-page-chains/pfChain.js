@@ -206,6 +206,43 @@ define([
   // the top. Capture its scroll and restore it across the next few frames so the view stays where the user is.
   const edgeBody = () => (typeof document !== 'undefined' ? document.querySelector('.nx-pf-edgedlg .nx-pf-featbody') : null);
   function keepEdgeScroll() { const b = edgeBody(); if (!b) return; const top = b.scrollTop; [0, 30, 80, 160].forEach((ms) => setTimeout(() => { const el = edgeBody(); if (el) el.scrollTop = top; }, ms)); }
+  // Run one API-level edge: resolve its API on the step, mutate the recorded request to the edge condition, send it and
+  // grade the response. opts.auto sends writes without the "changes data" gate (Run anyway / Run all); opts.restore keeps
+  // the dialog body's scroll across the re-renders. Returns the verdict ('pass'|'fail'|'warn'|'na'|'needsConfirm'|'').
+  async function runEdge(v, si, ei, opts) {
+    opts = opts || {};
+    const restore = typeof opts.restore === 'function' ? opts.restore : function () {};
+    const key = si + ':' + ei;
+    const steps = (v.edgeModel && v.edgeModel.steps) || [];
+    const edge = steps[si] && steps[si].edges[ei];
+    if (!edge) return '';
+    const setT = (st) => { v.edgeTests = Object.assign({}, v.edgeTests || {}, { [key]: st }); restore(); };
+    if (!ET.runnable(edge)) { setT({ ran: true, verdict: 'na', text: 'This edge is about the screen or an outside system — verify it by hand, then tick it covered.' }); return 'na'; }
+    const page = ((MODEL && MODEL.pages) || [])[si];
+    if (!page) { setT({ ran: true, verdict: 'na', text: 'The step could not be matched to a page.' }); return 'na'; }
+    setT({ running: true });
+    try {
+      const list = page.page ? await apisForPage(v, page.page) : [];
+      const em = ET.methodOf(edge), ep = ET.pathOf(edge);
+      const api = list.filter((a) => String(a.method || 'GET').toUpperCase() === em && pathMatches(a.path, ep))[0]
+        || list.filter((a) => pathMatches(a.path, ep) || pathMatches(ep, a.path))[0] || null;
+      if (!api || !api.endpoint) { setT({ ran: true, verdict: 'na', text: 'Couldn’t match “' + edge.stresses + '” to an API on this page — open the page’s APIs and Test it with your own data.' }); return 'na'; }
+      if (api.report) { setT({ ran: true, verdict: 'na', text: 'This is a BI Publisher report — run it from Oracle BIP Reporting.' }); return 'na'; }
+      const base = reqFromCall(api, callForApi(api, page.calls || []));
+      const plan = ET.plan(edge, { params: base.params, query: base.extra, body: base.body });
+      const expect = ET.classify(edge).expect;
+      let r = (await API.run({ endpoint: api.endpoint, params: plan.params, extra: plan.query, body: plan.body, confirm: !!opts.auto })).body || {};
+      if (plan.twice && r.ok && !r.needsConfirm) r = (await API.run({ endpoint: api.endpoint, params: plan.params, extra: plan.query, body: plan.body, confirm: true })).body || {};
+      const result = { status: (r.status !== undefined && r.status !== null) ? r.status : null, ok: !!r.ok, rows: r.table ? r.table.total : null, error: r.fault || r.error || '' };
+      const g = r.needsConfirm ? null : ET.grade(expect, result);
+      setT({ ran: true, running: false, needsConfirm: !!r.needsConfirm, message: r.needsConfirm ? (r.error || 'This changes data — Run anyway to send it.') : '',
+        reqText: plan.method + ' ' + ep, planNote: plan.note, expectLabel: (expect && expect.label) || '',
+        status: result.status, ms: (r.ms != null ? r.ms : null), rows: result.rows, body: trimResp(r.pretty),
+        verdict: g ? g.verdict : '', pass: g ? g.pass : false, text: g ? g.text : '' });
+      if (g && g.pass) { v.edgeChecks = Object.assign({}, v.edgeChecks || {}, { [key]: true }); restore(); }
+      return r.needsConfirm ? 'needsConfirm' : (g ? g.verdict : '');
+    } catch (e) { setT({ ran: true, running: false, verdict: 'fail', pass: false, text: String((e && e.message) || e) }); return 'fail'; }
+  }
 
   /** Read the page rows' inputs from the DOM into MODEL (name / note, and the matched catalog page). pedit keeps MODEL
    *  current on every keystroke, but this is called before any structural change or save so MODEL always matches what is
@@ -730,7 +767,7 @@ define([
         foldRows(v);
         const f = readEditor(v);
         if (!(f.pages || []).length) { say(false, 'This process flow has no pages to work out edge paths from.'); return; }
-        v.edgeDlg = true; v.edgeErr = ''; v.edgeNote = ''; v.edgeModel = null; v.edgeDraft = null; v.edgeSummary = null; v.edgeChecks = {}; v.edgeTests = {}; v.edgeTab = 'steps'; v.edgePreview = '';
+        v.edgeDlg = true; v.edgeErr = ''; v.edgeNote = ''; v.edgeModel = null; v.edgeDraft = null; v.edgeSummary = null; v.edgeChecks = {}; v.edgeTests = {}; v.edgeRunAll = ''; v.edgeTab = 'steps'; v.edgePreview = '';
         v.edgeGeneratedAt = ''; v.edgeSavedAt = ''; v.edgeSource = '';
         const saved = MODEL && MODEL.edges;
         if (saved && Array.isArray(saved.draft) && saved.draft.length) {
@@ -859,42 +896,32 @@ define([
       if (op === 'edgeRun' || op === 'edgeRunGo') {
         const mm = /^(\d+):(\d+)$/.exec(String(key || '')); // page steps only; the flow-wide group ('g') is not API-runnable
         if (!mm) return;
-        const si = Number(mm[1]), ei = Number(mm[2]);
-        const steps = (v.edgeModel && v.edgeModel.steps) || [];
-        const edge = steps[si] && steps[si].edges[ei];
-        if (!edge) return;
+        foldRows(v);
         const b0 = edgeBody();
         const keepTop = b0 ? b0.scrollTop : null;
-        const restoreScroll = () => { if (keepTop == null) return; [0, 30, 80, 160].forEach((ms) => setTimeout(() => { const el = edgeBody(); if (el) el.scrollTop = keepTop; }, ms)); };
-        const setT = (st) => { v.edgeTests = Object.assign({}, v.edgeTests || {}, { [key]: st }); restoreScroll(); };
-        if (!ET.runnable(edge)) { setT({ ran: true, verdict: 'na', text: 'This edge is about the screen or an outside system — verify it by hand, then tick it covered.' }); return; }
+        const restore = () => { if (keepTop == null) return; [0, 30, 80, 160].forEach((ms) => setTimeout(() => { const el = edgeBody(); if (el) el.scrollTop = keepTop; }, ms)); };
+        await runEdge(v, Number(mm[1]), Number(mm[2]), { auto: op === 'edgeRunGo', restore });
+        return;
+      }
+      // Run all the API-level edges at once and tally the result (writes are sent, after one confirm that says so).
+      if (op === 'edgeRunAll') {
+        if (v.edgeRunAll) return;
+        const steps = (v.edgeModel && v.edgeModel.steps) || [];
+        const list = [];
+        steps.forEach((s, si) => (s.edges || []).forEach((e, ei) => { if (ET.runnable(e)) list.push({ si: si, ei: ei, write: /^(POST|PUT|PATCH|DELETE)$/.test(ET.methodOf(e)) }); }));
+        if (!list.length) { v.edgeNote = 'No runnable edge paths here — the rest are checked by hand (UI / outside systems).'; return; }
+        const writes = list.filter((x) => x.write).length;
+        if (typeof window !== 'undefined' && window.confirm && !window.confirm('Run all ' + list.length + ' edge path(s)?' + (writes ? '\n\n' + writes + ' of them change data (POST / PUT / PATCH / DELETE) and WILL be sent to the backend.' : ''))) return;
         foldRows(v);
-        const pg = (MODEL && MODEL.pages) || [];
-        const page = pg[si];
-        if (!page) { setT({ ran: true, verdict: 'na', text: 'The step could not be matched to a page.' }); return; }
-        setT({ running: true });
+        const b0 = edgeBody();
+        const keepTop = b0 ? b0.scrollTop : null;
+        const restore = () => { if (keepTop == null) return; [0, 40, 120].forEach((ms) => setTimeout(() => { const el = edgeBody(); if (el) el.scrollTop = keepTop; }, ms)); };
         try {
-          const list = page.page ? await apisForPage(v, page.page) : [];
-          const em = ET.methodOf(edge), ep = ET.pathOf(edge);
-          const api = list.filter((a) => String(a.method || 'GET').toUpperCase() === em && pathMatches(a.path, ep))[0]
-            || list.filter((a) => pathMatches(a.path, ep) || pathMatches(ep, a.path))[0] || null;
-          if (!api || !api.endpoint) { setT({ ran: true, verdict: 'na', text: 'Couldn’t match “' + edge.stresses + '” to an API on this page — open the page’s APIs and Test it with your own data.' }); return; }
-          if (api.report) { setT({ ran: true, verdict: 'na', text: 'This is a BI Publisher report — run it from Oracle BIP Reporting.' }); return; }
-          const base = reqFromCall(api, callForApi(api, page.calls || []));
-          const plan = ET.plan(edge, { params: base.params, query: base.extra, body: base.body });
-          const expect = ET.classify(edge).expect;
-          const confirm = op === 'edgeRunGo';
-          let r = (await API.run({ endpoint: api.endpoint, params: plan.params, extra: plan.query, body: plan.body, confirm })).body || {};
-          // duplicate submission: the real test is the second send (only when the first went through, not a confirm gate)
-          if (plan.twice && r.ok && !r.needsConfirm) r = (await API.run({ endpoint: api.endpoint, params: plan.params, extra: plan.query, body: plan.body, confirm: true })).body || {};
-          const result = { status: (r.status !== undefined && r.status !== null) ? r.status : null, ok: !!r.ok, rows: r.table ? r.table.total : null, error: r.fault || r.error || '' };
-          const g = r.needsConfirm ? null : ET.grade(expect, result);
-          setT({ ran: true, running: false, needsConfirm: !!r.needsConfirm, message: r.needsConfirm ? (r.error || 'This changes data — Run anyway to send it.') : '',
-            reqText: plan.method + ' ' + ep, planNote: plan.note, expectLabel: (expect && expect.label) || '',
-            status: result.status, ms: (r.ms != null ? r.ms : null), rows: result.rows, body: trimResp(r.pretty),
-            verdict: g ? g.verdict : '', pass: g ? g.pass : false, text: g ? g.text : '' });
-          if (g && g.pass) { v.edgeChecks = Object.assign({}, v.edgeChecks || {}, { [key]: true }); restoreScroll(); } // a pass marks it covered
-        } catch (e) { setT({ ran: true, running: false, verdict: 'fail', pass: false, text: String((e && e.message) || e) }); }
+          for (let k = 0; k < list.length; k++) { v.edgeRunAll = (k + 1) + '/' + list.length; await runEdge(v, list[k].si, list[k].ei, { auto: true, restore }); }
+        } finally { v.edgeRunAll = ''; }
+        let pass = 0, fail = 0, warn = 0, other = 0;
+        list.forEach((x) => { const t = (v.edgeTests || {})[x.si + ':' + x.ei] || {}; if (t.verdict === 'pass') pass++; else if (t.verdict === 'fail') fail++; else if (t.verdict === 'warn') warn++; else other++; });
+        v.edgeNote = 'Ran ' + list.length + ' edge path(s): ' + pass + ' passed · ' + fail + ' failed' + (warn ? ' · ' + warn + ' to check' : '') + (other ? ' · ' + other + ' need a look' : '') + '.';
         return;
       }
 
