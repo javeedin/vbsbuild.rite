@@ -29,7 +29,7 @@ const DS = require(path.join(ROOT, 'desktop', 'lib', 'devserver.js'));
 
 const QUIET = /not fully qualified|Skip URL mapping/;
 // the desktop app's engines a script can stand in for (passed to Build.Rite's local server as they are)
-const STORES = ['sqlStore', 'aiStore', 'jiraStore', 'recStore', 'transcribe', 'minutesStore', 'followupsStore', 'fddStore', 'analysisStore', 'pagesStore',
+const STORES = ['sqlStore', 'aiStore', 'savedSqlStore', 'jiraStore', 'recStore', 'transcribe', 'minutesStore', 'followupsStore', 'fddStore', 'analysisStore', 'pagesStore',
   'fixStore', 'crStore', 'flowStore', 'processFlowStore', 'recorder', 'assistantStore', 'issuesStore', 'apiStore', 'apiProject', 'scenarioStore', 'appWindow', 'htmlToPdf', 'fusionSqlStore', 'fusionSetupsStore', 'bipStore', 'vbsStore', 'vbsFind', 'vbsRun', 'vbsConsole', 'vbsOpenPath', 'vbsPickFolder'];
 
 /** A BI Publisher runReport SOAP answer whose report holds `rows` (each a { TAG: value } object) as G_1 rows. */

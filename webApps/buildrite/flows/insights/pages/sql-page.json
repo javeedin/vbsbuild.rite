@@ -133,6 +133,14 @@
     "tone": "",
     "busy": ""
    }
+  },
+  "saved": {
+   "type": "any",
+   "defaultValue": { "list": [], "open": false, "error": "" }
+  },
+  "saveDlg": {
+   "type": "any",
+   "defaultValue": { "open": false, "name": "", "description": "", "share": true, "busy": "", "error": "" }
   }
  },
  "eventListeners": {
@@ -527,7 +535,15 @@
      }
     }
    ]
-  }
+  },
+  "onSavedToggle": { "chains": [ { "chain": "savedChain", "parameters": { "op": "toggle" } } ] },
+  "onSavedOpen": { "chains": [ { "chain": "savedChain", "parameters": { "op": "open", "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
+  "onSavedRemove": { "chains": [ { "chain": "savedChain", "parameters": { "op": "remove", "id": "{{ $event.currentTarget.dataset.id }}" } } ] },
+  "onSaveDlgOpen": { "chains": [ { "chain": "savedChain", "parameters": { "op": "dlgOpen" } } ] },
+  "onSaveDlgClose": { "chains": [ { "chain": "savedChain", "parameters": { "op": "dlgClose" } } ] },
+  "onSaveField": { "chains": [ { "chain": "savedChain", "parameters": { "op": "field", "key": "{{ $event.target.dataset.field }}", "value": "{{ $event.target.value }}" } } ] },
+  "onSaveCheck": { "chains": [ { "chain": "savedChain", "parameters": { "op": "field", "key": "share", "value": "{{ $event.target.checked }}" } } ] },
+  "onSaveGo": { "chains": [ { "chain": "savedChain", "parameters": { "op": "save" } } ] }
  },
  "imports": {
   "components": {

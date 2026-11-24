@@ -59,6 +59,14 @@ define([], function () {
     aiModels: function (provider) { return call('ai/models', 'POST', { provider: provider }); },
     aiAsk: function (session, question, sql) { return call('ai/ask', 'POST', { session: session, question: question, sql: sql }); },
     // A plain chat turn (no SQL), for features that just need the LLM to rewrite or format text (e.g. Minutes "Format by AI").
-    aiChat: function (system, user) { return call('ai/chat', 'POST', { system: system, user: user }); }
+    aiChat: function (system, user) { return call('ai/chat', 'POST', { system: system, user: user }); },
+    // ── The SQL library (saved queries, infolets, dashboards), shared with the team on the data branch. `commit` also
+    //    commits + pushes it (Save & share); without it the change is saved on this PC's worktree only. ──
+    savedList: function (conn) { return call('saved' + (conn ? '?conn=' + encodeURIComponent(conn) : ''), 'GET'); },
+    savedGet: function (id) { return call('saved/get', 'POST', { id: id }); },
+    saveQuery: function (rec, commit) { return call('saved/save', 'POST', Object.assign({ commit: !!commit, push: commit !== 'local' }, rec)); },
+    removeQuery: function (id, commit) { return call('saved/remove', 'POST', { id: id, commit: !!commit }); },
+    ranQuery: function (id) { return call('saved/ran', 'POST', { id: id }); },
+    savedGitSave: function (message) { return call('saved/git/save', 'POST', { message: message, push: true }); }
   };
 });

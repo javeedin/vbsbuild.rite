@@ -35,7 +35,8 @@ const FDD_RES = 'webApps/buildrite/resources/fdd';
 const FDD_DOCS = 'docs/fdd';
 const CODE_HISTORY = 'code-history';
 const ISSUES = 'issues';
-const DATA_PATHS = [FDD_DOCS, FDD_RES, PAGES_RES, CODE_HISTORY, ISSUES];
+const SQL_RES = 'webApps/buildrite/resources/sql';
+const DATA_PATHS = [FDD_DOCS, FDD_RES, PAGES_RES, CODE_HISTORY, ISSUES, SQL_RES];
 const README = [
   '# Build.Rite data',
   '',
@@ -107,6 +108,7 @@ function open(opts) {
       // an issue: the later state, and every comment and step of both (two people answering at once both keep their words)
       if (file.indexOf(ISSUES + '/') === 0) return JSON.stringify(require('./issues').mergeIssue(JSON.parse(ours), JSON.parse(theirs)), null, 1) + '\n';
       if (file.indexOf(CODE_HISTORY + '/') === 0) { const a = JSON.parse(ours), b = JSON.parse(theirs); return str(a.updatedAt) >= str(b.updatedAt) ? ours : theirs; } // the later state of a change
+      if (file === SQL_RES + '/saved.json') return require('./savedSql').mergeSaved(ours, theirs); // the SQL library: merge by record id, newest wins
     } catch (e) { /* not JSON as expected: keep ours */ }
     return null;
   }

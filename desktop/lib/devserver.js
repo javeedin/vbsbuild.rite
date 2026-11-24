@@ -1873,6 +1873,28 @@ function createDevServer(o) {
           if (pathname === '/__sql/rollback' && post) return json(200, await sq.rollback(b.session));
           if (pathname === '/__sql/cancel' && post) return json(200, await sq.cancel(b.session));
           if (pathname === '/__sql/disconnect' && post) return json(200, await sq.disconnect(b.session));
+          // ── the SQL library (saved queries, infolets, dashboards) — shared on the data branch (o.savedSqlStore) ──
+          {
+            const sv = o.savedSqlStore;
+            const who = () => { try { const id = o.getIdentity && o.getIdentity(); return (id && (id.displayName || id.username)) || ''; } catch (e) { return ''; } };
+            if (pathname === '/__sql/saved' && req.method === 'GET') return json(200, sv ? { ok: true, queries: sv.listQueries(u.searchParams.get('conn')), git: sv.info() } : { ok: false, error: 'The SQL library needs the desktop app.' });
+            if (pathname === '/__sql/saved/get' && post) return json(200, sv ? { ok: true, query: sv.getQuery(b.id) } : { ok: false, error: 'The SQL library needs the desktop app.' });
+            if (pathname === '/__sql/saved/save' && post) {
+              if (!sv) return json(200, { ok: false, error: 'The SQL library needs the desktop app.' });
+              const r = sv.saveQuery(b, who());
+              if (r.ok && b.commit) { r.git = await sv.gitSave({ message: 'SQL query: ' + (r.query.name || ''), push: b.push !== false }); }
+              log(`SQL save "${b.name || ''}" -> ${r.ok ? 'saved' + (r.git ? (r.git.pushed ? ', pushed' : (r.git.committed ? ', committed' : '')) : '') : r.error}`);
+              return json(200, r);
+            }
+            if (pathname === '/__sql/saved/remove' && post) {
+              if (!sv) return json(200, { ok: false, error: 'The SQL library needs the desktop app.' });
+              const r = sv.removeQuery(b.id);
+              if (r.ok && b.commit) { r.git = await sv.gitSave({ message: 'SQL query removed', push: b.push !== false }); }
+              return json(200, r);
+            }
+            if (pathname === '/__sql/saved/ran' && post) return json(200, sv ? sv.ranQuery(b.id) : { ok: false });
+            if (pathname === '/__sql/saved/git/save' && post) return json(200, sv ? await sv.gitSave({ message: b.message || 'SQL library: update', push: b.push !== false }) : { ok: false, error: 'The SQL library needs the desktop app.' });
+          }
           return json(404, { error: 'Not found' });
         })().catch((e) => json(200, { error: e.message }));
         return undefined;

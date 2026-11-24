@@ -199,6 +199,13 @@ async function fddStore() {
   if (!fddStoreInst) fddStoreInst = require('./lib/fdd').open({ root: path.join(__dirname, '..'), data: await dataBranch(), gitPath: commandPath('git') || 'git' });
   return fddStoreInst;
 }
+// The SQL library (the SQL tool): saved queries, infolets and dashboards shared through git
+// (webApps/buildrite/resources/sql on the data branch), so every user has the same ones.
+let savedSqlStoreInst = null;
+async function savedSqlStore() {
+  if (!savedSqlStoreInst) savedSqlStoreInst = require('./lib/savedSql').open({ root: path.join(__dirname, '..'), data: await dataBranch(), gitPath: commandPath('git') || 'git' });
+  return savedSqlStoreInst;
+}
 // What Build.Rite read from an app's own files (lib/appProfile.js): its layout, Visual Builder version and build tool, its
 // service connections and how they sign in, its roles, its components. Every VB app is different: nothing is assumed.
 const appProfile = require('./lib/appProfile');
@@ -342,6 +349,8 @@ async function buildRiteOptions() {
     // SQL: the desktop app connects to Oracle for it (node-oracledb, Thin mode); Ask AI: the LLM chosen and its key
     sqlStore: await sqlStore(),
     aiStore: await aiStore(),
+    savedSqlStore: await savedSqlStore(), // the SQL library (saved queries, infolets, dashboards), shared on the data branch
+
     // Jira stories: Connect Jira keeps the site, email, token and project key on this PC; the proxy adds the token
     jiraStore: jiraStore(),
     // Record on a Jira story: its recordings and screenshots, kept on this PC

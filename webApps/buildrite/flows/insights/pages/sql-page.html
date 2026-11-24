@@ -111,6 +111,26 @@
                 <option value="500" :selected="[[ $variables.fetch === 500 ]]">500</option><option value="1000" :selected="[[ $variables.fetch === 1000 ]]">1,000</option>
                 <option value="5000" :selected="[[ $variables.fetch === 5000 ]]">5,000</option>
               </select> rows</label>
+            <!-- the SQL library: save the worksheet's SQL and reopen a saved one (shared with the team on the data branch) -->
+            <button type="button" class="nx-btn nx-btn--sm" id="sqlSaveQuery" on-click="[[ $listeners.onSaveDlgOpen ]]" :disabled="[[ !!$variables.busy ]]" title="Save this SQL to the shared library">
+              <span class="oj-ux-ico-save" aria-hidden="true"></span>Save query</button>
+            <div class="nx-sql-saved" id="sqlSaved">
+              <button type="button" class="nx-btn nx-btn--sm" id="sqlSavedBtn" on-click="[[ $listeners.onSavedToggle ]]" :disabled="[[ !!$variables.busy ]]" aria-haspopup="true" :aria-expanded="[[ $variables.saved.open ? 'true' : 'false' ]]" title="Open a saved query">
+                <span class="oj-ux-ico-table" aria-hidden="true"></span>Saved<span class="oj-ux-ico-chevron-down" aria-hidden="true"></span></button>
+              <oj-bind-if test="[[ $variables.saved.open ]]">
+                <div class="nx-menu nx-sql-savedmenu" role="menu">
+                  <oj-bind-if test="[[ ($variables.saved.list || []).length === 0 ]]"><div class="nx-sql-savedempty" id="sqlSavedEmpty">No saved queries yet. Write some SQL, then <b>Save query</b>.</div></oj-bind-if>
+                  <oj-bind-for-each data="[[ $variables.saved.list ]]"><template data-oj-as="q">
+                    <div class="nx-sql-savedrow">
+                      <button type="button" class="nx-sql-savedname" :data-id="[[ q.data.id ]]" on-click="[[ $listeners.onSavedOpen ]]" :title="[[ q.data.description || q.data.name ]]">
+                        <span class="oj-ux-ico-document" aria-hidden="true"></span><span class="nx-sql-savedtitle"><oj-bind-text value="[[ q.data.name ]]"></oj-bind-text></span>
+                        <oj-bind-if test="[[ !!q.data.conn ]]"><span class="nx-sql-savedconn"><oj-bind-text value="[[ q.data.conn ]]"></oj-bind-text></span></oj-bind-if></button>
+                      <button type="button" class="nx-iconbtn nx-iconbtn--sm nx-sql-saveddel" :data-id="[[ q.data.id ]]" on-click="[[ $listeners.onSavedRemove ]]" aria-label="Delete this saved query" title="Delete"><span class="oj-ux-ico-trash" aria-hidden="true"></span></button>
+                    </div>
+                  </template></oj-bind-for-each>
+                </div>
+              </oj-bind-if>
+            </div>
             <oj-bind-if test="[[ !!$variables.session.id ]]">
               <button type="button" class="nx-btn nx-btn--sm nx-btn--plain" id="sqlDisconnect" on-click="[[ $listeners.onDisconnect ]]" :disabled="[[ !!$variables.busy ]]">Disconnect</button>
             </oj-bind-if>
@@ -437,6 +457,31 @@
           </div>
         </footer>
       </section>
+    </div>
+  </oj-bind-if>
+
+  <!-- Save query: name it and (optionally) share it with the team on the data branch -->
+  <oj-bind-if test="[[ $variables.saveDlg.open ]]">
+    <div class="nx-modal" id="sqlSaveModal">
+      <div class="nx-modal-scrim" on-click="[[ $listeners.onSaveDlgClose ]]"></div>
+      <div class="nx-dialog nx-sql-savedlg" role="dialog" aria-modal="true" aria-label="Save query">
+        <div class="nx-dialog-head">
+          <h2 class="nx-dialog-title">Save query</h2>
+          <button type="button" class="nx-iconbtn" id="sqlSaveClose" on-click="[[ $listeners.onSaveDlgClose ]]" aria-label="Close"><span class="oj-ux-ico-close" aria-hidden="true"></span></button>
+        </div>
+        <div class="nx-dialog-body nx-sql-savebody">
+          <label class="nx-sql-savefield">Name
+            <input id="sqlSaveName" class="nx-sql-in" type="text" autocomplete="off" data-field="name" :value="[[ $variables.saveDlg.name ]]" on-input="[[ $listeners.onSaveField ]]" placeholder="e.g. Equipment master — inventory tracked"/></label>
+          <label class="nx-sql-savefield">Description <span class="nx-sql-opt">(optional)</span>
+            <input id="sqlSaveDesc" class="nx-sql-in" type="text" autocomplete="off" data-field="description" :value="[[ $variables.saveDlg.description ]]" on-input="[[ $listeners.onSaveField ]]" placeholder="what it is for"/></label>
+          <label class="nx-sql-savesh"><input id="sqlSaveShare" type="checkbox" :checked="[[ $variables.saveDlg.share !== false ]]" on-change="[[ $listeners.onSaveCheck ]]"> Share with the team <span class="nx-sql-opt">(commit &amp; push to the data branch)</span></label>
+          <oj-bind-if test="[[ !!$variables.saveDlg.error ]]"><div class="nx-sql-dlgstatus nx-sql-dlgstatus--bad" id="sqlSaveErr" role="status"><oj-bind-text value="[[ $variables.saveDlg.error ]]"></oj-bind-text></div></oj-bind-if>
+        </div>
+        <footer class="nx-dialog-foot nx-sql-dlgfoot">
+          <button type="button" class="nx-btn nx-btn--plain" id="sqlSaveCancel" on-click="[[ $listeners.onSaveDlgClose ]]">Cancel</button>
+          <button type="button" class="nx-btn nx-btn--primary" id="sqlSaveGo" on-click="[[ $listeners.onSaveGo ]]" :disabled="[[ !!$variables.saveDlg.busy ]]"><oj-bind-text value="[[ $variables.saveDlg.busy ? 'Saving…' : 'Save' ]]"></oj-bind-text></button>
+        </footer>
+      </div>
     </div>
   </oj-bind-if>
 </div>
