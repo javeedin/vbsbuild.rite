@@ -284,9 +284,14 @@ const DOC_UI_CSS = `
 .doc-toolbar button{padding:7px 12px;border:1px solid #ccc;border-radius:6px;background:#f5f4f2;cursor:pointer;font:inherit;white-space:nowrap}
 .doc-toolbar .doc-count{color:#6f6c67;font-size:12px;margin-left:auto}
 body.apis-only .calldata{display:none}
+body.apis-only li.api-open .calldata{display:block}
 li.api-hide{display:none}
 .apis.sec-hide{display:none}
-@media print{.doc-toolbar{display:none!important}body.apis-only .calldata{display:block!important}}
+.api-head.clickable{cursor:pointer}
+.api-caret{display:none;color:#6f6c67;margin-right:6px;font-size:11px;transition:transform .1s}
+body.apis-only .has-detail .api-caret{display:inline-block}
+li.api-open .api-caret{transform:rotate(90deg)}
+@media print{.doc-toolbar{display:none!important}body.apis-only .calldata{display:block!important}.api-caret{display:none!important}}
 `;
 const DOC_TOOLBAR = '<div class="doc-toolbar">'
   + '<input id="apiFilter" type="search" placeholder="Filter APIs — method, path, status…" aria-label="Filter APIs">'
@@ -296,6 +301,13 @@ const DOC_UI_JS = `<script>(function(){
 var b=document.body,f=document.getElementById('apiFilter'),tg=document.getElementById('apiToggle'),c=document.getElementById('apiCount');
 if(!f||!tg)return;
 var items=[].slice.call(document.querySelectorAll('li[data-api]'));
+items.forEach(function(li){
+var head=li.querySelector('.api-head'),det=li.querySelector('.calldata');
+if(!head||!det)return;
+li.classList.add('has-detail');head.classList.add('clickable');
+var car=document.createElement('span');car.className='api-caret';car.textContent='\\u25B8';head.insertBefore(car,head.firstChild);
+head.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('a'))return;li.classList.toggle('api-open');});
+});
 function tog(){tg.textContent=b.classList.contains('apis-only')?'Show details':'APIs only';}
 function apply(){
 var q=(f.value||'').trim().toLowerCase(),terms=q?q.split(/\\s+/):[],shown=0;

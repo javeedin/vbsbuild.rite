@@ -91,6 +91,7 @@ const T = H.makeAsserter();
   T.check('starts collapsed (APIs only) and ships the toolbar script', /<body class="apis-only">/.test(docF) && /getElementById\('apiFilter'\)/.test(docF));
   T.check('each call carries a lower-case data-api for filtering (method + path + status)', /data-api="post \/ic\/api\/integration\/x http 401"/.test(docF) && /data-api="get \/eqp\/v1\/things http 200"/.test(docF));
   T.check('collapse hides only the call details, and print always shows them in full', /body\.apis-only \.calldata\{display:none\}/.test(docF) && /@media print\{/.test(docF) && /body\.apis-only \.calldata\{display:block!important\}/.test(docF) && /\.doc-toolbar\{display:none!important\}/.test(docF));
+  T.check('a single API can be expanded while the rest stay collapsed (per-row open + caret + click)', /body\.apis-only li\.api-open \.calldata\{display:block\}/.test(docF) && /api-caret/.test(docF) && /classList\.add\('has-detail'\)/.test(docF) && /classList\.toggle\('api-open'\)/.test(docF));
 
   T.section('recorded API call data (kept with each page as the test data)');
   const withCalls = P.cleanFlow({ name: 'Rec', pages: [{ name: 'A', calls: [
