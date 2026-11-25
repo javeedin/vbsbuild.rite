@@ -83,6 +83,15 @@ const T = H.makeAsserter();
   const docS = P.renderDocument({ name: 'Doc', pages: [{ name: 'A', page: 'app/a', shot: { src: 'page', data: img }, apis: [{ method: 'GET', name: 'getThings', path: '/things', writes: true }] }] }, {});
   T.check('the document embeds the screenshot and lists the page\'s APIs', /class="shot"/.test(docS) && docS.indexOf(img) !== -1 && /class="apis"/.test(docS) && /getThings/.test(docS) && /\/things/.test(docS) && /changes data/.test(docS));
 
+  T.section('preview: filter + collapse (APIs only)');
+  const docF = P.renderDocument({ name: 'Doc', pages: [{ name: 'A', page: 'app/a', calls: [
+    { method: 'POST', url: 'https://host/ic/api/integration/x', path: '/ic/api/integration/x', status: 401 },
+    { method: 'get', url: 'https://host/eqp/v1/things', path: '/eqp/v1/things', status: 200 }] }] }, {});
+  T.check('a filter box and an "APIs only" / details toggle are in the document', /id="apiFilter"/.test(docF) && /id="apiToggle"/.test(docF) && /class="doc-toolbar"/.test(docF));
+  T.check('starts collapsed (APIs only) and ships the toolbar script', /<body class="apis-only">/.test(docF) && /getElementById\('apiFilter'\)/.test(docF));
+  T.check('each call carries a lower-case data-api for filtering (method + path + status)', /data-api="post \/ic\/api\/integration\/x http 401"/.test(docF) && /data-api="get \/eqp\/v1\/things http 200"/.test(docF));
+  T.check('collapse hides only the call details, and print always shows them in full', /body\.apis-only \.calldata\{display:none\}/.test(docF) && /@media print\{/.test(docF) && /body\.apis-only \.calldata\{display:block!important\}/.test(docF) && /\.doc-toolbar\{display:none!important\}/.test(docF));
+
   T.section('recorded API call data (kept with each page as the test data)');
   const withCalls = P.cleanFlow({ name: 'Rec', pages: [{ name: 'A', calls: [
     { method: 'get', url: 'https://host/crm/v1/requests?q=open', path: '/crm/v1/requests', query: 'q=open', status: 200, response: '{"items":[]}' },

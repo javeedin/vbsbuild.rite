@@ -275,6 +275,38 @@ function callDataHtml(c) {
     + det('Response body' + (kind ? ' (' + kind + ')' : ''), c.response, !rows)
     + '</div>';
 }
+// A small viewing toolbar for the document: filter the API calls (by method / path / status) and collapse every call to
+// just its API line ("APIs only") so a long recording is readable. Preview and the downloaded HTML are interactive; the
+// toolbar is hidden when printing and the PDF always shows the details in full (the @media print rules below).
+const DOC_UI_CSS = `
+.doc-toolbar{position:sticky;top:0;z-index:50;display:flex;gap:8px;align-items:center;background:#fff;border-bottom:1px solid #e3e0da;padding:10px 12px;margin:0 0 14px}
+.doc-toolbar input{flex:1;max-width:460px;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font:inherit}
+.doc-toolbar button{padding:7px 12px;border:1px solid #ccc;border-radius:6px;background:#f5f4f2;cursor:pointer;font:inherit;white-space:nowrap}
+.doc-toolbar .doc-count{color:#6f6c67;font-size:12px;margin-left:auto}
+body.apis-only .calldata{display:none}
+li.api-hide{display:none}
+.apis.sec-hide{display:none}
+@media print{.doc-toolbar{display:none!important}body.apis-only .calldata{display:block!important}}
+`;
+const DOC_TOOLBAR = '<div class="doc-toolbar">'
+  + '<input id="apiFilter" type="search" placeholder="Filter APIs — method, path, status…" aria-label="Filter APIs">'
+  + '<button type="button" id="apiToggle">Show details</button>'
+  + '<span class="doc-count" id="apiCount"></span></div>';
+const DOC_UI_JS = `<script>(function(){
+var b=document.body,f=document.getElementById('apiFilter'),tg=document.getElementById('apiToggle'),c=document.getElementById('apiCount');
+if(!f||!tg)return;
+var items=[].slice.call(document.querySelectorAll('li[data-api]'));
+function tog(){tg.textContent=b.classList.contains('apis-only')?'Show details':'APIs only';}
+function apply(){
+var q=(f.value||'').trim().toLowerCase(),terms=q?q.split(/\\s+/):[],shown=0;
+items.forEach(function(li){var h=li.getAttribute('data-api')||'',ok=terms.every(function(t){return h.indexOf(t)>=0;});li.classList.toggle('api-hide',!ok);if(ok)shown++;});
+[].slice.call(document.querySelectorAll('.apis')).forEach(function(s){var any=s.querySelector('li[data-api]:not(.api-hide)');s.classList.toggle('sec-hide',!!q&&!any);});
+if(c)c.textContent=shown+' of '+items.length+' API'+(items.length===1?'':'s');
+}
+tg.addEventListener('click',function(){b.classList.toggle('apis-only');tog();});
+f.addEventListener('input',apply);tog();apply();
+})();</script>`;
+
 /** The whole document: a cover banner, a facts grid, the description, then the pages as a vertical card timeline. */
 function renderDocument(flow, opts) {
   const o = opts || {};
@@ -289,7 +321,9 @@ function renderDocument(flow, opts) {
         + p.apis.map((a) => {
           const call = docCallFor(a, calls);
           if (call) used.push(call);
-          return '<li><div class="api-head"><span class="m">' + esc(a.method || 'CALL') + '</span><b>' + esc(a.name || '') + '</b>'
+          const hay = ((a.method || 'CALL') + ' ' + (a.name || '') + ' ' + (a.path || '')
+            + (call && call.status != null && call.status !== '' ? ' http ' + call.status : '')).toLowerCase();
+          return '<li data-api="' + esc(hay) + '"><div class="api-head"><span class="m">' + esc(a.method || 'CALL') + '</span><b>' + esc(a.name || '') + '</b>'
             + (a.path ? ' <code>' + esc(a.path) + '</code>' : '') + (a.writes ? ' <span class="chip">changes data</span>' : '') + '</div>'
             + callDataHtml(call) + '</li>';
         }).join('')
@@ -299,8 +333,12 @@ function renderDocument(flow, opts) {
     const extra = calls.filter((c) => used.indexOf(c) === -1);
     const extraHtml = extra.length
       ? '<div class="apis"><h4>Other recorded calls (' + extra.length + ')</h4><ul>'
-        + extra.map((c) => '<li><div class="api-head"><span class="m">' + esc(str(c.method || 'GET').toUpperCase()) + '</span>'
-          + '<code>' + esc(c.path || docPathOf(c.url)) + '</code></div>' + callDataHtml(c) + '</li>').join('')
+        + extra.map((c) => {
+          const hay = (str(c.method || 'GET').toUpperCase() + ' ' + (c.path || docPathOf(c.url))
+            + (c.status != null && c.status !== '' ? ' http ' + c.status : '')).toLowerCase();
+          return '<li data-api="' + esc(hay) + '"><div class="api-head"><span class="m">' + esc(str(c.method || 'GET').toUpperCase()) + '</span>'
+            + '<code>' + esc(c.path || docPathOf(c.url)) + '</code></div>' + callDataHtml(c) + '</li>';
+        }).join('')
         + '</ul></div>'
       : '';
     return list + extraHtml;
@@ -320,7 +358,8 @@ function renderDocument(flow, opts) {
         + shotImg(p) + apiList(p) + '</div></div>';
     }).join('') + '</div>'
     : '<p class="empty">No pages yet.</p>';
-  return '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(f.name) + '</title><style>' + CSS + '</style></head><body>'
+  return '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(f.name) + '</title><style>' + CSS + DOC_UI_CSS + '</style></head><body class="apis-only">'
+    + DOC_TOOLBAR
     + '<div class="cover"><div class="kick">Process flow</div><h1>' + esc(f.name) + '</h1>'
     + '<div class="meta"><span class="pill ' + f.status + '">' + esc(STATUSES[f.status]) + '</span>' + (metaBits ? '<span>' + metaBits + '</span>' : '') + '</div></div>'
     + '<div class="facts">' + fact('Code', f.id) + fact('Area', f.area) + fact('Owner', f.owner) + fact('Status', STATUSES[f.status])
@@ -328,6 +367,7 @@ function renderDocument(flow, opts) {
     + '<h2>About this process</h2><div class="about">' + paras(f.description) + '</div>'
     + '<h2>The flow, step by step</h2>' + cards
     + '<div class="foot">Generated by Build.Rite' + (date ? ' on ' + esc(date) : '') + '. A process flow written by the team; review before use.</div>'
+    + DOC_UI_JS
     + '</body></html>';
 }
 
