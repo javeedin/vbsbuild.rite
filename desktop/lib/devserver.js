@@ -1002,11 +1002,14 @@ function createDevServer(o) {
         const post = req.method === 'POST';
         const get = (k) => u.searchParams.get(k) || '';
         const by = () => { try { const id = o.getIdentity && o.getIdentity(); return (id && (id.displayName || id.username)) || ''; } catch (e) { return ''; } };
+        // A flow carries a screenshot per page (base64), so saving / previewing one can be tens of MB — allow a generous
+        // body here (each screenshot is still capped in processFlows.js; this is the whole-flow ceiling).
+        const PFLOW_MAX = 64 * 1024 * 1024;
         const bodyOf = () => new Promise((resolve, reject) => {
           const chunks = [];
           let size = 0;
-          req.on('data', (c) => { size += c.length; if (size <= 8 * 1024 * 1024) chunks.push(c); });
-          req.on('end', () => (size > 8 * 1024 * 1024 ? reject(new Error('Too large.')) : resolve(Buffer.concat(chunks).toString('utf8'))));
+          req.on('data', (c) => { size += c.length; if (size <= PFLOW_MAX) chunks.push(c); });
+          req.on('end', () => (size > PFLOW_MAX ? reject(new Error('Too large (the flow with its screenshots must be under 64 MB — remove or shrink some page screenshots).')) : resolve(Buffer.concat(chunks).toString('utf8'))));
           req.on('error', reject);
         });
         (async () => {
