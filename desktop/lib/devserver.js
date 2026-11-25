@@ -442,7 +442,7 @@ function createDevServer(o) {
           }
           log(`${label} -> ${pres.statusCode} (${Date.now() - started} ms)${note}`);
           if (refused) {
-            problem({ kind: headers.authorization ? 'refused' : 'no-login', status: pres.statusCode });
+            problem({ kind: headers.authorization ? 'refused' : 'no-login', status: pres.statusCode, method: req.method, path: `${rest}${search}`, url: target.href });
           }
           resolve();
         });
@@ -452,7 +452,7 @@ function createDevServer(o) {
       preq.on('error', (e) => {
         log(`${label} -> FAILED: ${e.message} (${target.origin})`);
         trace(0, null, e.message);
-        problem({ kind: 'unreachable', host: target.origin, error: e.message });
+        problem({ kind: 'unreachable', host: target.origin, error: e.message, method: req.method, path: `${rest}${search}`, url: target.href });
         if (!res.headersSent) {
           send(res, 502, 'application/json', JSON.stringify({ error: `Build.Rite's local server could not reach ${name} at ${target.origin}: ${e.message}` }));
         } else {

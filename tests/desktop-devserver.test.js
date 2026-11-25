@@ -149,7 +149,10 @@ function get(port, p, opts) {
     T.eq('a 401 challenge is not passed on (no browser login box)', r401.headers['www-authenticate'], undefined);
 
     T.section('server — refused calls are reported, not left as silently empty lists');
-    T.check('a refused Fusion login is reported', problems.some((p) => p.kind === 'refused' && p.backend === 'fusion'), JSON.stringify(problems));
+    const refusedP = problems.find((p) => p.kind === 'refused' && p.backend === 'fusion');
+    T.check('a refused Fusion login is reported', !!refusedP, JSON.stringify(problems));
+    T.check('…and names the exact call that failed (so the user sees which API 401d)', !!refusedP
+      && refusedP.method === 'GET' && refusedP.path === '/fscmRestApi/resources/x' && /\/fscmRestApi\/resources\/x$/.test(refusedP.url || ''), JSON.stringify(refusedP));
     identity = { username: 'priya.raman', roles: ['SHOP_CLERK'], fusion: null };
     problems.length = 0;
     const customers = soap('/Custom/Shop/CUSTOMERS_RP.xdo', [['P_CUSTOMER_ID', '']]);

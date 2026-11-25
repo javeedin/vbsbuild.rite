@@ -1425,18 +1425,22 @@ function backendProblem(p) {
   if (warned.has(key) || !win || win.isDestroyed() || (signinWin && !signinWin.isDestroyed())) return;
   warned.add(key);
   const what = p.report ? `The ${p.report} report` : `A ${p.backend} call`;
+  // The exact call that failed, so you can see which API answered 401 (never a secret: auth is a header, not the URL).
+  const call = p.url || p.path ? `${p.method ? p.method + ' ' : ''}${p.url || p.path}` : '';
+  const api = call ? `\n\nThe call: ${call}` : '';
   const text = {
     'no-login': ['Your app\'s backend calls have no login',
       `${what} came back ${p.status}: your workspace's app runs without a backend login, so the calls VB Studio makes with its stored credential are refused. Sign in for your app (File menu) with a login that may make them.`],
     refused: ['The backend refused the login',
-      `${what} came back ${p.status} with the login you entered. Check the username and password (File → Sign in for your app…).`],
+      `${what} came back ${p.status} with the login you entered. Check the username and password (File → Sign in for your app…). If this backend signs in with its own credential (e.g. OIC/ics), add it under Sign in › Other backend logins.`],
     unreachable: [`Cannot reach ${p.backend}`,
-      `This PC could not connect to ${p.host} (${p.error}). Lists and data from ${p.backend} stay empty until it can; check the network or VPN. View → Backend calls… lists each call.`],
+      `This PC could not connect to ${p.host} (${p.error}). Lists and data from ${p.backend} stay empty until it can; check the network or VPN.`],
   }[p.kind];
   if (!text) return;
-  cpush('warn', text[0] + ': ' + text[1]);
+  const detail = text[1] + api + '\n\nView → Backend calls… lists every call with its address and result.';
+  cpush('warn', text[0] + ': ' + text[1] + (call ? ' — ' + call : ''));
   const signIn = p.kind !== 'unreachable';
-  dialog.showMessageBox(win, { type: 'warning', title: APP_NAME, message: text[0], detail: text[1], buttons: signIn ? ['Sign in…', 'Later'] : ['OK'], defaultId: 0, cancelId: signIn ? 1 : 0, noLink: true })
+  dialog.showMessageBox(win, { type: 'warning', title: APP_NAME, message: text[0], detail, buttons: signIn ? ['Sign in…', 'Later'] : ['OK'], defaultId: 0, cancelId: signIn ? 1 : 0, noLink: true })
     .then(({ response }) => { if (signIn && response === 0) openSignIn(); }).catch(() => {});
 }
 
