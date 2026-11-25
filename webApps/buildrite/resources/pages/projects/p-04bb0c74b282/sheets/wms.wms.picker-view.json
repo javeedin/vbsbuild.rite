@@ -1,0 +1,666 @@
+{
+ "id": "wms/wms/picker-view",
+ "facts": {
+  "id": "wms/wms/picker-view",
+  "app": "wms",
+  "appName": "wms",
+  "flow": "wms",
+  "page": "picker-view",
+  "label": "Picker Monitor",
+  "description": "Every picker's orders of an assignment date and how far their picking is, rebuilt from the current WMS's wms/picker-view.html and wms/picker-drill.js on Oracle's Redwood smart search page: TRIPMANAGEMENT/getpickersview and pickersviewsummary, the counts corrected from the WMS order lines, by picker / lorry / priority / loading bay / order / summary, as cards or a grid, filters, search, print status, Excel, PDF, the API information; an order opens its own screen.",
+  "route": {
+   "url": "/vp/shell/wms/picker-view",
+   "menu": "",
+   "needs": ""
+  },
+  "files": [
+   {
+    "path": "webApps/wms/flows/wms/pages/picker-view-page.json",
+    "lines": 661
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/picker-view-page.html",
+    "lines": 463
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/picker-view-page.js",
+    "lines": 968
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/picker-view-page-chains/dialogChain.js",
+    "lines": 34
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/picker-view-page-chains/exportChain.js",
+    "lines": 62
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/picker-view-page-chains/filterChain.js",
+    "lines": 44
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/picker-view-page-chains/loadChain.js",
+    "lines": 199
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/picker-view-page-chains/openChain.js",
+    "lines": 38
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/picker-view-page-chains/pagerChain.js",
+    "lines": 36
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/picker-view-page-chains/phoneChain.js",
+    "lines": 46
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/picker-view-page-chains/searchChain.js",
+    "lines": 35
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/picker-view-page-chains/viewChain.js",
+    "lines": 43
+   }
+  ],
+  "codeHash": "74d0aa1e4e69e8e8",
+  "features": {
+   "sections": [
+    "Picker Monitor",
+    "Web Service Info",
+    "Date & instance",
+    "Filters",
+    "Sample Record Fields"
+   ],
+   "actions": [
+    {
+     "label": "ExportExcel",
+     "listener": "exportExcel",
+     "chains": [
+      "exportChain"
+     ]
+    },
+    {
+     "label": "ExportPdf",
+     "listener": "exportPdf",
+     "chains": [
+      "exportChain"
+     ]
+    },
+    {
+     "label": "API",
+     "listener": "openApi",
+     "chains": [
+      "dialogChain"
+     ]
+    },
+    {
+     "label": "Fetch",
+     "listener": "fetch",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "Refresh Now",
+     "listener": "refresh",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "Try again",
+     "listener": "fetch",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "Dismiss",
+     "listener": "dismissError",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "Clear Filters",
+     "listener": "clearFilters",
+     "chains": [
+      "filterChain"
+     ]
+    },
+    {
+     "label": "Clear",
+     "listener": "clearSearch",
+     "chains": [
+      "searchChain"
+     ]
+    },
+    {
+     "label": "Cards",
+     "listener": "showCards",
+     "chains": [
+      "viewChain"
+     ]
+    },
+    {
+     "label": "Grid",
+     "listener": "showGrid",
+     "chains": [
+      "viewChain"
+     ]
+    },
+    {
+     "label": "Phone",
+     "listener": "phoneGroup",
+     "chains": [
+      "phoneChain"
+     ]
+    },
+    {
+     "label": "Shipped",
+     "listener": "openCard",
+     "chains": [
+      "openChain"
+     ]
+    },
+    {
+     "label": "OpenRow",
+     "listener": "openRow",
+     "chains": [
+      "openChain"
+     ]
+    },
+    {
+     "label": "Previous page",
+     "listener": "prev",
+     "chains": [
+      "pagerChain"
+     ]
+    },
+    {
+     "label": "Next page",
+     "listener": "next",
+     "chains": [
+      "pagerChain"
+     ]
+    },
+    {
+     "label": "PhoneSummary",
+     "listener": "phoneSummary",
+     "chains": [
+      "phoneChain"
+     ]
+    },
+    {
+     "label": "TestApi",
+     "listener": "testApi",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "Close",
+     "listener": "closeApi",
+     "chains": [
+      "dialogChain"
+     ]
+    },
+    {
+     "label": "oj-c-input-date-picker: value changed",
+     "listener": "dateChanged",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "oj-c-select-single: value changed",
+     "listener": "instanceChanged",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "oj-c-select-single: value changed",
+     "listener": "pickerFilter",
+     "chains": [
+      "filterChain"
+     ]
+    },
+    {
+     "label": "oj-c-select-single: value changed",
+     "listener": "lorryFilter",
+     "chains": [
+      "filterChain"
+     ]
+    },
+    {
+     "label": "oj-c-select-single: value changed",
+     "listener": "bayFilter",
+     "chains": [
+      "filterChain"
+     ]
+    },
+    {
+     "label": "oj-c-select-single: value changed",
+     "listener": "statusFilter",
+     "chains": [
+      "filterChain"
+     ]
+    },
+    {
+     "label": "View by picker, lorry, priority, loading bay, order or the lorry summary: select",
+     "listener": "viewChanged",
+     "chains": [
+      "viewChain"
+     ]
+    },
+    {
+     "label": "oj-c-input-text: raw value changed",
+     "listener": "search",
+     "chains": [
+      "searchChain"
+     ]
+    },
+    {
+     "label": "The orders: oj sort",
+     "listener": "sort",
+     "chains": [
+      "pagerChain"
+     ]
+    },
+    {
+     "label": "oj-c-select-single: value changed",
+     "listener": "size",
+     "chains": [
+      "pagerChain"
+     ]
+    }
+   ],
+   "fields": [
+    "Date",
+    "Instance",
+    "Picker",
+    "Lorry",
+    "Loading Bay",
+    "Pick Status",
+    "Search",
+    "Rows per page",
+    "All Pickers",
+    "All Lorries",
+    "All Bays",
+    "All Statuses",
+    "Search orders, pickers, lorry…"
+   ],
+   "columns": [],
+   "components": [
+    "oj-c-button",
+    "oj-c-form-layout",
+    "oj-c-input-date-picker",
+    "oj-c-input-text",
+    "oj-c-progress-bar",
+    "oj-c-select-single",
+    "oj-dialog",
+    "oj-sp-empty-state",
+    "oj-sp-smart-search-page",
+    "oj-tab-bar",
+    "oj-table"
+   ],
+   "inputs": [],
+   "lifecycle": [
+    {
+     "when": "when the page opens",
+     "chains": [
+      "loadChain"
+     ]
+    }
+   ]
+  },
+  "logic": {
+   "chains": [
+    {
+     "name": "dialogChain",
+     "file": "webApps/wms/flows/wms/pages/picker-view-page-chains/dialogChain.js",
+     "about": "API Info (toggleApiModal): the mode, the endpoint, the last status, Test Connection, the sample row, the calls.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "openApi",
+      "closeApi"
+     ],
+     "lines": 34
+    },
+    {
+     "name": "exportChain",
+     "file": "webApps/wms/flows/wms/pages/picker-view-page-chains/exportChain.js",
+     "about": "Export Excel (exportToExcel: PickerMonitor_<instance>_<date>.xlsx, the orders shown) and Export PDF (exportToPdf: the view on screen as a PDF table, PickerMonitor_<instance>_<date>.pdf).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "exportExcel",
+      "exportPdf"
+     ],
+     "lines": 62
+    },
+    {
+     "name": "filterChain",
+     "file": "webApps/wms/flows/wms/pages/picker-view-page-chains/filterChain.js",
+     "about": "The filters (applyFilters, clearFilters): Picker, Lorry, Loading Bay, Pick Status; Clear Filters.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "pickerFilter",
+      "lorryFilter",
+      "bayFilter",
+      "statusFilter",
+      "clearFilters"
+     ],
+     "lines": 44
+    },
+    {
+     "name": "loadChain",
+     "file": "webApps/wms/flows/wms/pages/picker-view-page-chains/loadChain.js",
+     "about": "The data (picker-view.html loadData, handlePickersViewData; picker-drill.js PV.enrich; fetchAndInjectPrintStatus): on entry today and the instance signed in (nothing read until Fetch Data, as the current page); Fetch Data and Refresh Now read the pickers view and its summary at once and show them, then — the screen usable meanwhile — the order headers of the date, every trip's WMS order lines (3 at a time) and the store transactions' details correct the counts, and the print status of every order is read; a newer fetch wins. Test Connection reads today's view without touching the screen.…",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "vbEnter",
+      "instanceChanged",
+      "dateChanged",
+      "fetch",
+      "refresh",
+      "dismissError",
+      "testApi"
+     ],
+     "lines": 199
+    },
+    {
+     "name": "openChain",
+     "file": "webApps/wms/flows/wms/pages/picker-view-page-chains/openChain.js",
+     "about": "An order (a card, or the grid's order number: picker-drill.js PV.open) opens its own screen in a tab: Store Transactions for a store / van transaction, else Order Transactions (wms.orderTab), with its trip, customer, picker and the instance read.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "openCard",
+      "openRow"
+     ],
+     "lines": 38
+    },
+    {
+     "name": "pagerChain",
+     "file": "webApps/wms/flows/wms/pages/picker-view-page-chains/pagerChain.js",
+     "about": "The grid's pages and its sort (sortGrid: a header sorts every order shown, back to page 1).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "prev",
+      "next",
+      "size",
+      "sort"
+     ],
+     "lines": 36
+    },
+    {
+     "name": "phoneChain",
+     "file": "webApps/wms/flows/wms/pages/picker-view-page-chains/phoneChain.js",
+     "about": "The picker's phone (picker-phone.js): a picker group's Phone button or a summary row's phone icon opens the Picker App in a tab of its own, signed in as that picker (found by picker name among the app's logins; without a login the app opens on the name alone) on the instance fetched.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "phoneGroup",
+      "phoneSummary"
+     ],
+     "lines": 46
+    },
+    {
+     "name": "searchChain",
+     "file": "webApps/wms/flows/wms/pages/picker-view-page-chains/searchChain.js",
+     "about": "The search (applySearch): the orders after the filters, every view and the grid follow it.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "search",
+      "clearSearch"
+     ],
+     "lines": 35
+    },
+    {
+     "name": "viewChain",
+     "file": "webApps/wms/flows/wms/pages/picker-view-page-chains/viewChain.js",
+     "about": "View by (setView: back to Cards on every switch) and Cards / Grid (setDisplayMode).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "viewChanged",
+      "showCards",
+      "showGrid"
+     ],
+     "lines": 43
+    }
+   ],
+   "modules": [],
+   "variables": 39
+  },
+  "integrations": {
+   "rest": [],
+   "reports": [],
+   "local": [],
+   "backends": [],
+   "lovs": [
+    {
+     "field": "Instance",
+     "component": "oj-c-select-single",
+     "target": "instance",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Picker",
+     "component": "oj-c-select-single",
+     "target": "picker",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Lorry",
+     "component": "oj-c-select-single",
+     "target": "lorry",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Loading Bay",
+     "component": "oj-c-select-single",
+     "target": "bay",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Pick Status",
+     "component": "oj-c-select-single",
+     "target": "status",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "full",
+       "text": "Fully Picked"
+      },
+      {
+       "key": "shipped",
+       "text": "Shipped"
+      },
+      {
+       "key": "partial",
+       "text": "Partial"
+      },
+      {
+       "key": "none",
+       "text": "Not Picked"
+      }
+     ],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Rows per page",
+     "component": "oj-c-select-single",
+     "target": "size",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "50",
+       "text": "50 / page"
+      },
+      {
+       "key": "100",
+       "text": "100 / page"
+      },
+      {
+       "key": "250",
+       "text": "250 / page"
+      },
+      {
+       "key": "500",
+       "text": "500 / page"
+      }
+     ],
+     "via": "",
+     "when": "display === 'grid' && view !== 'summary' && shown.length > 0"
+    }
+   ]
+  },
+  "links": [],
+  "next": [],
+  "unresolvedLinks": []
+ },
+ "ai": null,
+ "screenshots": [
+  {
+   "id": "s1",
+   "file": "projects/p-04bb0c74b282/screens/wms.wms.picker-view.1.jpg",
+   "at": "2026-11-25T10:57:19.420Z",
+   "by": "Javeed Shaik",
+   "source": "capture",
+   "caption": "",
+   "bytes": 37828,
+   "from": "workspace"
+  }
+ ],
+ "stories": [],
+ "at": "2026-11-25T10:57:19.121Z",
+ "by": "Javeed Shaik",
+ "codeHash": "74d0aa1e4e69e8e8"
+}

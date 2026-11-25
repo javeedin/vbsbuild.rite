@@ -1,0 +1,2734 @@
+{
+ "scannedAt": "2026-11-25T10:57:19.427Z",
+ "pages": [
+  {
+   "id": "wms//login",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "",
+   "page": "login",
+   "label": "Sign-in, as the current WMS",
+   "route": {
+    "url": "/",
+    "menu": "",
+    "needs": ""
+   },
+   "next": [
+    "wms//shell"
+   ],
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms//shell",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "",
+   "page": "shell",
+   "label": "Application shell on Oracle's Redwood templates",
+   "route": {
+    "url": "/",
+    "menu": "",
+    "needs": ""
+   },
+   "next": [
+    "wms//login"
+   ],
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/aide/apis",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "aide",
+   "page": "apis",
+   "label": "APIs",
+   "route": {
+    "url": "/vp/shell/aide/apis",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/aide/cando",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "aide",
+   "page": "cando",
+   "label": "What can I do?",
+   "route": {
+    "url": "/vp/shell/aide/cando",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/aide/chat",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "aide",
+   "page": "chat",
+   "label": "Chat",
+   "route": {
+    "url": "/vp/shell/aide/chat",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/aide/control",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "aide",
+   "page": "control",
+   "label": "Control",
+   "route": {
+    "url": "/vp/shell/aide/control",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/aide/form",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "aide",
+   "page": "form",
+   "label": "Form",
+   "route": {
+    "url": "/vp/shell/aide/form",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/aide/jobs",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "aide",
+   "page": "jobs",
+   "label": "Scheduled Jobs",
+   "route": {
+    "url": "/vp/shell/aide/jobs",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/aide/learn",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "aide",
+   "page": "learn",
+   "label": "Learn",
+   "route": {
+    "url": "/vp/shell/aide/learn",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/aide/order-entry",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "aide",
+   "page": "order-entry",
+   "label": "Order Entry",
+   "route": {
+    "url": "/vp/shell/aide/order-entry",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/aide/policies",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "aide",
+   "page": "policies",
+   "label": "Policies",
+   "route": {
+    "url": "/vp/shell/aide/policies",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/aide/processes",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "aide",
+   "page": "processes",
+   "label": "Processes",
+   "route": {
+    "url": "/vp/shell/aide/processes",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/aide/reports",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "aide",
+   "page": "reports",
+   "label": "Saved Reports",
+   "route": {
+    "url": "/vp/shell/aide/reports",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/aide/settings",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "aide",
+   "page": "settings",
+   "label": "AI Settings",
+   "route": {
+    "url": "/vp/shell/aide/settings",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/aide/tasks",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "aide",
+   "page": "tasks",
+   "label": "Daily Tasks",
+   "route": {
+    "url": "/vp/shell/aide/tasks",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/bip/catalog",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "bip",
+   "page": "catalog",
+   "label": "Catalog",
+   "route": {
+    "url": "/vp/shell/bip/catalog",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/bip/dashboards",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "bip",
+   "page": "dashboards",
+   "label": "The current app's Dashboards tab",
+   "route": {
+    "url": "/vp/shell/bip/dashboards",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/bip/explore",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "bip",
+   "page": "explore",
+   "label": "Explore",
+   "route": {
+    "url": "/vp/shell/bip/explore",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/bip/history",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "bip",
+   "page": "history",
+   "label": "History",
+   "route": {
+    "url": "/vp/shell/bip/history",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/bip/result",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "bip",
+   "page": "result",
+   "label": "The current app's result viewer",
+   "route": {
+    "url": "/vp/shell/bip/result",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/bip/run",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "bip",
+   "page": "run",
+   "label": "The current app's Run tab",
+   "route": {
+    "url": "/vp/shell/bip/run",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/bip/settings",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "bip",
+   "page": "settings",
+   "label": "Settings",
+   "route": {
+    "url": "/vp/shell/bip/settings",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/autopilot",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "autopilot",
+   "label": "CRM Autopilot",
+   "route": {
+    "url": "/vp/shell/crm/autopilot",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/calls",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "calls",
+   "label": "Calls",
+   "route": {
+    "url": "/vp/shell/crm/calls",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/compose",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "compose",
+   "label": "Customer CRM e-mail",
+   "route": {
+    "url": "/vp/shell/crm/compose",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/customer",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "customer",
+   "label": "Customer CRM › Customer 360",
+   "route": {
+    "url": "/vp/shell/crm/customer",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/customers",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "customers",
+   "label": "Customers",
+   "route": {
+    "url": "/vp/shell/crm/customers",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/drill",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "drill",
+   "label": "Customer CRM › Drill-down",
+   "route": {
+    "url": "/vp/shell/crm/drill",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/emails",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "emails",
+   "label": "E-mails",
+   "route": {
+    "url": "/vp/shell/crm/emails",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/growth-rules",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "growth-rules",
+   "label": "Growth Rules",
+   "route": {
+    "url": "/vp/shell/crm/growth-rules",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/insights",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "insights",
+   "label": "Insights",
+   "route": {
+    "url": "/vp/shell/crm/insights",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/opportunities",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "opportunities",
+   "label": "Opportunities & risks",
+   "route": {
+    "url": "/vp/shell/crm/opportunities",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/phone",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "phone",
+   "label": "Phone",
+   "route": {
+    "url": "/vp/shell/crm/phone",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/pinned",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "pinned",
+   "label": "Pinned Customers",
+   "route": {
+    "url": "/vp/shell/crm/pinned",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/playbooks",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "playbooks",
+   "label": "Playbooks",
+   "route": {
+    "url": "/vp/shell/crm/playbooks",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/scan",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "scan",
+   "label": "Opportunity Scan",
+   "route": {
+    "url": "/vp/shell/crm/scan",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/setup",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "setup",
+   "label": "CRM Setup",
+   "route": {
+    "url": "/vp/shell/crm/setup",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/ticket-new",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "ticket-new",
+   "label": "New ticket",
+   "route": {
+    "url": "/vp/shell/crm/ticket-new",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/ticket",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "ticket",
+   "label": "One Customer CRM ticket in its own tab",
+   "route": {
+    "url": "/vp/shell/crm/ticket",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/tickets",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "tickets",
+   "label": "Tickets",
+   "route": {
+    "url": "/vp/shell/crm/tickets",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/crm/today",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "crm",
+   "page": "today",
+   "label": "Customer CRM home",
+   "route": {
+    "url": "/vp/shell/crm/today",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/dataload/fapi",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "dataload",
+   "page": "fapi",
+   "label": "Fusion API",
+   "route": {
+    "url": "/vp/shell/dataload/fapi",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/dataload/fapi-resource",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "dataload",
+   "page": "fapi-resource",
+   "label": "Data Loading › Fusion API › one resource",
+   "route": {
+    "url": "/vp/shell/dataload/fapi-resource",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/dataload/fsm-exports",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "dataload",
+   "page": "fsm-exports",
+   "label": "Setup Data",
+   "route": {
+    "url": "/vp/shell/dataload/fsm-exports",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/dataload/fsm-projects",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "dataload",
+   "page": "fsm-projects",
+   "label": "Setup Projects",
+   "route": {
+    "url": "/vp/shell/dataload/fsm-projects",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/dataload/load",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "dataload",
+   "page": "load",
+   "label": "Load",
+   "route": {
+    "url": "/vp/shell/dataload/load",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/dataload/loads",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "dataload",
+   "page": "loads",
+   "label": "Prepare & Load",
+   "route": {
+    "url": "/vp/shell/dataload/loads",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/dataload/templates",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "dataload",
+   "page": "templates",
+   "label": "FBDI Templates",
+   "route": {
+    "url": "/vp/shell/dataload/templates",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/debtors/autopilot",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "debtors",
+   "page": "autopilot",
+   "label": "Debtors Autopilot",
+   "route": {
+    "url": "/vp/shell/debtors/autopilot",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/debtors/check",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "debtors",
+   "page": "check",
+   "label": "One check of a statement cycle",
+   "route": {
+    "url": "/vp/shell/debtors/check",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/debtors/checklist",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "debtors",
+   "page": "checklist",
+   "label": "Cycle Checklist",
+   "route": {
+    "url": "/vp/shell/debtors/checklist",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/debtors/customer",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "debtors",
+   "page": "customer",
+   "label": "Debtors Control Customer 360",
+   "route": {
+    "url": "/vp/shell/debtors/customer",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/debtors/customers",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "debtors",
+   "page": "customers",
+   "label": "Customers",
+   "route": {
+    "url": "/vp/shell/debtors/customers",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/debtors/cycle",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "debtors",
+   "page": "cycle",
+   "label": "One statement cycle of a business unit and month",
+   "route": {
+    "url": "/vp/shell/debtors/cycle",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/debtors/cycles",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "debtors",
+   "page": "cycles",
+   "label": "Statement Cycles",
+   "route": {
+    "url": "/vp/shell/debtors/cycles",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/debtors/drill",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "debtors",
+   "page": "drill",
+   "label": "Drill",
+   "route": {
+    "url": "/vp/shell/debtors/drill",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/debtors/followups",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "debtors",
+   "page": "followups",
+   "label": "Follow-ups",
+   "route": {
+    "url": "/vp/shell/debtors/followups",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/debtors/overview",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "debtors",
+   "page": "overview",
+   "label": "Debtors Control",
+   "route": {
+    "url": "/vp/shell/debtors/overview",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/debtors/send",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "debtors",
+   "page": "send",
+   "label": "Send Statements",
+   "route": {
+    "url": "/vp/shell/debtors/send",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/debtors/setup",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "debtors",
+   "page": "setup",
+   "label": "Debtors Setup",
+   "route": {
+    "url": "/vp/shell/debtors/setup",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/debtors/statements",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "debtors",
+   "page": "statements",
+   "label": "Statements Sent",
+   "route": {
+    "url": "/vp/shell/debtors/statements",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/account-mapping",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "account-mapping",
+   "label": "Account mapping",
+   "route": {
+    "url": "/vp/shell/finance/account-mapping",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/ai-agent",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "ai-agent",
+   "label": "AI Agent",
+   "route": {
+    "url": "/vp/shell/finance/ai-agent",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/analytics",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "analytics",
+   "label": "Analytics",
+   "route": {
+    "url": "/vp/shell/finance/analytics",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/board-packs",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "board-packs",
+   "label": "Board pack templates",
+   "route": {
+    "url": "/vp/shell/finance/board-packs",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/chart-of-accounts",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "chart-of-accounts",
+   "label": "Chart of accounts",
+   "route": {
+    "url": "/vp/shell/finance/chart-of-accounts",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/close-checks",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "close-checks",
+   "label": "Close checks",
+   "route": {
+    "url": "/vp/shell/finance/close-checks",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/close-package",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "close-package",
+   "label": "Close Package",
+   "route": {
+    "url": "/vp/shell/finance/close-package",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/close",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "close",
+   "label": "Close & reconcile",
+   "route": {
+    "url": "/vp/shell/finance/close",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/copilot",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "copilot",
+   "label": "CFO Copilot",
+   "route": {
+    "url": "/vp/shell/finance/copilot",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/cost-allocation",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "cost-allocation",
+   "label": "Cost allocation",
+   "route": {
+    "url": "/vp/shell/finance/cost-allocation",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/creditors",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "creditors",
+   "label": "Creditors",
+   "route": {
+    "url": "/vp/shell/finance/creditors",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/data-status",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "data-status",
+   "label": "Data & jobs",
+   "route": {
+    "url": "/vp/shell/finance/data-status",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/debtors",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "debtors",
+   "label": "Debtors",
+   "route": {
+    "url": "/vp/shell/finance/debtors",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/email-setup",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "email-setup",
+   "label": "E-mail setup",
+   "route": {
+    "url": "/vp/shell/finance/email-setup",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/full-gl-load",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "full-gl-load",
+   "label": "Full GL load",
+   "route": {
+    "url": "/vp/shell/finance/full-gl-load",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/fusion-setup",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "fusion-setup",
+   "label": "Fusion setup",
+   "route": {
+    "url": "/vp/shell/finance/fusion-setup",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/ifrs",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "ifrs",
+   "label": "IFRS pack",
+   "route": {
+    "url": "/vp/shell/finance/ifrs",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/intercompany",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "intercompany",
+   "label": "Inter company",
+   "route": {
+    "url": "/vp/shell/finance/intercompany",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/intercompany-sync",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "intercompany-sync",
+   "label": "Inter company sync",
+   "route": {
+    "url": "/vp/shell/finance/intercompany-sync",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/inventory",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "inventory",
+   "label": "Inventory",
+   "route": {
+    "url": "/vp/shell/finance/inventory",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/journal",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "journal",
+   "label": "The journal lines of an account",
+   "route": {
+    "url": "/vp/shell/finance/journal",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/journal-risk",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "journal-risk",
+   "label": "Journal risk",
+   "route": {
+    "url": "/vp/shell/finance/journal-risk",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/kpis",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "kpis",
+   "label": "KPIs & monitor",
+   "route": {
+    "url": "/vp/shell/finance/kpis",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/my-page-edit",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "my-page-edit",
+   "label": "My Page Edit",
+   "route": {
+    "url": "/vp/shell/finance/my-page-edit",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/my-pages",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "my-pages",
+   "label": "My pages of Finance Lens, rebuilt from the current app's tab",
+   "route": {
+    "url": "/vp/shell/finance/my-pages",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/overview",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "overview",
+   "label": "Overview",
+   "route": {
+    "url": "/vp/shell/finance/overview",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/pack-archive-detail",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "pack-archive-detail",
+   "label": "One archived board pack",
+   "route": {
+    "url": "/vp/shell/finance/pack-archive-detail",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/pack-archive",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "pack-archive",
+   "label": "Board pack archive",
+   "route": {
+    "url": "/vp/shell/finance/pack-archive",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/pack-distribution",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "pack-distribution",
+   "label": "Distribution",
+   "route": {
+    "url": "/vp/shell/finance/pack-distribution",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/pack-editor",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "pack-editor",
+   "label": "One board pack design",
+   "route": {
+    "url": "/vp/shell/finance/pack-editor",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/pack-new",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "pack-new",
+   "label": "New board pack",
+   "route": {
+    "url": "/vp/shell/finance/pack-new",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/pack-send-detail",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "pack-send-detail",
+   "label": "One distribution",
+   "route": {
+    "url": "/vp/shell/finance/pack-send-detail",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/pack-send",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "pack-send",
+   "label": "New distribution",
+   "route": {
+    "url": "/vp/shell/finance/pack-send",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/party-history",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "party-history",
+   "label": "Party History",
+   "route": {
+    "url": "/vp/shell/finance/party-history",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/plan-version",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "plan-version",
+   "label": "Plan Version",
+   "route": {
+    "url": "/vp/shell/finance/plan-version",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/plans",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "plans",
+   "label": "Budgets & forecasts",
+   "route": {
+    "url": "/vp/shell/finance/plans",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/segment-groups",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "segment-groups",
+   "label": "Segment Groups",
+   "route": {
+    "url": "/vp/shell/finance/segment-groups",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/segment-pl",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "segment-pl",
+   "label": "Segment P&L",
+   "route": {
+    "url": "/vp/shell/finance/segment-pl",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/sql-explorer",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "sql-explorer",
+   "label": "SQL explorer",
+   "route": {
+    "url": "/vp/shell/finance/sql-explorer",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/statement-builder",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "statement-builder",
+   "label": "Statement builder",
+   "route": {
+    "url": "/vp/shell/finance/statement-builder",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/statement-drill",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "statement-drill",
+   "label": "Statement Drill",
+   "route": {
+    "url": "/vp/shell/finance/statement-drill",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/statements",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "statements",
+   "label": "Statements",
+   "route": {
+    "url": "/vp/shell/finance/statements",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/takeover",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "takeover",
+   "label": "Take over from the current app",
+   "route": {
+    "url": "/vp/shell/finance/takeover",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/tb-sync",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "tb-sync",
+   "label": "Trial balance sync",
+   "route": {
+    "url": "/vp/shell/finance/tb-sync",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/template-designer",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "template-designer",
+   "label": "Template designer",
+   "route": {
+    "url": "/vp/shell/finance/template-designer",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/finance/working-capital",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "finance",
+   "page": "working-capital",
+   "label": "Working capital",
+   "route": {
+    "url": "/vp/shell/finance/working-capital",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/fusionsql/apex-data",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "fusionsql",
+   "page": "apex-data",
+   "label": "APEX Data",
+   "route": {
+    "url": "/vp/shell/fusionsql/apex-data",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/fusionsql/api-inspector",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "fusionsql",
+   "page": "api-inspector",
+   "label": "API Inspector",
+   "route": {
+    "url": "/vp/shell/fusionsql/api-inspector",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/fusionsql/connection",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "fusionsql",
+   "page": "connection",
+   "label": "Connection",
+   "route": {
+    "url": "/vp/shell/fusionsql/connection",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/fusionsql/flows",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "fusionsql",
+   "page": "flows",
+   "label": "Flows",
+   "route": {
+    "url": "/vp/shell/fusionsql/flows",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/fusionsql/format-results",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "fusionsql",
+   "page": "format-results",
+   "label": "The current app's Format Results",
+   "route": {
+    "url": "/vp/shell/fusionsql/format-results",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/fusionsql/knowledge",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "fusionsql",
+   "page": "knowledge",
+   "label": "Knowledge",
+   "route": {
+    "url": "/vp/shell/fusionsql/knowledge",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/fusionsql/pipelines",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "fusionsql",
+   "page": "pipelines",
+   "label": "Pipelines",
+   "route": {
+    "url": "/vp/shell/fusionsql/pipelines",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/fusionsql/saved-queries",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "fusionsql",
+   "page": "saved-queries",
+   "label": "Saved Queries",
+   "route": {
+    "url": "/vp/shell/fusionsql/saved-queries",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/fusionsql/setups",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "fusionsql",
+   "page": "setups",
+   "label": "Fusion SQL's Fusion Setups tab rebuilt from the current app",
+   "route": {
+    "url": "/vp/shell/fusionsql/setups",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/fusionsql/sql-builder",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "fusionsql",
+   "page": "sql-builder",
+   "label": "SQL Builder",
+   "route": {
+    "url": "/vp/shell/fusionsql/sql-builder",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/fusionsql/tables-list",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "fusionsql",
+   "page": "tables-list",
+   "label": "Tables List",
+   "route": {
+    "url": "/vp/shell/fusionsql/tables-list",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/fusionsql/watchdogs",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "fusionsql",
+   "page": "watchdogs",
+   "label": "Watchdogs",
+   "route": {
+    "url": "/vp/shell/fusionsql/watchdogs",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/home/welcome",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "home",
+   "page": "welcome",
+   "label": "Redwood welcome page",
+   "route": {
+    "url": "/vp/shell/home/welcome",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/dashboard",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "dashboard",
+   "label": "Inventory",
+   "route": {
+    "url": "/vp/shell/inventory/dashboard",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/item-lots",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "item-lots",
+   "label": "Inventory Item Lots",
+   "route": {
+    "url": "/vp/shell/inventory/item-lots",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/items",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "items",
+   "label": "Items List",
+   "route": {
+    "url": "/vp/shell/inventory/items",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/onhand",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "onhand",
+   "label": "Query Onhand",
+   "route": {
+    "url": "/vp/shell/inventory/onhand",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/organizations",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "organizations",
+   "label": "Organization List",
+   "route": {
+    "url": "/vp/shell/inventory/organizations",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/receipt",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "receipt",
+   "label": "One purchase order",
+   "route": {
+    "url": "/vp/shell/inventory/receipt",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/receiving",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "receiving",
+   "label": "PO Receiving",
+   "route": {
+    "url": "/vp/shell/inventory/receiving",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/reservations",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "reservations",
+   "label": "Reservations",
+   "route": {
+    "url": "/vp/shell/inventory/reservations",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/search-lots",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "search-lots",
+   "label": "Search Lots",
+   "route": {
+    "url": "/vp/shell/inventory/search-lots",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/shipping-batch",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "shipping-batch",
+   "label": "Batch release & ship",
+   "route": {
+    "url": "/vp/shell/inventory/shipping-batch",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/shipping",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "shipping",
+   "label": "Shipping",
+   "route": {
+    "url": "/vp/shell/inventory/shipping",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/stock-movement",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "stock-movement",
+   "label": "Stock Movement",
+   "route": {
+    "url": "/vp/shell/inventory/stock-movement",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/subinventories",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "subinventories",
+   "label": "Subinventories List",
+   "route": {
+    "url": "/vp/shell/inventory/subinventories",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/transaction-types",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "transaction-types",
+   "label": "Transaction Types",
+   "route": {
+    "url": "/vp/shell/inventory/transaction-types",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/inventory/transactions",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "inventory",
+   "page": "transactions",
+   "label": "Query Transactions",
+   "route": {
+    "url": "/vp/shell/inventory/transactions",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/modules/module",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "modules",
+   "page": "module",
+   "label": "Redwood smart search page for one module",
+   "route": {
+    "url": "/vp/shell/modules/module",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/oic/connections",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "oic",
+   "page": "connections",
+   "label": "Connections",
+   "route": {
+    "url": "/vp/shell/oic/connections",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/oic/dashboard",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "oic",
+   "page": "dashboard",
+   "label": "OIC Dashboard",
+   "route": {
+    "url": "/vp/shell/oic/dashboard",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/oic/iar",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "oic",
+   "page": "iar",
+   "label": "IAR Studio",
+   "route": {
+    "url": "/vp/shell/oic/iar",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/oic/integrations",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "oic",
+   "page": "integrations",
+   "label": "Integrations",
+   "route": {
+    "url": "/vp/shell/oic/integrations",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/oic/report-job",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "oic",
+   "page": "report-job",
+   "label": "One report job",
+   "route": {
+    "url": "/vp/shell/oic/report-job",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/oic/report-jobs",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "oic",
+   "page": "report-jobs",
+   "label": "Report Jobs",
+   "route": {
+    "url": "/vp/shell/oic/report-jobs",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/oic/runs",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "oic",
+   "page": "runs",
+   "label": "Runs & Errors",
+   "route": {
+    "url": "/vp/shell/oic/runs",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/oic/settings",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "oic",
+   "page": "settings",
+   "label": "OIC Settings",
+   "route": {
+    "url": "/vp/shell/oic/settings",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/oic/setup",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "oic",
+   "page": "setup",
+   "label": "Build the Integration",
+   "route": {
+    "url": "/vp/shell/oic/setup",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/settings/connections",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "settings",
+   "page": "connections",
+   "label": "Settings",
+   "route": {
+    "url": "/vp/shell/settings/connections",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/alerts",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "alerts",
+   "label": "Alerts",
+   "route": {
+    "url": "/vp/shell/wms/alerts",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/analytics",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "analytics",
+   "label": "Analytics",
+   "route": {
+    "url": "/vp/shell/wms/analytics",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/auto-inventory",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "auto-inventory",
+   "label": "The store transactions",
+   "route": {
+    "url": "/vp/shell/wms/auto-inventory",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/auto-sales-order",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "auto-sales-order",
+   "label": "Auto Sales Order Processing",
+   "route": {
+    "url": "/vp/shell/wms/auto-sales-order",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/cancel-autopilot",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "cancel-autopilot",
+   "label": "Cancel Autopilot",
+   "route": {
+    "url": "/vp/shell/wms/cancel-autopilot",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/daily-history",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "daily-history",
+   "label": "Daily History",
+   "route": {
+    "url": "/vp/shell/wms/daily-history",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/debrief",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "debrief",
+   "label": "Debrief",
+   "route": {
+    "url": "/vp/shell/wms/debrief",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/help",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "help",
+   "label": "The WMS's Help & Documentation",
+   "route": {
+    "url": "/vp/shell/wms/help",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/monitor-printing",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "monitor-printing",
+   "label": "Monitor Printing",
+   "route": {
+    "url": "/vp/shell/wms/monitor-printing",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/mra-interface",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "mra-interface",
+   "label": "Mra Interface",
+   "route": {
+    "url": "/vp/shell/wms/mra-interface",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/order-transactions",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "order-transactions",
+   "label": "Order Transactions",
+   "route": {
+    "url": "/vp/shell/wms/order-transactions",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/pending-shipment-lines",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "pending-shipment-lines",
+   "label": "Pending Shipment Lines",
+   "route": {
+    "url": "/vp/shell/wms/pending-shipment-lines",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/pending-store-transactions",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "pending-store-transactions",
+   "label": "Pending Store Transactions",
+   "route": {
+    "url": "/vp/shell/wms/pending-store-transactions",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/pick-release",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "pick-release",
+   "label": "Pick Release",
+   "route": {
+    "url": "/vp/shell/wms/pick-release",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/picker-app",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "picker-app",
+   "label": "Picker App",
+   "route": {
+    "url": "/vp/shell/wms/picker-app",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/picker-view",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "picker-view",
+   "label": "Picker Monitor",
+   "route": {
+    "url": "/vp/shell/wms/picker-view",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": {
+    "at": "2026-11-25T10:57:19.121Z",
+    "by": "Javeed Shaik",
+    "codeHash": "74d0aa1e4e69e8e8",
+    "screenshots": 1,
+    "ai": false,
+    "rest": 0,
+    "chains": 9
+   }
+  },
+  {
+   "id": "wms/wms/pickers",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "pickers",
+   "label": "Pickers Management",
+   "route": {
+    "url": "/vp/shell/wms/pickers",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/picking-time-monitor",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "picking-time-monitor",
+   "label": "Picking Time Monitor",
+   "route": {
+    "url": "/vp/shell/wms/picking-time-monitor",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/pinned-trips",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "pinned-trips",
+   "label": "Pinned Trips",
+   "route": {
+    "url": "/vp/shell/wms/pinned-trips",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/printer-setup",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "printer-setup",
+   "label": "Printer Setups",
+   "route": {
+    "url": "/vp/shell/wms/printer-setup",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/release-manager",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "release-manager",
+   "label": "Release Manager",
+   "route": {
+    "url": "/vp/shell/wms/release-manager",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/search",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "search",
+   "label": "Search",
+   "route": {
+    "url": "/vp/shell/wms/search",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/settings",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "settings",
+   "label": "Settings & Updates",
+   "route": {
+    "url": "/vp/shell/wms/settings",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/shipping-agent",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "shipping-agent",
+   "label": "Shipping Agent",
+   "route": {
+    "url": "/vp/shell/wms/shipping-agent",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/shipping-agents",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "shipping-agents",
+   "label": "Shipping Agents",
+   "route": {
+    "url": "/vp/shell/wms/shipping-agents",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/store-transactions",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "store-transactions",
+   "label": "Store Transactions",
+   "route": {
+    "url": "/vp/shell/wms/store-transactions",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/training",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "training",
+   "label": "The WMS's Training Center",
+   "route": {
+    "url": "/vp/shell/wms/training",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/trip-add-orders",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "trip-add-orders",
+   "label": "The orders not on a trip yet, put on one trip",
+   "route": {
+    "url": "/vp/shell/wms/trip-add-orders",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/trip-details",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "trip-details",
+   "label": "One trip, rebuilt from the current WMS's trip tab",
+   "route": {
+    "url": "/vp/shell/wms/trip-details",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/trip-lines",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "trip-lines",
+   "label": "Trip Lines",
+   "route": {
+    "url": "/vp/shell/wms/trip-lines",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/trip-management",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "trip-management",
+   "label": "Trip Management",
+   "route": {
+    "url": "/vp/shell/wms/trip-management",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/trip-pick-release",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "trip-pick-release",
+   "label": "Trip Pick Release",
+   "route": {
+    "url": "/vp/shell/wms/trip-pick-release",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/trip-shipment-lines",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "trip-shipment-lines",
+   "label": "Trip Shipment Lines",
+   "route": {
+    "url": "/vp/shell/wms/trip-shipment-lines",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/vehicles-dashboard",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "vehicles-dashboard",
+   "label": "Vehicles Dashboard",
+   "route": {
+    "url": "/vp/shell/wms/vehicles-dashboard",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  },
+  {
+   "id": "wms/wms/vehicles",
+   "app": "wms",
+   "appName": "wms",
+   "flow": "wms",
+   "page": "vehicles",
+   "label": "Vehicles",
+   "route": {
+    "url": "/vp/shell/wms/vehicles",
+    "menu": "",
+    "needs": ""
+   },
+   "stories": [],
+   "sheet": null
+  }
+ ]
+}
