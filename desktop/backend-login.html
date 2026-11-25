@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'">
+  <title>Sign in to a backend</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #f5f4f2; --card: #fff; --ink: #161513; --muted: #6f6c67; --line: #d9d6d0;
+      --accent: #c74634; --accent-ink: #fff; --field: #fff; --err: #b3261e; --ok: #1a7f37; --warn: #9a6700; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #1b1a18; --card: #262522; --ink: #ebe9e5; --muted: #a8a49d; --line: #3d3b37; --field: #1f1e1c; --err: #ff8a80; --ok: #5bd37f; --warn: #e3b341; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink);
+      font: 14px/1.45 "Oracle Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    form { padding: 22px 26px 18px; }
+    h1 { font-size: 18px; font-weight: 650; margin: 0 0 4px; }
+    .sub { color: var(--muted); margin: 0 0 16px; }
+    fieldset { border: 1px solid var(--line); border-radius: 10px; background: var(--card); margin: 0 0 14px; padding: 12px 14px 14px; }
+    legend { font-weight: 600; padding: 0 6px; }
+    label.f { display: block; margin: 8px 0 3px; color: var(--muted); font-size: 12.5px; }
+    input[type=text], input[type=password], textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px;
+      background: var(--field); color: var(--ink); font: inherit; }
+    textarea { resize: vertical; min-height: 54px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+    input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+    .help { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+    .row { display: flex; gap: 10px; }
+    .row > div { flex: 1; }
+    .call-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .result { min-height: 20px; margin: 10px 0 2px; font-size: 13px; font-weight: 600; }
+    .result.ok { color: var(--ok); } .result.err { color: var(--err); } .result.warn { color: var(--warn); } .result.muted { color: var(--muted); font-weight: 400; }
+    .actions { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    .actions .right { display: flex; gap: 10px; }
+    button { font: inherit; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+    button:disabled { opacity: .5; cursor: default; }
+    button.small { padding: 5px 10px; font-size: 12.5px; }
+    code { font-size: 12px; }
+  </style>
+</head>
+<body>
+  <form id="f" autocomplete="off">
+    <h1 id="title">Sign in to a backend</h1>
+    <p class="sub">This call was refused with a 401. Enter the login this backend wants, test it, and save it — saved on this PC only, encrypted with your account.</p>
+
+    <fieldset>
+      <legend>The call that failed</legend>
+      <div class="call-head">
+        <label class="f" for="call" style="margin:0">Full address (copy it to test elsewhere if you like)</label>
+        <button type="button" class="small" id="copy">Copy</button>
+      </div>
+      <textarea id="call" readonly spellcheck="false"></textarea>
+    </fieldset>
+
+    <fieldset>
+      <legend>Login for this backend</legend>
+      <label class="f" for="backend">Backend</label>
+      <input type="text" id="backend" spellcheck="false" placeholder="e.g. ics">
+      <p class="help">The backend's name in <code>services/catalog.json</code> (for Oracle Integration it is <code>ics</code>). You can also use its credential id.</p>
+      <div class="row" style="margin-top:8px">
+        <div><label class="f" for="user">Username</label>
+          <input type="text" id="user" spellcheck="false"></div>
+        <div><label class="f" for="pass">Password</label>
+          <input type="password" id="pass"></div>
+      </div>
+      <div class="result muted" id="result" role="status">Not tested yet.</div>
+    </fieldset>
+
+    <div class="actions">
+      <button type="button" id="test">Test</button>
+      <div class="right">
+        <button type="button" id="cancel">Close</button>
+        <button type="submit" class="primary" id="save">Save &amp; use</button>
+      </div>
+    </div>
+  </form>
+  <script src="backend-login.js"></script>
+</body>
+</html>

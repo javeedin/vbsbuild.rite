@@ -1322,6 +1322,8 @@ ipcMain.handle('rec:window', (event, what) => {
 
 let win = null;
 let signinWin = null;
+let backendLoginWin = null; // "sign in to this backend" (opens when a backend answers 401)
+let pendingBackendLogin = null; // the failed call shown in that window: { backend, method, url, path, status }
 let logWin = null;
 let servicesWin = null;
 let server = null; // Build.Rite's own local server
@@ -1437,11 +1439,14 @@ function backendProblem(p) {
       `This PC could not connect to ${p.host} (${p.error}). Lists and data from ${p.backend} stay empty until it can; check the network or VPN.`],
   }[p.kind];
   if (!text) return;
-  const detail = text[1] + api + '\n\nView → Backend calls… lists every call with its address and result.';
   cpush('warn', text[0] + ': ' + text[1] + (call ? ' — ' + call : ''));
-  const signIn = p.kind !== 'unreachable';
-  dialog.showMessageBox(win, { type: 'warning', title: APP_NAME, message: text[0], detail, buttons: signIn ? ['Sign in…', 'Later'] : ['OK'], defaultId: 0, cancelId: signIn ? 1 : 0, noLink: true })
-    .then(({ response }) => { if (signIn && response === 0) openSignIn(); }).catch(() => {});
+  if (p.kind === 'unreachable') {
+    dialog.showMessageBox(win, { type: 'warning', title: APP_NAME, message: text[0], detail: text[1] + api, buttons: ['OK'], noLink: true }).catch(() => {});
+    return;
+  }
+  // The backend refused the login: open the focused "sign in to this backend" window with the exact call, so the user
+  // enters its username/password, tests and saves it right there (rather than a dead-end message box).
+  openBackendLogin(p);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1497,6 +1502,91 @@ ipcMain.handle('signin:submit', (event, form) => {
   if (runWin && !runWin.isDestroyed()) runWin.webContents.reloadIgnoringCache();
   return { ok: true };
 });
+/* ---------------------------------------------------------------------------
+ * Sign in to a backend: opens when a backend (e.g. OIC/ics) answers 401, with the exact call; test and save its login
+ * ------------------------------------------------------------------------- */
+function openBackendLogin(p) {
+  pendingBackendLogin = { backend: p.backend, method: p.method || '', url: p.url || '', path: p.path || '', status: p.status };
+  if (backendLoginWin && !backendLoginWin.isDestroyed()) { backendLoginWin.webContents.reload(); backendLoginWin.focus(); return; }
+  backendLoginWin = new BrowserWindow({
+    parent: win || undefined, modal: !!win, width: 640, height: 600, resizable: true, minimizable: false,
+    title: 'Sign in to a backend', backgroundColor: '#f5f4f2', show: false, autoHideMenuBar: true,
+    webPreferences: { preload: path.join(__dirname, 'backend-login-preload.js'), contextIsolation: true, sandbox: true, nodeIntegration: false },
+  });
+  backendLoginWin.setMenu(null);
+  backendLoginWin.once('ready-to-show', () => backendLoginWin.show());
+  backendLoginWin.on('closed', () => { backendLoginWin = null; });
+  backendLoginWin.loadFile(path.join(__dirname, 'backend-login.html'));
+}
+const fromBackendLogin = (event) => !!backendLoginWin && !backendLoginWin.isDestroyed() && event.sender === backendLoginWin.webContents;
+
+/** Test a login by GETting the failed call's URL with Basic auth: a GET never runs the integration, and an auth failure
+ *  (401) comes back before anything else. Returns { status } or { error }. */
+function backendLoginTest({ url, user, password }) {
+  return new Promise((resolve) => {
+    let u;
+    try { u = new URL(String(url || '')); } catch { return resolve({ error: 'The call address is not a valid URL.' }); }
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return resolve({ error: 'Only http/https calls can be tested.' });
+    const mod = u.protocol === 'https:' ? require('https') : require('http');
+    const headers = { accept: 'application/json' };
+    if (user) headers.authorization = 'Basic ' + Buffer.from(`${user}:${password || ''}`).toString('base64');
+    let done = false;
+    const finish = (r) => { if (!done) { done = true; resolve(r); } };
+    try {
+      const req = mod.request(u, { method: 'GET', headers, timeout: 20000 }, (res) => {
+        res.on('data', () => {}); // drain
+        res.on('end', () => finish({ status: res.statusCode }));
+        res.on('error', (e) => finish({ error: e.message }));
+      });
+      req.on('timeout', () => req.destroy(new Error('no answer in 20s')));
+      req.on('error', (e) => finish({ error: e.message }));
+      req.end();
+    } catch (e) { finish({ error: e.message }); }
+  });
+}
+
+ipcMain.handle('backendLogin:initial', (event) => {
+  if (!fromBackendLogin(event)) return null;
+  const p = pendingBackendLogin || {};
+  const saved = identityStore.load(identityFile()) || {};
+  const mine = (Array.isArray(saved.backendLogins) ? saved.backendLogins : []).find((b) => b.key === p.backend);
+  return {
+    backend: p.backend || '', method: p.method || '', url: p.url || '', path: p.path || '', status: p.status,
+    user: mine ? mine.user : '', hasPassword: !!(mine && mine.password),
+  };
+});
+ipcMain.handle('backendLogin:copy', (event, text) => {
+  if (!fromBackendLogin(event)) return { ok: false };
+  try { clipboard.writeText(String(text || '')); return { ok: true }; } catch (e) { return { ok: false }; }
+});
+ipcMain.handle('backendLogin:test', async (event, form) => {
+  if (!fromBackendLogin(event)) return { error: 'not allowed' };
+  const f = form || {};
+  const url = (pendingBackendLogin && pendingBackendLogin.url) || '';
+  if (!url) return { error: 'There is no call address to test.' };
+  if (!String(f.user || '').trim()) return { error: 'Enter the username to test.' };
+  return backendLoginTest({ url, user: String(f.user).trim(), password: String(f.password || '') });
+});
+ipcMain.handle('backendLogin:save', (event, form) => {
+  if (!fromBackendLogin(event)) return { error: 'not allowed' };
+  const f = form || {};
+  const encrypt = canEncrypt() ? (s) => safeStorage.encryptString(s) : null;
+  const r = identityStore.upsertBackendLogin(identityFile(), { key: f.backend, user: f.user, password: f.password }, encrypt);
+  if (r.error) return { error: r.error };
+  identity = identityStore.toServerIdentity(r.saved, passwordThisRun, canEncrypt() ? (b) => safeStorage.decryptString(b) : null);
+  warned.clear();
+  const note = r.persisted ? '' : ' (not kept after you quit: this PC cannot encrypt it)';
+  pushLog(`${new Date().toTimeString().slice(0, 8)} saved the login for backend ${f.backend}${note}`);
+  cpush('info', `saved the login for ${f.backend}: its calls use it now${note} — run (or reload) the app`);
+  if (backendLoginWin) backendLoginWin.close();
+  if (runWin && !runWin.isDestroyed()) runWin.webContents.reloadIgnoringCache();
+  return { ok: true };
+});
+ipcMain.handle('backendLogin:cancel', (event) => {
+  if (fromBackendLogin(event) && backendLoginWin) backendLoginWin.close();
+  return { ok: true };
+});
+
 ipcMain.handle('signin:cancel', (event) => {
   if (fromSignin(event) && signinWin) signinWin.close();
   return true;

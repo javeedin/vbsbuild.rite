@@ -72,6 +72,35 @@ function validate(form, previous) {
   };
 }
 
+/**
+ * Adds or updates ONE backend login (e.g. OIC/ics) without touching the rest of the sign-in — used by the focused
+ * "sign in to this backend" dialog that opens when a backend answers 401. The password is encrypted like the Fusion
+ * one, or kept from the previous save when left blank. Needs an app sign-in already (a user it runs as).
+ */
+function upsertBackendLogin(file, entry, encrypt) {
+  const key = String((entry && entry.key) || '').trim();
+  const user = String((entry && entry.user) || '').trim();
+  const password = String((entry && entry.password) || '');
+  if (!key) return { error: 'Give the backend a name (e.g. ics for OIC).' };
+  if (!user) return { error: 'Enter the username.' };
+  const saved = load(file);
+  if (!saved || !saved.username) {
+    return { error: 'Sign in for your app first (the user it runs as), then add this backend login.' };
+  }
+  const list = Array.isArray(saved.backendLogins) ? saved.backendLogins : [];
+  const prev = list.find((b) => b.key === key);
+  let enc;
+  if (password && encrypt) enc = encrypt(password).toString('base64');
+  else if (!password && prev && prev.user === user && prev.password) enc = prev.password; // keep the saved one
+  else if (!password) return { error: 'Enter the password.' };
+  else enc = null; // no encryptor on this PC: cannot persist the password (as for the Fusion one)
+  const row = { key, user };
+  if (enc) row.password = enc;
+  const out = Object.assign({}, saved, { backendLogins: list.filter((b) => b.key !== key).concat([row]) });
+  fs.writeFileSync(file, JSON.stringify(out, null, 2), 'utf8');
+  return { saved: out, persisted: !!enc };
+}
+
 /** Reads the saved sign-in, or null. */
 function load(file) {
   try {
@@ -163,4 +192,4 @@ function saveVersion(file, version) {
   }
 }
 
-module.exports = { validate, load, save, remove, saveVersion, versionOf, toServerIdentity, usable };
+module.exports = { validate, load, save, remove, saveVersion, versionOf, toServerIdentity, usable, upsertBackendLogin };

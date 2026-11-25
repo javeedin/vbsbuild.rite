@@ -54,6 +54,25 @@ const saved2 = ID.save(file, vKeep.saved, vKeep.password, encrypt, prev, vKeep.l
 const id2 = ID.toServerIdentity(saved2, null, decrypt);
 T.check('…and it still decrypts after the blank re-save', id2.logins.ics && id2.logins.ics.password === 'secret');
 
+// --- upsertBackendLogin (the "sign in to this backend" dialog's Save) ---
+const ufile = path.join(os.tmpdir(), `br-identity-up-${process.pid}-${Date.now()}.json`);
+ID.save(ufile, ID.validate(base, null).saved, 'fp', encrypt, null, []); // an app sign-in must exist first
+T.check('upsert needs an app sign-in first', !!ID.upsertBackendLogin(path.join(os.tmpdir(), `br-none-${process.pid}.json`), { key: 'ics', user: 'u', password: 'p' }, encrypt).error);
+T.check('upsert needs a backend name', !!ID.upsertBackendLogin(ufile, { key: '', user: 'u', password: 'p' }, encrypt).error);
+T.check('upsert needs a password for a new backend', !!ID.upsertBackendLogin(ufile, { key: 'ics', user: 'u', password: '' }, encrypt).error);
+const up1 = ID.upsertBackendLogin(ufile, { key: 'ics', user: 'OIC_USER', password: 'oicpw' }, encrypt);
+T.check('upsert saves the OIC login, encrypted', !up1.error && up1.persisted
+  && ID.toServerIdentity(up1.saved, null, decrypt).logins.ics.password === 'oicpw'
+  && fs.readFileSync(ufile, 'utf8').indexOf('oicpw') === -1);
+const up2 = ID.upsertBackendLogin(ufile, { key: 'ics', user: 'OIC_USER', password: '' }, encrypt);
+T.check('upsert keeps the password when blank (same user)', !up2.error && ID.toServerIdentity(up2.saved, null, decrypt).logins.ics.password === 'oicpw');
+const up3 = ID.upsertBackendLogin(ufile, { key: 'ics', user: 'OTHER', password: 'pw2' }, encrypt);
+T.check('upsert replaces the login for the same backend (no duplicate)', !up3.error
+  && up3.saved.backendLogins.filter((b) => b.key === 'ics').length === 1
+  && ID.toServerIdentity(up3.saved, null, decrypt).logins.ics.user === 'OTHER');
+T.check('upsert leaves the Fusion sign-in untouched', up3.saved.username === 'jane.doe' && !!up3.saved.fusionPassword);
+try { fs.rmSync(ufile, { force: true }); } catch (e) { /* ignore */ }
+
 // --- loginFor precedence (the proxy) ---
 const identity = { fusion: { user: 'fu', password: 'fp' }, logins: { ics: { user: 'oicu', password: 'oicp' }, 'vb_x': { user: 'cu', password: 'cp' } } };
 T.eq('own login by backend name beats the Fusion login', DS.loginFor({ basic: true, credentials: 'vb_y' }, identity, 'ics').user, 'oicu');
