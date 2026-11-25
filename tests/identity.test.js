@@ -73,6 +73,17 @@ T.check('upsert replaces the login for the same backend (no duplicate)', !up3.er
 T.check('upsert leaves the Fusion sign-in untouched', up3.saved.username === 'jane.doe' && !!up3.saved.fusionPassword);
 try { fs.rmSync(ufile, { force: true }); } catch (e) { /* ignore */ }
 
+// --- forRunAs (Run as must keep the OIC login) ---
+const signedIn = { username: 'javeed.shaik', roles: null, fusion: { user: 'fu', password: 'fp' }, logins: { ics: { user: 'oicu', password: 'oicp' } } };
+T.check('no Run-as user -> the signed-in identity as-is (logins kept)', ID.forRunAs({ user: '' }, signedIn) === signedIn);
+const ra = ID.forRunAs({ user: 'tech.user', roles: ['RT_EQP_ADMINISTRATOR'] }, signedIn);
+T.check('Run as keeps the OIC login (so ics does not 401)', ra.username === 'tech.user' && ra.roles[0] === 'RT_EQP_ADMINISTRATOR'
+  && ra.fusion.user === 'fu' && ra.logins.ics && ra.logins.ics.user === 'oicu' && ra.logins.ics.password === 'oicp');
+const raNoBase = ID.forRunAs({ user: 'x', roles: [] }, null);
+T.check('Run as with no sign-in yet: empty logins, no fusion (not a crash)', raNoBase.username === 'x' && raNoBase.roles === null && raNoBase.fusion === null && JSON.stringify(raNoBase.logins) === '{}');
+// loginFor over a Run-as identity still finds the OIC login by backend name
+T.eq('…and loginFor over that Run-as identity still signs ics', DS.loginFor({ basic: true, credentials: 'vb_ics' }, ra, 'ics').user, 'oicu');
+
 // --- loginFor precedence (the proxy) ---
 const identity = { fusion: { user: 'fu', password: 'fp' }, logins: { ics: { user: 'oicu', password: 'oicp' }, 'vb_x': { user: 'cu', password: 'cp' } } };
 T.eq('own login by backend name beats the Fusion login', DS.loginFor({ basic: true, credentials: 'vb_y' }, identity, 'ics').user, 'oicu');

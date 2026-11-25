@@ -506,12 +506,13 @@ function setRunAs(user, roles) {
   noAccessSeen = null;
   return { ok: true, runAs: runAsMem };
 }
-/** Who the workspace's app runs as: Run as (with the backend login from Sign in for your app, so its data still
- *  loads), else the user from Sign in for your app, else nobody (anonymous). */
+/** Who the workspace's app runs as: Run as (with the Fusion login AND the per-backend logins from Sign in for your app,
+ *  so OIC/ics and other own-credential backends still authenticate), else the user from Sign in for your app, else
+ *  nobody (anonymous). */
 function workspaceIdentity() {
-  const r = runAsNow();
-  if (r.user) return { username: r.user, roles: r.roles.length ? r.roles : null, fusion: identity ? identity.fusion || null : null };
-  return identity;
+  // Under Run as, keep the signed-in identity's backend logins (fusion + the per-backend `logins` map, e.g. OIC/ics),
+  // or a backend with its own credential falls back to the Fusion login and answers 401 (identity.js forRunAs).
+  return identityStore.forRunAs(runAsNow(), identity);
 }
 /** "as <user> <ROLE>", with a role from the app's own code when one was found. */
 const asHint = () => 'as <user> ' + (knownRoles()[0] || '<ROLE>');

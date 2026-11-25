@@ -174,6 +174,24 @@ function toServerIdentity(saved, password, decrypt) {
   };
 }
 
+/**
+ * The identity a workspace app runs with under "Run as": the Run-as user and roles, but KEEPING the signed-in identity's
+ * backend logins — the Fusion login AND the per-backend `logins` map (OIC/ics …) — so a backend with its own credential
+ * still authenticates instead of borrowing the Fusion login and getting 401. With no Run-as user, the signed-in identity
+ * is used as it is.
+ */
+function forRunAs(runAs, base) {
+  const r = runAs || {};
+  if (!r.user) return base || null;
+  const roles = Array.isArray(r.roles) ? r.roles : [];
+  return {
+    username: r.user,
+    roles: roles.length ? roles : null,
+    fusion: base && base.fusion ? base.fusion : null,
+    logins: (base && base.logins) ? base.logins : {},
+  };
+}
+
 /** True when the saved sign-in can be used as-is (reading roles from Fusion needs a password we can decrypt). */
 function usable(identity, saved) {
   return !!identity && (saved.rolesFrom === 'pick' || !!identity.fusion);
@@ -192,4 +210,4 @@ function saveVersion(file, version) {
   }
 }
 
-module.exports = { validate, load, save, remove, saveVersion, versionOf, toServerIdentity, usable, upsertBackendLogin };
+module.exports = { validate, load, save, remove, saveVersion, versionOf, toServerIdentity, usable, upsertBackendLogin, forRunAs };
