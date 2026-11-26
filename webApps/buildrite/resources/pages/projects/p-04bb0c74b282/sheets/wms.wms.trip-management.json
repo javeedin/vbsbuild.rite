@@ -1,0 +1,1278 @@
+{
+ "id": "wms/wms/trip-management",
+ "facts": {
+  "id": "wms/wms/trip-management",
+  "app": "wms",
+  "appName": "wms",
+  "flow": "wms",
+  "page": "trip-management",
+  "label": "Trip Management",
+  "description": "Trip Management, rebuilt from the current WMS (wms/index.html 292–520, wms/app.js 2370–5115, wms/trip-filter.js) on Oracle's Redwood smart search page: the trips of a date range on an instance (GETTRIPDETAILS) as cards with date chips and a search on any column, All Trips and All Trip Details (GETTRIPDETAILS/ALL, one column per field), Volume Details and Volume Summary against the lorries' capacity (vehicles/get), Excel exports, the API addresses; a trip opens in its own tab (Trip Details).",
+  "route": {
+   "url": "/vp/shell/wms/trip-management",
+   "menu": "",
+   "needs": ""
+  },
+  "files": [
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page.json",
+    "lines": 1766
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page.html",
+    "lines": 884
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page.js",
+    "lines": 806
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/agentChain.js",
+    "lines": 94
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/cardsChain.js",
+    "lines": 43
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/dialogChain.js",
+    "lines": 56
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/exportChain.js",
+    "lines": 57
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/formChain.js",
+    "lines": 38
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/loadChain.js",
+    "lines": 158
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/lotsChain.js",
+    "lines": 93
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/newTripChain.js",
+    "lines": 117
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/openChain.js",
+    "lines": 61
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/pickerChain.js",
+    "lines": 121
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/pinChain.js",
+    "lines": 56
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/selectChain.js",
+    "lines": 39
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/tabChain.js",
+    "lines": 34
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/tableChain.js",
+    "lines": 85
+   },
+   {
+    "path": "webApps/wms/flows/wms/pages/trip-management-page-chains/unassignChain.js",
+    "lines": 83
+   }
+  ],
+  "codeHash": "c0b6c3007b6b02db",
+  "features": {
+   "sections": [
+    "Trip Management",
+    "Trip Management API information",
+    "Assign Picker",
+    "Allocate Lots for Store to Van Orders",
+    "Assign Trip to Agent",
+    "Create New Trip",
+    "Unassign Picker",
+    "Query parameters",
+    "Trips",
+    "All Trips",
+    "All Trip Details",
+    "Volume Details",
+    "Volume Summary by lorry"
+   ],
+   "actions": [
+    {
+     "label": "OpenPinned",
+     "listener": "openPinned",
+     "chains": [
+      "openChain"
+     ]
+    },
+    {
+     "label": "New Trip",
+     "listener": "newTrip",
+     "chains": [
+      "newTripChain"
+     ]
+    },
+    {
+     "label": "API information",
+     "listener": "openApi",
+     "chains": [
+      "dialogChain"
+     ]
+    },
+    {
+     "label": "FetchTrips",
+     "listener": "fetchTrips",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "Dismiss",
+     "listener": "dismissPins",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "Dismiss",
+     "listener": "dismissTrips",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "DateChip",
+     "listener": "dateChip",
+     "chains": [
+      "cardsChain"
+     ]
+    },
+    {
+     "label": "Select All",
+     "listener": "datesAll",
+     "chains": [
+      "cardsChain"
+     ]
+    },
+    {
+     "label": "Clear All",
+     "listener": "datesNone",
+     "chains": [
+      "cardsChain"
+     ]
+    },
+    {
+     "label": "View Details",
+     "listener": "viewTrip",
+     "chains": [
+      "openChain"
+     ]
+    },
+    {
+     "label": "PinCard",
+     "listener": "pinCard",
+     "chains": [
+      "pinChain"
+     ]
+    },
+    {
+     "label": "Assign this trip to a Shipping Agent",
+     "listener": "agentCard",
+     "chains": [
+      "agentChain"
+     ]
+    },
+    {
+     "label": "Export to Excel",
+     "listener": "exportTrips",
+     "chains": [
+      "exportChain"
+     ]
+    },
+    {
+     "label": "LorryChip",
+     "listener": "lorryChip",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "All",
+     "listener": "lorriesAll",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "Clear",
+     "listener": "lorriesNone",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "TripDateChip",
+     "listener": "tripDateChip",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "All",
+     "listener": "tripDatesAll",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "Clear",
+     "listener": "tripDatesNone",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "Clear the ticks",
+     "listener": "clearTrips",
+     "chains": [
+      "selectChain"
+     ]
+    },
+    {
+     "label": "Assign Picker",
+     "listener": "assignPickerTrips",
+     "chains": [
+      "pickerChain"
+     ]
+    },
+    {
+     "label": "Allocate Lot Qty",
+     "listener": "allocateTrips",
+     "chains": [
+      "lotsChain"
+     ]
+    },
+    {
+     "label": "TripOrder",
+     "listener": "tripOrder",
+     "chains": [
+      "openChain"
+     ]
+    },
+    {
+     "label": "Previous page",
+     "listener": "tripPrev",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "Next page",
+     "listener": "tripNext",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "Export to Excel",
+     "listener": "exportLines",
+     "chains": [
+      "exportChain"
+     ]
+    },
+    {
+     "label": "Dismiss",
+     "listener": "dismissLines",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "Clear the ticks",
+     "listener": "clearLines",
+     "chains": [
+      "selectChain"
+     ]
+    },
+    {
+     "label": "Assign Picker",
+     "listener": "assignPickerLines",
+     "chains": [
+      "pickerChain"
+     ]
+    },
+    {
+     "label": "Unassign Picker",
+     "listener": "unassignLines",
+     "chains": [
+      "unassignChain"
+     ]
+    },
+    {
+     "label": "ExportLinesTicked",
+     "listener": "exportLinesTicked",
+     "chains": [
+      "exportChain"
+     ]
+    },
+    {
+     "label": "Allocate Lots (S2V)",
+     "listener": "allocateLines",
+     "chains": [
+      "lotsChain"
+     ]
+    },
+    {
+     "label": "AssignLine",
+     "listener": "assignLine",
+     "chains": [
+      "pickerChain"
+     ]
+    },
+    {
+     "label": "UnassignLine",
+     "listener": "unassignLine",
+     "chains": [
+      "unassignChain"
+     ]
+    },
+    {
+     "label": "LineOrder",
+     "listener": "lineOrder",
+     "chains": [
+      "openChain"
+     ]
+    },
+    {
+     "label": "Previous page",
+     "listener": "linePrev",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "Next page",
+     "listener": "lineNext",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "RefreshVehicles",
+     "listener": "refreshVehicles",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "Dismiss",
+     "listener": "dismissVehicles",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "VolTrip",
+     "listener": "volTrip",
+     "chains": [
+      "openChain"
+     ]
+    },
+    {
+     "label": "Previous page",
+     "listener": "volPrev",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "Next page",
+     "listener": "volNext",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "Export Excel",
+     "listener": "exportSummary",
+     "chains": [
+      "exportChain"
+     ]
+    },
+    {
+     "label": "OpenLorry",
+     "listener": "openLorry",
+     "chains": [
+      "dialogChain"
+     ]
+    },
+    {
+     "label": "Previous page",
+     "listener": "sumPrev",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "Next page",
+     "listener": "sumNext",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "Copy",
+     "listener": "copyApi",
+     "chains": [
+      "dialogChain"
+     ]
+    },
+    {
+     "label": "Close",
+     "listener": "closeApi",
+     "chains": [
+      "dialogChain"
+     ]
+    },
+    {
+     "label": "LorryTrip",
+     "listener": "lorryTrip",
+     "chains": [
+      "openChain"
+     ]
+    },
+    {
+     "label": "Close",
+     "listener": "closeLorry",
+     "chains": [
+      "dialogChain"
+     ]
+    },
+    {
+     "label": "Cancel",
+     "listener": "closePicker",
+     "chains": [
+      "pickerChain"
+     ]
+    },
+    {
+     "label": "SavePicker",
+     "listener": "savePicker",
+     "chains": [
+      "pickerChain"
+     ]
+    },
+    {
+     "label": "CloseLots",
+     "listener": "closeLots",
+     "chains": [
+      "lotsChain"
+     ]
+    },
+    {
+     "label": "StartLots",
+     "listener": "startLots",
+     "chains": [
+      "lotsChain"
+     ]
+    },
+    {
+     "label": "Cancel",
+     "listener": "closeAgent",
+     "chains": [
+      "agentChain"
+     ]
+    },
+    {
+     "label": "SaveAgent",
+     "listener": "saveAgent",
+     "chains": [
+      "agentChain"
+     ]
+    },
+    {
+     "label": "Cancel",
+     "listener": "closeNewTrip",
+     "chains": [
+      "newTripChain"
+     ]
+    },
+    {
+     "label": "CreateTrip",
+     "listener": "createTrip",
+     "chains": [
+      "newTripChain"
+     ]
+    },
+    {
+     "label": "CloseUnassign",
+     "listener": "closeUnassign",
+     "chains": [
+      "unassignChain"
+     ]
+    },
+    {
+     "label": "UnassignRun",
+     "listener": "unassignRun",
+     "chains": [
+      "unassignChain"
+     ]
+    },
+    {
+     "label": "erptripschanged",
+     "listener": "tripsHeard",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "erptripdate",
+     "listener": "tripDateHeard",
+     "chains": [
+      "loadChain"
+     ]
+    },
+    {
+     "label": "oj-c-select-single: value changed",
+     "listener": "instanceChanged",
+     "chains": [
+      "formChain"
+     ]
+    },
+    {
+     "label": "oj-c-input-date-picker: value changed",
+     "listener": "fromChanged",
+     "chains": [
+      "formChain"
+     ]
+    },
+    {
+     "label": "oj-c-input-date-picker: value changed",
+     "listener": "toChanged",
+     "chains": [
+      "formChain"
+     ]
+    },
+    {
+     "label": "Trips, all trips, all trip details and the lorries' volumes: selection changed",
+     "listener": "tabChanged",
+     "chains": [
+      "tabChain"
+     ]
+    },
+    {
+     "label": "oj-c-input-text: raw value changed",
+     "listener": "cardSearch",
+     "chains": [
+      "cardsChain"
+     ]
+    },
+    {
+     "label": "oj-c-input-text: raw value changed",
+     "listener": "tripSearch",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "Tick every row shown: click",
+     "listener": "toggleTripsShown",
+     "chains": [
+      "selectChain"
+     ]
+    },
+    {
+     "label": "All trips: oj sort",
+     "listener": "tripSort",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "click",
+     "listener": "toggleTrip",
+     "chains": [
+      "selectChain"
+     ]
+    },
+    {
+     "label": "Clear filters: sp primary action",
+     "listener": "tripClear",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "oj-c-select-single: value changed",
+     "listener": "tripSize",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "oj-c-input-text: raw value changed",
+     "listener": "lineSearch",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "Tick every line shown: click",
+     "listener": "toggleLinesShown",
+     "chains": [
+      "selectChain"
+     ]
+    },
+    {
+     "label": "All trip details: oj sort",
+     "listener": "lineSort",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "click",
+     "listener": "toggleLine",
+     "chains": [
+      "selectChain"
+     ]
+    },
+    {
+     "label": "Clear the search: sp primary action",
+     "listener": "lineClear",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "oj-c-select-single: value changed",
+     "listener": "lineSize",
+     "chains": [
+      "tableChain"
+     ]
+    },
+    {
+     "label": "Volume per trip: oj sort",
+     "listener": "volSort",
+     "chains": [
+      "tableChain"
+     ]
+    }
+   ],
+   "fields": [
+    "Every row shown",
+    "Every line shown",
+    "Instance",
+    "From Date",
+    "To Date",
+    "Filter trips",
+    "Search all trips",
+    "Rows per page",
+    "Search the lines",
+    "Select Picker",
+    "Assignment Date",
+    "Instance Name",
+    "Trip Date",
+    "Actual Ship Date",
+    "Vehicle",
+    "Picker",
+    "Priority",
+    "Loading Bay",
+    "Notes (Optional)",
+    "Any column: lorry:pickup, priority:high …",
+    "Search every column",
+    "Select Vehicle",
+    "Select Priority",
+    "Select Loading Bay",
+    "Enter any additional notes or instructions…"
+   ],
+   "columns": [
+    "Trip ID",
+    "Trip Date",
+    "Lorry",
+    "Vehicle Model",
+    "Orders",
+    "Filled m³",
+    "Capacity m³",
+    "Available m³",
+    "Fill %",
+    "Status",
+    "Trips",
+    "Capacity/Trip m³",
+    "Total Capacity m³",
+    "Overfilled Trips",
+    "Trip",
+    "Date"
+   ],
+   "components": [
+    "oj-c-button",
+    "oj-c-form-layout",
+    "oj-c-input-date-picker",
+    "oj-c-input-text",
+    "oj-c-progress-bar",
+    "oj-c-select-single",
+    "oj-c-text-area",
+    "oj-dialog",
+    "oj-sp-empty-state",
+    "oj-sp-smart-search-page",
+    "oj-tab-bar",
+    "oj-table"
+   ],
+   "inputs": [],
+   "lifecycle": [
+    {
+     "when": "when the page opens",
+     "chains": [
+      "loadChain"
+     ]
+    }
+   ]
+  },
+  "logic": {
+   "chains": [
+    {
+     "name": "agentChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/agentChain.js",
+     "about": "A trip card's Assign Agent (saAddTripToAgent): the active shipping agents, the first chosen; Assign gives the trip to the agent (a refusal the handler words as \"ERROR: …\" is said, not taken for a success).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "agentCard",
+      "agentChosen",
+      "saveAgent",
+      "closeAgent"
+     ],
+     "lines": 94
+    },
+    {
+     "name": "cardsChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/cardsChain.js",
+     "about": "The trip cards: a date chip turns its date on or off, Select All / Clear All, and the search on any column of the trip and its orders (trip-filter.js: every word must match; column:value).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "dateChip",
+      "datesAll",
+      "datesNone",
+      "cardSearch"
+     ],
+     "lines": 43
+    },
+    {
+     "name": "dialogChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/dialogChain.js",
+     "about": "The dialogs: the API addresses (Copy each) and a lorry's trips (Volume Summary's lorry link).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "openApi",
+      "closeApi",
+      "copyApi",
+      "openLorry",
+      "closeLorry"
+     ],
+     "lines": 56
+    },
+    {
+     "name": "exportChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/exportChain.js",
+     "about": "Excel: All Trips and All Trip Details as filtered and sorted (the grids' export, TripDetails.xlsx), Volume Summary as the current export lays it out (title, blue header, coloured fill, totals: VolumeSummary_<date>.xlsx).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "exportTrips",
+      "exportLines",
+      "exportSummary",
+      "exportLinesTicked"
+     ],
+     "lines": 57
+    },
+    {
+     "name": "formChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/formChain.js",
+     "about": "The query's fields: the instance and the dates (nothing is fetched until Fetch Trips, as the current screen).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "instanceChanged",
+      "fromChanged",
+      "toChanged"
+     ],
+     "lines": 38
+    },
+    {
+     "name": "loadChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/loadChain.js",
+     "about": "The data: on entry the instance signed in and tomorrow in both dates, then Fetch Trips by itself (the current WMS fetches tomorrow 400 ms after it opens); Fetch Trips checks the dates, clears the old results and reads the trips (GETTRIPDETAILS), every order line of the dates (GETTRIPDETAILS/ALL, kept for the instance) and, the first time, the lorries (vehicles/get) at once; each call's failure shows where its tab shows. Refresh reads the lorries again; Dismiss hides an error.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "vbEnter",
+      "fetchTrips",
+      "refreshVehicles",
+      "dismissTrips",
+      "dismissLines",
+      "dismissVehicles",
+      "tripsHeard",
+      "dismissPins",
+      "tripDateHeard"
+     ],
+     "lines": 158
+    },
+    {
+     "name": "lotsChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/lotsChain.js",
+     "about": "Allocate Lots for the ticked Store to Van orders of All Trips or All Trip Details: a review first, then Start Processing allocates each order's lots (WAREHOUSEMANAGEMENT/trip/fetchlotdetails), one after the other, half a second apart (the trip tab's allocateLotsForS2V; the current All Trips button only pretended to).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "allocateTrips",
+      "allocateLines",
+      "startLots",
+      "closeLots"
+     ],
+     "lines": 93
+    },
+    {
+     "name": "newTripChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/newTripChain.js",
+     "about": "Create New Trip (the Co-Pilot's openNewTripModal / createNewTrip): the lorries and pickers read when missing, the form (instance, trip date, actual ship date, vehicle, picker, priority, loading bay, notes), trips/create; the new trip opens in its own tab and Trip Management reads its dates again.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "newTrip",
+      "newTripInstance",
+      "newTripDate",
+      "newTripCostDate",
+      "newTripVehicle",
+      "newTripPicker",
+      "newTripPriority",
+      "newTripBay",
+      "newTripNotes",
+      "createTrip",
+      "closeNewTrip"
+     ],
+     "lines": 117
+    },
+    {
+     "name": "openChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/openChain.js",
+     "about": "A trip in its own tab (Trip Details, as View Details opened openTripDetails): from its card, from an order of All Trips / All Trip Details (the trip with that order picked out), or from a trip of the volumes.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "viewTrip",
+      "tripOrder",
+      "lineOrder",
+      "volTrip",
+      "lorryTrip",
+      "openPinned"
+     ],
+     "lines": 61
+    },
+    {
+     "name": "pickerChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/pickerChain.js",
+     "about": "Assign Picker for the ticked orders of All Trips or All Trip Details (assignPickerForSelectedTrips / …Orders), or for one line of All Trip Details (its row button, assignPickerForTripOrder): the pickers not deleted, a date, one pickerassignment call for all; the tables show the picker, the trips' tabs read themselves again.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "assignPickerTrips",
+      "assignPickerLines",
+      "pickerChosen",
+      "pickerDate",
+      "savePicker",
+      "closePicker",
+      "assignLine"
+     ],
+     "lines": 121
+    },
+    {
+     "name": "pinChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/pinChain.js",
+     "about": "A trip card's Pin (wmsPinToggle): pinned or unpinned in WMS_TRIP_PINS (the table created on the first pin), the card's button following; the Pinned Trips screen reads the pins when it opens or refreshes.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "pinCard"
+     ],
+     "lines": 56
+    },
+    {
+     "name": "selectChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/selectChain.js",
+     "about": "The ticks of All Trips and All Trip Details (the orders Assign Picker and Allocate Lots work on).",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "toggleTrip",
+      "toggleTripsShown",
+      "clearTrips",
+      "toggleLine",
+      "toggleLinesShown",
+      "clearLines"
+     ],
+     "lines": 39
+    },
+    {
+     "name": "tabChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/tabChain.js",
+     "about": "The tabs: Trips, All Trips, All Trip Details, Volume Details, Volume Summary.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "tabChanged"
+     ],
+     "lines": 34
+    },
+    {
+     "name": "tableChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/tableChain.js",
+     "about": "The tables (All Trips, All Trip Details, Volume Details, Volume Summary): pages, page size, a column's sort (on every row that matches), the search on every column, and All Trips' lorry and date chips.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "tripSearch",
+      "lorryChip",
+      "tripDateChip",
+      "lorriesAll",
+      "lorriesNone",
+      "tripDatesAll",
+      "tripDatesNone",
+      "tripClear",
+      "lineSearch",
+      "lineClear",
+      "tripPrev",
+      "tripNext",
+      "tripSize",
+      "tripSort",
+      "linePrev",
+      "lineNext",
+      "lineSize",
+      "lineSort",
+      "volPrev",
+      "volNext",
+      "volSize",
+      "volSort",
+      "sumPrev",
+      "sumNext",
+      "sumSize",
+      "sumSort"
+     ],
+     "lines": 85
+    },
+    {
+     "name": "unassignChain",
+     "file": "webApps/wms/flows/wms/pages/trip-management-page-chains/unassignChain.js",
+     "about": "Unassign Picker in All Trip Details (one line's button, or the ticked lines): the orders' picker assignment removed (wms_picker_assignment, as WMS 2.0's unassignPicker; the current WMS's button only said \"To be implemented\"), confirmed in the dialog; the lines show N/A, the trips' tabs read themselves again.",
+     "calls": [],
+     "reports": [],
+     "local": [],
+     "opens": [],
+     "modules": [],
+     "on": [
+      "unassignLine",
+      "unassignLines",
+      "unassignRun",
+      "closeUnassign"
+     ],
+     "lines": 83
+    }
+   ],
+   "modules": [],
+   "variables": 62
+  },
+  "integrations": {
+   "rest": [],
+   "reports": [],
+   "local": [],
+   "backends": [],
+   "lovs": [
+    {
+     "field": "Instance",
+     "component": "oj-c-select-single",
+     "target": "instance",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Rows per page",
+     "component": "oj-c-select-single",
+     "target": "size",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "static",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [
+      {
+       "key": "10",
+       "text": "10 / page"
+      },
+      {
+       "key": "25",
+       "text": "25 / page"
+      },
+      {
+       "key": "50",
+       "text": "50 / page"
+      },
+      {
+       "key": "100",
+       "text": "100 / page"
+      }
+     ],
+     "via": "",
+     "when": "(tab === 'all-trips') && (trips.length > 0)"
+    },
+    {
+     "field": "Select Picker",
+     "component": "oj-c-select-single",
+     "target": "pickerId",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "AgentId",
+     "component": "oj-c-select-single",
+     "target": "agentId",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Instance Name",
+     "component": "oj-c-select-single",
+     "target": "instance",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Vehicle",
+     "component": "oj-c-select-single",
+     "target": "vehicle",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Picker",
+     "component": "oj-c-select-single",
+     "target": "picker",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Priority",
+     "component": "oj-c-select-single",
+     "target": "priority",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    },
+    {
+     "field": "Loading Bay",
+     "component": "oj-c-select-single",
+     "target": "bay",
+     "text": "label",
+     "key": "value",
+     "textFrom": "",
+     "keyFrom": "",
+     "sub": "",
+     "subFrom": "",
+     "source": "",
+     "endpoint": "",
+     "report": "",
+     "reportPath": "",
+     "rowTag": "",
+     "search": "",
+     "itemsPath": "",
+     "params": {},
+     "values": [],
+     "via": "",
+     "when": ""
+    }
+   ]
+  },
+  "links": [],
+  "next": [],
+  "unresolvedLinks": []
+ },
+ "ai": null,
+ "screenshots": [
+  {
+   "id": "s1",
+   "file": "projects/p-04bb0c74b282/screens/wms.wms.trip-management.1.jpg",
+   "at": "2026-11-26T10:34:01.317Z",
+   "by": "Javeed Shaik",
+   "source": "capture",
+   "caption": "",
+   "bytes": 165449,
+   "from": "workspace"
+  }
+ ],
+ "stories": [],
+ "at": "2026-11-26T10:33:54.301Z",
+ "by": "Javeed Shaik",
+ "codeHash": "c0b6c3007b6b02db"
+}
